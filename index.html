@@ -1,17 +1,26 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <link rel="icon" type="image/svg+xml" href="/src/assets/logo.svg" />
-    <title>Tauri + Solid + Typescript App</title>
-  </head>
 
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+	<title>hang.live</title>
+	<link rel="stylesheet" href="/index.css">
+</head>
 
-    <script src="/src/index.tsx" type="module"></script>
-  </body>
+<body>
+	<header style="position: fixed; top: 0; left: 0; right: 0;">
+		<div class="logo">hang</div>
+		<nav>
+			<a href="#new">new</a>
+			<a href="#about">about</a>
+		</nav>
+	</header>
+
+	<hang-live name="demo"></hang-live>
+
+	<script type="module" src="/src/index.tsx"></script>
+</body>
+
 </html>
