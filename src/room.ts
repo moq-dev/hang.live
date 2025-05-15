@@ -74,7 +74,10 @@ export class Room {
 			const mouse = Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio);
 
 			if (this.#dragging) {
-				this.#dragging.targetPosition = Vector.create(mouse.x / this.canvas.width, mouse.y / this.canvas.height);
+				this.#dragging.targetPosition = Vector.create(
+					mouse.x / this.canvas.width,
+					mouse.y / this.canvas.height,
+				);
 			} else {
 				this.#hovering = this.#broadcastAt(mouse);
 				if (this.#hovering) {
@@ -121,7 +124,9 @@ export class Room {
 				let broadcast = this.#dragging;
 				if (!broadcast) {
 					const rect = this.canvas.getBoundingClientRect();
-					const mouse = Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio);
+					const mouse = Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(
+						window.devicePixelRatio,
+					);
 
 					broadcast = this.#broadcastAt(mouse);
 					if (!broadcast) return;
