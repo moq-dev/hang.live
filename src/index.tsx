@@ -1,42 +1,47 @@
 import { Connection } from "@kixelated/hang";
-import { jsx } from "./jsx";
 import { Me } from "./me";
 import { Room } from "./room";
+import { JSX } from "solid-js/jsx-runtime";
 
-const RELAY = new URL("http://localhost:4443");
+const RELAY = "http://localhost:4443";
 
-export class HangLive extends HTMLElement {
-	constructor() {
-		super();
+export function Hang(): JSX.Element {
+	const canvas = (
+		<canvas
+			style={{
+				display: "block",
+				"background-color": "#000",
+				width: "100%",
+				height: "100%",
+			}}
+		/>
+	) as HTMLCanvasElement;
 
-		const canvas = (
-			<canvas css={{ display: "block", backgroundColor: "#000", width: "100%", height: "100%" }} />
-		) as HTMLCanvasElement;
-		const connection = new Connection({ url: RELAY });
+	const url = new URL(`${RELAY}/demo`);
+	const connection = new Connection({ url });
 
-		const me = new Me({ connection, room: "demo", name: "me" });
-		const room = new Room({ connection, path: "demo", canvas });
+	const room = new Room(connection, canvas);
 
-		// Register any window/document level events.
-		const resize = () => {
-			canvas.width = window.devicePixelRatio * window.innerWidth;
-			canvas.height = window.devicePixelRatio * window.innerHeight;
-		};
+	// Register any window/document level events.
+	const resize = () => {
+		canvas.width = window.devicePixelRatio * window.innerWidth;
+		canvas.height = window.devicePixelRatio * window.innerHeight;
+	};
 
-		const visible = () => {
-			room.visible = document.visibilityState !== "hidden";
-		};
+	const visible = () => {
+		room.visible = document.visibilityState !== "hidden";
+	};
 
-		resize();
-		visible();
+	resize();
+	visible();
 
-		window.addEventListener("resize", resize);
-		document.addEventListener("visibilitychange", visible);
+	window.addEventListener("resize", resize);
+	document.addEventListener("visibilitychange", visible);
 
-		const shadow = this.attachShadow({ mode: "open" });
-		shadow.appendChild(canvas);
-		shadow.appendChild(me);
-	}
+	return (
+		<>
+			{canvas}
+			<Me connection={connection} name="me" />
+		</>
+	);
 }
-
-customElements.define("hang-live", HangLive);

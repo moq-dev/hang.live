@@ -10,7 +10,7 @@ default:
 check:
 	pnpm i
 
-	# Format the JS packages
+	# Lint the JS packages
 	pnpm exec biome check
 
 	# Make sure Typescript compiles
@@ -53,3 +53,7 @@ build:
 # Run pnpm link
 link:
 	pnpm link @kixelated/moq @kixelated/hang
+
+dev:
+	pnpm i
+	pnpm run dev

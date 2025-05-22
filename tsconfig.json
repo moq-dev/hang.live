@@ -13,8 +13,10 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noEmit": true,
+
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
+		"types": ["vite/client"],
 
 		// https://www.typescriptlang.org/tsconfig/#Type_Checking_6248
 		"allowUnreachableCode": false,
