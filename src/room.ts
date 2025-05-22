@@ -1,8 +1,8 @@
-import { Connection } from "@kixelated/hang/connection";
-import { Signal, Signals, signal } from "@kixelated/hang/signals";
-import * as Watch from "@kixelated/hang/watch";
+import { Connection } from "@kixelated/hang";
+import { Signals } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Vector } from "./vector";
+import { WatchBroadcast } from "@kixelated/hang";
 
 const PADDING = 64;
 
@@ -25,7 +25,6 @@ export class Room {
 	#rip: Broadcast[] = [];
 
 	canvas: HTMLCanvasElement;
-	path: Signal<string | undefined>;
 
 	#ctx: CanvasRenderingContext2D;
 
@@ -38,10 +37,9 @@ export class Room {
 
 	#signals = new Signals();
 
-	constructor(props: RoomProps) {
-		this.connection = props.connection;
-		this.canvas = props.canvas;
-		this.path = signal(props.path);
+	constructor(connection: Connection, canvas: HTMLCanvasElement) {
+		this.connection = connection;
+		this.canvas = canvas;
 
 		const ctx = this.canvas.getContext("2d");
 		if (!ctx) {
@@ -110,7 +108,7 @@ export class Room {
 			() => {
 				this.#muted = false;
 				for (const broadcast of this.#broadcasts.values()) {
-					broadcast.audio.enabled.set(!this.#muted);
+					broadcast.audio.muted.set(!this.#muted);
 				}
 			},
 			{ once: true },
@@ -155,10 +153,7 @@ export class Room {
 		const connection = this.connection.established.get();
 		if (!connection) return;
 
-		const path = this.path.get();
-		if (!path) return;
-
-		const announced = connection.announced(`${path}/`);
+		const announced = connection.announced();
 
 		(async () => {
 			for (;;) {
@@ -167,12 +162,10 @@ export class Room {
 				// We're donezo.
 				if (!update) break;
 
-				const name = update.broadcast.slice(path.length + 1);
-
 				if (update.active) {
-					this.#startBroadcast(path, name);
+					this.#startBroadcast(update.path);
 				} else {
-					this.#stopBroadcast(name);
+					this.#stopBroadcast(update.path);
 				}
 			}
 
@@ -202,7 +195,7 @@ export class Room {
 		return result;
 	}
 
-	#startBroadcast(path: string, name: string) {
+	#startBroadcast(name: string) {
 		const targetPosition = Vector.create(Math.random(), Math.random());
 
 		const offset = Vector.create(targetPosition.x - 0.5, targetPosition.y - 0.5)
@@ -215,13 +208,13 @@ export class Room {
 			targetPosition.y * this.canvas.height,
 		).add(offset);
 
-		const watch = new Watch.Broadcast({ connection: this.connection, path: `${path}/${name}`, reload: false });
+		const watch = new WatchBroadcast(this.connection, { path: name, reload: false });
 
 		const broadcast = new Broadcast(watch, name);
 		broadcast.targetPosition = targetPosition;
 		broadcast.bounds.position = startPosition;
 
-		broadcast.audio.enabled.set(!this.#muted);
+		broadcast.audio.muted.set(!this.#muted);
 		broadcast.watch.video.enabled.set(this.#visible);
 
 		// This should never happen, but just in case.

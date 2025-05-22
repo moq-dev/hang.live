@@ -1,20 +1,20 @@
-import { Signals } from "@kixelated/hang/signals";
-import * as Watch from "@kixelated/hang/watch";
+import { Signals } from "@kixelated/signals";
+import { WatchBroadcast, WatchAudio, WatchVideoSource } from "@kixelated/hang";
 
 import { Bounds } from "./bounds";
 import { Vector } from "./vector";
 
 export class Broadcast {
-	watch: Watch.Broadcast;
+	watch: WatchBroadcast;
 	name: string;
 
-	audio: Watch.Audio;
-	audioEmitter: Watch.AudioEmitter;
+	audio: WatchAudio;
 	audioPanner?: StereoPannerNode;
 	audioLeft?: AnalyserNode;
 	audioRight?: AnalyserNode;
 
-	video: Watch.Video;
+	// We don't use the Video renderer that comes with hang because it's too simple.
+	video: WatchVideoSource;
 
 	bounds: Bounds;
 	scale = 1.0; // 1 is 100%
@@ -29,15 +29,12 @@ export class Broadcast {
 
 	#signals = new Signals();
 
-	constructor(watch: Watch.Broadcast, name: string) {
+	constructor(watch: WatchBroadcast, name: string) {
 		this.watch = watch;
 		this.name = name;
 
 		this.video = this.watch.video;
-		this.video.enabled.set(true);
-
-		this.audio = this.watch.audio;
-		this.audioEmitter = new Watch.AudioEmitter({ source: this.audio });
+		this.audio = new WatchAudio(this.watch.audio, { paused: false });
 
 		this.targetSize = Vector.create(128, 128);
 		this.bounds = new Bounds(Vector.create(0, 0), this.targetSize);
@@ -46,7 +43,7 @@ export class Broadcast {
 	}
 
 	#setupAudio() {
-		const audio = this.audioEmitter.context.get();
+		const audio = this.audio.context.get();
 		if (!audio) return;
 
 		const { root: context, gain } = audio;
@@ -163,31 +160,34 @@ export class Broadcast {
 			ctx.globalAlpha = 0.7;
 		}
 
-		const closest = this.video.frame(now);
+		const frame = this.video.frame;
 
 		// Check if the frame size has changed.
-		if (closest && this.video.selected.peek()) {
-			this.targetSize = Vector.create(closest.frame.displayWidth, closest.frame.displayHeight);
+		if (frame && this.video.selected.peek()) {
+			this.targetSize = Vector.create(frame.displayWidth, frame.displayHeight);
 			this.fade = Math.min(this.fade + 0.05, 1);
 		} else {
 			this.targetSize = Vector.create(128, 128);
 			this.fade = Math.max(this.fade - 0.01, 0);
 		}
 
-		if (closest) {
+		if (frame) {
 			ctx.save();
 			ctx.globalAlpha *= this.fade;
 
 			// Compute grayscale level based on how late the frame is.
-			const lag = Math.min(Math.max((closest.lag - 2000) / (5000 - 2000), 0), 1);
+			/*
+			const lag = Math.min(Math.max((frame.lag - 2000) / (5000 - 2000), 0), 1);
 			if (lag > 0) {
 				ctx.filter = `grayscale(${lag})`;
 			}
+			*/
 
 			ctx.imageSmoothingEnabled = true;
-			ctx.drawImage(closest.frame, 0, 0, bounds.size.x, bounds.size.y);
+			ctx.drawImage(frame, 0, 0, bounds.size.x, bounds.size.y);
 			ctx.restore();
 
+			/*
 			if (lag > 0) {
 				const spinnerSize = 32 * this.scale;
 				const spinnerX = bounds.size.x / 2 - spinnerSize / 2;
@@ -206,6 +206,7 @@ export class Broadcast {
 
 				ctx.restore();
 			}
+			*/
 		}
 
 		if (this.fade < 1) {
@@ -255,6 +256,5 @@ export class Broadcast {
 		this.watch.close();
 		this.video.close();
 		this.audio.close();
-		this.audioEmitter.close();
 	}
 }

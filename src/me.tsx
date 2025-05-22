@@ -1,276 +1,247 @@
-import { Connection } from "@kixelated/hang/connection";
-import * as Publish from "@kixelated/hang/publish";
+import { Connection, PublishAudio, PublishBroadcast, PublishVideo, VideoTrackConstraints } from "@kixelated/hang";
+import { batch, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { JSX } from "solid-js/jsx-runtime";
 
-import { batch, Signal, Signals, signal } from "@kixelated/hang/signals";
-import { jsx } from "./jsx";
+const inputCss: JSX.CSSProperties = {
+	color: "white",
+	padding: "8px 12px",
+	"border-radius": "4px",
+	background: "transparent",
+	border: "1px solid transparent",
+	"backdrop-filter": "blur(2px)",
+	"text-shadow": "-1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black",
+};
+
+const buttonCss: JSX.CSSProperties = {
+	cursor: "pointer",
+	...inputCss,
+};
 
 export type MeProps = {
 	connection: Connection;
-	room?: string;
-	name?: string;
+	name: string;
 };
 
-export class Me extends HTMLElement {
-	connection: Connection;
-	room: Signal<string | undefined>;
-	name: Signal<string | undefined>;
+export function Me(props: MeProps): JSX.Element {
+	const camera = new PublishBroadcast(props.connection, {
+		device: "camera",
+		video: false,
+		audio: false,
+		path: props.name,
+	});
 
-	#camera: Publish.Broadcast;
-	#cameraVolume: Volume;
+	onCleanup(() => camera.close());
 
-	#screen: Publish.Broadcast;
-	#screenVolume: Volume;
+	const screen = new PublishBroadcast(props.connection, {
+		device: "screen",
+		publish: false,
+		path: `${props.name}/screen`,
+	});
+	onCleanup(() => screen.close());
 
-	#signals = new Signals();
+	createEffect(() => {
+		// Publish only once we have at least one active track.
+		screen.publish.set(!!screen.video.media.get() || !!screen.audio.media.get());
+	});
 
-	constructor(props: MeProps) {
-		super();
-
-		this.connection = props.connection;
-		this.room = signal(props.room);
-		this.name = signal(props.name);
-
-		const path = this.#signals.derived(() => {
-			const room = this.room.get();
-			const name = this.name.get();
-			if (!room || !name) return undefined;
-			return `${room}/${name}`;
-		});
-
-		const control: Partial<CSSStyleDeclaration> = {
-			color: "white",
-			padding: "8px 12px",
-			borderRadius: "4px",
-			background: "transparent",
-			border: "1px solid transparent",
-			backdropFilter: "blur(2px)",
-			textShadow: "-1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black",
-		};
-
-		const button: Partial<CSSStyleDeclaration> = {
-			cursor: "pointer",
-			...control,
-		};
-
-		this.#camera = new Publish.Broadcast({
-			connection: this.connection,
-			device: "camera",
-			video: false,
-			audio: false,
-		});
-		this.#cameraVolume = new Volume(this.#camera.audio);
-		const cameraButton = (
-			<button type="button" css={button}>
-				📷
-			</button>
-		);
-
-		cameraButton.addEventListener("click", () => {
-			const video: Publish.VideoTrackConstraints | undefined = this.#camera.video.constraints.peek()
-				? undefined
-				: {
-						// 480p but square, so the browser can choose the best aspect ratio.
-						width: { ideal: 640 },
-						height: { ideal: 640 },
-						frameRate: { ideal: 60 },
-						facingMode: { ideal: "user" },
-						resizeMode: "none",
-					};
-			this.#camera.video.constraints.set(video);
-		});
-
-		this.#signals.effect(() => {
-			this.#camera.path.set(path.get());
-		});
-
-		const microphoneButton = (
-			<button type="button" css={{ ...button, position: "relative" }}>
-				{this.#cameraVolume.dom}🎤
-			</button>
-		);
-
-		this.#signals.effect(() => {
-			const video = this.#camera.video.media.get();
-			const audio = this.#camera.audio.media.get();
-
-			microphoneButton.style.borderColor = audio ? "white" : "transparent";
-			cameraButton.style.borderColor = video ? "white" : "transparent";
-		});
-
-		microphoneButton.addEventListener("click", () => {
-			const audio = this.#camera.audio.constraints.peek()
-				? undefined
-				: {
-						channelCount: { ideal: 2, max: 2 },
-						echoCancellation: { ideal: true },
-						autoGainControl: { ideal: true },
-						noiseCancellation: { ideal: true },
-					};
-			this.#camera.audio.constraints.set(audio);
-		});
-
-		this.#screen = new Publish.Broadcast({ connection: this.connection, device: "screen", publish: false });
-		this.#screenVolume = new Volume(this.#screen.audio);
-		this.#signals.effect(() => {
-			let screenPath = path.get();
-			if (screenPath) {
-				screenPath = `${screenPath}/screen`;
-			}
-			this.#screen.path.set(screenPath);
-		});
-
-		const screenButton = (
-			<button type="button" css={button}>
-				{this.#screenVolume.dom}🖥️
-			</button>
-		);
-
-		screenButton.addEventListener("click", () => {
-			// We need to batch otherwise we'll request the device twice.
-			batch(() => {
-				this.#screen.video.constraints.set(
-					this.#screen.video.constraints.peek()
-						? undefined
-						: {
-								frameRate: { ideal: 60 },
-								resizeMode: "none",
-							},
-				);
-				this.#screen.audio.constraints.set(
-					this.#screen.audio.constraints.peek()
-						? undefined
-						: {
-								channelCount: { ideal: 2, max: 2 },
-							},
-				);
-			});
-
-			screenButton.style.borderColor = this.#screen.video.constraints.peek() ? "white" : "transparent";
-		});
-
-		this.#signals.effect(() => {
-			// Publish only once we have at least one active track.
-			this.#screen.publish.set(!!this.#screen.video.media.get() || !!this.#screen.audio.media.get());
-		});
-
-		const chat = <input type="text" placeholder="Type a message..." css={control} />;
-		const settings = (
-			<button type="button" css={button}>
-				⚙️
-			</button>
-		);
-		const fullscreen = (
-			<button type="button" css={button}>
-				⛶
-			</button>
-		);
-
-		const root = this.attachShadow({ mode: "open" });
-		root.appendChild(
-			<div
-				css={{
-					position: "fixed",
-					bottom: "0",
-					left: "0",
-					right: "0",
-					display: "flex",
-					alignItems: "center",
-					padding: "8px 16px",
-					gap: "8px",
-				}}
-			>
-				{microphoneButton}
-				{cameraButton}
-				{screenButton}
-				{chat}
-				<div css={{ flexGrow: "1" }} />
-				{settings}
-				{fullscreen}
-			</div>,
-		);
-	}
+	return (
+		<div
+			style={{
+				position: "fixed",
+				bottom: "0",
+				left: "0",
+				right: "0",
+				display: "flex",
+				"align-items": "center",
+				padding: "8px 16px",
+				gap: "8px",
+			}}
+		>
+			<Microphone audio={camera.audio} />
+			<Camera video={camera.video} />
+			<Screen video={screen.video} audio={screen.audio} />
+			<Chat />
+			<div style={{ "flex-grow": "1" }} />
+			<Settings />
+			<Fullscreen />
+		</div>
+	);
 }
 
-customElements.define("hang-me", Me);
+function Microphone(props: { audio: PublishAudio }): JSX.Element {
+	const toggle = () => {
+		const audio = props.audio.constraints.peek()
+			? undefined
+			: {
+					channelCount: { ideal: 2, max: 2 },
+					echoCancellation: { ideal: true },
+					autoGainControl: { ideal: true },
+					noiseCancellation: { ideal: true },
+				};
+		props.audio.constraints.set(audio);
+	};
 
-// Renders a volume meter.
-class Volume {
-	audio: Publish.Audio;
-	dom: HTMLDivElement;
+	return (
+		<button
+			type="button"
+			onClick={toggle}
+			style={{
+				...buttonCss,
+				position: "relative",
+				"border-color": props.audio.media.get() ? "white" : "transparent",
+			}}
+		>
+			<Volume audio={props.audio} />🎤
+		</button>
+	);
+}
 
-	#animation?: number;
-	#signals = new Signals();
+function Camera(props: { video: PublishVideo }): JSX.Element {
+	const toggle = () => {
+		const video: VideoTrackConstraints | undefined = props.video.constraints.peek()
+			? undefined
+			: {
+					// 480p but square, so the browser can choose the best aspect ratio.
+					width: { ideal: 640 },
+					height: { ideal: 640 },
+					frameRate: { ideal: 60 },
+					facingMode: { ideal: "user" },
+					resizeMode: "none",
+				};
+		props.video.constraints.set(video);
+	};
 
-	constructor(audio: Publish.Audio) {
-		this.audio = audio;
-		this.dom = (
-			<div
-				css={{
-					position: "absolute",
-					bottom: "0",
-					left: "0",
-					width: "100%",
-					top: "100%",
-					backgroundColor: "transparent",
-				}}
-			/>
-		) as HTMLDivElement;
+	return (
+		<button
+			type="button"
+			style={{ ...buttonCss, "border-color": props.video.media.get() ? "white" : "transparent" }}
+			onClick={toggle}
+		>
+			📷
+		</button>
+	);
+}
 
-		this.#signals.effect(() => this.#onMedia());
-	}
+function Screen(props: { video: PublishVideo; audio: PublishAudio }): JSX.Element {
+	const toggle = () => {
+		// We need to batch otherwise we'll request the device twice.
+		batch(() => {
+			props.video.constraints.set(
+				props.video.constraints.peek()
+					? undefined
+					: {
+							frameRate: { ideal: 60 },
+							resizeMode: "none",
+						},
+			);
+			props.audio.constraints.set(
+				props.audio.constraints.peek()
+					? undefined
+					: {
+							channelCount: { ideal: 2, max: 2 },
+						},
+			);
+		});
+	};
 
-	#onMedia() {
-		const audio = this.audio.media.get();
+	return (
+		<button
+			type="button"
+			style={{ ...buttonCss, "border-color": props.video.media.get() ? "white" : "transparent" }}
+			onClick={toggle}
+		>
+			🖥️
+		</button>
+	);
+}
 
-		this.dom.style.backgroundColor = "transparent";
-		this.dom.style.top = "100%";
+// Renders a volume meter in the background of an element.
+function Volume(props: { audio: PublishAudio }): JSX.Element {
+	const [power, setPower] = createSignal<number | undefined>(undefined);
 
-		if (!audio) {
-			return;
-		}
+	const top = createMemo(() => {
+		return `${Math.min(100, 100 - (power() ?? 0) * 100)}%`;
+	});
+
+	const color = createMemo(() => {
+		const p = power();
+		if (!p) return "transparent";
+		const hue = 2 ** p * 100 + 135;
+		return `hsla(${hue}, 80%, 40%, 0.75)`;
+	});
+
+	createEffect(() => {
+		const media = props.audio.media.get();
+		if (!media) return;
 
 		const context = new AudioContext({
-			sampleRate: audio.getSettings().sampleRate,
+			sampleRate: media.getSettings().sampleRate,
 		});
+		onCleanup(() => context.close());
+
 		const analyzer = new AnalyserNode(context, {
 			// Monitor the last x samples of audio.
 			// ex. at 48kHz, 4096 samples is 85ms.
 			fftSize: 4096,
 		});
+		onCleanup(() => analyzer.disconnect());
 
-		const source = context.createMediaStreamSource(new MediaStream([audio]));
+		const source = context.createMediaStreamSource(new MediaStream([media]));
 		source.connect(analyzer);
+		onCleanup(() => source.disconnect());
 
-		// Create a buffer that we will reuse
 		const data = new Uint8Array(analyzer.frequencyBinCount);
-		this.#animation = requestAnimationFrame(this.#render.bind(this, analyzer, data));
 
-		return () => {
-			if (this.#animation) {
-				cancelAnimationFrame(this.#animation);
-				this.#animation = undefined;
+		let animation: number | undefined;
+
+		const updatePower = () => {
+			analyzer.getByteTimeDomainData(data);
+
+			// Convert from [0, 255] to [-1, 1]
+			let sum = 0;
+			for (let i = 0; i < data.length; i++) {
+				const sample = (data[i] - 128) / 128;
+				sum += sample * sample;
 			}
-
-			analyzer.disconnect();
-			source.disconnect();
-			context.close();
+			const power = 2 * Math.sqrt(sum / data.length);
+			setPower(power);
+			animation = requestAnimationFrame(updatePower);
 		};
-	}
 
-	#render(analyzer: AnalyserNode, buffer: Uint8Array<ArrayBuffer>) {
-		analyzer.getByteTimeDomainData(buffer);
+		animation = requestAnimationFrame(updatePower);
+		onCleanup(() => cancelAnimationFrame(animation ?? 0));
+	});
 
-		// Convert from [0, 255] to [-1, 1]
-		let sum = 0;
-		for (let i = 0; i < buffer.length; i++) {
-			const sample = (buffer[i] - 128) / 128;
-			sum += sample * sample;
-		}
-		const power = 2 * Math.sqrt(sum / buffer.length);
-		const hue = 2 ** power * 100 + 135;
+	return (
+		<div
+			style={{
+				position: "absolute",
+				bottom: "0",
+				left: "0",
+				width: "100%",
+				top: top(),
+				"background-color": color(),
+			}}
+		/>
+	);
+}
 
-		this.dom.style.backgroundColor = `hsla(${hue}, 80%, 40%, 0.75)`;
-		this.dom.style.top = `${Math.min(100, 100 - power * 100)}%`;
-		this.#animation = requestAnimationFrame(this.#render.bind(this, analyzer, buffer));
-	}
+function Chat(): JSX.Element {
+	return <input type="text" placeholder="Type a message..." style={inputCss} />;
+}
+
+function Settings(): JSX.Element {
+	return (
+		<button type="button" style={buttonCss}>
+			⚙️
+		</button>
+	);
+}
+
+function Fullscreen(): JSX.Element {
+	return (
+		<button type="button" style={buttonCss}>
+			⛶
+		</button>
+	);
 }
