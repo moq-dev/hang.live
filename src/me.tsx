@@ -1,4 +1,4 @@
-import { Connection, PublishAudio, PublishBroadcast, PublishVideo, VideoTrackConstraints } from "@kixelated/hang";
+import { Connection, Publish } from "@kixelated/hang";
 import { batch, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 
@@ -23,7 +23,7 @@ export type MeProps = {
 };
 
 export function Me(props: MeProps): JSX.Element {
-	const camera = new PublishBroadcast(props.connection, {
+	const camera = new Publish.Broadcast(props.connection, {
 		device: "camera",
 		video: false,
 		audio: false,
@@ -32,7 +32,7 @@ export function Me(props: MeProps): JSX.Element {
 
 	onCleanup(() => camera.close());
 
-	const screen = new PublishBroadcast(props.connection, {
+	const screen = new Publish.Broadcast(props.connection, {
 		device: "screen",
 		publish: false,
 		path: `${props.name}/screen`,
@@ -68,8 +68,10 @@ export function Me(props: MeProps): JSX.Element {
 	);
 }
 
-function Microphone(props: { audio: PublishAudio }): JSX.Element {
-	const toggle = () => {
+function Microphone(props: { audio: Publish.Audio }): JSX.Element {
+	const toggle = (e: MouseEvent) => {
+		e.preventDefault();
+
 		const audio = props.audio.constraints.peek()
 			? undefined
 			: {
@@ -96,9 +98,11 @@ function Microphone(props: { audio: PublishAudio }): JSX.Element {
 	);
 }
 
-function Camera(props: { video: PublishVideo }): JSX.Element {
-	const toggle = () => {
-		const video: VideoTrackConstraints | undefined = props.video.constraints.peek()
+function Camera(props: { video: Publish.Video }): JSX.Element {
+	const toggle = (e: MouseEvent) => {
+		e.preventDefault();
+
+		const video: Publish.VideoConstraints | undefined = props.video.constraints.peek()
 			? undefined
 			: {
 					// 480p but square, so the browser can choose the best aspect ratio.
@@ -122,8 +126,10 @@ function Camera(props: { video: PublishVideo }): JSX.Element {
 	);
 }
 
-function Screen(props: { video: PublishVideo; audio: PublishAudio }): JSX.Element {
-	const toggle = () => {
+function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Element {
+	const toggle = (e: MouseEvent) => {
+		e.preventDefault();
+
 		// We need to batch otherwise we'll request the device twice.
 		batch(() => {
 			props.video.constraints.set(
@@ -156,7 +162,7 @@ function Screen(props: { video: PublishVideo; audio: PublishAudio }): JSX.Elemen
 }
 
 // Renders a volume meter in the background of an element.
-function Volume(props: { audio: PublishAudio }): JSX.Element {
+function Volume(props: { audio: Publish.Audio }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
