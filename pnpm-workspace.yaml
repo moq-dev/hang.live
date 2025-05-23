@@ -1,2 +1,4 @@
 onlyBuiltDependencies:
   - '@biomejs/biome'
+overrides:
+  '@kixelated/hang': link:../../Library/pnpm/global/5/node_modules/@kixelated/hang

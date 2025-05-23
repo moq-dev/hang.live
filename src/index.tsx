@@ -2,6 +2,7 @@ import { Connection } from "@kixelated/hang";
 import { Me } from "./me";
 import { Room } from "./room";
 import { JSX } from "solid-js/jsx-runtime";
+import { render } from "solid-js/web";
 
 const RELAY = "http://localhost:4443";
 
@@ -17,7 +18,7 @@ export function Hang(): JSX.Element {
 		/>
 	) as HTMLCanvasElement;
 
-	const url = new URL(`${RELAY}/demo`);
+	const url = new URL(`${RELAY}/demo/`);
 	const connection = new Connection({ url });
 
 	const room = new Room(connection, canvas);
@@ -45,3 +46,10 @@ export function Hang(): JSX.Element {
 		</>
 	);
 }
+
+const hang = document.getElementById("hang");
+if (!hang) {
+	throw new Error("No hang element found");
+}
+
+render(() => <Hang />, hang);
