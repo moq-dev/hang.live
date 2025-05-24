@@ -1,49 +1,9 @@
-import { Connection, Publish } from "@kixelated/hang";
-import { batch, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { Publish } from "@kixelated/hang";
+import { batch, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
+import { Room } from "./room";
 
-const inputCss: JSX.CSSProperties = {
-	color: "white",
-	padding: "8px 12px",
-	"border-radius": "4px",
-	background: "transparent",
-	border: "1px solid transparent",
-	"backdrop-filter": "blur(2px)",
-	"text-shadow": "-1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black",
-};
-
-const buttonCss: JSX.CSSProperties = {
-	cursor: "pointer",
-	...inputCss,
-};
-
-export type MeProps = {
-	connection: Connection;
-	name: string;
-};
-
-export function Me(props: MeProps): JSX.Element {
-	const camera = new Publish.Broadcast(props.connection, {
-		device: "camera",
-		video: false,
-		audio: false,
-		path: props.name,
-	});
-
-	onCleanup(() => camera.close());
-
-	const screen = new Publish.Broadcast(props.connection, {
-		device: "screen",
-		publish: false,
-		path: `${props.name}/screen`,
-	});
-	onCleanup(() => screen.close());
-
-	createEffect(() => {
-		// Publish only once we have at least one active track.
-		screen.publish.set(!!screen.video.media.get() || !!screen.audio.media.get());
-	});
-
+export function Controls(props: { room: Room; camera: Publish.Broadcast; screen: Publish.Broadcast }): JSX.Element {
 	return (
 		<div
 			style={{
@@ -53,25 +13,23 @@ export function Me(props: MeProps): JSX.Element {
 				right: "0",
 				display: "flex",
 				"align-items": "center",
-				padding: "8px 16px",
 				gap: "8px",
+				margin: "8px",
 			}}
 		>
-			<Microphone audio={camera.audio} />
-			<Camera video={camera.video} />
-			<Screen video={screen.video} audio={screen.audio} />
+			<Microphone audio={props.camera.audio} />
+			<Camera video={props.camera.video} />
+			<Screen video={props.screen.video} audio={props.screen.audio} />
 			<Chat />
 			<div style={{ "flex-grow": "1" }} />
-			<Settings />
+			<Volume room={props.room} />
 			<Fullscreen />
 		</div>
 	);
 }
 
 function Microphone(props: { audio: Publish.Audio }): JSX.Element {
-	const toggle = (e: MouseEvent) => {
-		e.preventDefault();
-
+	const toggle = () => {
 		const audio = props.audio.constraints.peek()
 			? undefined
 			: {
@@ -88,20 +46,17 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 			type="button"
 			onClick={toggle}
 			style={{
-				...buttonCss,
 				position: "relative",
 				"border-color": props.audio.media.get() ? "white" : "transparent",
 			}}
 		>
-			<Volume audio={props.audio} />🎤
+			<Visualize audio={props.audio} />🎤
 		</button>
 	);
 }
 
 function Camera(props: { video: Publish.Video }): JSX.Element {
-	const toggle = (e: MouseEvent) => {
-		e.preventDefault();
-
+	const toggle = () => {
 		const video: Publish.VideoConstraints | undefined = props.video.constraints.peek()
 			? undefined
 			: {
@@ -118,7 +73,7 @@ function Camera(props: { video: Publish.Video }): JSX.Element {
 	return (
 		<button
 			type="button"
-			style={{ ...buttonCss, "border-color": props.video.media.get() ? "white" : "transparent" }}
+			style={{ "border-color": props.video.media.get() ? "white" : "transparent" }}
 			onClick={toggle}
 		>
 			📷
@@ -127,9 +82,7 @@ function Camera(props: { video: Publish.Video }): JSX.Element {
 }
 
 function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Element {
-	const toggle = (e: MouseEvent) => {
-		e.preventDefault();
-
+	const toggle = () => {
 		// We need to batch otherwise we'll request the device twice.
 		batch(() => {
 			props.video.constraints.set(
@@ -153,7 +106,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Elem
 	return (
 		<button
 			type="button"
-			style={{ ...buttonCss, "border-color": props.video.media.get() ? "white" : "transparent" }}
+			style={{ "border-color": props.video.media.get() ? "white" : "transparent" }}
 			onClick={toggle}
 		>
 			🖥️
@@ -162,7 +115,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Elem
 }
 
 // Renders a volume meter in the background of an element.
-function Volume(props: { audio: Publish.Audio }): JSX.Element {
+function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
@@ -233,21 +186,75 @@ function Volume(props: { audio: Publish.Audio }): JSX.Element {
 }
 
 function Chat(): JSX.Element {
-	return <input type="text" placeholder="Type a message..." style={inputCss} />;
+	return <input type="text" placeholder="Type a message..." />;
 }
 
+function Volume(props: { room: Room }): JSX.Element {
+	const [showSlider, setShowSlider] = createSignal(false);
+
+	const toggle = () => {
+		props.room.muted.set(!props.room.muted.get());
+	};
+
+	return (
+		<div
+			style={{
+				position: "relative",
+				display: "inline-block",
+			}}
+			onMouseEnter={() => setShowSlider(true)}
+			onMouseLeave={() => setShowSlider(false)}
+			onFocusIn={() => setShowSlider(true)}
+			onFocusOut={() => setShowSlider(false)}
+		>
+			<button type="button" onClick={toggle}>
+				{props.room.muted.get() ? "🔇" : "🔊"}
+			</button>
+			<Show when={showSlider()}>
+				<div
+					style={{
+						position: "absolute",
+						bottom: "100%",
+						left: "50%",
+						transform: "translateX(-50%)",
+						display: "flex",
+						"align-items": "center",
+						"justify-content": "center",
+						height: "100px",
+						width: "50px",
+					}}
+					onMouseEnter={() => setShowSlider(true)}
+					onMouseLeave={() => setShowSlider(false)}
+				>
+					<input
+						type="range"
+						min="0"
+						max="100"
+						value={props.room.volume.get() * 100}
+						onInput={(e) => props.room.volume.set(Number(e.currentTarget.value) / 100)}
+						style={{
+							transform: "rotate(-90deg)",
+							width: "100px",
+							height: "50px",
+							cursor: "pointer",
+						}}
+					/>
+				</div>
+			</Show>
+		</div>
+	);
+}
+
+/*
 function Settings(): JSX.Element {
 	return (
-		<button type="button" style={buttonCss}>
+		<button type="button">
 			⚙️
 		</button>
 	);
 }
+*/
 
 function Fullscreen(): JSX.Element {
-	return (
-		<button type="button" style={buttonCss}>
-			⛶
-		</button>
-	);
+	return <button type="button">⛶</button>;
 }

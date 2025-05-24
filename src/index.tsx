@@ -1,8 +1,9 @@
-import { Connection } from "@kixelated/hang";
-import { Me } from "./me";
+import { Connection, Publish, Support } from "@kixelated/hang";
 import { Room } from "./room";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
+import { createEffect, onCleanup } from "solid-js";
+import { Controls } from "./controls";
 
 const RELAY = "http://localhost:4443";
 
@@ -20,8 +21,28 @@ export function Hang(): JSX.Element {
 
 	const url = new URL(`${RELAY}/demo/`);
 	const connection = new Connection({ url });
-
 	const room = new Room(connection, canvas);
+
+	const camera = new Publish.Broadcast(connection, {
+		device: "camera",
+		video: false,
+		audio: false,
+		path: "me",
+	});
+
+	onCleanup(() => camera.close());
+
+	const screen = new Publish.Broadcast(connection, {
+		device: "screen",
+		publish: false,
+		path: "me/screen",
+	});
+	onCleanup(() => screen.close());
+
+	createEffect(() => {
+		// Publish only once we have at least one active track.
+		screen.publish.set(!!screen.video.media.get() || !!screen.audio.media.get());
+	});
 
 	// Register any window/document level events.
 	const resize = () => {
@@ -30,7 +51,7 @@ export function Hang(): JSX.Element {
 	};
 
 	const visible = () => {
-		room.visible = document.visibilityState !== "hidden";
+		room.visible.set(document.visibilityState !== "hidden");
 	};
 
 	resize();
@@ -39,11 +60,15 @@ export function Hang(): JSX.Element {
 	window.addEventListener("resize", resize);
 	document.addEventListener("visibilitychange", visible);
 
+	// Determine when the user has interacted with the page so we can potentially unmute audio.
+	document.addEventListener("click", () => room.suspended.set(false), { once: true });
+	document.addEventListener("keydown", () => room.suspended.set(false), { once: true });
+
 	return (
-		<>
+		<div>
 			{canvas}
-			<Me connection={connection} name="me" />
-		</>
+			<Controls room={room} camera={camera} screen={screen} />
+		</div>
 	);
 }
 
@@ -53,3 +78,10 @@ if (!hang) {
 }
 
 render(() => <Hang />, hang);
+
+const support = document.getElementById("support");
+if (!support) {
+	throw new Error("No support element found");
+}
+
+render(() => <Support.Modal />, support);
