@@ -1,0 +1,167 @@
+import { Signals } from "@kixelated/signals"
+import { Watch } from "@kixelated/hang"
+import { Bounds } from "./bounds"
+
+export class Video {
+	// We don't use the Video renderer that comes with hang because it assumes a single video source.
+	// So we use the Video class directly to get individual frames.
+	watch: Watch.Video
+
+	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
+	transition = 0;
+
+	avatar: HTMLImageElement
+	name: string
+
+	// The video frame to render, if transition > 0.
+	frame?: VideoFrame
+
+	#signals = new Signals();
+
+	constructor(watch: Watch.Video, name: string) {
+		this.watch = watch
+
+		this.avatar = new Image()
+		this.avatar.src = "/avatar.png"
+
+		this.name = name
+	}
+
+	tick(now: DOMHighResTimeStamp) {
+		const { frame } = this.watch.get(now) ?? {}
+		this.frame = frame
+
+		const active = this.watch.selected.peek()
+		if (frame && active) {
+			this.transition = Math.min(this.transition + 0.05, 1)
+		} else {
+			this.transition = Math.max(this.transition - 0.05, 0)
+		}
+	}
+
+	// Try to avoid any mutations in this function; do it in tick instead.
+	render(
+		ctx: CanvasRenderingContext2D,
+		bounds: Bounds,
+		scale: number,
+		modifiers?: {
+			dragging?: boolean
+			hovering?: boolean
+		}) {
+		ctx.save()
+
+		ctx.translate(bounds.position.x, bounds.position.y)
+		ctx.fillStyle = "#000"
+
+		// Create a rounded rectangle path
+		const radius = 8 * scale
+		const w = bounds.size.x
+		const h = bounds.size.y
+
+		ctx.beginPath()
+		ctx.moveTo(radius, 0)
+		ctx.lineTo(w - radius, 0)
+		ctx.quadraticCurveTo(w, 0, w, radius)
+		ctx.lineTo(w, h - radius)
+		ctx.quadraticCurveTo(w, h, w - radius, h)
+		ctx.lineTo(radius, h)
+		ctx.quadraticCurveTo(0, h, 0, h - radius)
+		ctx.lineTo(0, radius)
+		ctx.quadraticCurveTo(0, 0, radius, 0)
+		ctx.closePath()
+
+		// Clip and draw the image
+		ctx.clip()
+
+		// Apply an opacity to the image.
+		if (modifiers?.dragging) {
+			ctx.globalAlpha *= 0.7
+		}
+
+		if (this.frame && this.transition > 0) {
+			ctx.save()
+			ctx.globalAlpha *= this.transition
+
+			// Compute grayscale level based on how late the frame is.
+			/*
+			const spinner = Math.min(Math.max((lag ?? 0 - 2000) / (5000 - 2000), 0), 1)
+			if (spinner > 0) {
+				ctx.filter = `grayscale(${spinner})`
+			}
+				*/
+
+			ctx.imageSmoothingEnabled = true
+			ctx.drawImage(this.frame, 0, 0, bounds.size.x, bounds.size.y)
+			ctx.restore()
+
+			/*
+			if (spinner > 0) {
+				const spinnerSize = 32 * this.scale
+				const spinnerX = bounds.size.x / 2 - spinnerSize / 2
+				const spinnerY = bounds.size.y / 2 - spinnerSize / 2
+				const angle = ((now % 1000) / 1000) * 2 * Math.PI
+
+				ctx.save()
+				ctx.translate(spinnerX + spinnerSize / 2, spinnerY + spinnerSize / 2)
+				ctx.rotate(angle)
+
+				ctx.beginPath()
+				ctx.arc(0, 0, spinnerSize / 2 - 2, 0, Math.PI * 1.5) // crude 3/4 arc
+				ctx.lineWidth = 4 * this.scale
+				ctx.strokeStyle = `hsla(290, 80%, 40%, ${spinner})`
+				ctx.stroke()
+
+				ctx.restore()
+			}
+				*/
+		}
+
+		if (this.transition < 1) {
+			ctx.save()
+			ctx.globalAlpha *= 1 - this.transition
+
+			if (this.avatar.complete) {
+				ctx.drawImage(this.avatar, 0, 0, bounds.size.x, bounds.size.y)
+			} else {
+				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y)
+			}
+
+			ctx.restore()
+		}
+
+		//if (modifiers.hovering) {
+		//ctx.lineWidth = 2 * this.scale;
+		//ctx.strokeStyle = "white";
+		//ctx.strokeRect(0, 0, bounds.size.x, bounds.size.y);
+		//}
+
+		ctx.font = `${24 * scale}px sans-serif`
+		ctx.lineWidth = 3 * scale
+		ctx.strokeStyle = "black"
+		ctx.strokeText(this.name ?? "", 12 * scale, 32 * scale)
+
+		ctx.fillStyle = "white"
+		ctx.fillText(this.name ?? "", 12 * scale, 32 * scale)
+
+		ctx.restore()
+
+		// Draw target for debugging
+		/*
+		ctx.beginPath();
+		ctx.arc(
+			this.targetPosition.x * ctx.canvas.width,
+			this.targetPosition.y * ctx.canvas.height,
+			4 * this.scale,
+			0,
+			2 * Math.PI,
+		);
+		ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+		ctx.fill();
+		*/
+	}
+
+	close() {
+		this.#signals.close()
+		this.watch.close()
+	}
+}

@@ -3,18 +3,14 @@ import { Watch } from "@kixelated/hang"
 
 import { Bounds } from "./bounds"
 import { Vector } from "./vector"
+import { Audio } from "./audio"
+import { Video } from "./video"
 
 export class Broadcast {
 	watch: Watch.Broadcast
-	name: string
 
-	audio: Watch.Audio
-	audioPanner?: StereoPannerNode
-	audioLeft?: AnalyserNode
-	audioRight?: AnalyserNode
-
-	// We don't use the Video renderer that comes with hang because it's too simple.
-	video: Watch.VideoSource
+	audio: Audio
+	video: Video
 
 	bounds: Bounds
 	scale = 1.0; // 1 is 100%
@@ -24,223 +20,90 @@ export class Broadcast {
 	targetScale = 1.0; // 1 is 100%
 	targetSize: Vector // in pixels
 
-	// 1 when a video frame is fully rendered, 0 when it's not.
-	fade = 0;
+	// 1 when the broadcaster is online, 0 when they're offline.
+	online = 1;
+
+	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
+	transition = 0;
+
+	avatar?: HTMLImageElement
 
 	#signals = new Signals();
 
-	constructor(watch: Watch.Broadcast, name: string) {
+	constructor(watch: Watch.Broadcast) {
 		this.watch = watch
-		this.name = name
 
-		this.video = this.watch.video
-		this.audio = new Watch.Audio(this.watch.audio, { paused: false })
+		this.avatar = new Image()
+		this.avatar.src = "/avatar.png"
+
+		this.video = new Video(watch.video, watch.path.peek())
+		this.audio = new Audio(watch.audio)
 
 		this.targetSize = Vector.create(128, 128)
 		this.bounds = new Bounds(Vector.create(0, 0), this.targetSize)
-
-		this.#signals.effect(() => this.#setupAudio())
 	}
 
-	#setupAudio() {
-		const audio = this.audio.context.get()
-		if (!audio) return
+	tick(now: DOMHighResTimeStamp, canvas: Bounds, scale: number) {
+		this.video.tick(now)
 
-		const { context, gain } = audio
+		this.scale += (this.targetScale - this.scale) * 0.1
+		const targetSize = this.targetSize.mult(this.scale * scale)
 
-		if (gain.channelCount >= 2) {
-			this.audioPanner = new StereoPannerNode(context, {
-				channelCount: gain.channelCount,
-			})
-			const splitter = new ChannelSplitterNode(context, {
-				channelCount: gain.channelCount,
-				numberOfOutputs: 2,
-			})
+		// Slowly move from the actual size to the target size
+		this.bounds.size.x += (targetSize.x - this.bounds.size.x) * 0.1
+		this.bounds.size.y += (targetSize.y - this.bounds.size.y) * 0.1
 
-			this.audioLeft = new AnalyserNode(context, { fftSize: 256 })
-			this.audioRight = new AnalyserNode(context, { fftSize: 256 })
+		// Slowly slow down the velocity.
+		this.velocity = this.velocity.mult(0.5)
 
-			splitter.connect(this.audioLeft, 0)
-			splitter.connect(this.audioRight, 1)
+		// Guide the body towards the target position with a bit of force.
+		const target = Vector.create(
+			this.targetPosition.x * canvas.size.x,
+			this.targetPosition.y * canvas.size.y,
+		)
 
-			gain.connect(this.audioPanner)
-			this.audioPanner.connect(splitter)
-			this.audioPanner.connect(context.destination)
-		} else {
-			this.audioPanner = undefined
-			this.audioLeft = new AnalyserNode(context, { fftSize: 256 })
-			this.audioRight = this.audioLeft
+		const middle = this.bounds.middle()
+		const force = target.sub(middle)
+		this.velocity = this.velocity.add(force)
 
-			gain.connect(this.audioLeft)
-			gain.connect(context.destination) // output to the speakers
+		// Bounce off the edges of the canvas.
+		/*
+		const left = this.bounds.position.x;
+		const right = this.bounds.position.x + this.bounds.size.x;
+		const top = this.bounds.position.y;
+		const bottom = this.bounds.position.y + this.bounds.size.y;
+
+		if (left < 0) {
+			this.velocity.x += -left;
+		} else if (right > canvas.size.x) {
+			this.velocity.x += canvas.size.x - right;
 		}
 
-		return () => {
-			this.audioLeft?.disconnect()
-			this.audioRight?.disconnect()
-			this.audioPanner?.disconnect()
+		if (top < 0) {
+			this.velocity.y += -top;
+		} else if (bottom > canvas.size.y) {
+			this.velocity.y += canvas.size.y - bottom;
 		}
-	}
+		*/
 
-	renderAudio(ctx: CanvasRenderingContext2D, _now: DOMHighResTimeStamp) {
-		if (!this.audioLeft || !this.audioRight) {
-			return
-		}
-
-		const bounds = this.bounds
-
-		ctx.translate(bounds.position.x, bounds.position.y)
-
-		// Round down the height to the nearest power of 2.
-		const bars = Math.max(2 ** Math.floor(Math.log2(bounds.size.y / 4)), 32)
-		const barHeight = bounds.size.y / bars
-		const barData = new Uint8Array(bars) // TODO reuse a buffer.
-		const barScale = 8 * this.scale
-
-		this.audioLeft.fftSize = bars
-		this.audioLeft.getByteFrequencyData(barData)
-
-		for (let i = 0; i < bars / 2; i++) {
-			const power = barData[i] / 255
-			const hue = 2 ** power * 100 + 135
-			const barWidth = 4 ** power * barScale
-
-			ctx.fillStyle = `hsla(${hue}, 80%, 40%, ${power})`
-			ctx.fillRect(-barWidth, bounds.size.y / 2 - (i + 1) * barHeight, barWidth, barHeight + 0.1)
-			ctx.fillRect(-barWidth, bounds.size.y / 2 + i * barHeight, barWidth, barHeight + 0.1)
-		}
-
-		this.audioRight.fftSize = bars
-		this.audioRight.getByteFrequencyData(barData)
-
-		for (let i = 0; i < bars / 2; i++) {
-			const power = barData[i] / 255
-			const hue = 2 ** power * 100 + 135
-			const barWidth = 4 ** power * barScale
-
-			ctx.fillStyle = `hsla(${hue}, 80%, 40%, ${power})`
-			ctx.fillRect(bounds.size.x, bounds.size.y / 2 - (i + 1) * barHeight, barWidth, barHeight + 0.1)
-			ctx.fillRect(bounds.size.x, bounds.size.y / 2 + i * barHeight, barWidth, barHeight + 0.1)
-		}
-	}
-
-	renderVideo(
-		ctx: CanvasRenderingContext2D,
-		now: DOMHighResTimeStamp,
-		modifiers?: { dragging?: boolean; hovering?: boolean },
-	) {
-		const bounds = this.bounds
-		ctx.save()
-
-		ctx.translate(bounds.position.x, bounds.position.y)
-		ctx.fillStyle = "#000"
-
-		// Create a rounded rectangle path
-		const radius = 8 * this.scale
-		const w = bounds.size.x
-		const h = bounds.size.y
-
-		ctx.beginPath()
-		ctx.moveTo(radius, 0)
-		ctx.lineTo(w - radius, 0)
-		ctx.quadraticCurveTo(w, 0, w, radius)
-		ctx.lineTo(w, h - radius)
-		ctx.quadraticCurveTo(w, h, w - radius, h)
-		ctx.lineTo(radius, h)
-		ctx.quadraticCurveTo(0, h, 0, h - radius)
-		ctx.lineTo(0, radius)
-		ctx.quadraticCurveTo(0, 0, radius, 0)
-		ctx.closePath()
-
-		// Clip and draw the image
-		ctx.clip()
-
-		// Apply an opacity to the image.
-		if (modifiers?.dragging) {
-			ctx.globalAlpha = 0.7
-		}
-
-		const { frame, lag } = this.video.get(now) ?? {}
+		// Update the target size based on if we're showing a video frame or an avatar.
+		const active = this.video.watch.selected.peek()
 
 		// Check if the frame size has changed.
-		if (frame && this.video.selected.peek()) {
-			this.targetSize = Vector.create(frame.displayWidth, frame.displayHeight)
-			this.fade = Math.min(this.fade + 0.05, 1)
-		} else {
-			this.targetSize = Vector.create(128, 128)
-			this.fade = Math.max(this.fade - 0.01, 0)
+		if (active && this.video.frame) {
+			this.targetSize = Vector.create(this.video.frame.displayWidth, this.video.frame.displayHeight)
+		} else if (this.video.avatar.complete) {
+			this.targetSize = Vector.create(this.video.avatar.width, this.video.avatar.height)
 		}
+	}
 
-		if (frame) {
-			ctx.save()
-			ctx.globalAlpha *= this.fade
+	// Apply velocity to the bounds.
+	update(canvas: Bounds) {
+		this.bounds = this.bounds.add(this.velocity.div(50))
 
-			// Compute grayscale level based on how late the frame is.
-			const spinner = Math.min(Math.max((lag ?? 0 - 2000) / (5000 - 2000), 0), 1)
-			if (spinner > 0) {
-				ctx.filter = `grayscale(${spinner})`
-			}
-
-			ctx.imageSmoothingEnabled = true
-			ctx.drawImage(frame, 0, 0, bounds.size.x, bounds.size.y)
-			ctx.restore()
-
-			if (spinner > 0) {
-				const spinnerSize = 32 * this.scale
-				const spinnerX = bounds.size.x / 2 - spinnerSize / 2
-				const spinnerY = bounds.size.y / 2 - spinnerSize / 2
-				const angle = ((now % 1000) / 1000) * 2 * Math.PI
-
-				ctx.save()
-				ctx.translate(spinnerX + spinnerSize / 2, spinnerY + spinnerSize / 2)
-				ctx.rotate(angle)
-
-				ctx.beginPath()
-				ctx.arc(0, 0, spinnerSize / 2 - 2, 0, Math.PI * 1.5) // crude 3/4 arc
-				ctx.lineWidth = 4 * this.scale
-				ctx.strokeStyle = `hsla(290, 80%, 40%, ${spinner})`
-				ctx.stroke()
-
-				ctx.restore()
-			}
-		}
-
-		if (this.fade < 1) {
-			ctx.save()
-			ctx.globalAlpha *= 1 - this.fade
-			ctx.fillRect(0, 0, bounds.size.x, bounds.size.y)
-			ctx.restore()
-		}
-
-		//if (modifiers.hovering) {
-		//ctx.lineWidth = 2 * this.scale;
-		//ctx.strokeStyle = "white";
-		//ctx.strokeRect(0, 0, bounds.size.x, bounds.size.y);
-		//}
-
-		ctx.font = `${24 * this.scale}px sans-serif`
-		ctx.lineWidth = 3 * this.scale
-		ctx.strokeStyle = "black"
-		ctx.strokeText(this.name, 12 * this.scale, 32 * this.scale)
-
-		ctx.fillStyle = "white"
-		ctx.fillText(this.name, 12 * this.scale, 32 * this.scale)
-
-		ctx.restore()
-
-		// Draw target for debugging
-		/*
-		ctx.beginPath();
-		ctx.arc(
-			this.targetPosition.x * ctx.canvas.width,
-			this.targetPosition.y * ctx.canvas.height,
-			4 * this.scale,
-			0,
-			2 * Math.PI,
-		);
-		ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-		ctx.fill();
-		*/
+		// Pan the audio left or right based on the position.
+		const pan = (2 * this.bounds.middle().x) / canvas.size.x - 1
+		this.audio.pan.set(Math.min(Math.max(pan, -1), 1))
 	}
 
 	rip() {
