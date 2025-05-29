@@ -1,24 +1,37 @@
-import { Signals } from "@kixelated/signals"
-import { Watch } from "@kixelated/hang"
+import { Signal, Signals } from "@kixelated/signals"
 
-import { Bounds } from "./bounds"
-import { Vector } from "./vector"
-import { Audio } from "./audio"
-import { Video } from "./video"
+import { Bounds, Vector } from "./geometry"
+import { Audio, AudioSource } from "./audio"
+import { Video, VideoSource } from "./video"
+import { Catalog } from "@kixelated/hang"
+
+export interface BroadcastSource {
+	audio: AudioSource
+	video: VideoSource
+
+	// We can both get and set the location (reactive)
+	location: {
+		get: () => Catalog.Position | undefined
+		set: (position: Catalog.Position) => void
+	},
+	enabled: Signal<boolean>
+
+	close: () => void
+}
 
 export class Broadcast {
-	watch: Watch.Broadcast
+	source: BroadcastSource
+	viewport: Signal<Bounds>
 
 	audio: Audio
 	video: Video
 
-	bounds: Bounds
+	bounds: Bounds // -canvas/2 to +canvas/2
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
-	targetPosition = Vector.create(0.5, 0.5); // from 0 to 1 because the math is easier
+	targetPosition = Vector.create(0, 0); // -0.5 to 0.5
 	targetScale = 1.0; // 1 is 100%
-	targetSize: Vector // in pixels
 
 	// 1 when the broadcaster is online, 0 when they're offline.
 	online = 1;
@@ -30,33 +43,54 @@ export class Broadcast {
 
 	#signals = new Signals();
 
-	constructor(watch: Watch.Broadcast) {
-		this.watch = watch
+	constructor(source: BroadcastSource, viewport: Signal<Bounds>) {
+		this.source = source
+		this.viewport = viewport
 
 		this.avatar = new Image()
 		this.avatar.src = "/avatar.png"
 
-		this.video = new Video(watch.video, watch.path.peek())
-		this.audio = new Audio(watch.audio)
+		this.video = new Video(source.video)
+		this.audio = new Audio(source.audio)
 
-		this.targetSize = Vector.create(128, 128)
-		this.bounds = new Bounds(Vector.create(0, 0), this.targetSize)
+		// Start them at the center of the screen with a tiiiiny bit of variance.
+		const start = () => (Math.random() - 0.5) / 2
+		this.targetPosition = Vector.create(start(), start())
+
+		const canvas = this.viewport.peek()
+
+		// TODO This seems kinda buggy?
+		const startPosition = this.targetPosition
+			.normalize()
+			.mult(2 * Math.sqrt(canvas.size.x ** 2 + canvas.size.y ** 2))
+
+		this.bounds = new Bounds(startPosition, this.video.targetSize)
 
 		// Load the broadcaster's position from the network.
 		this.#signals.effect(() => {
-			const location = this.watch.location.current.get()
+			if (!this.source.enabled.get()) {
+				// Change the target position to somewhere outside the screen.
+				this.targetPosition = this.targetPosition
+					.normalize()
+					.mult(2)
+
+				return
+			}
+
+			// Update the target position from the network.
+			const location = this.source.location.get()
 			if (!location) return
 
-			// Convert from -1 to 1 to 0 to 1.
-			this.targetPosition = Vector.create(location.x / 2 + 0.5, location.y / 2 + 0.5)
+			this.targetPosition = Vector.create(location.x, location.y)
 		})
 	}
 
-	tick(now: DOMHighResTimeStamp, canvas: Bounds, scale: number) {
+	// TODO Also make scale a signal
+	tick(now: DOMHighResTimeStamp, scale: number) {
 		this.video.tick(now)
 
 		this.scale += (this.targetScale - this.scale) * 0.1
-		const targetSize = this.targetSize.mult(this.scale * scale)
+		const targetSize = this.video.targetSize.mult(this.scale * scale)
 
 		// Slowly move from the actual size to the target size
 		this.bounds.size.x += (targetSize.x - this.bounds.size.x) * 0.1
@@ -65,12 +99,13 @@ export class Broadcast {
 		// Slowly slow down the velocity.
 		this.velocity = this.velocity.mult(0.5)
 
+		const viewport = this.viewport.peek()
+
 		// Guide the body towards the target position with a bit of force.
 		const target = Vector.create(
-			this.targetPosition.x * canvas.size.x,
-			this.targetPosition.y * canvas.size.y,
-		)
-
+			this.targetPosition.x * viewport.size.x,
+			this.targetPosition.y * viewport.size.y,
+		).mult(2)
 		const middle = this.bounds.middle()
 		const force = target.sub(middle)
 		this.velocity = this.velocity.add(force)
@@ -94,34 +129,21 @@ export class Broadcast {
 			this.velocity.y += canvas.size.y - bottom;
 		}
 		*/
-
-		// Update the target size based on if we're showing a video frame or an avatar.
-		const active = this.video.watch.selected.peek()
-
-		// Check if the frame size has changed.
-		if (active && this.video.frame) {
-			this.targetSize = Vector.create(this.video.frame.displayWidth, this.video.frame.displayHeight)
-		} else if (this.video.avatar.complete) {
-			this.targetSize = Vector.create(this.video.avatar.width, this.video.avatar.height)
-		}
 	}
 
 	// Apply velocity to the bounds.
-	update(canvas: Bounds) {
+	move() {
 		this.bounds = this.bounds.add(this.velocity.div(50))
+		const viewport = this.viewport.peek()
 
 		// Pan the audio left or right based on the position.
-		const pan = (2 * this.bounds.middle().x) / canvas.size.x - 1
+		const pan = this.bounds.middle().x / viewport.size.x
 		this.audio.pan.set(Math.min(Math.max(pan, -1), 1))
-	}
-
-	rip() {
-		this.targetPosition = Vector.create(Math.random(), Math.random())
 	}
 
 	close() {
 		this.#signals.close()
-		this.watch.close()
+		this.source.close()
 		this.video.close()
 		this.audio.close()
 	}

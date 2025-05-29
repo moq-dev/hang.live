@@ -1,8 +1,9 @@
-import { Connection, Watch } from "@kixelated/hang"
-import { Signal, Signals, signal } from "@kixelated/signals"
-import { Broadcast } from "./broadcast"
-import { Vector } from "./vector"
-import { Bounds } from "./bounds"
+import { Connection, Publish, Watch } from "@kixelated/hang"
+import { Signal, Signals, cleanup, signal } from "@kixelated/signals"
+import { Bounds, Vector } from "./geometry"
+import { Broadcast, BroadcastSource } from "./broadcast"
+
+import * as Moq from "@kixelated/moq"
 
 const PADDING = 64
 
@@ -21,10 +22,14 @@ export class Room {
 	// We use the insertion order to determine the z-index.
 	#broadcasts = new Map<string, Broadcast>();
 
+	// Remote broadcasts are stored separately so we treat them differently.
+	#remotes = new Map<string, Watch.Broadcast>();
+
 	// The broadcasts that have been closed and are fading away.
 	#rip: Broadcast[] = [];
 
 	canvas: HTMLCanvasElement
+	viewport: Signal<Bounds> // The canvas size, from -width/2 to +width/2, -height/2 to +height/2
 
 	#ctx: CanvasRenderingContext2D
 	#animation: number | undefined
@@ -50,14 +55,67 @@ export class Room {
 	// This is used to restore the volume on unmute.
 	#unmuteVolume = 0.5
 
+	// The local broadcasts.
+	// The camera/avatar is always published while the screen share is conditionally published.
+	camera: Publish.Broadcast
+	screen: Publish.Broadcast
+
 	#signals = new Signals();
 
-	constructor(connection: Connection, canvas: HTMLCanvasElement, props?: RoomProps) {
+	constructor(connection: Connection, canvas: HTMLCanvasElement, camera: Publish.Broadcast, screen: Publish.Broadcast, props?: RoomProps) {
 		this.connection = connection
 		this.canvas = canvas
 		this.muted = signal(props?.muted ?? false)
 		this.visible = signal(props?.visible ?? true)
 		this.volume = signal(props?.volume ?? 0.5)
+		this.viewport = signal(new Bounds(Vector.create(-canvas.width / 2, -canvas.height / 2), Vector.create(canvas.width / 2, canvas.height / 2)))
+
+		this.camera = camera
+		this.screen = screen
+
+		// Register any window/document level events.
+		const resize = () => {
+			this.canvas.width = window.devicePixelRatio * window.innerWidth
+			this.canvas.height = window.devicePixelRatio * window.innerHeight
+			this.viewport.set(new Bounds(Vector.create(-this.canvas.width / 2, -this.canvas.height / 2), Vector.create(this.canvas.width / 2, this.canvas.height / 2)))
+		}
+
+		const visible = () => {
+			this.visible.set(document.visibilityState !== "hidden")
+		}
+
+		resize()
+		visible()
+
+		window.addEventListener("resize", resize)
+		document.addEventListener("visibilitychange", visible)
+
+		this.#signals.cleanup(() => {
+			window.removeEventListener("resize", resize)
+			document.removeEventListener("visibilitychange", visible)
+		})
+
+		this.#broadcastStart(camera.path.peek(), {
+			audio: camera.audio,
+			video: camera.video,
+			enabled: camera.enabled,
+			location: {
+				get: () => camera.location.current.get(),
+				set: (position) => camera.location.current.set(position),
+			},
+			close: () => camera.close(),
+		})
+
+		this.#broadcastStart(screen.path.peek(), {
+			audio: screen.audio,
+			video: screen.video,
+			enabled: screen.enabled,
+			location: {
+				get: () => screen.location.current.get(),
+				set: (position) => screen.location.current.set(position),
+			},
+			close: () => screen.close(),
+		})
 
 		// Check if the user needs to click the page to unmute the audio.
 		// TODO do this in a UI element.
@@ -75,39 +133,41 @@ export class Room {
 
 		this.#ctx = ctx
 
-		this.canvas.addEventListener("resize", () => { })
+		const mousePosition = (e: MouseEvent) => {
+			const rect = this.canvas.getBoundingClientRect()
+			return Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio).sub(Vector.create(this.canvas.width / 2, this.canvas.height / 2))
+		}
 
 		this.canvas.addEventListener("mousedown", (e) => {
-			const rect = this.canvas.getBoundingClientRect()
-			const mouse = Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio)
+			const mouse = mousePosition(e)
 
-			this.#dragging = this.#broadcastAt(mouse)
-			if (!this.#dragging) return
+			const at = this.#broadcastAt(mouse)
+			this.#dragging = at?.broadcast
+
+			if (!at) return
 
 			// Reinsert to update the z-index.
-			const name = this.#dragging.watch.path.peek()
-			if (name) {
-				this.#broadcasts.delete(name)
-				this.#broadcasts.set(name, this.#dragging)
-			}
+			this.#broadcasts.delete(at.name)
+			this.#broadcasts.set(at.name, at.broadcast)
 
 			this.canvas.style.cursor = "grabbing"
 		})
 
 		this.canvas.addEventListener("mousemove", (e) => {
-			const rect = this.canvas.getBoundingClientRect()
-			const mouse = Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio)
+			const mouse = mousePosition(e)
 
 			if (this.#dragging) {
-				this.#dragging.targetPosition = Vector.create(
-					mouse.x / this.canvas.width,
-					mouse.y / this.canvas.height,
-				)
+				this.#dragging.source.location.set({
+					x: mouse.x / this.canvas.width,
+					y: mouse.y / this.canvas.height,
+				})
 			} else {
-				this.#hovering = this.#broadcastAt(mouse)
-				if (this.#hovering) {
+				const at = this.#broadcastAt(mouse)
+				if (at) {
+					this.#hovering = at.broadcast
 					this.canvas.style.cursor = "grab"
 				} else {
+					this.#hovering = undefined
 					this.canvas.style.cursor = "default"
 				}
 			}
@@ -136,15 +196,13 @@ export class Room {
 
 				let broadcast = this.#dragging
 				if (!broadcast) {
-					const rect = this.canvas.getBoundingClientRect()
-					const mouse = Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(
-						window.devicePixelRatio,
-					)
+					const mouse = mousePosition(e)
 
-					broadcast = this.#broadcastAt(mouse)
-					if (!broadcast) return
+					const at = this.#broadcastAt(mouse)
+					if (!at) return
 
-					this.#hovering = broadcast
+					this.#hovering = at.broadcast
+					broadcast = at.broadcast
 				}
 
 				const scale = e.deltaY * 0.001
@@ -159,6 +217,10 @@ export class Room {
 			{ passive: false },
 		)
 
+		// Determine when the user has interacted with the page so we can potentially unmute audio.
+		document.addEventListener("click", () => this.suspended.set(false), { once: true })
+		document.addEventListener("keydown", () => this.suspended.set(false), { once: true })
+
 		// Only render the canvas when it's visible.
 		this.#signals.effect(() => {
 			const visible = this.visible.get()
@@ -168,12 +230,12 @@ export class Room {
 			return () => cancelAnimationFrame(this.#animation ?? 0)
 		})
 
-		// Apply the visible signal to the broadcasts.
+		// Apply the visible signal to remote broadcasts.
 		this.#signals.effect(() => {
 			const visible = this.visible.get()
 
-			for (const broadcast of this.#broadcasts.values()) {
-				broadcast.watch.video.enabled.set(visible)
+			for (const broadcast of this.#remotes.values()) {
+				broadcast.video.enabled?.set(visible)
 			}
 		})
 
@@ -181,16 +243,16 @@ export class Room {
 		// NOTE: We don't pause audio so we still get visualizations.
 		this.#signals.effect(() => {
 			const muted = this.muted.get()
-			for (const broadcast of this.#broadcasts.values()) {
-				broadcast.audio.muted.set(muted)
+			for (const broadcast of this.#remotes.values()) {
+				broadcast.audio.enabled.set(muted)
 			}
 		})
 
 		// Don't download audio if the AudioContext is suspended.
 		this.#signals.effect(() => {
 			const suspended = this.suspended.get()
-			for (const broadcast of this.#broadcasts.values()) {
-				broadcast.audio.source.enabled.set(!suspended)
+			for (const broadcast of this.#remotes.values()) {
+				broadcast.audio.enabled.set(!suspended)
 			}
 		})
 
@@ -218,103 +280,117 @@ export class Room {
 		const connection = this.connection.established.get()
 		if (!connection) return
 
-		const announced = connection.announced();
+		const announced = connection.announced()
+		cleanup(() => announced.close())
 
-		(async () => {
-			for (; ;) {
-				const update = await announced.next()
-
-				// We're donezo.
-				if (!update) break
-
-				if (update.active) {
-					this.#startBroadcast(update.path)
-				} else {
-					this.#stopBroadcast(update.path)
-				}
-			}
-
-			for (const broadcast of this.#broadcasts.values()) {
-				broadcast.close()
-			}
-
-			this.#broadcasts.clear()
-		})()
-
-		return () => {
-			announced.close()
-		}
+		void this.#runRemotes(announced)
 	}
 
-	#broadcastAt(point: Vector) {
+	async #runRemotes(announced: Moq.AnnouncedConsumer) {
+		for (; ;) {
+			const update = await announced.next()
+
+			// We're donezo.
+			if (!update) break
+
+			if (update.path === this.camera.path.peek() || update.path === this.screen.path.peek()) {
+				continue
+			}
+
+			const existing = this.#remotes.get(update.path)
+			this.#remotes.delete(update.path)
+
+			if (update.active) {
+				const watch = new Watch.Broadcast(this.connection, {
+					enabled: true,
+					path: update.path,
+					reload: false,
+					// Download video unless the window is hidden.
+					video: { enabled: this.visible.peek() },
+					// Download audio unless the AudioContext is suspended.
+					audio: { enabled: !this.suspended.peek() },
+					// Download the location of the broadcaster.
+					location: { enabled: true },
+					// Request feedback from the broadcaster (as a viewer).
+					feedback: { enabled: true },
+				})
+
+
+				// Request the position we should use from this remote broadcast.
+				const camera = watch.feedback.location(this.camera.path.peek())
+				this.#signals.effect(() => {
+					const position = camera.get()
+					if (position) {
+						this.camera.location.current.set(position)
+					}
+				})
+
+				const screen = watch.feedback.location(this.screen.path.peek())
+				this.#signals.effect(() => {
+					const position = screen.get()
+					if (position) {
+						this.screen.location.current.set(position)
+					}
+				})
+
+				this.#remotes.set(update.path, watch)
+
+				const feedback = this.camera.feedback.location(update.path)
+
+				this.#broadcastStart(update.path, {
+					audio: watch.audio,
+					video: watch.video,
+					enabled: watch.enabled,
+					location: {
+						get: () => watch.location.current.get(),
+						set: (position) => feedback.append(position),
+					},
+					close: () => {
+						feedback.close()
+						watch.close()
+					},
+				})
+			} else if (existing) {
+				this.#broadcastStop(update.path)
+			}
+		}
+
+		for (const broadcast of this.#remotes.values()) {
+			broadcast.close()
+		}
+
+		this.#remotes.clear()
+	}
+
+	#broadcastAt(point: Vector): { name: string; broadcast: Broadcast } | undefined {
 		// We need to iterate in reverse order to respect the z-index.
 		// TODO: Short-circuit on the first result, but that requires a reverse iterator.
-		let result: Broadcast | undefined
+		let result: { name: string; broadcast: Broadcast } | undefined
 
-		for (const broadcast of this.#broadcasts.values()) {
+		for (const [name, broadcast] of this.#broadcasts) {
 			if (broadcast.bounds.contains(point)) {
-				result = broadcast
+				result = { name, broadcast }
 			}
 		}
 
 		return result
 	}
 
-	#startBroadcast(name: string) {
-		// Start them at the center of the screen with a tiiiiny bit of variance.
-		const targetPosition = Vector.create(0.5 + ((Math.random() - 0.5) ** 4), 0.5 + ((Math.random() - 0.5) ** 4))
-
-		// We haven't received their initial position yet, so we'll just put them somewhere offscreen.
-		// This gives us a bit of time to start loading stuff and looks cool.
-		const offset = Vector.create(targetPosition.x - 0.5, targetPosition.y - 0.5)
-			.normalize()
-			.mult(Math.sqrt(this.canvas.width ** 2 + this.canvas.height ** 2))
-
-		// Follow the unit vector of the target position and go outside the screen.
-		const startPosition = Vector.create(
-			targetPosition.x * this.canvas.width,
-			targetPosition.y * this.canvas.height,
-		).add(offset)
-
-		const watch = new Watch.Broadcast(this.connection, {
-			path: name,
-			reload: false,
-			// Download video unless the window is hidden.
-			video: { enabled: this.visible.peek() },
-			// Download audio unless the AudioContext is suspended.
-			audio: { enabled: !this.suspended.peek() },
-			location: { enabled: true }
-		})
-
-		const broadcast = new Broadcast(watch)
-		broadcast.targetPosition = targetPosition
-		broadcast.bounds.position = startPosition
-
-		// This should never happen, but just in case.
-		const old = this.#broadcasts.get(name)
-		if (old) {
-			console.warn(`Broadcast already exists: ${name}`)
-			old.close()
-		}
-
-		this.#broadcasts.set(name, broadcast)
+	#broadcastStart(path: string, source: BroadcastSource) {
+		const broadcast = new Broadcast(source, this.viewport)
+		this.#broadcasts.set(path, broadcast)
 	}
 
-	#stopBroadcast(path: string) {
+	#broadcastStop(path: string) {
 		const broadcast = this.#broadcasts.get(path)
+		if (!broadcast) throw new Error(`Broadcast not found: ${path}`)
 
-		// TODO Fix the relay so it doesn't do this.
-		if (!broadcast) {
-			console.warn(`Broadcast not found: ${path}`)
-			return
-		}
+		// Stop downloading it.
+		broadcast.source.enabled.set(false)
 
+		// Move it from the main list to the rip list.
 		this.#broadcasts.delete(path)
 		this.#rip.push(broadcast)
-
-		// Follow the unit vector of the target position and go outside the screen.
-		const half = Vector.create(0.5, 0.5)
-		broadcast.targetPosition = broadcast.targetPosition.sub(half).normalize().mult(2).add(half)
 
 		// Slowly fade out the offline broadcast.
 		const fade = () => {
@@ -322,6 +398,7 @@ export class Room {
 
 			if (broadcast.online <= 0) {
 				this.#rip.splice(this.#rip.indexOf(broadcast), 1)
+				broadcast.close()
 			} else {
 				requestAnimationFrame(fade)
 			}
@@ -333,16 +410,14 @@ export class Room {
 	#tick(now: DOMHighResTimeStamp) {
 		this.#updateScale()
 
-		const bounds = new Bounds(Vector.create(0, 0), Vector.create(this.canvas.width, this.canvas.height))
-
 		for (const broadcast of this.#rip) {
-			broadcast.tick(now, bounds, this.#scale)
-			broadcast.update(bounds)
+			broadcast.tick(now, this.#scale)
+			broadcast.move()
 		}
 
 		const broadcasts = Array.from(this.#broadcasts.values())
 		for (const broadcast of broadcasts) {
-			broadcast.tick(now, bounds, this.#scale)
+			broadcast.tick(now, this.#scale)
 		}
 
 		// Check for collisions.
@@ -371,19 +446,19 @@ export class Room {
 				b.velocity = b.velocity.sub(force)
 			}
 
-			const above = PADDING - a.bounds.position.y
-			const below = a.bounds.position.y + a.bounds.size.y - (this.canvas.height - PADDING)
-			const left = PADDING - a.bounds.position.x
-			const right = a.bounds.position.x + a.bounds.size.x - (this.canvas.width - PADDING)
+			const top = PADDING - a.bounds.position.y - (this.canvas.height / 2)
+			const down = a.bounds.position.y + a.bounds.size.y - (this.canvas.height / 2 - PADDING)
+			const left = PADDING - a.bounds.position.x - (this.canvas.width / 2)
+			const right = a.bounds.position.x + a.bounds.size.x - (this.canvas.width / 2 - PADDING)
 
-			if (above > 0) {
-				if (below > 0) {
+			if (top > 0) {
+				if (down > 0) {
 					// Do nothing, this element is huge.
 				} else {
-					a.velocity.y += above
+					a.velocity.y += top
 				}
-			} else if (below > 0) {
-				a.velocity.y -= below
+			} else if (down > 0) {
+				a.velocity.y -= down
 			}
 
 			if (left > 0) {
@@ -399,15 +474,15 @@ export class Room {
 
 		// Finally, apply the velocity to the position.
 		for (const broadcast of broadcasts) {
-			broadcast.update(bounds)
+			broadcast.move()
 		}
 
-		this.#render()
+		this.#render(now)
 
 		this.#animation = requestAnimationFrame(this.#tick.bind(this))
 	}
 
-	#render() {
+	#render(now: DOMHighResTimeStamp) {
 		const ctx = this.#ctx
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
@@ -420,14 +495,14 @@ export class Room {
 		for (const broadcast of this.#rip) {
 			ctx.save()
 			ctx.globalAlpha *= broadcast.online // Fade the opacity when the broadcaster is offline.
-			broadcast.video.render(ctx, broadcast.bounds, broadcast.scale)
+			broadcast.video.render(now, ctx, broadcast.bounds, broadcast.scale)
 			ctx.restore()
 		}
 
 		for (const broadcast of this.#broadcasts.values()) {
 			if (this.#dragging !== broadcast) {
 				ctx.save()
-				broadcast.video.render(ctx, broadcast.bounds, broadcast.scale, {
+				broadcast.video.render(now, ctx, broadcast.bounds, broadcast.scale, {
 					hovering: this.#hovering === broadcast,
 				})
 				ctx.restore()
@@ -438,7 +513,7 @@ export class Room {
 		if (this.#dragging) {
 			ctx.save()
 			ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-			this.#dragging.video.render(ctx, this.#dragging.bounds, this.#dragging.scale, { dragging: true })
+			this.#dragging.video.render(now, ctx, this.#dragging.bounds, this.#dragging.scale, { dragging: true })
 			ctx.restore()
 		}
 	}
@@ -448,7 +523,7 @@ export class Room {
 
 		let broadcastArea = 0
 		for (const broadcast of this.#broadcasts.values()) {
-			broadcastArea += broadcast.targetSize.x * broadcast.targetSize.y
+			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y
 		}
 
 		const fillRatio = broadcastArea / canvasArea
@@ -470,5 +545,8 @@ export class Room {
 
 		this.#rip = []
 		this.#broadcasts.clear()
+
+		this.camera.close()
+		this.screen.close()
 	}
 }
