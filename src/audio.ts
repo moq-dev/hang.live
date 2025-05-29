@@ -1,6 +1,5 @@
-import { cleanup, signal, Signal, Signals } from "@kixelated/signals"
-import { Watch } from "@kixelated/hang"
-import { Bounds } from "./bounds"
+import { cleanup, Derived, signal, Signal, Signals } from "@kixelated/signals"
+import { Bounds } from "./geometry"
 import { createEffect } from "solid-js"
 
 export type AudioProps = {
@@ -9,9 +8,16 @@ export type AudioProps = {
 	pan?: number
 }
 
+export interface AudioSource {
+	root: Derived<{ context: AudioContext; node: AudioNode } | undefined>
+	close: () => void
+
+	// Called to stop downloading when muted, but obviously we don't want to stop publishing so it's optional.
+	enabled?: Signal<boolean>
+}
+
 export class Audio {
-	// We don't use the Audio emitter that comes with hang so we can do cool audio effects.
-	source: Watch.Audio
+	source: AudioSource
 	muted: Signal<boolean>
 	volume: Signal<number>
 	pan: Signal<number>
@@ -22,7 +28,7 @@ export class Audio {
 
 	#signals = new Signals();
 
-	constructor(source: Watch.Audio, props?: AudioProps) {
+	constructor(source: AudioSource, props?: AudioProps) {
 		this.source = source
 		this.muted = signal(props?.muted ?? false)
 		this.volume = signal(props?.volume ?? 1)
@@ -107,7 +113,7 @@ export class Audio {
 			return
 		}
 
-		ctx.translate(bounds.position.x, bounds.position.y)
+		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2)
 
 		// Round down the height to the nearest power of 2.
 		const bars = Math.max(2 ** Math.floor(Math.log2(bounds.size.y / 4)), 32)

@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@kixelated/hang': link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
+  '@kixelated/moq': link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
 
 importers:
 
@@ -14,6 +15,9 @@ importers:
       '@kixelated/hang':
         specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
         version: link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
+      '@kixelated/moq':
+        specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
+        version: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
       '@kixelated/signals':
         specifier: 0.1.0
         version: 0.1.0
@@ -23,6 +27,9 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2
         version: 2.2.6
+      moq:
+        specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
+        version: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
       solid-js:
         specifier: ^1.9.6
         version: 1.9.6

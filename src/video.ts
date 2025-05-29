@@ -1,46 +1,58 @@
-import { Signals } from "@kixelated/signals"
-import { Watch } from "@kixelated/hang"
-import { Bounds } from "./bounds"
+import { Derived, Signal, Signals } from "@kixelated/signals"
+import { Bounds, Vector } from "./geometry"
+
+// Local or remote (Hang.Watch.Video) video source.
+export interface VideoSource {
+	active: Derived<boolean>
+	frame: (now: DOMHighResTimeStamp) => { frame: VideoFrame; lag: DOMHighResTimeStamp } | undefined
+	close: () => void
+
+	// Called to stop downloading when minimized, but obviously we don't want to stop publishing so it's optional.
+	enabled?: Signal<boolean>
+}
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
 	// So we use the Video class directly to get individual frames.
-	watch: Watch.Video
+	source: VideoSource
 
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
 
 	avatar: HTMLImageElement
-	name: string
 
-	// The video frame to render, if transition > 0.
-	frame?: VideoFrame
+	// The desired size of the video in pixels.
+	targetSize: Vector // in pixels
 
 	#signals = new Signals();
 
-	constructor(watch: Watch.Video, name: string) {
-		this.watch = watch
+	constructor(source: VideoSource) {
+		this.source = source
+
+		this.targetSize = Vector.create(128, 128)
 
 		this.avatar = new Image()
 		this.avatar.src = "/avatar.png"
-
-		this.name = name
 	}
 
 	tick(now: DOMHighResTimeStamp) {
-		const { frame } = this.watch.get(now) ?? {}
-		this.frame = frame
+		const active = this.source.active.peek()
+		const next = this.source.frame(now)
 
-		const active = this.watch.selected.peek()
-		if (frame && active) {
+		if (active && next) {
 			this.transition = Math.min(this.transition + 0.05, 1)
+			this.targetSize = Vector.create(next.frame.displayWidth, next.frame.displayHeight)
 		} else {
 			this.transition = Math.max(this.transition - 0.05, 0)
+			if (this.avatar.complete) {
+				this.targetSize = Vector.create(this.avatar.width, this.avatar.height)
+			}
 		}
 	}
 
 	// Try to avoid any mutations in this function; do it in tick instead.
 	render(
+		now: DOMHighResTimeStamp,
 		ctx: CanvasRenderingContext2D,
 		bounds: Bounds,
 		scale: number,
@@ -56,7 +68,7 @@ export class Video {
 		ctx.shadowOffsetX = 0
 		ctx.shadowOffsetY = 4 * scale
 
-		ctx.translate(bounds.position.x, bounds.position.y)
+		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2)
 		ctx.fillStyle = "#000"
 
 		// Create a rounded rectangle path
@@ -89,7 +101,9 @@ export class Video {
 			ctx.globalAlpha *= 0.7
 		}
 
-		if (this.frame && this.transition > 0) {
+		const next = this.source.frame(now)
+
+		if (next && this.transition > 0) {
 			ctx.save()
 			ctx.globalAlpha *= this.transition
 
@@ -102,7 +116,7 @@ export class Video {
 				*/
 
 			ctx.imageSmoothingEnabled = true
-			ctx.drawImage(this.frame, 0, 0, bounds.size.x, bounds.size.y)
+			ctx.drawImage(next.frame, 0, 0, bounds.size.x, bounds.size.y)
 			ctx.restore()
 
 			/*
@@ -146,14 +160,6 @@ export class Video {
 		//ctx.strokeRect(0, 0, bounds.size.x, bounds.size.y);
 		//}
 
-		ctx.font = `${24 * scale}px sans-serif`
-		ctx.lineWidth = 3 * scale
-		ctx.strokeStyle = "black"
-		ctx.strokeText(this.name ?? "", 12 * scale, 32 * scale)
-
-		ctx.fillStyle = "white"
-		ctx.fillText(this.name ?? "", 12 * scale, 32 * scale)
-
 		ctx.restore()
 
 		// Draw target for debugging
@@ -173,6 +179,6 @@ export class Video {
 
 	close() {
 		this.#signals.close()
-		this.watch.close()
+		this.source.close()
 	}
 }
