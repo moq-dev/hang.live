@@ -16,7 +16,7 @@ export class Broadcast {
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
-	targetPosition = Vector.create(0.5, 0.5); // in 0-1
+	targetPosition = Vector.create(0.5, 0.5); // from 0 to 1 because the math is easier
 	targetScale = 1.0; // 1 is 100%
 	targetSize: Vector // in pixels
 
@@ -41,6 +41,15 @@ export class Broadcast {
 
 		this.targetSize = Vector.create(128, 128)
 		this.bounds = new Bounds(Vector.create(0, 0), this.targetSize)
+
+		// Load the broadcaster's position from the network.
+		this.#signals.effect(() => {
+			const location = this.watch.location.current.get()
+			if (!location) return
+
+			// Convert from -1 to 1 to 0 to 1.
+			this.targetPosition = Vector.create(location.x / 2 + 0.5, location.y / 2 + 0.5)
+		})
 	}
 
 	tick(now: DOMHighResTimeStamp, canvas: Bounds, scale: number) {

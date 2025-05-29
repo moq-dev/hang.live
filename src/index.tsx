@@ -22,13 +22,24 @@ export function Hang(): JSX.Element {
 	const url = new URL(`${RELAY}/demo/`);
 	const connection = new Connection({ url });
 	const room = new Room(connection, canvas);
+	onCleanup(() => room.close());
 
 	const camera = new Publish.Broadcast(connection, {
 		device: "camera",
 		video: false,
 		audio: false,
+		// Always publish the camera/avatar.
+		publish: true,
 		path: "me",
+		location: {
+			enabled: true,
+			position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+		},
 	});
+
+	setInterval(() => {
+		camera.location.position.set({ x: Math.random() - 0.5, y: Math.random() - 0.5 });
+	}, 1000);
 
 	onCleanup(() => camera.close());
 
@@ -36,6 +47,10 @@ export function Hang(): JSX.Element {
 		device: "screen",
 		publish: false,
 		path: "me/screen",
+		location: {
+			enabled: true,
+			position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+		},
 	});
 	onCleanup(() => screen.close());
 
@@ -84,4 +99,4 @@ if (!support) {
 	throw new Error("No support element found");
 }
 
-render(() => <Support.Modal />, support);
+render(() => <Support.Modal show="partial" />, support);

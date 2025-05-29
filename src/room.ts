@@ -261,8 +261,11 @@ export class Room {
 	}
 
 	#startBroadcast(name: string) {
-		const targetPosition = Vector.create(Math.random(), Math.random())
+		// Start them at the center of the screen with a tiiiiny bit of variance.
+		const targetPosition = Vector.create(0.5 + ((Math.random() - 0.5) ** 4), 0.5 + ((Math.random() - 0.5) ** 4))
 
+		// We haven't received their initial position yet, so we'll just put them somewhere offscreen.
+		// This gives us a bit of time to start loading stuff and looks cool.
 		const offset = Vector.create(targetPosition.x - 0.5, targetPosition.y - 0.5)
 			.normalize()
 			.mult(Math.sqrt(this.canvas.width ** 2 + this.canvas.height ** 2))
@@ -280,6 +283,7 @@ export class Room {
 			video: { enabled: this.visible.peek() },
 			// Download audio unless the AudioContext is suspended.
 			audio: { enabled: !this.suspended.peek() },
+			location: { enabled: true }
 		})
 
 		const broadcast = new Broadcast(watch)
@@ -459,5 +463,12 @@ export class Room {
 		for (const broadcast of this.#broadcasts.values()) {
 			broadcast.close()
 		}
+
+		for (const broadcast of this.#rip) {
+			broadcast.close()
+		}
+
+		this.#rip = []
+		this.#broadcasts.clear()
 	}
 }
