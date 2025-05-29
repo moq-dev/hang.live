@@ -50,6 +50,12 @@ export class Video {
 		}) {
 		ctx.save()
 
+		// Add a slight drop shadow
+		ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+		ctx.shadowBlur = 16 * scale
+		ctx.shadowOffsetX = 0
+		ctx.shadowOffsetY = 4 * scale
+
 		ctx.translate(bounds.position.x, bounds.position.y)
 		ctx.fillStyle = "#000"
 
@@ -69,6 +75,11 @@ export class Video {
 		ctx.lineTo(0, radius)
 		ctx.quadraticCurveTo(0, 0, radius, 0)
 		ctx.closePath()
+
+		ctx.fillStyle = "#000" // just needed to apply the shadow
+		ctx.fill()
+
+		ctx.shadowColor = "transparent"
 
 		// Clip and draw the image
 		ctx.clip()
