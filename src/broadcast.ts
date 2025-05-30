@@ -13,7 +13,9 @@ export interface BroadcastSource {
 	location: {
 		get: () => Catalog.Position | undefined
 		set: (position: Catalog.Position) => void
+		locked?: () => boolean
 	},
+
 	enabled: Signal<boolean>
 
 	close: () => void
@@ -81,7 +83,9 @@ export class Broadcast {
 			const location = this.source.location.get()
 			if (!location) return
 
-			this.targetPosition = Vector.create(location.x, location.y)
+			this.targetPosition.x = location.x ?? this.targetPosition.x
+			this.targetPosition.y = location.y ?? this.targetPosition.y
+			this.targetScale = location.zoom ?? this.targetScale
 		})
 	}
 

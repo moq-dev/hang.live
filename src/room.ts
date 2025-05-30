@@ -62,7 +62,7 @@ export class Room {
 
 	#signals = new Signals();
 
-	constructor(connection: Connection, canvas: HTMLCanvasElement, camera: Publish.Broadcast, screen: Publish.Broadcast, props?: RoomProps) {
+	constructor(connection: Connection, canvas: HTMLCanvasElement, props?: RoomProps) {
 		this.connection = connection
 		this.canvas = canvas
 		this.muted = signal(props?.muted ?? false)
@@ -70,10 +70,31 @@ export class Room {
 		this.volume = signal(props?.volume ?? 0.5)
 		this.viewport = signal(new Bounds(Vector.create(-canvas.width / 2, -canvas.height / 2), Vector.create(canvas.width / 2, canvas.height / 2)))
 
-		this.camera = camera
-		this.screen = screen
+		this.camera = new Publish.Broadcast(connection, {
+			device: "camera",
+			video: false,
+			audio: false,
+			// Always publish the camera/avatar.
+			enabled: true,
+			path: "me.hang",
+			location: {
+				enabled: true,
+				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				handle: randomU32(),
+			},
+		})
 
-		// Register any window/document level events.
+		this.screen = new Publish.Broadcast(connection, {
+			device: "screen",
+			enabled: false,
+			path: "me/screen.hang",
+			location: {
+				enabled: true,
+				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				handle: randomU32(),
+			},
+		})
+
 		const resize = () => {
 			this.canvas.width = window.devicePixelRatio * window.innerWidth
 			this.canvas.height = window.devicePixelRatio * window.innerHeight
@@ -95,26 +116,28 @@ export class Room {
 			document.removeEventListener("visibilitychange", visible)
 		})
 
-		this.#broadcastStart(camera.path.peek(), {
-			audio: camera.audio,
-			video: camera.video,
-			enabled: camera.enabled,
+		this.#broadcastStart(this.camera.path.peek(), {
+			audio: this.camera.audio,
+			video: this.camera.video,
+			enabled: this.camera.enabled,
 			location: {
-				get: () => camera.location.current.get(),
-				set: (position) => camera.location.current.set(position),
+				get: () => this.camera.location.position.get(),
+				set: (position) => this.camera.location.position.set(position),
+				locked: () => false, // TODO make a UI element for this?
 			},
-			close: () => camera.close(),
+			close: () => this.camera.close(),
 		})
 
-		this.#broadcastStart(screen.path.peek(), {
-			audio: screen.audio,
-			video: screen.video,
-			enabled: screen.enabled,
+		this.#broadcastStart(this.screen.path.peek(), {
+			audio: this.screen.audio,
+			video: this.screen.video,
+			enabled: this.screen.enabled,
 			location: {
-				get: () => screen.location.current.get(),
-				set: (position) => screen.location.current.set(position),
+				get: () => this.screen.location.position.get(),
+				set: (position) => this.screen.location.position.set(position),
+				locked: () => false, // TODO make a UI element for this?
 			},
-			close: () => screen.close(),
+			close: () => this.screen.close(),
 		})
 
 		// Check if the user needs to click the page to unmute the audio.
@@ -143,14 +166,17 @@ export class Room {
 
 			const at = this.#broadcastAt(mouse)
 			this.#dragging = at?.broadcast
-
 			if (!at) return
 
 			// Reinsert to update the z-index.
 			this.#broadcasts.delete(at.name)
 			this.#broadcasts.set(at.name, at.broadcast)
 
-			this.canvas.style.cursor = "grabbing"
+			if (at.broadcast.source.location.locked?.()) {
+				this.canvas.style.cursor = "not-allowed"
+			} else {
+				this.canvas.style.cursor = "grabbing"
+			}
 		})
 
 		this.canvas.addEventListener("mousemove", (e) => {
@@ -164,8 +190,11 @@ export class Room {
 			} else {
 				const at = this.#broadcastAt(mouse)
 				if (at) {
-					this.#hovering = at.broadcast
-					this.canvas.style.cursor = "grab"
+					if (!at.broadcast.source.location.locked?.()) {
+						this.#hovering = at.broadcast
+						this.canvas.style.cursor = "grab"
+					}
+
 				} else {
 					this.#hovering = undefined
 					this.canvas.style.cursor = "default"
@@ -205,6 +234,11 @@ export class Room {
 					broadcast = at.broadcast
 				}
 
+				if (broadcast.source.location.locked?.()) {
+					this.canvas.style.cursor = "not-allowed"
+					return
+				}
+
 				const scale = e.deltaY * 0.001
 				if (scale < 0) {
 					this.canvas.style.cursor = "zoom-out"
@@ -212,7 +246,11 @@ export class Room {
 					this.canvas.style.cursor = "zoom-in"
 				}
 
-				broadcast.targetScale = Math.max(Math.min(broadcast.targetScale + scale, 4), 0.25)
+				const location = broadcast.source.location.get()
+				broadcast.source.location.set({
+					...location,
+					zoom: Math.max(Math.min((location?.zoom ?? 1) + scale, 4), 0.25)
+				})
 			},
 			{ passive: false },
 		)
@@ -273,6 +311,11 @@ export class Room {
 			this.muted.set(volume === 0)
 		})
 
+		this.#signals.effect(() => {
+			// Publish our screen share once we have at least one active track.
+			this.screen.enabled.set(!!this.screen.video.media.get() || !!this.screen.audio.media.get())
+		})
+
 		this.#signals.effect(() => this.#init())
 	}
 
@@ -311,31 +354,46 @@ export class Room {
 					audio: { enabled: !this.suspended.peek() },
 					// Download the location of the broadcaster.
 					location: { enabled: true },
-					// Request feedback from the broadcaster (as a viewer).
-					feedback: { enabled: true },
 				})
 
-
 				// Request the position we should use from this remote broadcast.
-				const camera = watch.feedback.location(this.camera.path.peek())
+				// TODO This should be scoped to the broadcast, so it gets cleaned up on close.
 				this.#signals.effect(() => {
+					const handle = this.camera.location.handle.peek()
+					if (!handle) return
+
+					const camera = watch.location.peer(handle)
+
 					const position = camera.get()
 					if (position) {
-						this.camera.location.current.set(position)
+						this.camera.location.position.set(position)
 					}
 				})
 
-				const screen = watch.feedback.location(this.screen.path.peek())
 				this.#signals.effect(() => {
+					const handle = this.screen.location.handle.peek()
+					if (!handle) return
+
+					const screen = watch.location.peer(handle)
+
 					const position = screen.get()
 					if (position) {
-						this.screen.location.current.set(position)
+						this.screen.location.position.set(position)
 					}
 				})
 
 				this.#remotes.set(update.path, watch)
 
-				const feedback = this.camera.feedback.location(update.path)
+				// TODO scope this to the broadcast so it gets cleaned up on close.
+				const producer = this.#signals.derived(() => {
+					const handle = watch.location.handle.get()
+					if (!handle) return
+
+					const producer = this.camera.location.peer(handle)
+					cleanup(() => producer.close())
+
+					return producer
+				})
 
 				this.#broadcastStart(update.path, {
 					audio: watch.audio,
@@ -343,12 +401,10 @@ export class Room {
 					enabled: watch.enabled,
 					location: {
 						get: () => watch.location.current.get(),
-						set: (position) => feedback.append(position),
+						set: (position) => producer.peek()?.update(position),
+						locked: () => producer.peek() === undefined,
 					},
-					close: () => {
-						feedback.close()
-						watch.close()
-					},
+					close: () => watch.close()
 				})
 			} else if (existing) {
 				this.#broadcastStop(update.path)
@@ -549,4 +605,11 @@ export class Room {
 		this.camera.close()
 		this.screen.close()
 	}
+}
+
+// lul javascript
+function randomU32() {
+	const array = new Uint32Array(1)
+	crypto.getRandomValues(array)
+	return array[0]
 }
