@@ -4,6 +4,7 @@ import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { onCleanup } from "solid-js";
 import { Controls } from "./controls";
+import { Dialog } from "./dialog";
 
 const RELAY = "http://localhost:4443";
 
@@ -28,6 +29,7 @@ export function Hang(): JSX.Element {
 	return (
 		<div>
 			{canvas}
+			<Dialog name={room.name} />
 			<Controls room={room} camera={room.camera} screen={room.screen} />
 		</div>
 	);

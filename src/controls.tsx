@@ -16,12 +16,13 @@ export function Controls(props: { room: Room; camera: Publish.Broadcast; screen:
 				gap: "8px",
 				margin: "8px",
 			}}
+			class="controls"
 		>
 			<Microphone audio={props.camera.audio} />
 			<Camera video={props.camera.video} />
 			<Screen video={props.screen.video} audio={props.screen.audio} />
 			<Chat />
-			<div style={{ "flex-grow": "1" }} />
+			<div style={{ "flex-grow": "1", "pointer-events": "none" }} />
 			<Volume room={props.room} />
 			<Fullscreen />
 		</div>
