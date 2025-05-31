@@ -8,6 +8,7 @@ import * as Moq from "@kixelated/moq"
 const PADDING = 64
 
 export type RoomProps = {
+	name?: string
 	visible?: boolean
 	volume?: number
 	muted?: boolean
@@ -17,6 +18,8 @@ export class Room {
 	// The connection to the server.
 	// This is reactive; it may still be pending.
 	connection: Connection
+
+	name: Signal<string | undefined>
 
 	// All of the broadcasts keyed by their path.
 	// We use the insertion order to determine the z-index.
@@ -69,18 +72,17 @@ export class Room {
 		this.visible = signal(props?.visible ?? true)
 		this.volume = signal(props?.volume ?? 0.5)
 		this.viewport = signal(new Bounds(Vector.create(-canvas.width / 2, -canvas.height / 2), Vector.create(canvas.width / 2, canvas.height / 2)))
+		this.name = signal(props?.name)
 
 		this.camera = new Publish.Broadcast(connection, {
 			device: "camera",
 			video: false,
 			audio: false,
 			// Always publish the camera/avatar.
-			enabled: true,
-			path: "me.hang",
 			location: {
 				enabled: true,
 				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-				handle: randomU32(),
+				peering: true,
 			},
 		})
 
@@ -91,8 +93,31 @@ export class Room {
 			location: {
 				enabled: true,
 				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-				handle: randomU32(),
+				peering: true,
 			},
+		})
+
+		this.#signals.effect(() => {
+			const name = this.name.get()
+			if (!name) return
+
+			this.camera.enabled.set(true)
+			cleanup(() => this.camera.enabled.set(false))
+
+			this.camera.path.set(`${name}.hang`)
+		})
+
+		this.#signals.effect(() => {
+			const name = this.name.get()
+			if (!name) return
+
+			const active = !!this.screen.video.media.get() || !!this.screen.audio.media.get()
+			if (!active) return
+
+			this.screen.path.set(`${name}.hang/screen`)
+
+			this.screen.enabled.set(true)
+			cleanup(() => this.screen.enabled.set(false))
 		})
 
 		const resize = () => {
@@ -311,11 +336,6 @@ export class Room {
 			this.muted.set(volume === 0)
 		})
 
-		this.#signals.effect(() => {
-			// Publish our screen share once we have at least one active track.
-			this.screen.enabled.set(!!this.screen.video.media.get() || !!this.screen.audio.media.get())
-		})
-
 		this.#signals.effect(() => this.#init())
 	}
 
@@ -356,44 +376,44 @@ export class Room {
 					location: { enabled: true },
 				})
 
-				// Request the position we should use from this remote broadcast.
-				// TODO This should be scoped to the broadcast, so it gets cleaned up on close.
+				// TODO call `close` on these when the broadcast is closed.
+				const cameraUpdates = watch.location.peer()
+				const screenUpdates = watch.location.peer()
+
+				// Update the handle when our path changes.
 				this.#signals.effect(() => {
-					const handle = this.camera.location.handle.peek()
-					if (!handle) return
+					cameraUpdates.handle.set(this.camera.path.get())
+					screenUpdates.handle.set(this.screen.path.get())
+				})
 
-					const camera = watch.location.peer(handle)
-
-					const position = camera.get()
+				// Request the position we should use from this remote broadcast.
+				this.#signals.effect(() => {
+					const position = cameraUpdates.location.get()
 					if (position) {
 						this.camera.location.position.set(position)
 					}
 				})
 
 				this.#signals.effect(() => {
-					const handle = this.screen.location.handle.peek()
-					if (!handle) return
-
-					const screen = watch.location.peer(handle)
-
-					const position = screen.get()
+					const position = screenUpdates.location.get()
 					if (position) {
 						this.screen.location.position.set(position)
 					}
 				})
 
-				this.#remotes.set(update.path, watch)
+				// Create a new peer handle so we can publish updates if allowed.
+				// TODO close this handle when the broadcast is closed.
+				const peer = this.camera.location.peer()
 
-				// TODO scope this to the broadcast so it gets cleaned up on close.
-				const producer = this.#signals.derived(() => {
-					const handle = watch.location.handle.get()
-					if (!handle) return
+				this.#signals.effect(() => {
+					// Only set the handle if the broadcast allows peering.
+					if (!watch.location.peering.get()) return
 
-					const producer = this.camera.location.peer(handle)
-					cleanup(() => producer.close())
-
-					return producer
+					peer.handle.set(update.path)
+					cleanup(() => peer.handle.set(undefined))
 				})
+
+				this.#remotes.set(update.path, watch)
 
 				this.#broadcastStart(update.path, {
 					audio: watch.audio,
@@ -401,8 +421,8 @@ export class Room {
 					enabled: watch.enabled,
 					location: {
 						get: () => watch.location.current.get(),
-						set: (position) => producer.peek()?.update(position),
-						locked: () => producer.peek() === undefined,
+						set: (position) => peer.producer.peek()?.update(position),
+						locked: () => peer.producer.peek() === undefined,
 					},
 					close: () => watch.close()
 				})
