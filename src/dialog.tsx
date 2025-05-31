@@ -1,4 +1,4 @@
-import { signal, Signal } from "@kixelated/signals";
+import { Signal, signal } from "@kixelated/signals";
 import { Show } from "solid-js";
 
 export function Dialog(props: { name: Signal<string | undefined> }) {

@@ -7,6 +7,7 @@ settings:
 overrides:
   '@kixelated/hang': link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
   '@kixelated/moq': link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
+  '@kixelated/signals': link:../../Library/pnpm/global/5/node_modules/@kixelated/signals
 
 importers:
 
@@ -19,8 +20,8 @@ importers:
         specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
         version: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
       '@kixelated/signals':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/signals
+        version: link:../../Library/pnpm/global/5/node_modules/@kixelated/signals
       '@tauri-apps/api':
         specifier: ^2
         version: 2.4.1
@@ -359,9 +360,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
-
-  '@kixelated/signals@0.1.0':
-    resolution: {integrity: sha512-5vxF6k/SNSsNIRgoJH5jl0qE9YlvD8ICVjk88RCw6BzDFIDpyOuz0t8sf+KAg41eI1F0qXCM8lNcROpFeNJPNA==}
 
   '@rollup/rollup-android-arm-eabi@4.39.0':
     resolution: {integrity: sha512-lGVys55Qb00Wvh8DMAocp5kIcaNzEFTmGhfFd88LfaogYTRKrdxgtlO5H6S49v2Nd8R2C6wLOal0qv6/kCkOwA==}
@@ -1038,10 +1036,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
-
-  '@kixelated/signals@0.1.0':
-    dependencies:
-      solid-js: 1.9.6
 
   '@rollup/rollup-android-arm-eabi@4.39.0':
     optional: true

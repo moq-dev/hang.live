@@ -1,5 +1,5 @@
 import { Publish } from "@kixelated/hang";
-import { batch, createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
+import { Show, batch, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { Room } from "./room";
 
@@ -16,7 +16,7 @@ export function Controls(props: { room: Room; camera: Publish.Broadcast; screen:
 				gap: "8px",
 				margin: "8px",
 			}}
-			class="controls"
+			class="controls pointer-gaps"
 		>
 			<Microphone audio={props.camera.audio} />
 			<Camera video={props.camera.video} />
