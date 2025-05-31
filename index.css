@@ -39,28 +39,29 @@ header {
 	color: white;
 
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
 	padding: 8px 16px;
 
-	text-shadow:
-		-1px -1px 0 black,
-		1px -1px 0 black,
-		-1px 1px 0 black,
-		1px 1px 0 black;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
 
-	>* {
+	text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+
+	> * {
 		border-radius: 4px;
 		backdrop-filter: blur(2px);
 	}
 
-	>.logo {
+	> .logo {
 		font-size: 1.5em;
 		font-weight: bold;
 	}
 
-	>nav {
+	> nav {
 		display: flex;
 		gap: 16px;
 
@@ -77,17 +78,14 @@ header {
 }
 
 .controls {
-	button, input {
+	button,
+	input {
 		color: white;
 		border-radius: 4px;
 		background: transparent;
 		border: 1px solid transparent;
 		backdrop-filter: blur(2px);
-		text-shadow:
-			-1px -1px 0 black,
-			1px -1px 0 black,
-			-1px 1px 0 black,
-			1px 1px 0 black;
+		text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
 	}
 
 	button {
@@ -96,5 +94,13 @@ header {
 
 	button:focus:not(:focus-visible) {
 		outline: none;
+	}
+}
+
+.pointer-gaps {
+	pointer-events: none;
+
+	> * {
+		pointer-events: auto;
 	}
 }

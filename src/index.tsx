@@ -1,14 +1,15 @@
-import { Connection, Support } from "@kixelated/hang";
-import { Room } from "./room";
+import { Connection } from "@kixelated/hang";
+import { onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
-import { onCleanup } from "solid-js";
 import { Controls } from "./controls";
 import { Dialog } from "./dialog";
+import { Room } from "./room";
+import { Status } from "./status";
 
 const RELAY = "http://localhost:4443";
 
-export function Hang(): JSX.Element {
+export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	const canvas = (
 		<canvas
 			style={{
@@ -19,9 +20,6 @@ export function Hang(): JSX.Element {
 			}}
 		/>
 	) as HTMLCanvasElement;
-
-	const url = new URL(`${RELAY}/demo/`);
-	const connection = new Connection({ url });
 
 	const room = new Room(connection, canvas);
 	onCleanup(() => room.close());
@@ -35,16 +33,19 @@ export function Hang(): JSX.Element {
 	);
 }
 
+const url = new URL(`${RELAY}/demo/`);
+const connection = new Connection({ url });
+
 const hang = document.getElementById("hang");
 if (!hang) {
 	throw new Error("No hang element found");
 }
 
-render(() => <Hang />, hang);
+render(() => <Hang connection={connection} />, hang);
 
-const support = document.getElementById("support");
-if (!support) {
-	throw new Error("No support element found");
+const status = document.getElementById("status");
+if (!status) {
+	throw new Error("No status element found");
 }
 
-render(() => <Support.Modal show="partial" />, support);
+render(() => <Status connection={connection} />, status);

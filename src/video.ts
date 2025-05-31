@@ -1,51 +1,51 @@
-import { Derived, Signal, Signals } from "@kixelated/signals"
-import { Bounds, Vector } from "./geometry"
+import { Memo, Signal, Signals } from "@kixelated/signals";
+import { Bounds, Vector } from "./geometry";
 
 // Local or remote (Hang.Watch.Video) video source.
 export interface VideoSource {
-	active: Derived<boolean>
-	frame: (now: DOMHighResTimeStamp) => { frame: VideoFrame; lag: DOMHighResTimeStamp } | undefined
-	close: () => void
+	active: Memo<boolean>;
+	frame: (now: DOMHighResTimeStamp) => { frame: VideoFrame; lag: DOMHighResTimeStamp } | undefined;
+	close: () => void;
 
 	// Called to stop downloading when minimized, but obviously we don't want to stop publishing so it's optional.
-	enabled?: Signal<boolean>
+	enabled?: Signal<boolean>;
 }
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
 	// So we use the Video class directly to get individual frames.
-	source: VideoSource
+	source: VideoSource;
 
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
 
-	avatar: HTMLImageElement
+	avatar: HTMLImageElement;
 
 	// The desired size of the video in pixels.
-	targetSize: Vector // in pixels
+	targetSize: Vector; // in pixels
 
 	#signals = new Signals();
 
 	constructor(source: VideoSource) {
-		this.source = source
+		this.source = source;
 
-		this.targetSize = Vector.create(128, 128)
+		this.targetSize = Vector.create(128, 128);
 
-		this.avatar = new Image()
-		this.avatar.src = "/avatar.png"
+		this.avatar = new Image();
+		this.avatar.src = "/avatar.png";
 	}
 
 	tick(now: DOMHighResTimeStamp) {
-		const active = this.source.active.peek()
-		const next = this.source.frame(now)
+		const active = this.source.active.peek();
+		const next = this.source.frame(now);
 
 		if (active && next) {
-			this.transition = Math.min(this.transition + 0.05, 1)
-			this.targetSize = Vector.create(next.frame.displayWidth, next.frame.displayHeight)
+			this.transition = Math.min(this.transition + 0.05, 1);
+			this.targetSize = Vector.create(next.frame.displayWidth, next.frame.displayHeight);
 		} else {
-			this.transition = Math.max(this.transition - 0.05, 0)
+			this.transition = Math.max(this.transition - 0.05, 0);
 			if (this.avatar.complete) {
-				this.targetSize = Vector.create(this.avatar.width, this.avatar.height)
+				this.targetSize = Vector.create(this.avatar.width, this.avatar.height);
 			}
 		}
 	}
@@ -57,55 +57,56 @@ export class Video {
 		bounds: Bounds,
 		scale: number,
 		modifiers?: {
-			dragging?: boolean
-			hovering?: boolean
-		}) {
-		ctx.save()
+			dragging?: boolean;
+			hovering?: boolean;
+		},
+	) {
+		ctx.save();
 
 		// Add a slight drop shadow
-		ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
-		ctx.shadowBlur = 16 * scale
-		ctx.shadowOffsetX = 0
-		ctx.shadowOffsetY = 4 * scale
+		ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+		ctx.shadowBlur = 16 * scale;
+		ctx.shadowOffsetX = 0;
+		ctx.shadowOffsetY = 4 * scale;
 
-		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2)
-		ctx.fillStyle = "#000"
+		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2);
+		ctx.fillStyle = "#000";
 
 		// Create a rounded rectangle path
-		const radius = 8 * scale
-		const w = bounds.size.x
-		const h = bounds.size.y
+		const radius = 8 * scale;
+		const w = bounds.size.x;
+		const h = bounds.size.y;
 
-		ctx.beginPath()
-		ctx.moveTo(radius, 0)
-		ctx.lineTo(w - radius, 0)
-		ctx.quadraticCurveTo(w, 0, w, radius)
-		ctx.lineTo(w, h - radius)
-		ctx.quadraticCurveTo(w, h, w - radius, h)
-		ctx.lineTo(radius, h)
-		ctx.quadraticCurveTo(0, h, 0, h - radius)
-		ctx.lineTo(0, radius)
-		ctx.quadraticCurveTo(0, 0, radius, 0)
-		ctx.closePath()
+		ctx.beginPath();
+		ctx.moveTo(radius, 0);
+		ctx.lineTo(w - radius, 0);
+		ctx.quadraticCurveTo(w, 0, w, radius);
+		ctx.lineTo(w, h - radius);
+		ctx.quadraticCurveTo(w, h, w - radius, h);
+		ctx.lineTo(radius, h);
+		ctx.quadraticCurveTo(0, h, 0, h - radius);
+		ctx.lineTo(0, radius);
+		ctx.quadraticCurveTo(0, 0, radius, 0);
+		ctx.closePath();
 
-		ctx.fillStyle = "#000" // just needed to apply the shadow
-		ctx.fill()
+		ctx.fillStyle = "#000"; // just needed to apply the shadow
+		ctx.fill();
 
-		ctx.shadowColor = "transparent"
+		ctx.shadowColor = "transparent";
 
 		// Clip and draw the image
-		ctx.clip()
+		ctx.clip();
 
 		// Apply an opacity to the image.
 		if (modifiers?.dragging) {
-			ctx.globalAlpha *= 0.7
+			ctx.globalAlpha *= 0.7;
 		}
 
-		const next = this.source.frame(now)
+		const next = this.source.frame(now);
 
 		if (next && this.transition > 0) {
-			ctx.save()
-			ctx.globalAlpha *= this.transition
+			ctx.save();
+			ctx.globalAlpha *= this.transition;
 
 			// Compute grayscale level based on how late the frame is.
 			/*
@@ -115,9 +116,9 @@ export class Video {
 			}
 				*/
 
-			ctx.imageSmoothingEnabled = true
-			ctx.drawImage(next.frame, 0, 0, bounds.size.x, bounds.size.y)
-			ctx.restore()
+			ctx.imageSmoothingEnabled = true;
+			ctx.drawImage(next.frame, 0, 0, bounds.size.x, bounds.size.y);
+			ctx.restore();
 
 			/*
 			if (spinner > 0) {
@@ -142,16 +143,16 @@ export class Video {
 		}
 
 		if (this.transition < 1) {
-			ctx.save()
-			ctx.globalAlpha *= 1 - this.transition
+			ctx.save();
+			ctx.globalAlpha *= 1 - this.transition;
 
 			if (this.avatar.complete) {
-				ctx.drawImage(this.avatar, 0, 0, bounds.size.x, bounds.size.y)
+				ctx.drawImage(this.avatar, 0, 0, bounds.size.x, bounds.size.y);
 			} else {
-				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y)
+				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y);
 			}
 
-			ctx.restore()
+			ctx.restore();
 		}
 
 		//if (modifiers.hovering) {
@@ -160,7 +161,7 @@ export class Video {
 		//ctx.strokeRect(0, 0, bounds.size.x, bounds.size.y);
 		//}
 
-		ctx.restore()
+		ctx.restore();
 
 		// Draw target for debugging
 		/*
@@ -178,7 +179,7 @@ export class Video {
 	}
 
 	close() {
-		this.#signals.close()
-		this.source.close()
+		this.#signals.close();
+		this.source.close();
 	}
 }

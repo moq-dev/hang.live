@@ -3,3 +3,4 @@ onlyBuiltDependencies:
 overrides:
   '@kixelated/hang': link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
   '@kixelated/moq': link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
+  '@kixelated/signals': link:../../Library/pnpm/global/5/node_modules/@kixelated/signals
