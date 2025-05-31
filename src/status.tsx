@@ -1,13 +1,10 @@
 import { Connection, Support } from "@kixelated/hang";
-import { Match, Switch, createEffect, createSelector } from "solid-js";
+import { Match, Switch, createSelector } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 
 export function Status({ connection }: { connection: Connection }): JSX.Element {
 	const url = connection.url.get;
 	const status = createSelector(connection.status.get);
-	createEffect(() => {
-		console.log(connection.status.get());
-	});
 
 	return (
 		<div>
