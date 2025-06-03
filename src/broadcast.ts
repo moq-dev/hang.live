@@ -55,8 +55,8 @@ export class Broadcast {
 		this.video = new Video(source.video);
 		this.audio = new Audio(source.audio);
 
-		// Start them at the center of the screen with a tiiiiny bit of variance.
-		const start = () => (Math.random() - 0.5) / 2;
+		// Start them at the center of the screen with a tiiiiny bit of variance to break ties.
+		const start = () => (Math.random() - 0.5) / 100;
 		this.targetPosition = Vector.create(start(), start());
 
 		const canvas = this.viewport.peek();
