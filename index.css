@@ -53,7 +53,7 @@ header {
 
 	> * {
 		border-radius: 4px;
-		backdrop-filter: blur(2px);
+		backdrop-filter: blur(4px);
 	}
 
 	> .logo {
@@ -84,7 +84,7 @@ header {
 		border-radius: 4px;
 		background: transparent;
 		border: 1px solid transparent;
-		backdrop-filter: blur(2px);
+		backdrop-filter: blur(4px);
 		text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
 	}
 

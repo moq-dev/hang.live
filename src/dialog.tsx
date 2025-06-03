@@ -27,7 +27,7 @@ export function Dialog(props: { name: Signal<string | undefined> }) {
 					transform: "translate(-50%, -50%)",
 					border: "1px solid #fff",
 					"border-radius": "1rem",
-					"backdrop-filter": "blur(2px)",
+					"backdrop-filter": "blur(4px)",
 					"min-width": "500px",
 				}}
 			>
@@ -35,7 +35,6 @@ export function Dialog(props: { name: Signal<string | undefined> }) {
 					style={{
 						padding: "1.5rem",
 						"border-radius": "1rem",
-						"box-shadow": "0 10px 30px rgba(0, 0, 0, 0.2)",
 					}}
 				>
 					<h2
