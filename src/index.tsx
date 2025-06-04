@@ -3,7 +3,6 @@ import { onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { Controls } from "./controls";
-import { Dialog } from "./dialog";
 import { Room } from "./room";
 import { Status } from "./status";
 
@@ -21,13 +20,24 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 		/>
 	) as HTMLCanvasElement;
 
-	const room = new Room(connection, canvas);
+	// Generate a random user ID if none is set.
+	// Obviously this should be replaced with a proper auth system.
+	let user = localStorage.getItem("user_id");
+	if (!user) {
+		const rand = new Uint32Array(1);
+		window.crypto.getRandomValues(rand);
+		user = rand[0].toString();
+		localStorage.setItem("user_id", user);
+	}
+
+	console.log(user);
+
+	const room = new Room(connection, canvas, { user });
 	onCleanup(() => room.close());
 
 	return (
 		<div>
 			{canvas}
-			<Dialog name={room.name} />
 			<Controls room={room} camera={room.camera} screen={room.screen} />
 		</div>
 	);

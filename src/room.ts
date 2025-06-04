@@ -6,7 +6,7 @@ import { Bounds, Vector } from "./geometry";
 const PADDING = 64;
 
 export type RoomProps = {
-	name?: string;
+	user?: string;
 	visible?: boolean;
 	volume?: number;
 	muted?: boolean;
@@ -17,7 +17,8 @@ export class Room {
 	// This is reactive; it may still be pending.
 	connection: Connection;
 
-	name: Signal<string | undefined>;
+	// The user ID of the local user.
+	user: Signal<string | undefined>;
 
 	// All of the broadcasts keyed by their path.
 	// We use the insertion order to determine the z-index.
@@ -75,13 +76,11 @@ export class Room {
 				Vector.create(canvas.width / 2, canvas.height / 2),
 			),
 		);
-		this.name = signal(props?.name);
+		this.user = signal(props?.user);
 
 		this.camera = new Publish.Broadcast(connection, {
 			device: "camera",
-			video: false,
-			audio: false,
-			// Always publish the camera/avatar.
+			// Publish our camera's location, starting at a random position.
 			location: {
 				enabled: true,
 				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
@@ -91,8 +90,7 @@ export class Room {
 
 		this.screen = new Publish.Broadcast(connection, {
 			device: "screen",
-			enabled: false,
-			path: "me/screen.hang",
+			// Publish our screen's location, starting at a random position.
 			location: {
 				enabled: true,
 				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
@@ -101,26 +99,54 @@ export class Room {
 		});
 
 		this.#signals.effect(() => {
-			const name = this.name.get();
-			if (!name) return;
+			const user = this.user.get();
+			if (!user) return;
 
 			this.camera.enabled.set(true);
 			cleanup(() => this.camera.enabled.set(false));
 
-			this.camera.path.set(`${name}.hang`);
+			const path = `${user}.hang`;
+			this.camera.path.set(path);
+
+			this.#broadcastStart(path, {
+				audio: this.camera.audio,
+				video: this.camera.video,
+				enabled: this.camera.enabled,
+				location: {
+					get: () => this.camera.location.position.get(),
+					set: (position) => this.camera.location.position.set(position),
+					locked: () => false, // TODO make a UI element for this?
+				},
+				close: () => this.camera.close(),
+			});
+			cleanup(() => this.#broadcastStop(path));
 		});
 
 		this.#signals.effect(() => {
-			const name = this.name.get();
-			if (!name) return;
+			const user = this.user.get();
+			if (!user) return;
 
 			const active = !!this.screen.video.media.get() || !!this.screen.audio.media.get();
 			if (!active) return;
 
-			this.screen.path.set(`${name}.hang/screen`);
+			const path = `${user}.hang/screen`;
+			this.screen.path.set(path);
 
 			this.screen.enabled.set(true);
 			cleanup(() => this.screen.enabled.set(false));
+
+			this.#broadcastStart(path, {
+				audio: this.screen.audio,
+				video: this.screen.video,
+				enabled: this.screen.enabled,
+				location: {
+					get: () => this.screen.location.position.get(),
+					set: (position) => this.screen.location.position.set(position),
+					locked: () => false, // TODO make a UI element for this?
+				},
+				close: () => this.screen.close(),
+			});
+			cleanup(() => this.#broadcastStop(path));
 		});
 
 		const resize = () => {
@@ -147,30 +173,6 @@ export class Room {
 		this.#signals.cleanup(() => {
 			window.removeEventListener("resize", resize);
 			document.removeEventListener("visibilitychange", visible);
-		});
-
-		this.#broadcastStart(this.camera.path.peek(), {
-			audio: this.camera.audio,
-			video: this.camera.video,
-			enabled: this.camera.enabled,
-			location: {
-				get: () => this.camera.location.position.get(),
-				set: (position) => this.camera.location.position.set(position),
-				locked: () => false, // TODO make a UI element for this?
-			},
-			close: () => this.camera.close(),
-		});
-
-		this.#broadcastStart(this.screen.path.peek(), {
-			audio: this.screen.audio,
-			video: this.screen.video,
-			enabled: this.screen.enabled,
-			location: {
-				get: () => this.screen.location.position.get(),
-				set: (position) => this.screen.location.position.set(position),
-				locked: () => false, // TODO make a UI element for this?
-			},
-			close: () => this.screen.close(),
 		});
 
 		// Check if the user needs to click the page to unmute the audio.
@@ -467,6 +469,10 @@ export class Room {
 	}
 
 	#broadcastStart(path: string, source: BroadcastSource) {
+		if (!path) {
+			throw new Error("empty path");
+		}
+
 		const broadcast = new Broadcast(source, this.viewport);
 		this.#broadcasts.set(path, broadcast);
 	}
@@ -576,10 +582,14 @@ export class Room {
 		const ctx = this.#ctx;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+		this.#renderBackground(now);
+
 		for (const broadcast of this.#broadcasts.values()) {
-			ctx.save();
+			broadcast.audio.renderBackground(ctx, broadcast.bounds, broadcast.scale);
+		}
+
+		for (const broadcast of this.#broadcasts.values()) {
 			broadcast.audio.render(ctx, broadcast.bounds, broadcast.scale);
-			ctx.restore();
 		}
 
 		for (const broadcast of this.#rip) {
@@ -606,6 +616,59 @@ export class Room {
 			this.#dragging.video.render(now, ctx, this.#dragging.bounds, this.#dragging.scale, { dragging: true });
 			ctx.restore();
 		}
+	}
+
+	#renderBackground(now: DOMHighResTimeStamp) {
+		const LINE_SPACING = 64;
+		const LINE_WIDTH = 10;
+		const SEGMENTS = 16;
+		const WOBBLE_AMPLITUDE = 10;
+		const BEND_AMPLITUDE = 16;
+		const BEND_PROBABILITY = 0.2;
+		const WOBBLE_SPEED = 0.0006;
+		const LINE_OVERDRAW = 2;
+
+		const ctx = this.#ctx;
+		const width = ctx.canvas.width;
+		const height = ctx.canvas.height;
+
+		const LINE_COUNT = Math.ceil(height / LINE_SPACING) + LINE_OVERDRAW * 2;
+
+		ctx.save();
+		ctx.lineWidth = LINE_WIDTH;
+		ctx.lineCap = "round";
+		ctx.globalAlpha = 0.25;
+
+		for (let i = 0; i < LINE_COUNT; i++) {
+			const hue = (i * 25 + now * 0.03) % 360;
+			ctx.strokeStyle = `hsl(${hue}, 75%, 50%)`;
+
+			const baseY = (i - LINE_OVERDRAW) * LINE_SPACING;
+			const wobble = Math.sin(now * WOBBLE_SPEED + i) * WOBBLE_AMPLITUDE;
+
+			ctx.beginPath();
+
+			for (let s = 0; s <= SEGMENTS; s++) {
+				const t = s / SEGMENTS;
+				const xBase = -100 + t * (width + 200);
+				const xWobble = Math.sin(now * WOBBLE_SPEED + s + i) * WOBBLE_AMPLITUDE;
+				const x = xBase + xWobble;
+
+				const seed = (s * 31 + i * 17) % 100;
+				const bend = seed / 100 < BEND_PROBABILITY ? (seed % 2 === 0 ? 1 : -1) * BEND_AMPLITUDE : 0;
+
+				const y = baseY + wobble + bend + t * 200;
+				if (s === 0) {
+					ctx.moveTo(x, y);
+				} else {
+					ctx.lineTo(x, y);
+				}
+			}
+
+			ctx.stroke();
+		}
+
+		ctx.restore();
 	}
 
 	#updateScale() {

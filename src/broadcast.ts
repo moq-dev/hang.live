@@ -111,26 +111,6 @@ export class Broadcast {
 		const middle = this.bounds.middle();
 		const force = target.sub(middle);
 		this.velocity = this.velocity.add(force);
-
-		// Bounce off the edges of the canvas.
-		/*
-		const left = this.bounds.position.x;
-		const right = this.bounds.position.x + this.bounds.size.x;
-		const top = this.bounds.position.y;
-		const bottom = this.bounds.position.y + this.bounds.size.y;
-
-		if (left < 0) {
-			this.velocity.x += -left;
-		} else if (right > canvas.size.x) {
-			this.velocity.x += canvas.size.x - right;
-		}
-
-		if (top < 0) {
-			this.velocity.y += -top;
-		} else if (bottom > canvas.size.y) {
-			this.velocity.y += canvas.size.y - bottom;
-		}
-		*/
 	}
 
 	// Apply velocity to the bounds.

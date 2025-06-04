@@ -22,9 +22,10 @@ export class Audio {
 	volume: Signal<number>;
 	pan: Signal<number>;
 
-	#gain = signal<GainNode | undefined>(undefined);
-	#left?: AnalyserNode;
-	#right?: AnalyserNode;
+	#analyser?: AnalyserNode;
+	#analyserBuffer = new Uint8Array(1024);
+
+	#volumeSmoothed = 0;
 
 	#signals = new Signals();
 
@@ -38,114 +39,125 @@ export class Audio {
 	}
 
 	#init() {
-		this.#left = undefined;
-		this.#right = undefined;
-
 		const audio = this.source.root.get();
 		if (!audio) return;
 
 		const { context, node } = audio;
 
-		if (node.channelCount < 2) {
-			const analyzer = new AnalyserNode(context, { fftSize: 256 });
+		// We analyze the audio to get the volume before gain/pan.
+		const analyser = new AnalyserNode(context, { fftSize: this.#analyserBuffer.length });
+		this.#analyser = analyser;
+		node.connect(analyser);
 
-			node.connect(analyzer);
-			node.connect(context.destination); // output to the speakers
-
-			this.#left = analyzer;
-			this.#right = analyzer;
-
-			return cleanup(() => {
-				analyzer.disconnect();
-			});
-		}
+		cleanup(() => {
+			analyser.disconnect();
+			this.#analyser = undefined;
+		});
 
 		const gain = new GainNode(context, { gain: this.volume.peek() });
+		cleanup(() => gain.disconnect());
+
 		createEffect(() => {
 			// Update the gain when the volume changes.
 			gain.gain.value = this.muted.get() ? 0 : this.volume.get();
 		});
 
+		node.connect(gain);
+
+		if (node.channelCount < 2) {
+			gain.connect(context.destination); // output to the speakers
+			return;
+		}
+
 		const audioPanner = new StereoPannerNode(context, {
 			channelCount: node.channelCount,
 			pan: this.pan.peek(),
 		});
+		cleanup(() => audioPanner.disconnect());
 
+		// Update the pan when the pan changes.
 		createEffect(() => {
-			// Update the pan when the pan changes.
 			audioPanner.pan.value = this.pan.get();
 		});
 
-		node.connect(gain);
 		gain.connect(audioPanner);
 		audioPanner.connect(context.destination);
+	}
 
-		const splitter = new ChannelSplitterNode(context, {
-			channelCount: node.channelCount,
-			numberOfOutputs: 2,
-		});
+	renderBackground(ctx: CanvasRenderingContext2D, bounds: Bounds, scale: number) {
+		ctx.save();
+		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2);
 
-		const audioLeft = new AnalyserNode(context, { fftSize: 256 });
-		const audioRight = new AnalyserNode(context, { fftSize: 256 });
+		const cornerRadius = 32 * scale;
+		const PADDING = 32;
 
-		// We analyze pre-gain so we can see the audio even when muted.
-		node.connect(splitter);
-		splitter.connect(audioLeft, 0);
-		splitter.connect(audioRight, 1);
-
-		this.#left = audioLeft;
-		this.#right = audioRight;
-		this.#gain.set(gain);
-
-		return () => {
-			gain.disconnect();
-			this.#gain.set(undefined);
-
-			audioLeft.disconnect();
-			audioRight.disconnect();
-			splitter.disconnect();
-			audioPanner.disconnect();
-		};
+		// Background outline
+		ctx.beginPath();
+		this.#roundedRectPath(
+			ctx,
+			-PADDING,
+			-PADDING,
+			bounds.size.x + PADDING * 2,
+			bounds.size.y + PADDING * 2,
+			cornerRadius,
+		);
+		ctx.fillStyle = "#000";
+		ctx.fill();
+		ctx.restore();
 	}
 
 	render(ctx: CanvasRenderingContext2D, bounds: Bounds, scale: number) {
-		if (!this.#left || !this.#right) {
-			return;
-		}
+		if (!this.#analyser) return;
 
+		ctx.save();
 		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2);
 
-		// Round down the height to the nearest power of 2.
-		const bars = Math.max(2 ** Math.floor(Math.log2(bounds.size.y / 4)), 32);
-		const barHeight = bounds.size.y / bars;
-		const barData = new Uint8Array(bars); // TODO reuse a buffer.
-		const barScale = 8 * scale;
+		const cornerRadius = 32 * scale;
+		const fillAlphaBase = 0.3;
+		const PADDING = 32;
 
-		this.#left.fftSize = bars;
-		this.#left.getByteFrequencyData(barData);
+		// Compute average volume
+		this.#analyser.getByteTimeDomainData(this.#analyserBuffer);
 
-		for (let i = 0; i < bars / 2; i++) {
-			const power = barData[i] / 255;
-			const hue = 2 ** power * 100 + 135;
-			const barWidth = 4 ** power * barScale;
-
-			ctx.fillStyle = `hsla(${hue}, 80%, 40%, ${power})`;
-			ctx.fillRect(-barWidth, bounds.size.y / 2 - (i + 1) * barHeight, barWidth, barHeight + 0.1);
-			ctx.fillRect(-barWidth, bounds.size.y / 2 + i * barHeight, barWidth, barHeight + 0.1);
+		let sum = 0;
+		for (let i = 0; i < this.#analyserBuffer.length; i++) {
+			const sample = Math.abs(this.#analyserBuffer[i] - 128);
+			sum += sample * sample;
 		}
+		const volume = Math.sqrt(sum) / this.#analyserBuffer.length;
+		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
 
-		this.#right.fftSize = bars;
-		this.#right.getByteFrequencyData(barData);
+		// Colored fill based on volume (inside → outside)
+		const expand = PADDING * Math.min(1, this.#volumeSmoothed - 0.01);
 
-		for (let i = 0; i < bars / 2; i++) {
-			const power = barData[i] / 255;
-			const hue = 2 ** power * 100 + 135;
-			const barWidth = 4 ** power * barScale;
+		ctx.beginPath();
+		this.#roundedRectPath(
+			ctx,
+			-expand,
+			-expand,
+			bounds.size.x + expand * 2,
+			bounds.size.y + expand * 2,
+			cornerRadius,
+		);
 
-			ctx.fillStyle = `hsla(${hue}, 80%, 40%, ${power})`;
-			ctx.fillRect(bounds.size.x, bounds.size.y / 2 - (i + 1) * barHeight, barWidth, barHeight + 0.1);
-			ctx.fillRect(bounds.size.x, bounds.size.y / 2 + i * barHeight, barWidth, barHeight + 0.1);
-		}
+		const hue = 180 + this.#volumeSmoothed * 120;
+		const alpha = fillAlphaBase + this.#volumeSmoothed * 0.4;
+		ctx.fillStyle = `hsla(${hue}, 80%, 45%, ${alpha})`;
+		ctx.fill();
+		ctx.restore();
+	}
+
+	#roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+		const maxR = Math.min(r, w / 2, h / 2);
+		ctx.moveTo(x + maxR, y);
+		ctx.lineTo(x + w - maxR, y);
+		ctx.quadraticCurveTo(x + w, y, x + w, y + maxR);
+		ctx.lineTo(x + w, y + h - maxR);
+		ctx.quadraticCurveTo(x + w, y + h, x + w - maxR, y + h);
+		ctx.lineTo(x + maxR, y + h);
+		ctx.quadraticCurveTo(x, y + h, x, y + h - maxR);
+		ctx.lineTo(x, y + maxR);
+		ctx.quadraticCurveTo(x, y, x + maxR, y);
 	}
 
 	close() {

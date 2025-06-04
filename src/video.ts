@@ -73,7 +73,7 @@ export class Video {
 		ctx.fillStyle = "#000";
 
 		// Create a rounded rectangle path
-		const radius = 8 * scale;
+		const radius = 32 * scale;
 		const w = bounds.size.x;
 		const h = bounds.size.y;
 
