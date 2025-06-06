@@ -200,7 +200,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns true if the broadcaster is locked to a position.
 	locked(): boolean {
 		if (this.source instanceof Watch.Broadcast) {
-			return !!this.source.location.peering.get();
+			return !this.source.location.peering.get();
 		}
 
 		return false;
