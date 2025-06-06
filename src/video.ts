@@ -1,7 +1,9 @@
-import { Memo, Signal, Signals } from "@kixelated/signals";
+import { Watch, Publish } from "@kixelated/hang";
+import { Signals } from "@kixelated/signals";
 import { Bounds, Vector } from "./geometry";
 
 // Local or remote (Hang.Watch.Video) video source.
+/*
 export interface VideoSource {
 	active: Memo<boolean>;
 	frame: (now: DOMHighResTimeStamp) => { frame: VideoFrame; lag: DOMHighResTimeStamp } | undefined;
@@ -10,6 +12,9 @@ export interface VideoSource {
 	// Called to stop downloading when minimized, but obviously we don't want to stop publishing so it's optional.
 	enabled?: Signal<boolean>;
 }
+	*/
+
+export type VideoSource = Watch.Video | Publish.Video;
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
@@ -23,6 +28,8 @@ export class Video {
 
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
+
+	#locator?: DOMHighResTimeStamp;
 
 	#signals = new Signals();
 
@@ -63,8 +70,8 @@ export class Video {
 	) {
 		ctx.save();
 
-		// Add a slight drop shadow
-		ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+		// Add a drop shadow
+		ctx.shadowColor = "rgba(0, 0, 0, 1.0)";
 		ctx.shadowBlur = 16 * scale;
 		ctx.shadowOffsetX = 0;
 		ctx.shadowOffsetY = 4 * scale;
@@ -181,5 +188,63 @@ export class Video {
 	close() {
 		this.#signals.close();
 		this.source.close();
+	}
+
+	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D, bounds: Bounds, scale: number) {
+		if (!this.#locator && this.source.active.peek()) {
+			this.#locator = now;
+		}
+
+		const elapsed = now - (this.#locator ?? 0);
+		const alpha = Math.min(Math.max((7000 - elapsed) / (10000 - 8000), 0), 1);
+		if (alpha <= 0) {
+			return;
+		}
+
+		ctx.save();
+		ctx.globalAlpha *= alpha;
+
+		// Calculate arrow position and animation
+		const arrowSize = 16 * scale;
+		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
+		const offset = 10 * scale;
+
+		const gap = 2 * (arrowSize + offset);
+
+		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2 + ctx.canvas.width / 2, 0), ctx.canvas.width);
+		const y = Math.min(Math.max(bounds.position.y + ctx.canvas.height / 2, 2 * gap), ctx.canvas.height);
+
+		ctx.translate(x, y - gap);
+		ctx.scale(pulseScale, pulseScale);
+
+		ctx.beginPath();
+		ctx.moveTo(0, arrowSize);
+		ctx.lineTo(-arrowSize / 2, 0);
+		ctx.lineTo(arrowSize / 2, 0);
+		ctx.closePath();
+
+		// Style the arrow
+		ctx.lineWidth = 3 * scale;
+		ctx.strokeStyle = "#000"; // Gold color
+		ctx.fillStyle = "#FFD700";
+		ctx.stroke();
+		ctx.fill();
+
+		// Draw "YOU" text
+		ctx.font = `bold ${24 * scale}px Arial`;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillStyle = "#FFD700";
+		ctx.strokeText("YOU", 0, -arrowSize - offset);
+		ctx.fillText("YOU", 0, -arrowSize - offset);
+
+		/*
+		// Add a subtle glow effect
+		ctx.shadowColor = "#FFD700";
+		ctx.shadowBlur = 10 * scale;
+		ctx.stroke();
+		*/
+
+		ctx.restore();
 	}
 }

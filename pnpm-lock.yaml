@@ -13,6 +13,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource-variable/montserrat':
+        specifier: ^5.2.5
+        version: 5.2.5
       '@kixelated/hang':
         specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
         version: link:../../Library/pnpm/global/5/node_modules/@kixelated/hang
@@ -28,9 +31,6 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2
         version: 2.2.6
-      moq:
-        specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
-        version: link:../../Library/pnpm/global/5/node_modules/@kixelated/moq
       solid-js:
         specifier: ^1.9.6
         version: 1.9.6
@@ -342,6 +342,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource-variable/montserrat@5.2.5':
+    resolution: {integrity: sha512-Mfg/AiXwhPLAAgLCqzugFUs/PLprbHzXMhPVrf35q5od4/wHjVqtm0bI000tKGUGDZ3gDpId/+cqufcYHAAAEQ==}
 
   '@jridgewell/gen-mapping@0.3.8':
     resolution: {integrity: sha512-imAbBGkb+ebQyxKgzv5Hu2nmROxoDOXHh80evxdoXNOrvAnVx7zimzc1Oo5h9RlfV4vPXaE2iM5pOFbvOCClWA==}
@@ -1019,6 +1022,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.25.2':
     optional: true
+
+  '@fontsource-variable/montserrat@5.2.5': {}
 
   '@jridgewell/gen-mapping@0.3.8':
     dependencies:

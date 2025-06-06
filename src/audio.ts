@@ -1,4 +1,5 @@
-import { Memo, Signal, Signals, cleanup, signal } from "@kixelated/signals";
+import { Watch, Publish } from "@kixelated/hang";
+import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { createEffect } from "solid-js";
 import { Bounds } from "./geometry";
 
@@ -8,6 +9,9 @@ export type AudioProps = {
 	pan?: number;
 };
 
+export type AudioSource = Watch.Audio | Publish.Audio;
+
+/*
 export interface AudioSource {
 	root: Memo<{ context: AudioContext; node: AudioNode } | undefined>;
 	close: () => void;
@@ -15,6 +19,7 @@ export interface AudioSource {
 	// Called to stop downloading when muted, but obviously we don't want to stop publishing so it's optional.
 	enabled?: Signal<boolean>;
 }
+*/
 
 export class Audio {
 	source: AudioSource;

@@ -1,18 +1,30 @@
-import { Connection, Support } from "@kixelated/hang";
-import { Match, Switch, createSelector } from "solid-js";
+import { Connection } from "@kixelated/hang";
+import { createSelector } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 
 export function Status({ connection }: { connection: Connection }): JSX.Element {
-	const url = connection.url.get;
 	const status = createSelector(connection.status.get);
+	const color = () => {
+		if (status("connected")) return "#13de89";
+		if (status("connecting")) return "#ffd700";
+		return "#ff0000";
+	};
+
+	const text = () => {
+		if (status("disconnected")) return "offline";
+		return "live";
+	};
 
 	return (
-		<div>
-			<Switch fallback={<Support.Modal show="partial" />}>
-				<Match when={!url()}>🔴&nbsp;No URL</Match>
-				<Match when={status("disconnected")}>🔴&nbsp;Disconnected</Match>
-				<Match when={status("connecting")}>🟡&nbsp;Connecting...</Match>
-			</Switch>
-		</div>
+		<span
+			style={{
+				color: color(),
+				transition: "color 1.0s ease-in-out",
+				"font-size": "0.5em",
+				"vertical-align": "-0.2em",
+			}}
+		>
+			{text()}
+		</span>
 	);
 }
