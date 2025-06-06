@@ -1,4 +1,4 @@
-import { Connection } from "@kixelated/hang";
+import { Connection, Support } from "@kixelated/hang";
 import { onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
@@ -38,7 +38,7 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	return (
 		<div>
 			{canvas}
-			<Controls room={room} camera={room.camera} screen={room.screen} />
+			<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />
 		</div>
 	);
 }
@@ -52,6 +52,13 @@ if (!hang) {
 }
 
 render(() => <Hang connection={connection} />, hang);
+
+const support = document.getElementById("support");
+if (!support) {
+	throw new Error("No support element found");
+}
+
+render(() => <Support.Modal show="partial" />, support);
 
 const status = document.getElementById("status");
 if (!status) {

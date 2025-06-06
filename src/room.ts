@@ -1,7 +1,8 @@
 import { Connection, Moq, Publish, Watch } from "@kixelated/hang";
 import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
-import { Broadcast, BroadcastSource } from "./broadcast";
+import { Broadcast } from "./broadcast";
 import { Bounds, Vector } from "./geometry";
+import Settings from "./settings";
 
 const PADDING = 64;
 
@@ -59,8 +60,8 @@ export class Room {
 
 	// The local broadcasts.
 	// The camera/avatar is always published while the screen share is conditionally published.
-	camera: Publish.Broadcast;
-	screen: Publish.Broadcast;
+	camera: Broadcast<Publish.Broadcast>;
+	screen: Broadcast<Publish.Broadcast>;
 
 	#signals = new Signals();
 
@@ -78,75 +79,59 @@ export class Room {
 		);
 		this.user = signal(props?.user);
 
-		this.camera = new Publish.Broadcast(connection, {
+		const camera = new Publish.Broadcast(connection, {
 			device: "camera",
 			// Publish our camera's location, starting at a random position.
 			location: {
 				enabled: true,
-				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-				peering: true,
+				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				// Allow other users to move our camera.
+				peering: Settings.draggable.get(),
 			},
 		});
+		this.camera = new Broadcast(camera, this.viewport);
 
-		this.screen = new Publish.Broadcast(connection, {
+		const screen = new Publish.Broadcast(connection, {
 			device: "screen",
 			// Publish our screen's location, starting at a random position.
 			location: {
 				enabled: true,
-				position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-				peering: true,
+				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				// Allow other users to move our screen.
+				peering: Settings.draggable.get(),
 			},
 		});
+		this.screen = new Broadcast(screen, this.viewport);
 
 		this.#signals.effect(() => {
 			const user = this.user.get();
 			if (!user) return;
 
-			this.camera.enabled.set(true);
-			cleanup(() => this.camera.enabled.set(false));
+			camera.enabled.set(true);
+			cleanup(() => camera.enabled.set(false));
 
-			const path = `${user}.hang`;
-			this.camera.path.set(path);
+			const path = `${user}/camera.hang`;
+			camera.path.set(path);
 
-			this.#broadcastStart(path, {
-				audio: this.camera.audio,
-				video: this.camera.video,
-				enabled: this.camera.enabled,
-				location: {
-					get: () => this.camera.location.position.get(),
-					set: (position) => this.camera.location.position.set(position),
-					locked: () => false, // TODO make a UI element for this?
-				},
-				close: () => this.camera.close(),
-			});
-			cleanup(() => this.#broadcastStop(path));
+			this.#broadcasts.set(path, this.camera);
+			cleanup(() => this.#stopBroadcast(path));
 		});
 
 		this.#signals.effect(() => {
 			const user = this.user.get();
 			if (!user) return;
 
-			const active = !!this.screen.video.media.get() || !!this.screen.audio.media.get();
+			const active = !!screen.video.media.get() || !!screen.audio.media.get();
 			if (!active) return;
 
-			const path = `${user}.hang/screen`;
-			this.screen.path.set(path);
+			const path = `${user}/screen.hang`;
+			screen.path.set(path);
 
-			this.screen.enabled.set(true);
-			cleanup(() => this.screen.enabled.set(false));
+			screen.enabled.set(true);
+			cleanup(() => screen.enabled.set(false));
 
-			this.#broadcastStart(path, {
-				audio: this.screen.audio,
-				video: this.screen.video,
-				enabled: this.screen.enabled,
-				location: {
-					get: () => this.screen.location.position.get(),
-					set: (position) => this.screen.location.position.set(position),
-					locked: () => false, // TODO make a UI element for this?
-				},
-				close: () => this.screen.close(),
-			});
-			cleanup(() => this.#broadcastStop(path));
+			this.#broadcasts.set(path, this.screen);
+			cleanup(() => this.#stopBroadcast(path));
 		});
 
 		const resize = () => {
@@ -211,7 +196,7 @@ export class Room {
 			this.#broadcasts.delete(at.name);
 			this.#broadcasts.set(at.name, at.broadcast);
 
-			if (at.broadcast.source.location.locked?.()) {
+			if (at.broadcast.locked()) {
 				this.canvas.style.cursor = "not-allowed";
 			} else {
 				this.canvas.style.cursor = "grabbing";
@@ -222,14 +207,14 @@ export class Room {
 			const mouse = mousePosition(e);
 
 			if (this.#dragging) {
-				this.#dragging.source.location.set({
+				this.#dragging.setLocation({
 					x: mouse.x / this.canvas.width,
 					y: mouse.y / this.canvas.height,
 				});
 			} else {
 				const at = this.#broadcastAt(mouse);
 				if (at) {
-					if (!at.broadcast.source.location.locked?.()) {
+					if (!at.broadcast.locked()) {
 						this.#hovering = at.broadcast;
 						this.canvas.style.cursor = "grab";
 					}
@@ -272,7 +257,7 @@ export class Room {
 					broadcast = at.broadcast;
 				}
 
-				if (broadcast.source.location.locked?.()) {
+				if (broadcast.locked()) {
 					this.canvas.style.cursor = "not-allowed";
 					return;
 				}
@@ -284,8 +269,8 @@ export class Room {
 					this.canvas.style.cursor = "zoom-in";
 				}
 
-				const location = broadcast.source.location.get();
-				broadcast.source.location.set({
+				const location = broadcast.source.location.current.get();
+				broadcast.setLocation({
 					...location,
 					zoom: Math.max(Math.min((location?.zoom ?? 1) + scale, 4), 0.25),
 				});
@@ -369,7 +354,7 @@ export class Room {
 			// We're donezo.
 			if (!update) break;
 
-			if (update.path === this.camera.path.peek() || update.path === this.screen.path.peek()) {
+			if (update.path === this.camera.source.path.peek() || update.path === this.screen.source.path.peek()) {
 				continue;
 			}
 
@@ -389,61 +374,15 @@ export class Room {
 					location: { enabled: true },
 				});
 
-				// TODO call `close` on these when the broadcast is closed.
-				const cameraUpdates = watch.location.peer();
-				const screenUpdates = watch.location.peer();
-
-				// Update the handle when our path changes.
-				this.#signals.effect(() => {
-					cameraUpdates.handle.set(this.camera.path.get());
-					screenUpdates.handle.set(this.screen.path.get());
-				});
-
-				// Request the position we should use from this remote broadcast.
-				this.#signals.effect(() => {
-					const position = cameraUpdates.location.get();
-					if (position) {
-						this.camera.location.position.set(position);
-					}
-				});
-
-				this.#signals.effect(() => {
-					const position = screenUpdates.location.get();
-					if (position) {
-						this.screen.location.position.set(position);
-					}
-				});
-
-				// Create a new peer handle so we can publish updates if allowed.
-				// TODO close this handle when the broadcast is closed.
-				const peer = this.camera.location.peer();
-
-				this.#signals.effect(() => {
-					// Make sure we're actually publishing.
-					if (!this.camera.published.get()) return;
-
-					// Only set the handle if the broadcast allows peering.
-					if (!watch.location.peering.get()) return;
-
-					peer.handle.set(update.path);
-					cleanup(() => peer.handle.set(undefined));
+				const broadcast = new Broadcast(watch, this.viewport, {
+					camera: this.camera.source,
+					screen: this.screen.source,
 				});
 
 				this.#remotes.set(update.path, watch);
-
-				this.#broadcastStart(update.path, {
-					audio: watch.audio,
-					video: watch.video,
-					enabled: watch.enabled,
-					location: {
-						get: () => watch.location.current.get(),
-						set: (position) => peer.producer.peek()?.update(position),
-						locked: () => peer.producer.peek() === undefined,
-					},
-					close: () => watch.close(),
-				});
+				this.#broadcasts.set(update.path, broadcast);
 			} else if (existing) {
-				this.#broadcastStop(update.path);
+				this.#stopBroadcast(update.path);
 			}
 		}
 
@@ -456,7 +395,7 @@ export class Room {
 
 	#broadcastAt(point: Vector): { name: string; broadcast: Broadcast } | undefined {
 		// We need to iterate in reverse order to respect the z-index.
-		// TODO: Short-circuit on the first result, but that requires a reverse iterator.
+		// TODO: Shoet-circuit on the first result, but that requires a reverse iterator.
 		let result: { name: string; broadcast: Broadcast } | undefined;
 
 		for (const [name, broadcast] of this.#broadcasts) {
@@ -468,16 +407,7 @@ export class Room {
 		return result;
 	}
 
-	#broadcastStart(path: string, source: BroadcastSource) {
-		if (!path) {
-			throw new Error("empty path");
-		}
-
-		const broadcast = new Broadcast(source, this.viewport);
-		this.#broadcasts.set(path, broadcast);
-	}
-
-	#broadcastStop(path: string) {
+	#stopBroadcast(path: string) {
 		const broadcast = this.#broadcasts.get(path);
 		if (!broadcast) throw new Error(`Broadcast not found: ${path}`);
 
@@ -615,6 +545,14 @@ export class Room {
 			ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
 			this.#dragging.video.render(now, ctx, this.#dragging.bounds, this.#dragging.scale, { dragging: true });
 			ctx.restore();
+		}
+
+		if (this.camera.source.enabled.peek()) {
+			this.camera.video.renderLocator(now, ctx, this.camera.bounds, this.camera.scale);
+		}
+
+		if (this.screen.source.enabled.peek()) {
+			this.screen.video.renderLocator(now, ctx, this.screen.bounds, this.screen.scale);
 		}
 	}
 

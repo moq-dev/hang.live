@@ -1,10 +1,12 @@
-import { Signal, Signals } from "@kixelated/signals";
+import { cleanup, Signal, Signals } from "@kixelated/signals";
 
-import { Catalog } from "@kixelated/hang";
-import { Audio, AudioSource } from "./audio";
+import { Publish, Watch, Catalog } from "@kixelated/hang";
+import { Audio } from "./audio";
 import { Bounds, Vector } from "./geometry";
-import { Video, VideoSource } from "./video";
+import { Video } from "./video";
 
+export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
+/*
 export interface BroadcastSource {
 	audio: AudioSource;
 	video: VideoSource;
@@ -20,9 +22,10 @@ export interface BroadcastSource {
 
 	close: () => void;
 }
+	*/
 
-export class Broadcast {
-	source: BroadcastSource;
+export class Broadcast<T extends BroadcastSource = BroadcastSource> {
+	source: T;
 	viewport: Signal<Bounds>;
 
 	audio: Audio;
@@ -43,9 +46,18 @@ export class Broadcast {
 
 	avatar?: HTMLImageElement;
 
+	#locationProducer?: Publish.LocationProducer;
+
 	#signals = new Signals();
 
-	constructor(source: BroadcastSource, viewport: Signal<Bounds>) {
+	constructor(
+		source: T,
+		viewport: Signal<Bounds>,
+		locals?: {
+			camera: Publish.Broadcast;
+			screen: Publish.Broadcast;
+		},
+	) {
 		this.source = source;
 		this.viewport = viewport;
 
@@ -78,12 +90,74 @@ export class Broadcast {
 			}
 
 			// Update the target position from the network.
-			const location = this.source.location.get();
+			const location = this.source.location.current.get();
 			if (!location) return;
 
 			this.targetPosition.x = location.x ?? this.targetPosition.x;
 			this.targetPosition.y = location.y ?? this.targetPosition.y;
 			this.targetScale = location.zoom ?? this.targetScale;
+		});
+
+		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
+		if (locals && this.source instanceof Watch.Broadcast) {
+			this.#initRemote(this.source, locals);
+		}
+	}
+
+	// Special logic for only remote broadcasts.
+	#initRemote(
+		remote: Watch.Broadcast,
+		locals: {
+			camera: Publish.Broadcast;
+			screen: Publish.Broadcast;
+		},
+	) {
+		const cameraUpdates = remote.location.peer();
+		this.#signals.cleanup(() => cameraUpdates.close());
+
+		const screenUpdates = remote.location.peer();
+		this.#signals.cleanup(() => screenUpdates.close());
+
+		// Update the handle when our path changes.
+		this.#signals.effect(() => {
+			cameraUpdates.handle.set(locals.camera.path.get());
+			screenUpdates.handle.set(locals.screen.path.get());
+		});
+
+		// Request the position we should use from this remote broadcast.
+		this.#signals.effect(() => {
+			// Only update the camera position if the local broadcast allows it.
+			if (!locals.camera.location.peering.get()) return;
+
+			const position = cameraUpdates.location.get();
+			if (!position) return;
+
+			locals.camera.location.current.set(position);
+		});
+
+		this.#signals.effect(() => {
+			// Only update the camera position if the local broadcast allows it.
+			if (!locals.camera.location.peering.get()) return;
+
+			const position = screenUpdates.location.get();
+			if (!position) return;
+
+			locals.screen.location.current.set(position);
+		});
+
+		// Create a new peer handle so we can publish updates if allowed.
+		const peer = locals.camera.location.peer();
+		this.#signals.cleanup(() => peer.close());
+
+		this.#signals.effect(() => {
+			// Make sure we're actually publishing.
+			if (!locals.camera.published.get()) return;
+
+			// Only set the handle if the broadcast allows peering.
+			if (!this.source.location.peering.get()) return;
+
+			peer.handle.set(this.source.path.get());
+			cleanup(() => peer.handle.set(undefined));
 		});
 	}
 
@@ -121,6 +195,23 @@ export class Broadcast {
 		// Pan the audio left or right based on the position.
 		const pan = this.bounds.middle().x / viewport.size.x;
 		this.audio.pan.set(Math.min(Math.max(pan, -1), 1));
+	}
+
+	// Returns true if the broadcaster is locked to a position.
+	locked(): boolean {
+		if (this.source instanceof Watch.Broadcast) {
+			return !!this.source.location.peering.get();
+		}
+
+		return false;
+	}
+
+	setLocation(position: Catalog.Position) {
+		if (this.source instanceof Publish.Broadcast) {
+			this.source.location.current.set(position);
+		} else if (this.#locationProducer) {
+			this.#locationProducer.update(position);
+		}
 	}
 
 	close() {
