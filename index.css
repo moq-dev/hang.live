@@ -17,13 +17,10 @@
 
 a {
 	color: inherit;
-	text-decoration: none;
-	/*
 	text-decoration-color: orange;
 	text-underline-offset: 0.125em;
 	text-decoration-thickness: 0.075em;
 	transition: text-decoration-color 0.2s ease-in-out;
-	*/
 }
 
 /*
@@ -43,17 +40,6 @@ body {
 	overflow: hidden;
 }
 
-@media (prefers-color-scheme: light) {
-	:root {
-		color: #213547;
-		background-color: #ffffff;
-	}
-
-	a:hover {
-		color: #747bff;
-	}
-}
-
 header {
 	color: white;
 
@@ -70,7 +56,12 @@ header {
 
 	text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
 
-	> .logo, > nav {
+	a {
+		text-decoration: none;
+	}
+
+	> .logo,
+	> nav {
 		border-radius: 4px;
 		backdrop-filter: blur(4px);
 		padding: 6px 14px;
@@ -83,7 +74,6 @@ header {
 	> nav {
 		display: flex;
 		gap: 16px;
-
 	}
 }
 
@@ -93,14 +83,15 @@ header {
 	left: 0;
 	right: 0;
 	display: flex;
-	align-items: center;
+	align-items: flex-end;
 	gap: 8px;
 	padding: 8px 12px;
 	font-size: 1.5em;
 
 	text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
 
-	input, button {
+	input,
+	button {
 		border: 1px solid transparent;
 		backdrop-filter: blur(4px);
 		border-radius: 4px;
@@ -127,4 +118,12 @@ header {
 	> * {
 		pointer-events: auto;
 	}
+}
+
+.dragging * {
+	pointer-events: none !important;
+}
+
+.dragging canvas {
+	pointer-events: auto !important;
 }

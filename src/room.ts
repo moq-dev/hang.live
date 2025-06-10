@@ -1,10 +1,9 @@
 import { Connection, Moq, Publish, Watch } from "@kixelated/hang";
 import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
-import { Bounds, Vector } from "./geometry";
+import { Vector } from "./geometry";
 import Settings from "./settings";
-
-const PADDING = 64;
+import { ReactiveMap } from "@solid-primitives/map";
 
 export type RoomProps = {
 	user?: string;
@@ -23,7 +22,7 @@ export class Room {
 
 	// All of the broadcasts keyed by their path.
 	// We use the insertion order to determine the z-index.
-	#broadcasts = new Map<string, Broadcast>();
+	broadcasts = new ReactiveMap<string, Broadcast>();
 
 	// Remote broadcasts are stored separately so we treat them differently.
 	#remotes = new Map<string, Watch.Broadcast>();
@@ -32,7 +31,7 @@ export class Room {
 	#rip: Broadcast[] = [];
 
 	canvas: HTMLCanvasElement;
-	viewport: Signal<Bounds>; // The canvas size, from -width/2 to +width/2, -height/2 to +height/2
+	viewport: Signal<Vector>; // The canvas size
 
 	#ctx: CanvasRenderingContext2D;
 	#animation: number | undefined;
@@ -71,12 +70,7 @@ export class Room {
 		this.muted = signal(props?.muted ?? false);
 		this.visible = signal(props?.visible ?? true);
 		this.volume = signal(props?.volume ?? 0.5);
-		this.viewport = signal(
-			new Bounds(
-				Vector.create(-canvas.width / 2, -canvas.height / 2),
-				Vector.create(canvas.width / 2, canvas.height / 2),
-			),
-		);
+		this.viewport = signal(Vector.create(canvas.width, canvas.height));
 		this.user = signal(props?.user);
 
 		const camera = new Publish.Broadcast(connection, {
@@ -87,6 +81,13 @@ export class Room {
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 				// Allow other users to move our camera.
 				peering: Settings.draggable.get(),
+			},
+			user: {
+				name: "John Doe",
+				avatar: "https://placehold.co/100x100",
+			},
+			chat: {
+				enabled: true,
 			},
 		});
 		this.camera = new Broadcast(camera, this.viewport);
@@ -113,7 +114,7 @@ export class Room {
 			const path = `${user}/camera.hang`;
 			camera.path.set(path);
 
-			this.#broadcasts.set(path, this.camera);
+			this.broadcasts.set(path, this.camera);
 			cleanup(() => this.#stopBroadcast(path));
 		});
 
@@ -130,19 +131,14 @@ export class Room {
 			screen.enabled.set(true);
 			cleanup(() => screen.enabled.set(false));
 
-			this.#broadcasts.set(path, this.screen);
+			this.broadcasts.set(path, this.screen);
 			cleanup(() => this.#stopBroadcast(path));
 		});
 
 		const resize = () => {
 			this.canvas.width = window.devicePixelRatio * window.innerWidth;
 			this.canvas.height = window.devicePixelRatio * window.innerHeight;
-			this.viewport.set(
-				new Bounds(
-					Vector.create(-this.canvas.width / 2, -this.canvas.height / 2),
-					Vector.create(this.canvas.width / 2, this.canvas.height / 2),
-				),
-			);
+			this.viewport.set(Vector.create(this.canvas.width, this.canvas.height));
 		};
 
 		const visible = () => {
@@ -180,12 +176,10 @@ export class Room {
 
 		const mousePosition = (e: MouseEvent) => {
 			const rect = this.canvas.getBoundingClientRect();
-			return Vector.create(e.clientX - rect.left, e.clientY - rect.top)
-				.mult(window.devicePixelRatio)
-				.sub(Vector.create(this.canvas.width / 2, this.canvas.height / 2));
+			return Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio);
 		};
 
-		this.canvas.addEventListener("mousedown", (e) => {
+		window.addEventListener("mousedown", (e) => {
 			const mouse = mousePosition(e);
 
 			const at = this.#broadcastAt(mouse);
@@ -193,23 +187,24 @@ export class Room {
 			if (!at) return;
 
 			// Reinsert to update the z-index.
-			this.#broadcasts.delete(at.name);
-			this.#broadcasts.set(at.name, at.broadcast);
+			this.broadcasts.delete(at.name);
+			this.broadcasts.set(at.name, at.broadcast);
 
 			if (at.broadcast.locked()) {
 				this.canvas.style.cursor = "not-allowed";
 			} else {
 				this.canvas.style.cursor = "grabbing";
+				document.documentElement.classList.add("dragging");
 			}
 		});
 
-		this.canvas.addEventListener("mousemove", (e) => {
+		window.addEventListener("mousemove", (e) => {
 			const mouse = mousePosition(e);
 
 			if (this.#dragging) {
 				this.#dragging.setLocation({
-					x: mouse.x / this.canvas.width,
-					y: mouse.y / this.canvas.height,
+					x: mouse.x / this.canvas.width - 0.5,
+					y: mouse.y / this.canvas.height - 0.5,
 				});
 			} else {
 				const at = this.#broadcastAt(mouse);
@@ -225,23 +220,25 @@ export class Room {
 			}
 		});
 
-		this.canvas.addEventListener("mouseup", () => {
+		window.addEventListener("mouseup", () => {
 			if (this.#dragging) {
 				this.#dragging = undefined;
 				this.#hovering = undefined;
 				this.canvas.style.cursor = "default";
+				document.documentElement.classList.remove("dragging");
 			}
 		});
 
-		this.canvas.addEventListener("mouseleave", () => {
+		window.addEventListener("mouseleave", () => {
 			if (this.#dragging) {
 				this.#dragging = undefined;
 				this.#hovering = undefined;
 				this.canvas.style.cursor = "default";
+				document.documentElement.classList.remove("dragging");
 			}
 		});
 
-		this.canvas.addEventListener(
+		window.addEventListener(
 			"wheel",
 			(e) => {
 				e.preventDefault(); // Prevent scroll
@@ -372,6 +369,8 @@ export class Room {
 					audio: { enabled: !this.suspended.peek() },
 					// Download the location of the broadcaster.
 					location: { enabled: true },
+					// Download the chat of the broadcaster.
+					chat: { enabled: true },
 				});
 
 				const broadcast = new Broadcast(watch, this.viewport, {
@@ -380,7 +379,7 @@ export class Room {
 				});
 
 				this.#remotes.set(update.path, watch);
-				this.#broadcasts.set(update.path, broadcast);
+				this.broadcasts.set(update.path, broadcast);
 			} else if (existing) {
 				this.#stopBroadcast(update.path);
 			}
@@ -398,8 +397,8 @@ export class Room {
 		// TODO: Shoet-circuit on the first result, but that requires a reverse iterator.
 		let result: { name: string; broadcast: Broadcast } | undefined;
 
-		for (const [name, broadcast] of this.#broadcasts) {
-			if (broadcast.bounds.contains(point)) {
+		for (const [name, broadcast] of this.broadcasts) {
+			if (broadcast.bounds.peek().contains(point)) {
 				result = { name, broadcast };
 			}
 		}
@@ -408,14 +407,14 @@ export class Room {
 	}
 
 	#stopBroadcast(path: string) {
-		const broadcast = this.#broadcasts.get(path);
+		const broadcast = this.broadcasts.get(path);
 		if (!broadcast) throw new Error(`Broadcast not found: ${path}`);
 
 		// Stop downloading it.
 		broadcast.source.enabled.set(false);
 
 		// Move it from the main list to the rip list.
-		this.#broadcasts.delete(path);
+		this.broadcasts.delete(path);
 		this.#rip.push(broadcast);
 
 		// Slowly fade out the offline broadcast.
@@ -438,10 +437,9 @@ export class Room {
 
 		for (const broadcast of this.#rip) {
 			broadcast.tick(now, this.#scale);
-			broadcast.move();
 		}
 
-		const broadcasts = Array.from(this.#broadcasts.values());
+		const broadcasts = Array.from(this.broadcasts.values());
 		for (const broadcast of broadcasts) {
 			broadcast.tick(now, this.#scale);
 		}
@@ -450,19 +448,21 @@ export class Room {
 		// We might need to optimize this with a quadtree or something.
 		for (let i = 0; i < broadcasts.length; i++) {
 			const a = broadcasts[i];
+			const abounds = a.bounds.peek();
 
 			for (let j = i + 1; j < broadcasts.length; j++) {
 				const b = broadcasts[j];
+				const bbounds = b.bounds.peek();
 
 				// Compute the intersection rectangle.
-				const intersection = a.bounds.intersects(b.bounds);
+				const intersection = abounds.intersects(bbounds);
 				if (!intersection) {
 					continue;
 				}
 
 				// Repel each other based on the size of the intersection.
-				const strength = (2 * intersection.area()) / (a.bounds.area() + b.bounds.area());
-				let force = a.bounds.middle().sub(b.bounds.middle()).mult(strength);
+				const strength = (2 * intersection.area()) / (abounds.area() + bbounds.area());
+				let force = abounds.middle().sub(bbounds.middle()).mult(strength);
 
 				if (this.#dragging !== a && this.#dragging !== b) {
 					force = force.mult(10);
@@ -471,36 +471,6 @@ export class Room {
 				a.velocity = a.velocity.add(force);
 				b.velocity = b.velocity.sub(force);
 			}
-
-			const top = PADDING - a.bounds.position.y - this.canvas.height / 2;
-			const down = a.bounds.position.y + a.bounds.size.y - (this.canvas.height / 2 - PADDING);
-			const left = PADDING - a.bounds.position.x - this.canvas.width / 2;
-			const right = a.bounds.position.x + a.bounds.size.x - (this.canvas.width / 2 - PADDING);
-
-			if (top > 0) {
-				if (down > 0) {
-					// Do nothing, this element is huge.
-				} else {
-					a.velocity.y += top;
-				}
-			} else if (down > 0) {
-				a.velocity.y -= down;
-			}
-
-			if (left > 0) {
-				if (right > 0) {
-					// Do nothing, this element is huge.
-				} else {
-					a.velocity.x += left;
-				}
-			} else if (right > 0) {
-				a.velocity.x -= right;
-			}
-		}
-
-		// Finally, apply the velocity to the position.
-		for (const broadcast of broadcasts) {
-			broadcast.move();
 		}
 
 		this.#render(now);
@@ -514,25 +484,25 @@ export class Room {
 
 		this.#renderBackground(now);
 
-		for (const broadcast of this.#broadcasts.values()) {
-			broadcast.audio.renderBackground(ctx, broadcast.bounds, broadcast.scale);
+		for (const broadcast of this.broadcasts.values()) {
+			broadcast.audio.renderBackground(ctx);
 		}
 
-		for (const broadcast of this.#broadcasts.values()) {
-			broadcast.audio.render(ctx, broadcast.bounds, broadcast.scale);
+		for (const broadcast of this.broadcasts.values()) {
+			broadcast.audio.render(ctx);
 		}
 
 		for (const broadcast of this.#rip) {
 			ctx.save();
 			ctx.globalAlpha *= broadcast.online; // Fade the opacity when the broadcaster is offline.
-			broadcast.video.render(now, ctx, broadcast.bounds, broadcast.scale);
+			broadcast.video.render(now, ctx);
 			ctx.restore();
 		}
 
-		for (const broadcast of this.#broadcasts.values()) {
+		for (const broadcast of this.broadcasts.values()) {
 			if (this.#dragging !== broadcast) {
 				ctx.save();
-				broadcast.video.render(now, ctx, broadcast.bounds, broadcast.scale, {
+				broadcast.video.render(now, ctx, {
 					hovering: this.#hovering === broadcast,
 				});
 				ctx.restore();
@@ -543,16 +513,16 @@ export class Room {
 		if (this.#dragging) {
 			ctx.save();
 			ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-			this.#dragging.video.render(now, ctx, this.#dragging.bounds, this.#dragging.scale, { dragging: true });
+			this.#dragging.video.render(now, ctx, { dragging: true });
 			ctx.restore();
 		}
 
 		if (this.camera.source.enabled.peek()) {
-			this.camera.video.renderLocator(now, ctx, this.camera.bounds, this.camera.scale);
+			this.camera.video.renderLocator(now, ctx);
 		}
 
 		if (this.screen.source.enabled.peek()) {
-			this.screen.video.renderLocator(now, ctx, this.screen.bounds, this.screen.scale);
+			this.screen.video.renderLocator(now, ctx);
 		}
 	}
 
@@ -610,11 +580,21 @@ export class Room {
 	}
 
 	#updateScale() {
+		if (this.broadcasts.size === 0) {
+			// Avoid division by zero.
+			return;
+		}
+
 		const canvasArea = this.canvas.width * this.canvas.height;
 
 		let broadcastArea = 0;
-		for (const broadcast of this.#broadcasts.values()) {
+		for (const broadcast of this.broadcasts.values()) {
 			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y;
+		}
+
+		// If we're the only broadcaster, then don't make our avatar huge.
+		if (this.broadcasts.size <= 1) {
+			broadcastArea *= 2;
 		}
 
 		const fillRatio = broadcastArea / canvasArea;
@@ -626,7 +606,7 @@ export class Room {
 	close() {
 		this.#signals.close();
 
-		for (const broadcast of this.#broadcasts.values()) {
+		for (const broadcast of this.broadcasts.values()) {
 			broadcast.close();
 		}
 
@@ -635,7 +615,7 @@ export class Room {
 		}
 
 		this.#rip = [];
-		this.#broadcasts.clear();
+		this.broadcasts.clear();
 
 		this.camera.close();
 		this.screen.close();

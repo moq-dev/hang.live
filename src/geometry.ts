@@ -19,20 +19,12 @@ export class Bounds {
 		return this.size.x * this.size.y;
 	}
 
-	add(v: Vector) {
-		return new Bounds(this.position.add(v), this.size);
-	}
-
-	sub(v: Vector) {
-		return new Bounds(this.position.sub(v), this.size);
-	}
-
 	mult(v: number) {
-		return new Bounds(this.position, this.size.mult(v));
+		return new Bounds(this.position.mult(v), this.size.mult(v));
 	}
 
 	div(v: number) {
-		return new Bounds(this.position, this.size.div(v));
+		return new Bounds(this.position.div(v), this.size.div(v));
 	}
 
 	intersects(b: Bounds) {
@@ -56,6 +48,10 @@ export class Bounds {
 			p.y >= this.position.y &&
 			p.y <= this.position.y + this.size.y
 		);
+	}
+
+	clone() {
+		return new Bounds(this.position.clone(), this.size.clone());
 	}
 }
 

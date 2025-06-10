@@ -1,7 +1,7 @@
 import { Watch, Publish } from "@kixelated/hang";
 import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { createEffect } from "solid-js";
-import { Bounds } from "./geometry";
+import { Broadcast } from "./broadcast";
 
 export type AudioProps = {
 	muted?: boolean;
@@ -11,18 +11,8 @@ export type AudioProps = {
 
 export type AudioSource = Watch.Audio | Publish.Audio;
 
-/*
-export interface AudioSource {
-	root: Memo<{ context: AudioContext; node: AudioNode } | undefined>;
-	close: () => void;
-
-	// Called to stop downloading when muted, but obviously we don't want to stop publishing so it's optional.
-	enabled?: Signal<boolean>;
-}
-*/
-
 export class Audio {
-	source: AudioSource;
+	broadcast: Broadcast;
 	muted: Signal<boolean>;
 	volume: Signal<number>;
 	pan: Signal<number>;
@@ -34,8 +24,8 @@ export class Audio {
 
 	#signals = new Signals();
 
-	constructor(source: AudioSource, props?: AudioProps) {
-		this.source = source;
+	constructor(broadcast: Broadcast, props?: AudioProps) {
+		this.broadcast = broadcast;
 		this.muted = signal(props?.muted ?? false);
 		this.volume = signal(props?.volume ?? 1);
 		this.pan = signal(props?.pan ?? 0);
@@ -44,7 +34,7 @@ export class Audio {
 	}
 
 	#init() {
-		const audio = this.source.root.get();
+		const audio = this.broadcast.source.audio.root.get();
 		if (!audio) return;
 
 		const { context, node } = audio;
@@ -89,11 +79,14 @@ export class Audio {
 		audioPanner.connect(context.destination);
 	}
 
-	renderBackground(ctx: CanvasRenderingContext2D, bounds: Bounds, scale: number) {
+	renderBackground(ctx: CanvasRenderingContext2D) {
 		ctx.save();
-		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2);
 
-		const cornerRadius = 32 * scale;
+		const bounds = this.broadcast.bounds.peek();
+
+		ctx.translate(bounds.position.x, bounds.position.y);
+
+		const cornerRadius = 32 * this.broadcast.scale;
 		const PADDING = 32;
 
 		// Background outline
@@ -111,11 +104,14 @@ export class Audio {
 		ctx.restore();
 	}
 
-	render(ctx: CanvasRenderingContext2D, bounds: Bounds, scale: number) {
+	render(ctx: CanvasRenderingContext2D) {
 		if (!this.#analyser) return;
 
+		const bounds = this.broadcast.bounds.peek();
+		const scale = this.broadcast.scale;
+
 		ctx.save();
-		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2);
+		ctx.translate(bounds.position.x, bounds.position.y);
 
 		const cornerRadius = 32 * scale;
 		const fillAlphaBase = 0.3;
@@ -167,6 +163,5 @@ export class Audio {
 
 	close() {
 		this.#signals.close();
-		this.source.close();
 	}
 }

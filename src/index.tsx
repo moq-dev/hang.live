@@ -5,6 +5,7 @@ import { render } from "solid-js/web";
 import { Controls } from "./controls";
 import { Room } from "./room";
 import { Status } from "./status";
+import { Chat } from "./chat";
 
 const RELAY = "http://localhost:4443";
 
@@ -38,6 +39,7 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	return (
 		<div>
 			{canvas}
+			<Chat room={room} />
 			<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />
 		</div>
 	);

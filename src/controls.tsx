@@ -15,7 +15,7 @@ export function Controls(props: {
 			<Microphone audio={props.camera.audio} />
 			<Camera video={props.camera.video} />
 			<Screen video={props.screen.video} audio={props.screen.audio} />
-			<Chat />
+			<Chat broadcast={props.camera} />
 			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
 			<Volume room={props.room} />
 			<Settings />
@@ -182,8 +182,57 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	);
 }
 
-function Chat(): JSX.Element {
-	return <input type="text" placeholder="Chat" />;
+function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
+	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
+	const [message, setMessage] = createSignal("");
+
+	const keydown = (e: KeyboardEvent) => {
+		if (
+			e.ctrlKey ||
+			e.altKey ||
+			e.metaKey ||
+			["Tab", "Escape"].includes(e.key) ||
+			document.activeElement instanceof HTMLInputElement
+		)
+			return;
+
+		input()?.focus();
+	};
+
+	onMount(() => {
+		window.addEventListener("keydown", keydown);
+		onCleanup(() => window.removeEventListener("keydown", keydown));
+	});
+
+	const submit = (e: SubmitEvent) => {
+		e.preventDefault();
+
+		const m = message();
+		if (!m) return;
+
+		if (!props.broadcast.chat.enabled.get()) return;
+
+		// Clear then publish so we only store a single message.
+		// TODO clear old messages after X seconds
+		props.broadcast.chat.clear();
+		props.broadcast.chat.publish(m);
+
+		setMessage("");
+	};
+
+	return (
+		<form onSubmit={submit}>
+			<input
+				ref={setInput}
+				type="text"
+				value={message()}
+				onInput={(e) => setMessage(e.currentTarget.value)}
+				aria-label="Chat message"
+				placeholder="chat"
+				autocomplete="off"
+			/>
+		</form>
+	);
 }
 
 function Volume(props: { room: Room }): JSX.Element {
