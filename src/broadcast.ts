@@ -1,41 +1,42 @@
-import { cleanup, Signal, Signals } from "@kixelated/signals";
+import { cleanup, signal, Signal, Signals } from "@kixelated/signals";
 
-import { Publish, Watch, Catalog } from "@kixelated/hang";
+import { Publish, Watch, Catalog, Container } from "@kixelated/hang";
 import { Audio } from "./audio";
 import { Bounds, Vector } from "./geometry";
 import { Video } from "./video";
+import { ChatMessage } from "@kixelated/hang/container";
+
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
-/*
-export interface BroadcastSource {
-	audio: AudioSource;
-	video: VideoSource;
 
-	// We can both get and set the location (reactive)
-	location: {
-		get: () => Catalog.Position | undefined;
-		set: (position: Catalog.Position) => void;
-		locked?: () => boolean;
-	};
+// Create a markdown renderer that opens links in a new tab.
+const renderer = new marked.Renderer();
 
-	enabled: Signal<boolean>;
+renderer.link = ({ href, title, text }) => {
+	const t = title ? ` title="${title}"` : "";
+	const safeHref = href ?? "#";
+	// Important: target="_blank" rel="noopener noreferrer"
+	return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer"${t}>${text}</a>`;
+};
 
-	close: () => void;
-}
-	*/
+marked.use({ renderer });
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	source: T;
-	viewport: Signal<Bounds>;
+
+	// The canvas size, 0 to width/height.
+	viewport: Signal<Vector>;
 
 	audio: Audio;
 	video: Video;
 
-	bounds: Bounds; // -canvas/2 to +canvas/2
+	bounds: Signal<Bounds>; // 0 to canvas
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
-	targetPosition = Vector.create(0, 0); // -0.5 to 0.5
+	targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
 	targetScale = 1.0; // 1 is 100%
 
 	// 1 when the broadcaster is online, 0 when they're offline.
@@ -46,13 +47,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	avatar?: HTMLImageElement;
 
+	// Returns the most recent chat messages.
+	messages: Signal<ChatMessage[]>;
+
 	#locationProducer?: Publish.LocationProducer;
 
 	#signals = new Signals();
 
 	constructor(
 		source: T,
-		viewport: Signal<Bounds>,
+		viewport: Signal<Vector>,
 		locals?: {
 			camera: Publish.Broadcast;
 			screen: Publish.Broadcast;
@@ -60,12 +64,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	) {
 		this.source = source;
 		this.viewport = viewport;
+		this.messages = signal<ChatMessage[]>([]);
 
-		this.avatar = new Image();
-		this.avatar.src = "/avatar.png";
-
-		this.video = new Video(source.video);
-		this.audio = new Audio(source.audio);
+		this.video = new Video(this);
+		this.audio = new Audio(this);
 
 		// Start them at the center of the screen with a tiiiiny bit of variance to break ties.
 		const start = () => (Math.random() - 0.5) / 100;
@@ -74,11 +76,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const canvas = this.viewport.peek();
 
 		// TODO This seems kinda buggy?
-		const startPosition = this.targetPosition
-			.normalize()
-			.mult(2 * Math.sqrt(canvas.size.x ** 2 + canvas.size.y ** 2));
+		const startPosition = this.targetPosition.normalize().mult(canvas.length()).add(canvas.div(2));
 
-		this.bounds = new Bounds(startPosition, this.video.targetSize);
+		this.bounds = signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
 		this.#signals.effect(() => {
@@ -96,6 +96,24 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			this.targetPosition.x = location.x ?? this.targetPosition.x;
 			this.targetPosition.y = location.y ?? this.targetPosition.y;
 			this.targetScale = location.zoom ?? this.targetScale;
+		});
+
+		this.#signals.effect(() => {
+			const user = this.source.user.get();
+			if (!user) return;
+
+			this.avatar = new Image();
+			this.avatar.src = user.avatar ?? "/avatar.png";
+
+			cleanup(() => {
+				this.avatar = undefined;
+			});
+		});
+
+		this.#signals.effect(() => {
+			if (!this.source.chat.enabled.get()) return;
+			const consumer = this.source.chat.consume();
+			void this.#runChat(consumer);
 		});
 
 		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
@@ -161,40 +179,99 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 	}
 
+	async #runChat(decoder: Container.ChatDecoder) {
+		try {
+			for (;;) {
+				const message = await decoder.readMessage();
+				if (!message) break;
+
+				// Convert markdown to HTML.
+				// TODO: Run in a web worker to prevent DoS attacks apparently?
+				const markdown = marked.parse(message.text, { async: false });
+
+				// Sanitize the resulting HTML.
+				// ChatGPT says that allowing target is ONLY safe with noopener noreferrer,
+				message.text = DOMPurify.sanitize(markdown, { ADD_ATTR: ["target", "rel"] });
+
+				this.messages.set((messages) => [message, ...messages]);
+
+				// Remove from the DOM after the max fade time.
+				setTimeout(() => {
+					this.messages.set((messages) => messages.slice(0, -1));
+				}, 9000);
+			}
+		} finally {
+			this.messages.set([]);
+		}
+	}
+
 	// TODO Also make scale a signal
 	tick(now: DOMHighResTimeStamp, scale: number) {
 		this.video.tick(now);
 
-		this.scale += (this.targetScale - this.scale) * 0.1;
-		const targetSize = this.video.targetSize.mult(this.scale * scale);
-
-		// Slowly move from the actual size to the target size
-		this.bounds.size.x += (targetSize.x - this.bounds.size.x) * 0.1;
-		this.bounds.size.y += (targetSize.y - this.bounds.size.y) * 0.1;
-
-		// Slowly slow down the velocity.
-		this.velocity = this.velocity.mult(0.5);
-
+		const bounds = this.bounds.peek().clone(); //  clone is needed so SolidJS can track changes
 		const viewport = this.viewport.peek();
 
 		// Guide the body towards the target position with a bit of force.
-		const target = Vector.create(
-			this.targetPosition.x * viewport.size.x,
-			this.targetPosition.y * viewport.size.y,
-		).mult(2);
-		const middle = this.bounds.middle();
+		const target = Vector.create(this.targetPosition.x * viewport.x, this.targetPosition.y * viewport.y).add(
+			viewport.div(2),
+		);
+
+		// Make sure the target position is within the viewport.
+		target.x = Math.max(0, Math.min(target.x, viewport.x));
+		target.y = Math.max(0, Math.min(target.y, viewport.y));
+
+		const middle = this.bounds.peek().middle();
 		const force = target.sub(middle);
 		this.velocity = this.velocity.add(force);
-	}
 
-	// Apply velocity to the bounds.
-	move() {
-		this.bounds = this.bounds.add(this.velocity.div(50));
-		const viewport = this.viewport.peek();
+		const PADDING = 64;
+
+		const top = PADDING - bounds.position.y;
+		const down = bounds.position.y + bounds.size.y - viewport.y + PADDING;
+		const left = PADDING - bounds.position.x;
+		const right = bounds.position.x + bounds.size.x - viewport.x + PADDING;
+
+		if (top > 0) {
+			if (down > 0) {
+				// Do nothing, this element is huge.
+			} else {
+				this.velocity.y += top;
+			}
+		} else if (down > 0) {
+			this.velocity.y -= down;
+		}
+
+		if (left > 0) {
+			if (right > 0) {
+				// Do nothing, this element is huge.
+			} else {
+				this.velocity.x += left;
+			}
+		} else if (right > 0) {
+			this.velocity.x -= right;
+		}
+
+		// Apply everything now.
+		const targetSize = this.video.targetSize.mult(this.scale * scale);
+		this.scale += (this.targetScale - this.scale) * 0.1;
+
+		// Apply the velocity.
+		bounds.position = bounds.position.add(this.velocity.div(50));
+
+		// Slowly move from the actual size to the target size.
+		bounds.size.x += (targetSize.x - bounds.size.x) * 0.1;
+		bounds.size.y += (targetSize.y - bounds.size.y) * 0.1;
+
+		this.bounds.set(bounds);
 
 		// Pan the audio left or right based on the position.
-		const pan = this.bounds.middle().x / viewport.size.x;
+		// If a broadcast is visible, then it will be between -0.5 and 0.5.
+		const pan = bounds.middle().x / viewport.x - 0.5;
 		this.audio.pan.set(Math.min(Math.max(pan, -1), 1));
+
+		// Slow down the velocity for the next frame.
+		this.velocity = this.velocity.mult(0.5);
 	}
 
 	// Returns true if the broadcaster is locked to a position.

@@ -1,6 +1,7 @@
 import { Watch, Publish } from "@kixelated/hang";
 import { Signals } from "@kixelated/signals";
-import { Bounds, Vector } from "./geometry";
+import { Vector } from "./geometry";
+import { Broadcast } from "./broadcast";
 
 // Local or remote (Hang.Watch.Video) video source.
 /*
@@ -19,7 +20,7 @@ export type VideoSource = Watch.Video | Publish.Video;
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
 	// So we use the Video class directly to get individual frames.
-	source: VideoSource;
+	broadcast: Broadcast;
 
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
@@ -33,8 +34,8 @@ export class Video {
 
 	#signals = new Signals();
 
-	constructor(source: VideoSource) {
-		this.source = source;
+	constructor(broadcast: Broadcast) {
+		this.broadcast = broadcast;
 
 		this.targetSize = Vector.create(128, 128);
 
@@ -43,8 +44,8 @@ export class Video {
 	}
 
 	tick(now: DOMHighResTimeStamp) {
-		const active = this.source.active.peek();
-		const next = this.source.frame(now);
+		const active = this.broadcast.source.video.active.peek();
+		const next = this.broadcast.source.video.frame(now);
 
 		if (active && next) {
 			this.transition = Math.min(this.transition + 0.05, 1);
@@ -61,8 +62,6 @@ export class Video {
 	render(
 		now: DOMHighResTimeStamp,
 		ctx: CanvasRenderingContext2D,
-		bounds: Bounds,
-		scale: number,
 		modifiers?: {
 			dragging?: boolean;
 			hovering?: boolean;
@@ -70,13 +69,16 @@ export class Video {
 	) {
 		ctx.save();
 
+		const bounds = this.broadcast.bounds.peek();
+		const scale = this.broadcast.scale;
+
 		// Add a drop shadow
 		ctx.shadowColor = "rgba(0, 0, 0, 1.0)";
 		ctx.shadowBlur = 16 * scale;
 		ctx.shadowOffsetX = 0;
 		ctx.shadowOffsetY = 4 * scale;
 
-		ctx.translate(bounds.position.x + ctx.canvas.width / 2, bounds.position.y + ctx.canvas.height / 2);
+		ctx.translate(bounds.position.x, bounds.position.y);
 		ctx.fillStyle = "#000";
 
 		// Create a rounded rectangle path
@@ -109,7 +111,7 @@ export class Video {
 			ctx.globalAlpha *= 0.7;
 		}
 
-		const next = this.source.frame(now);
+		const next = this.broadcast.source.video.frame(now);
 
 		if (next && this.transition > 0) {
 			ctx.save();
@@ -187,11 +189,13 @@ export class Video {
 
 	close() {
 		this.#signals.close();
-		this.source.close();
 	}
 
-	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D, bounds: Bounds, scale: number) {
-		if (!this.#locator && this.source.active.peek()) {
+	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
+		const bounds = this.broadcast.bounds.peek();
+		const scale = this.broadcast.scale;
+
+		if (!this.#locator && this.broadcast.source.video.active.peek()) {
 			this.#locator = now;
 		}
 
@@ -211,8 +215,8 @@ export class Video {
 
 		const gap = 2 * (arrowSize + offset);
 
-		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2 + ctx.canvas.width / 2, 0), ctx.canvas.width);
-		const y = Math.min(Math.max(bounds.position.y + ctx.canvas.height / 2, 2 * gap), ctx.canvas.height);
+		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2, 0), ctx.canvas.width);
+		const y = Math.min(Math.max(bounds.position.y, 2 * gap), ctx.canvas.height);
 
 		ctx.translate(x, y - gap);
 		ctx.scale(pulseScale, pulseScale);
@@ -231,7 +235,7 @@ export class Video {
 		ctx.fill();
 
 		// Draw "YOU" text
-		ctx.font = `bold ${24 * scale}px Arial`;
+		ctx.font = `bold ${24 * Math.sqrt(scale)}px Arial`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillStyle = "#FFD700";
