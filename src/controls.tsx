@@ -211,17 +211,13 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 		if (!m) return;
 
 		if (!props.broadcast.chat.enabled.get()) return;
-
-		// Clear then publish so we only store a single message.
-		// TODO clear old messages after X seconds
-		props.broadcast.chat.clear();
 		props.broadcast.chat.publish(m);
 
 		setMessage("");
 	};
 
 	return (
-		<form onSubmit={submit}>
+		<form onSubmit={submit} style={{ "flex-grow": message() ? "1" : "0" }}>
 			<input
 				ref={setInput}
 				type="text"
@@ -230,6 +226,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 				aria-label="Chat message"
 				placeholder="chat"
 				autocomplete="off"
+				style={{ width: "100%" }}
 			/>
 		</form>
 	);

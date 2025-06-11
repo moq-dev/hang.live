@@ -1,8 +1,7 @@
 import { Accessor, createMemo, createSignal, For, onMount } from "solid-js";
 import { Room } from "./room";
-import { Broadcast } from "./broadcast";
+import { Broadcast, ChatMessage } from "./broadcast";
 
-import { ChatMessage } from "@kixelated/hang/container";
 import { Bounds, Vector } from "./geometry";
 
 import "github-markdown-css/github-markdown-dark.css";
@@ -49,21 +48,28 @@ function Message(props: {
 }) {
 	const round = (v: number) => Math.round(v * window.devicePixelRatio) / window.devicePixelRatio;
 
-	const active = createMemo(() => {
-		if (props.index() !== 0) return false;
-		const elapsed = props.now() - props.message.timestamp;
-		if (elapsed < 100) return false;
-		if (elapsed > 7500) return false;
-		return true;
+	const state = createMemo(() => {
+		if (props.index() !== 0) return "fade-out";
+		// Kind of a hack to make the first message fade in.
+		if (props.now() < props.message.received + 100) return "fade-in";
+		if (props.now() > props.message.expires - 1000) return "fade-out";
+		return "active";
+	});
+
+	const opacity = createMemo(() => {
+		if (state() === "fade-out") return 0;
+		return 1;
 	});
 
 	const translate = () => {
-		if (props.index() !== 0) return 10;
-		const elapsed = props.now() - props.message.timestamp;
-		if (elapsed < 100) return -24;
-		if (elapsed > 7500) return 24;
+		if (state() === "fade-out") return 24;
 		return 0;
 	};
+
+	const scale = createMemo(() => {
+		if (state() === "fade-in") return 1.2;
+		return 1;
+	});
 
 	const [box, setBox] = createSignal<HTMLDivElement>();
 
@@ -92,7 +98,7 @@ function Message(props: {
 	const top = createMemo(() => {
 		const viewport = props.viewport();
 		const bounds = props.bounds();
-		return Math.min(viewport.y - height(), bounds.position.y + bounds.size.y);
+		return Math.min(viewport.y - height() - 40, bounds.position.y + bounds.size.y);
 	});
 
 	const left = createMemo(() => {
@@ -111,10 +117,10 @@ function Message(props: {
 			ref={setBox}
 			style={{
 				position: "fixed",
-				transition: "opacity 0.5s, transform 0.5s",
-				opacity: active() ? 1 : 0,
+				transition: "opacity 0.5s, transform 0.5s, text-shadow 0.5s",
+				opacity: opacity(),
 				"pointer-events": "none",
-				transform: `translateY(${translate()}px)`,
+				transform: `translateY(${translate()}px) scale(${scale()})`,
 				top: `${round(top())}px`,
 				left: `${round(left())}px`,
 				"max-width": `${round(maxWidth())}px`,
@@ -128,14 +134,14 @@ function Message(props: {
 					display: "inline-block",
 					"backdrop-filter": "blur(4px)",
 					"border-radius": "4px",
-					"pointer-events": active() ? "auto" : "none",
+					"pointer-events": state() === "active" ? "auto" : "none",
 					background: "rgba(0, 0, 0, 0.5)",
 					color: "white",
 					padding: "0 12px",
 					"font-size": `${font()}px`,
 				}}
 				class="chat-message markdown-body"
-				innerHTML={props.message.text}
+				innerHTML={props.message.markdown}
 			/>
 		</div>
 	);
