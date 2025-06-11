@@ -217,7 +217,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	};
 
 	return (
-		<form onSubmit={submit} style={{ "flex-grow": message() ? "1" : "0" }}>
+		<form onSubmit={submit} style={{ "flex-grow": "1" }}>
 			<input
 				ref={setInput}
 				type="text"

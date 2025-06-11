@@ -17,7 +17,7 @@ export function Chat(props: { room: Room }) {
 	const viewport = createMemo(() => props.room.viewport.get().div(window.devicePixelRatio));
 
 	return (
-		<For each={Array.from(props.room.broadcasts.values())}>
+		<For each={props.room.broadcasts.get()}>
 			{(broadcast) => <Broadcaster broadcast={broadcast} now={now} viewport={viewport} />}
 		</For>
 	);
