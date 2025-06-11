@@ -21,7 +21,7 @@ export class Room {
 	user: Signal<string | undefined>;
 
 	// All of the broadcasts stored in z-index order.
-	broadcasts: Broadcast[] = [];
+	broadcasts = signal<Broadcast[]>([]);
 
 	// Remote broadcasts are stored separately so we treat them differently.
 	#remotes = new ReactiveMap<string, Broadcast<Watch.Broadcast>>();
@@ -428,8 +428,9 @@ export class Room {
 
 	#broadcastAt(point: Vector): Broadcast | undefined {
 		// Loop in reverse order to respect the z-index.
-		for (let i = this.broadcasts.length - 1; i >= 0; i--) {
-			const broadcast = this.broadcasts[i];
+		const broadcasts = this.broadcasts.peek();
+		for (let i = broadcasts.length - 1; i >= 0; i--) {
+			const broadcast = broadcasts[i];
 			if (broadcast.bounds.peek().contains(point)) {
 				return broadcast;
 			}
@@ -444,7 +445,7 @@ export class Room {
 		broadcast.z.set(++this.#maxZ);
 
 		// Insert the broadcast into the room based on it's z-index.
-		this.broadcasts.push(broadcast);
+		this.broadcasts.set((prev) => [...prev, broadcast]);
 
 		// Resort the broadcasts when the z-index changes.
 		broadcast.signals.effect(() => {
@@ -455,9 +456,11 @@ export class Room {
 				this.#maxZ = z;
 			}
 
-			this.broadcasts.sort(
-				// Peek at the other broadcasts' z-index to avoid re-sorting every time.
-				(a, b) => a.z.peek() - b.z.peek(),
+			this.broadcasts.set((prev) =>
+				prev.sort(
+					// Peek at the other broadcasts' z-index to avoid re-sorting every time.
+					(a, b) => a.z.peek() - b.z.peek(),
+				),
 			);
 		});
 	}
@@ -467,7 +470,7 @@ export class Room {
 		broadcast.source.enabled.set(false);
 
 		// Move it from the main list to the rip list.
-		this.broadcasts.splice(this.broadcasts.indexOf(broadcast), 1);
+		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));
 		this.#rip.push(broadcast);
 
 		// Slowly fade out the offline broadcast.
@@ -492,7 +495,7 @@ export class Room {
 			broadcast.tick(now, this.#scale);
 		}
 
-		const broadcasts = Array.from(this.broadcasts.values());
+		const broadcasts = this.broadcasts.peek();
 		for (const broadcast of broadcasts) {
 			broadcast.tick(now, this.#scale);
 		}
@@ -537,11 +540,12 @@ export class Room {
 
 		this.#renderBackground(now);
 
-		for (const broadcast of this.broadcasts.values()) {
+		const broadcasts = this.broadcasts.peek();
+		for (const broadcast of broadcasts) {
 			broadcast.audio.renderBackground(ctx);
 		}
 
-		for (const broadcast of this.broadcasts.values()) {
+		for (const broadcast of broadcasts) {
 			broadcast.audio.render(ctx);
 		}
 
@@ -552,7 +556,7 @@ export class Room {
 			ctx.restore();
 		}
 
-		for (const broadcast of this.broadcasts.values()) {
+		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
 				ctx.save();
 				broadcast.video.render(now, ctx, {
@@ -633,7 +637,8 @@ export class Room {
 	}
 
 	#updateScale() {
-		if (this.broadcasts.length === 0) {
+		const broadcasts = this.broadcasts.peek();
+		if (broadcasts.length === 0) {
 			// Avoid division by zero.
 			return;
 		}
@@ -641,12 +646,12 @@ export class Room {
 		const canvasArea = this.canvas.width * this.canvas.height;
 
 		let broadcastArea = 0;
-		for (const broadcast of this.broadcasts.values()) {
+		for (const broadcast of broadcasts) {
 			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y;
 		}
 
 		// If we're the only broadcaster, then don't make our avatar huge.
-		if (this.broadcasts.length <= 1) {
+		if (broadcasts.length <= 1) {
 			broadcastArea *= 2;
 		}
 
@@ -659,7 +664,7 @@ export class Room {
 	close() {
 		this.#signals.close();
 
-		for (const broadcast of this.broadcasts.values()) {
+		for (const broadcast of this.broadcasts.peek()) {
 			broadcast.close();
 		}
 
@@ -668,7 +673,7 @@ export class Room {
 		}
 
 		this.#rip = [];
-		this.broadcasts = [];
+		this.broadcasts.set([]);
 
 		this.camera.close();
 		this.screen.close();
