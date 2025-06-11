@@ -16,7 +16,6 @@
 
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
-		"types": ["vite/client"],
 
 		// https://www.typescriptlang.org/tsconfig/#Type_Checking_6248
 		"allowUnreachableCode": false,
@@ -44,7 +43,9 @@
 		"erasableSyntaxOnly": true,
 
 		// Avoids a bug with the dom-mediacapture-transform types.
-		"skipLibCheck": true
+		"skipLibCheck": true,
+
+		"types": ["unplugin-icons/types/solid", "vite/client"]
 	},
 	"include": ["src"],
 	"references": [{ "path": "./tsconfig.node.json" }]

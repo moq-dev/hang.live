@@ -62,7 +62,7 @@ function Message(props: {
 	});
 
 	const translate = () => {
-		if (state() === "fade-out") return 24;
+		if (state() === "fade-out") return 16;
 		return 0;
 	};
 
@@ -117,7 +117,7 @@ function Message(props: {
 			ref={setBox}
 			style={{
 				position: "fixed",
-				transition: "opacity 0.5s, transform 0.5s, text-shadow 0.5s",
+				transition: "opacity 1.0s, transform 1.0s",
 				opacity: opacity(),
 				"pointer-events": "none",
 				transform: `translateY(${translate()}px) scale(${scale()})`,
@@ -146,3 +146,50 @@ function Message(props: {
 		</div>
 	);
 }
+/*
+function Username(props: { broadcast: Accessor<Broadcast | undefined>; viewport: Accessor<Vector> }) {
+	const round = (v: number) => Math.round(v * window.devicePixelRatio) / window.devicePixelRatio;
+	const [linger, setLinger] = createSignal<Broadcast | undefined>(undefined);
+
+	createEffect(() => {
+		const broadcast = props.broadcast();
+		// If no longer hovering, still linger instead of unsetting the name/bounds
+		if (!broadcast) return;
+
+		setLinger(broadcast);
+	});
+
+	const display = createMemo(() => linger()?.display.get() ?? "");
+	const bounds = createMemo(
+		() =>
+			linger()?.bounds.get().div(window.devicePixelRatio) ?? new Bounds(Vector.create(0, 0), Vector.create(0, 0)),
+	);
+
+	const top = createMemo(() => {
+		const viewport = props.viewport();
+		return Math.max(0, bounds().position.y - 40);
+	});
+
+	const left = createMemo(() => {
+		const viewport = props.viewport();
+		return Math.min(Math.max(0, bounds().position.x + bounds().size.x / 2 - 100 / 2), viewport.x - 100);
+	});
+
+	return (
+		<div
+			style={{
+				position: "fixed",
+				transition: "opacity 0.5s, transform 0.5s",
+				"pointer-events": props.broadcast() ? "auto" : "none",
+				opacity: props.broadcast() ? 1 : 0,
+				top: `${round(top())}px`,
+				left: `${round(left())}px`,
+				color: "white",
+				"font-size": "24px",
+			}}
+		>
+			{display()}
+		</div>
+	);
+}
+	*/

@@ -25,22 +25,16 @@ export class Video {
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
 
-	avatar: HTMLImageElement;
-
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
 
-	#locator?: DOMHighResTimeStamp;
+	#nameOpacity = 0;
 
 	#signals = new Signals();
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
-
 		this.targetSize = Vector.create(128, 128);
-
-		this.avatar = new Image();
-		this.avatar.src = "/avatar.png";
 	}
 
 	tick(now: DOMHighResTimeStamp) {
@@ -52,8 +46,8 @@ export class Video {
 			this.targetSize = Vector.create(next.frame.displayWidth, next.frame.displayHeight);
 		} else {
 			this.transition = Math.max(this.transition - 0.05, 0);
-			if (this.avatar.complete) {
-				this.targetSize = Vector.create(this.avatar.width, this.avatar.height);
+			if (this.broadcast.avatar.complete) {
+				this.targetSize = Vector.create(this.broadcast.avatar.width, this.broadcast.avatar.height);
 			}
 		}
 	}
@@ -72,14 +66,16 @@ export class Video {
 		const bounds = this.broadcast.bounds.peek();
 		const scale = this.broadcast.scale;
 
+		ctx.translate(bounds.position.x, bounds.position.y);
+		ctx.fillStyle = "#000";
+
+		ctx.save();
+
 		// Add a drop shadow
 		ctx.shadowColor = "rgba(0, 0, 0, 1.0)";
 		ctx.shadowBlur = 16 * scale;
 		ctx.shadowOffsetX = 0;
 		ctx.shadowOffsetY = 4 * scale;
-
-		ctx.translate(bounds.position.x, bounds.position.y);
-		ctx.fillStyle = "#000";
 
 		// Create a rounded rectangle path
 		const radius = 32 * scale;
@@ -155,8 +151,8 @@ export class Video {
 			ctx.save();
 			ctx.globalAlpha *= 1 - this.transition;
 
-			if (this.avatar.complete) {
-				ctx.drawImage(this.avatar, 0, 0, bounds.size.x, bounds.size.y);
+			if (this.broadcast.avatar.complete) {
+				ctx.drawImage(this.broadcast.avatar, 0, 0, bounds.size.x, bounds.size.y);
 			} else {
 				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y);
 			}
@@ -164,13 +160,32 @@ export class Video {
 			ctx.restore();
 		}
 
+		// Cancel the clip
+		ctx.restore();
+
 		//if (modifiers.hovering) {
 		//ctx.lineWidth = 2 * this.scale;
 		//ctx.strokeStyle = "white";
 		//ctx.strokeRect(0, 0, bounds.size.x, bounds.size.y);
 		//}
 
-		ctx.restore();
+		// Render the display name when hovering.
+		const targetOpacity = modifiers?.hovering ? 1 : 0;
+		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
+
+		if (this.#nameOpacity > 0) {
+			const fontSize = 10 + 16 * Math.sqrt(scale);
+			ctx.save();
+			ctx.globalAlpha *= this.#nameOpacity;
+			ctx.font = `bold ${fontSize}px Arial`;
+			ctx.fillStyle = "white";
+			ctx.strokeStyle = "black";
+			ctx.lineWidth = 1 + 2 * Math.sqrt(scale);
+			const offset = 16 + 8 * Math.sqrt(scale);
+			ctx.strokeText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
+			ctx.fillText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
+			ctx.restore();
+		}
 
 		// Draw target for debugging
 		/*
@@ -185,70 +200,11 @@ export class Video {
 		ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
 		ctx.fill();
 		*/
+
+		ctx.restore();
 	}
 
 	close() {
 		this.#signals.close();
-	}
-
-	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
-		const bounds = this.broadcast.bounds.peek();
-		const scale = this.broadcast.scale;
-
-		if (!this.#locator && this.broadcast.source.video.active.peek()) {
-			this.#locator = now;
-		}
-
-		const elapsed = now - (this.#locator ?? 0);
-		const alpha = Math.min(Math.max((7000 - elapsed) / (10000 - 8000), 0), 1);
-		if (alpha <= 0) {
-			return;
-		}
-
-		ctx.save();
-		ctx.globalAlpha *= alpha;
-
-		// Calculate arrow position and animation
-		const arrowSize = 16 * scale;
-		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * scale;
-
-		const gap = 2 * (arrowSize + offset);
-
-		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2, 0), ctx.canvas.width);
-		const y = Math.min(Math.max(bounds.position.y, 2 * gap), ctx.canvas.height);
-
-		ctx.translate(x, y - gap);
-		ctx.scale(pulseScale, pulseScale);
-
-		ctx.beginPath();
-		ctx.moveTo(0, arrowSize);
-		ctx.lineTo(-arrowSize / 2, 0);
-		ctx.lineTo(arrowSize / 2, 0);
-		ctx.closePath();
-
-		// Style the arrow
-		ctx.lineWidth = 3 * scale;
-		ctx.strokeStyle = "#000"; // Gold color
-		ctx.fillStyle = "#FFD700";
-		ctx.stroke();
-		ctx.fill();
-
-		// Draw "YOU" text
-		ctx.font = `bold ${24 * Math.sqrt(scale)}px Arial`;
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillStyle = "#FFD700";
-		ctx.strokeText("YOU", 0, -arrowSize - offset);
-		ctx.fillText("YOU", 0, -arrowSize - offset);
-
-		/*
-		// Add a subtle glow effect
-		ctx.shadowColor = "#FFD700";
-		ctx.shadowBlur = 10 * scale;
-		ctx.stroke();
-		*/
-
-		ctx.restore();
 	}
 }

@@ -1,4 +1,4 @@
-import { cleanup, signal, Signal, Signals } from "@kixelated/signals";
+import { cleanup, Memo, signal, Signal, Signals } from "@kixelated/signals";
 
 import { Publish, Watch, Catalog, Container } from "@kixelated/hang";
 import { Audio } from "./audio";
@@ -51,7 +51,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
 
-	avatar?: HTMLImageElement;
+	// The display name of the broadcaster.
+	display: Memo<string>;
+	avatar = new Image();
 
 	// Returns the most recent chat messages.
 	messages: Signal<ChatMessage[]>;
@@ -64,6 +66,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	#locationPeer?: Publish.LocationPeer;
 
 	signals = new Signals();
+
+	// Show a locator arrow for 8 seconds to show our position on join.
+	#locatorStart?: DOMHighResTimeStamp;
 
 	constructor(source: T, viewport: Signal<Vector>, props?: BroadcastProps) {
 		this.source = source;
@@ -103,16 +108,17 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			this.targetScale = location.scale ?? this.targetScale;
 		});
 
+		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
 		this.signals.effect(() => {
 			const user = this.source.user.get();
-			if (!user) return;
+			if (user?.avatar) {
+				this.avatar.src = user.avatar;
+			}
+		});
 
-			this.avatar = new Image();
-			this.avatar.src = user.avatar ?? "/avatar.png";
-
-			cleanup(() => {
-				this.avatar = undefined;
-			});
+		// The display name is the user's name or the path if they don't have a name.
+		this.display = this.signals.memo(() => {
+			return this.source.user.get()?.name ?? this.source.path.get();
 		});
 
 		this.signals.effect(() => {
@@ -121,16 +127,12 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			let consumer: Container.ChatConsumer | undefined;
 			if (this.source instanceof Watch.Broadcast) {
 				consumer = this.source.chat.track.get();
+				if (!consumer) return;
 			} else {
 				consumer = this.source.chat.consume();
 			}
 
-			if (!consumer) return;
-
-			cleanup(() => {
-				consumer.close();
-			});
-
+			cleanup(() => consumer.close());
 			void this.#runChat(consumer);
 		});
 
@@ -330,6 +332,70 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		} else if (this.#locationPeer) {
 			this.#locationPeer.producer.get()?.update(position);
 		}
+	}
+
+	// Render a locator arrow for our local broadcasts on join
+	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
+		if (!this.source.enabled.get()) return;
+
+		if (!this.#locatorStart) {
+			this.#locatorStart = now;
+		}
+
+		const elapsed = now - this.#locatorStart;
+		const alpha = Math.min(Math.max((7000 - elapsed) / (10000 - 8000), 0), 1);
+		if (alpha <= 0) {
+			return;
+		}
+
+		const bounds = this.bounds.peek();
+		const scale = Math.sqrt(this.scale);
+
+		ctx.save();
+		ctx.globalAlpha *= alpha;
+
+		// Calculate arrow position and animation
+		const arrowSize = 16 * scale;
+		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
+		const offset = 10 * scale;
+
+		const gap = 2 * (arrowSize + offset);
+
+		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2, 0), ctx.canvas.width);
+		const y = Math.min(Math.max(bounds.position.y, 2 * gap), ctx.canvas.height);
+
+		ctx.translate(x, y - gap);
+		ctx.scale(pulseScale, pulseScale);
+
+		ctx.beginPath();
+		ctx.moveTo(0, arrowSize);
+		ctx.lineTo(-arrowSize / 2, 0);
+		ctx.lineTo(arrowSize / 2, 0);
+		ctx.closePath();
+
+		// Style the arrow
+		ctx.lineWidth = 2 * scale;
+		ctx.strokeStyle = "#000"; // Gold color
+		ctx.fillStyle = "#FFD700";
+		ctx.stroke();
+		ctx.fill();
+
+		// Draw "YOU" text
+		ctx.font = `bold ${14 + 12 * scale}px Arial`;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillStyle = "#FFD700";
+		ctx.strokeText("YOU", 0, -arrowSize - offset);
+		ctx.fillText("YOU", 0, -arrowSize - offset);
+
+		/*
+		// Add a subtle glow effect
+		ctx.shadowColor = "#FFD700";
+		ctx.shadowBlur = 10 * scale;
+		ctx.stroke();
+		*/
+
+		ctx.restore();
 	}
 
 	close() {
