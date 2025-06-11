@@ -120,11 +120,3 @@ header {
 		pointer-events: auto;
 	}
 }
-
-.dragging * {
-	pointer-events: none !important;
-}
-
-.dragging canvas {
-	pointer-events: auto !important;
-}

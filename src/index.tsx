@@ -24,7 +24,7 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	// Generate a random user ID if none is set.
 	// Obviously this should be replaced with a proper auth system.
 	let user = localStorage.getItem("user_id");
-	if (!user || true) {
+	if (!user) {
 		const rand = new Uint32Array(1);
 		window.crypto.getRandomValues(rand);
 		user = rand[0].toString();

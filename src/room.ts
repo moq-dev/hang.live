@@ -35,7 +35,7 @@ export class Room {
 	#ctx: CanvasRenderingContext2D;
 	#animation: number | undefined;
 
-	#hovering?: Broadcast;
+	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
 	#scale = 1.0;
 
@@ -58,6 +58,9 @@ export class Room {
 
 	// The highest z-index of any broadcast that we've seen.
 	#maxZ = 0;
+
+	// The keys that are currently being held down.
+	#keysDown = new Set<string>();
 
 	// The local broadcasts.
 	// The camera/avatar is always published while the screen share is conditionally published.
@@ -85,8 +88,8 @@ export class Room {
 				peering: Settings.draggable.get(),
 			},
 			user: {
-				name: "John Doe",
-				avatar: "https://placehold.co/100x100",
+				name: props?.user,
+				avatar: "/avatar.png",
 			},
 			chat: {
 				enabled: true,
@@ -97,6 +100,10 @@ export class Room {
 
 		const screen = new Publish.Broadcast(connection, {
 			device: "screen",
+			user: {
+				name: props?.user ? `${props?.user} (Screen)` : undefined,
+				avatar: "/avatar.png",
+			},
 			// Publish our screen's location, starting at a random position.
 			location: {
 				enabled: true,
@@ -107,9 +114,14 @@ export class Room {
 		});
 		this.screen = new Broadcast(screen, this.viewport);
 
+		// Update everything when a username is selected.
 		camera.signals.effect(() => {
 			const user = this.user.get();
 			if (!user) return;
+
+			// Update the username
+			camera.user.set((prev) => ({ ...prev, name: user }));
+			screen.user.set((prev) => ({ ...prev, name: user ? `${user} (Screen)` : undefined }));
 
 			camera.enabled.set(true);
 			cleanup(() => camera.enabled.set(false));
@@ -207,8 +219,6 @@ export class Room {
 			this.#dragging = broadcast;
 			if (!broadcast) return;
 
-			document.documentElement.classList.add("dragging");
-
 			// Bump the z-index unless we're already at the top.
 			const z = broadcast.z.peek() === this.#maxZ ? this.#maxZ : ++this.#maxZ;
 
@@ -233,17 +243,19 @@ export class Room {
 					x: mouse.x / this.canvas.width - 0.5,
 					y: mouse.y / this.canvas.height - 0.5,
 				});
-			} else {
-				const broadcast = this.#broadcastAt(mouse);
-				if (broadcast) {
-					if (!broadcast.locked()) {
-						this.#hovering = broadcast;
-						this.canvas.style.cursor = "grab";
-					}
-				} else {
-					this.#hovering = undefined;
-					this.canvas.style.cursor = "default";
+				return;
+			}
+
+			const broadcast = this.#broadcastAt(mouse);
+			if (broadcast) {
+				this.#hovering = broadcast;
+
+				if (!broadcast.locked()) {
+					this.canvas.style.cursor = "grab";
 				}
+			} else {
+				this.#hovering = undefined;
+				this.canvas.style.cursor = "default";
 			}
 		});
 
@@ -252,7 +264,6 @@ export class Room {
 				this.#dragging = undefined;
 				this.#hovering = undefined;
 				this.canvas.style.cursor = "default";
-				document.documentElement.classList.remove("dragging");
 			}
 		});
 
@@ -261,7 +272,6 @@ export class Room {
 				this.#dragging = undefined;
 				this.#hovering = undefined;
 				this.canvas.style.cursor = "default";
-				document.documentElement.classList.remove("dragging");
 			}
 		});
 
@@ -306,8 +316,36 @@ export class Room {
 		);
 
 		// Determine when the user has interacted with the page so we can potentially unmute audio.
-		document.addEventListener("click", () => this.suspended.set(false), { once: true });
-		document.addEventListener("keydown", () => this.suspended.set(false), { once: true });
+		window.addEventListener("click", () => this.suspended.set(false), { once: true });
+		window.addEventListener("keydown", () => this.suspended.set(false), { once: true });
+
+		window.addEventListener("keydown", (e) => {
+			// Only handle arrows when no text input is focused
+			if (
+				document.activeElement instanceof HTMLInputElement ||
+				document.activeElement instanceof HTMLTextAreaElement ||
+				document.activeElement?.getAttribute("contenteditable") === "true"
+			) {
+				return;
+			}
+
+			switch (e.key) {
+				case "ArrowLeft":
+				case "ArrowRight":
+				case "ArrowUp":
+				case "ArrowDown":
+					// We'll actually move the camera in #tick.
+					this.#keysDown.add(e.key);
+					break;
+				default:
+					// Prevent scrolling the page.
+					e.preventDefault();
+			}
+		});
+
+		window.addEventListener("keyup", (e) => {
+			this.#keysDown.delete(e.key);
+		});
 
 		// Only render the canvas when it's visible.
 		this.#signals.effect(() => {
@@ -489,7 +527,8 @@ export class Room {
 	}
 
 	#tick(now: DOMHighResTimeStamp) {
-		this.#updateScale();
+		this.#tickScale();
+		this.#tickKeyboard();
 
 		for (const broadcast of this.#rip) {
 			broadcast.tick(now, this.#scale);
@@ -534,6 +573,33 @@ export class Room {
 		this.#animation = requestAnimationFrame(this.#tick.bind(this));
 	}
 
+	#tickKeyboard() {
+		// Update the camera's location based on the keys that are being held down.
+		// TODO: Figure out a way that we can also move the screen.
+		const keysDown = this.#keysDown;
+
+		const position = this.camera.source.location.current.peek();
+		if (position) {
+			if (keysDown.has("ArrowLeft")) {
+				position.x = Math.max((position.x ?? 0) - 0.02, -0.5);
+			}
+
+			if (keysDown.has("ArrowRight")) {
+				position.x = Math.min((position.x ?? 0) + 0.02, 0.5);
+			}
+
+			if (keysDown.has("ArrowUp")) {
+				position.y = Math.max((position.y ?? 0) - 0.02, -0.5);
+			}
+
+			if (keysDown.has("ArrowDown")) {
+				position.y = Math.min((position.y ?? 0) + 0.02, 0.5);
+			}
+
+			this.camera.setLocation(position);
+		}
+	}
+
 	#render(now: DOMHighResTimeStamp) {
 		const ctx = this.#ctx;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -566,7 +632,7 @@ export class Room {
 			}
 		}
 
-		// Render the dragging broadcast last so it's on top.
+		// Render the dragging broadcast last so it's always on top.
 		if (this.#dragging) {
 			ctx.save();
 			ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
@@ -574,13 +640,9 @@ export class Room {
 			ctx.restore();
 		}
 
-		if (this.camera.source.enabled.peek()) {
-			this.camera.video.renderLocator(now, ctx);
-		}
-
-		if (this.screen.source.enabled.peek()) {
-			this.screen.video.renderLocator(now, ctx);
-		}
+		// Render the locator arrows for our broadcasts on join.
+		this.camera.renderLocator(now, ctx);
+		this.screen.renderLocator(now, ctx);
 	}
 
 	#renderBackground(now: DOMHighResTimeStamp) {
@@ -636,7 +698,7 @@ export class Room {
 		ctx.restore();
 	}
 
-	#updateScale() {
+	#tickScale() {
 		const broadcasts = this.broadcasts.peek();
 		if (broadcasts.length === 0) {
 			// Avoid division by zero.

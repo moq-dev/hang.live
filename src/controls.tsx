@@ -4,6 +4,14 @@ import { JSX } from "solid-js/jsx-runtime";
 import { Room } from "./room";
 import { Modal } from "./settings";
 
+import IconMicrophone from "~icons/mdi/microphone";
+import IconCamera from "~icons/mdi/camera";
+import IconScreen from "~icons/mdi/monitor-screenshot";
+import IconSettings from "~icons/mdi/cog";
+import IconFullscreen from "~icons/mdi/fullscreen";
+import IconVolumeMute from "~icons/mdi/volume-mute";
+import IconVolumeHigh from "~icons/mdi/volume-high";
+
 export function Controls(props: {
 	room: Room;
 	camera: Publish.Broadcast;
@@ -46,7 +54,8 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 				"border-color": props.audio.media.get() ? "white" : "transparent",
 			}}
 		>
-			<Visualize audio={props.audio} />🎤
+			<Visualize audio={props.audio} />
+			<IconMicrophone />
 		</button>
 	);
 }
@@ -72,7 +81,7 @@ function Camera(props: { video: Publish.Video }): JSX.Element {
 			style={{ "border-color": props.video.media.get() ? "white" : "transparent" }}
 			onClick={toggle}
 		>
-			📷
+			<IconCamera />
 		</button>
 	);
 }
@@ -105,7 +114,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Elem
 			style={{ "border-color": props.video.media.get() ? "white" : "transparent" }}
 			onClick={toggle}
 		>
-			🖥️
+			<IconScreen />
 		</button>
 	);
 }
@@ -127,7 +136,10 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 
 	createEffect(() => {
 		const media = props.audio.media.get();
-		if (!media) return;
+		if (!media) {
+			setPower(undefined);
+			return;
+		}
 
 		const context = new AudioContext({
 			sampleRate: media.getSettings().sampleRate,
@@ -192,7 +204,9 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 			e.altKey ||
 			e.metaKey ||
 			["Tab", "Escape"].includes(e.key) ||
-			document.activeElement instanceof HTMLInputElement
+			document.activeElement instanceof HTMLInputElement ||
+			e.key.length !== 1 || // Filters out keys like "ArrowLeft", "Escape", etc.
+			e.key === " "
 		)
 			return;
 
@@ -226,7 +240,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 				aria-label="Chat message"
 				placeholder="chat"
 				autocomplete="off"
-				style={{ width: "100%" }}
+				style={{ width: "100%", height: "24px" }}
 			/>
 		</form>
 	);
@@ -251,7 +265,7 @@ function Volume(props: { room: Room }): JSX.Element {
 			onFocusOut={() => setShowSlider(false)}
 		>
 			<button type="button" onClick={toggle}>
-				{props.room.muted.get() ? "🔇" : "🔊"}
+				{props.room.muted.get() ? <IconVolumeMute /> : <IconVolumeHigh />}
 			</button>
 			<Show when={showSlider()}>
 				<div
@@ -314,7 +328,7 @@ function Settings(): JSX.Element {
 	return (
 		<>
 			<button type="button" onClick={toggle} ref={setButton}>
-				⚙️
+				<IconSettings />
 			</button>
 
 			<Show when={showSettings()}>
@@ -349,7 +363,7 @@ function Fullscreen(props: { canvas: HTMLCanvasElement }): JSX.Element {
 
 	return (
 		<button type="button" onClick={toggle}>
-			⛶
+			<IconFullscreen />
 		</button>
 	);
 }
