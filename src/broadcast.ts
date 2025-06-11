@@ -4,12 +4,12 @@ import { Publish, Watch, Catalog, Container } from "@kixelated/hang";
 import { Audio } from "./audio";
 import { Bounds, Vector } from "./geometry";
 import { Video } from "./video";
-import { ChatMessage } from "@kixelated/hang/container";
 
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
+export type ChatMessage = { markdown: string; received: DOMHighResTimeStamp; expires: DOMHighResTimeStamp };
 
 // Create a markdown renderer that opens links in a new tab.
 const renderer = new marked.Renderer();
@@ -50,7 +50,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns the most recent chat messages.
 	messages: Signal<ChatMessage[]>;
 
-	#locationProducer?: Publish.LocationProducer;
+	#locationPeer?: Publish.LocationPeer;
 
 	#signals = new Signals();
 
@@ -112,7 +112,20 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		this.#signals.effect(() => {
 			if (!this.source.chat.enabled.get()) return;
-			const consumer = this.source.chat.consume();
+
+			let consumer: Container.ChatConsumer | undefined;
+			if (this.source instanceof Watch.Broadcast) {
+				consumer = this.source.chat.track.get();
+			} else {
+				consumer = this.source.chat.consume();
+			}
+
+			if (!consumer) return;
+
+			cleanup(() => {
+				consumer.close();
+			});
+
 			void this.#runChat(consumer);
 		});
 
@@ -177,31 +190,42 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			peer.handle.set(this.source.path.get());
 			cleanup(() => peer.handle.set(undefined));
 		});
+
+		this.#locationPeer = peer;
 	}
 
-	async #runChat(decoder: Container.ChatDecoder) {
+	async #runChat(decoder: Container.ChatConsumer) {
 		try {
 			for (;;) {
-				const message = await decoder.readMessage();
-				if (!message) break;
+				const next = await decoder.next();
+				if (!next) break;
 
 				// Convert markdown to HTML.
 				// TODO: Run in a web worker to prevent DoS attacks apparently?
-				const markdown = marked.parse(message.text, { async: false });
+				const markdown = marked.parse(next, { async: false });
 
 				// Sanitize the resulting HTML.
 				// ChatGPT says that allowing target is ONLY safe with noopener noreferrer,
-				message.text = DOMPurify.sanitize(markdown, { ADD_ATTR: ["target", "rel"] });
+				const sanitized = DOMPurify.sanitize(markdown, { ADD_ATTR: ["target", "rel"] });
+
+				const message = {
+					markdown: sanitized,
+					received: performance.now(),
+					expires: performance.now() + 10000, // 10 seconds
+				};
 
 				this.messages.set((messages) => [message, ...messages]);
 
 				// Remove from the DOM after the max fade time.
 				setTimeout(() => {
 					this.messages.set((messages) => messages.slice(0, -1));
-				}, 9000);
+				}, 10000);
 			}
+		} catch (err) {
+			console.warn("error running chat", err);
 		} finally {
 			this.messages.set([]);
+			decoder.close();
 		}
 	}
 
@@ -286,8 +310,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	setLocation(position: Catalog.Position) {
 		if (this.source instanceof Publish.Broadcast) {
 			this.source.location.current.set(position);
-		} else if (this.#locationProducer) {
-			this.#locationProducer.update(position);
+		} else if (this.#locationPeer) {
+			this.#locationPeer.producer.get()?.update(position);
 		}
 	}
 

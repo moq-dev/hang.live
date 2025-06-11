@@ -88,6 +88,7 @@ export class Room {
 			},
 			chat: {
 				enabled: true,
+				ttl: 10000, // Save messages for at most 10 seconds.
 			},
 		});
 		this.camera = new Broadcast(camera, this.viewport);
@@ -186,6 +187,8 @@ export class Room {
 			this.#dragging = at?.broadcast;
 			if (!at) return;
 
+			document.documentElement.classList.add("dragging");
+
 			// Reinsert to update the z-index.
 			this.broadcasts.delete(at.name);
 			this.broadcasts.set(at.name, at.broadcast);
@@ -194,7 +197,6 @@ export class Room {
 				this.canvas.style.cursor = "not-allowed";
 			} else {
 				this.canvas.style.cursor = "grabbing";
-				document.documentElement.classList.add("dragging");
 			}
 		});
 
@@ -345,51 +347,55 @@ export class Room {
 	}
 
 	async #runRemotes(announced: Moq.AnnouncedConsumer) {
-		for (;;) {
-			const update = await announced.next();
+		try {
+			for (;;) {
+				const update = await announced.next();
 
-			// We're donezo.
-			if (!update) break;
+				// We're donezo.
+				if (!update) break;
 
-			if (update.path === this.camera.source.path.peek() || update.path === this.screen.source.path.peek()) {
-				continue;
+				if (update.path === this.camera.source.path.peek() || update.path === this.screen.source.path.peek()) {
+					continue;
+				}
+
+				console.debug("new broadcast:", update.path);
+
+				const existing = this.#remotes.get(update.path);
+				this.#remotes.delete(update.path);
+
+				if (update.active) {
+					const watch = new Watch.Broadcast(this.connection, {
+						enabled: true,
+						path: update.path,
+						reload: false,
+						// Download video unless the window is hidden.
+						video: { enabled: this.visible.peek() },
+						// Download audio unless the AudioContext is suspended.
+						audio: { enabled: !this.suspended.peek() },
+						// Download the location of the broadcaster.
+						location: { enabled: true },
+						// Download the chat of the broadcaster.
+						chat: { enabled: true },
+					});
+
+					const broadcast = new Broadcast(watch, this.viewport, {
+						camera: this.camera.source,
+						screen: this.screen.source,
+					});
+
+					this.#remotes.set(update.path, watch);
+					this.broadcasts.set(update.path, broadcast);
+				} else if (existing) {
+					this.#stopBroadcast(update.path);
+				}
+			}
+		} finally {
+			for (const broadcast of this.#remotes.values()) {
+				broadcast.close();
 			}
 
-			const existing = this.#remotes.get(update.path);
-			this.#remotes.delete(update.path);
-
-			if (update.active) {
-				const watch = new Watch.Broadcast(this.connection, {
-					enabled: true,
-					path: update.path,
-					reload: false,
-					// Download video unless the window is hidden.
-					video: { enabled: this.visible.peek() },
-					// Download audio unless the AudioContext is suspended.
-					audio: { enabled: !this.suspended.peek() },
-					// Download the location of the broadcaster.
-					location: { enabled: true },
-					// Download the chat of the broadcaster.
-					chat: { enabled: true },
-				});
-
-				const broadcast = new Broadcast(watch, this.viewport, {
-					camera: this.camera.source,
-					screen: this.screen.source,
-				});
-
-				this.#remotes.set(update.path, watch);
-				this.broadcasts.set(update.path, broadcast);
-			} else if (existing) {
-				this.#stopBroadcast(update.path);
-			}
+			this.#remotes.clear();
 		}
-
-		for (const broadcast of this.#remotes.values()) {
-			broadcast.close();
-		}
-
-		this.#remotes.clear();
 	}
 
 	#broadcastAt(point: Vector): { name: string; broadcast: Broadcast } | undefined {
