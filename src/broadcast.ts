@@ -23,6 +23,12 @@ renderer.link = ({ href, title, text }) => {
 
 marked.use({ renderer });
 
+export type BroadcastProps = {
+	z?: number;
+	camera?: Publish.Broadcast;
+	screen?: Publish.Broadcast;
+};
+
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	source: T;
 
@@ -50,21 +56,20 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns the most recent chat messages.
 	messages: Signal<ChatMessage[]>;
 
+	// The z-index of the broadcast.
+	// This is separate from the source.location.current.z so we can replace the initial undefined with maxZ.
+	// Once we learn the real z-index over the network, we'll replace it with the real value.
+	z: Signal<number>;
+
 	#locationPeer?: Publish.LocationPeer;
 
-	#signals = new Signals();
+	signals = new Signals();
 
-	constructor(
-		source: T,
-		viewport: Signal<Vector>,
-		locals?: {
-			camera: Publish.Broadcast;
-			screen: Publish.Broadcast;
-		},
-	) {
+	constructor(source: T, viewport: Signal<Vector>, props?: BroadcastProps) {
 		this.source = source;
 		this.viewport = viewport;
 		this.messages = signal<ChatMessage[]>([]);
+		this.z = signal(props?.z ?? 0);
 
 		this.video = new Video(this);
 		this.audio = new Audio(this);
@@ -81,7 +86,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.bounds = signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
-		this.#signals.effect(() => {
+		this.signals.effect(() => {
 			if (!this.source.enabled.get()) {
 				// Change the target position to somewhere outside the screen.
 				this.targetPosition = this.targetPosition.normalize().mult(2);
@@ -95,10 +100,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 			this.targetPosition.x = location.x ?? this.targetPosition.x;
 			this.targetPosition.y = location.y ?? this.targetPosition.y;
-			this.targetScale = location.zoom ?? this.targetScale;
+			this.targetScale = location.scale ?? this.targetScale;
 		});
 
-		this.#signals.effect(() => {
+		this.signals.effect(() => {
 			const user = this.source.user.get();
 			if (!user) return;
 
@@ -110,7 +115,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			});
 		});
 
-		this.#signals.effect(() => {
+		this.signals.effect(() => {
 			if (!this.source.chat.enabled.get()) return;
 
 			let consumer: Container.ChatConsumer | undefined;
@@ -129,60 +134,72 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			void this.#runChat(consumer);
 		});
 
+		// Update our local z-index when the remote z-index changes.
+		// The local z-index starts at max+1 while the remote z-index starts at undefined.
+		// This way we'll appear on top until we discover all other broadcasts and their z-index to +1 them.
+		// That's why we don't use the remote z-index directly, but rather proxy it.
+		this.signals.effect(() => {
+			const z = this.source.location.current.get()?.z;
+			if (z === undefined) return;
+			this.z.set(z);
+		});
+
 		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
-		if (locals && this.source instanceof Watch.Broadcast) {
-			this.#initRemote(this.source, locals);
+		if (props?.camera && this.source instanceof Watch.Broadcast) {
+			this.#initRemote(this.source, props.camera, props.screen);
 		}
 	}
 
 	// Special logic for only remote broadcasts.
-	#initRemote(
-		remote: Watch.Broadcast,
-		locals: {
-			camera: Publish.Broadcast;
-			screen: Publish.Broadcast;
-		},
-	) {
+	#initRemote(remote: Watch.Broadcast, camera: Publish.Broadcast, screen?: Publish.Broadcast) {
 		const cameraUpdates = remote.location.peer();
-		this.#signals.cleanup(() => cameraUpdates.close());
+		this.signals.cleanup(() => cameraUpdates.close());
 
 		const screenUpdates = remote.location.peer();
-		this.#signals.cleanup(() => screenUpdates.close());
+		this.signals.cleanup(() => screenUpdates.close());
 
 		// Update the handle when our path changes.
-		this.#signals.effect(() => {
-			cameraUpdates.handle.set(locals.camera.path.get());
-			screenUpdates.handle.set(locals.screen.path.get());
+		this.signals.effect(() => {
+			cameraUpdates.handle.set(camera.path.get());
 		});
 
 		// Request the position we should use from this remote broadcast.
-		this.#signals.effect(() => {
+		this.signals.effect(() => {
 			// Only update the camera position if the local broadcast allows it.
-			if (!locals.camera.location.peering.get()) return;
+			if (!camera.location.peering.get()) return;
 
 			const position = cameraUpdates.location.get();
 			if (!position) return;
 
-			locals.camera.location.current.set(position);
+			// Merge in the new position, keeping existing values when undefined.
+			camera.location.current.set((prev) => ({ ...prev, ...position }));
 		});
 
-		this.#signals.effect(() => {
-			// Only update the camera position if the local broadcast allows it.
-			if (!locals.camera.location.peering.get()) return;
+		if (screen) {
+			// Update the handle when our path changes.
+			this.signals.effect(() => {
+				screenUpdates.handle.set(screen.path.get());
+			});
 
-			const position = screenUpdates.location.get();
-			if (!position) return;
+			this.signals.effect(() => {
+				// Only update the screen position if the local broadcast allows it.
+				if (!screen.location.peering.get()) return;
 
-			locals.screen.location.current.set(position);
-		});
+				const position = screenUpdates.location.get();
+				if (!position) return;
+
+				// Merge in the new position, keeping existing values when undefined.
+				screen.location.current.set((prev) => ({ ...prev, ...position }));
+			});
+		}
 
 		// Create a new peer handle so we can publish updates if allowed.
-		const peer = locals.camera.location.peer();
-		this.#signals.cleanup(() => peer.close());
+		const peer = camera.location.peer();
+		this.signals.cleanup(() => peer.close());
 
-		this.#signals.effect(() => {
+		this.signals.effect(() => {
 			// Make sure we're actually publishing.
-			if (!locals.camera.published.get()) return;
+			if (!camera.published.get()) return;
 
 			// Only set the handle if the broadcast allows peering.
 			if (!this.source.location.peering.get()) return;
@@ -309,14 +326,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	setLocation(position: Catalog.Position) {
 		if (this.source instanceof Publish.Broadcast) {
-			this.source.location.current.set(position);
+			this.source.location.current.set((old) => ({ ...old, ...position }));
 		} else if (this.#locationPeer) {
 			this.#locationPeer.producer.get()?.update(position);
 		}
 	}
 
 	close() {
-		this.#signals.close();
+		this.signals.close();
 		this.source.close();
 		this.video.close();
 		this.audio.close();

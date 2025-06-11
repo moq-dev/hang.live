@@ -20,12 +20,11 @@ export class Room {
 	// The user ID of the local user.
 	user: Signal<string | undefined>;
 
-	// All of the broadcasts keyed by their path.
-	// We use the insertion order to determine the z-index.
-	broadcasts = new ReactiveMap<string, Broadcast>();
+	// All of the broadcasts stored in z-index order.
+	broadcasts: Broadcast[] = [];
 
 	// Remote broadcasts are stored separately so we treat them differently.
-	#remotes = new Map<string, Watch.Broadcast>();
+	#remotes = new ReactiveMap<string, Broadcast<Watch.Broadcast>>();
 
 	// The broadcasts that have been closed and are fading away.
 	#rip: Broadcast[] = [];
@@ -56,6 +55,9 @@ export class Room {
 	// The last volume that was set.
 	// This is used to restore the volume on unmute.
 	#unmuteVolume = 0.5;
+
+	// The highest z-index of any broadcast that we've seen.
+	#maxZ = 0;
 
 	// The local broadcasts.
 	// The camera/avatar is always published while the screen share is conditionally published.
@@ -105,7 +107,7 @@ export class Room {
 		});
 		this.screen = new Broadcast(screen, this.viewport);
 
-		this.#signals.effect(() => {
+		camera.signals.effect(() => {
 			const user = this.user.get();
 			if (!user) return;
 
@@ -115,11 +117,29 @@ export class Room {
 			const path = `${user}/camera.hang`;
 			camera.path.set(path);
 
-			this.broadcasts.set(path, this.camera);
-			cleanup(() => this.#stopBroadcast(path));
+			this.#startBroadcast(this.camera);
+			cleanup(() => this.#stopBroadcast(this.camera));
 		});
 
-		this.#signals.effect(() => {
+		// When the media source changes, bump the z-index to the highest known value.
+		camera.signals.effect(() => {
+			if (!camera.enabled.get()) return;
+			if (!camera.video.media.get() && !camera.audio.media.get()) return;
+			this.camera.setLocation({
+				z: ++this.#maxZ,
+			});
+		});
+
+		// When the media source changes, bump the z-index to the highest known value.
+		screen.signals.effect(() => {
+			if (!screen.enabled.get()) return;
+			if (!screen.video.media.get() && !screen.audio.media.get()) return;
+			this.screen.setLocation({
+				z: ++this.#maxZ,
+			});
+		});
+
+		screen.signals.effect(() => {
 			const user = this.user.get();
 			if (!user) return;
 
@@ -132,8 +152,8 @@ export class Room {
 			screen.enabled.set(true);
 			cleanup(() => screen.enabled.set(false));
 
-			this.broadcasts.set(path, this.screen);
-			cleanup(() => this.#stopBroadcast(path));
+			this.#startBroadcast(this.screen);
+			cleanup(() => this.#stopBroadcast(this.screen));
 		});
 
 		const resize = () => {
@@ -183,17 +203,22 @@ export class Room {
 		window.addEventListener("mousedown", (e) => {
 			const mouse = mousePosition(e);
 
-			const at = this.#broadcastAt(mouse);
-			this.#dragging = at?.broadcast;
-			if (!at) return;
+			const broadcast = this.#broadcastAt(mouse);
+			this.#dragging = broadcast;
+			if (!broadcast) return;
 
 			document.documentElement.classList.add("dragging");
 
-			// Reinsert to update the z-index.
-			this.broadcasts.delete(at.name);
-			this.broadcasts.set(at.name, at.broadcast);
+			// Bump the z-index unless we're already at the top.
+			const z = broadcast.z.peek() === this.#maxZ ? this.#maxZ : ++this.#maxZ;
 
-			if (at.broadcast.locked()) {
+			broadcast.setLocation({
+				x: mouse.x / this.canvas.width - 0.5,
+				y: mouse.y / this.canvas.height - 0.5,
+				z,
+			});
+
+			if (broadcast.locked()) {
 				this.canvas.style.cursor = "not-allowed";
 			} else {
 				this.canvas.style.cursor = "grabbing";
@@ -209,10 +234,10 @@ export class Room {
 					y: mouse.y / this.canvas.height - 0.5,
 				});
 			} else {
-				const at = this.#broadcastAt(mouse);
-				if (at) {
-					if (!at.broadcast.locked()) {
-						this.#hovering = at.broadcast;
+				const broadcast = this.#broadcastAt(mouse);
+				if (broadcast) {
+					if (!broadcast.locked()) {
+						this.#hovering = broadcast;
 						this.canvas.style.cursor = "grab";
 					}
 				} else {
@@ -249,11 +274,10 @@ export class Room {
 				if (!broadcast) {
 					const mouse = mousePosition(e);
 
-					const at = this.#broadcastAt(mouse);
-					if (!at) return;
+					broadcast = this.#broadcastAt(mouse);
+					if (!broadcast) return;
 
-					this.#hovering = at.broadcast;
-					broadcast = at.broadcast;
+					this.#hovering = broadcast;
 				}
 
 				if (broadcast.locked()) {
@@ -268,10 +292,14 @@ export class Room {
 					this.canvas.style.cursor = "zoom-in";
 				}
 
-				const location = broadcast.source.location.current.get();
+				const location = broadcast.source.location.current.peek();
+
+				// Bump the z-index unless we're already at the top.
+				const z = broadcast.z.peek() === this.#maxZ ? this.#maxZ : ++this.#maxZ;
+
 				broadcast.setLocation({
-					...location,
-					zoom: Math.max(Math.min((location?.zoom ?? 1) + scale, 4), 0.25),
+					scale: Math.max(Math.min((location?.scale ?? 1) + scale, 4), 0.25),
+					z,
 				});
 			},
 			{ passive: false },
@@ -295,7 +323,7 @@ export class Room {
 			const visible = this.visible.get();
 
 			for (const broadcast of this.#remotes.values()) {
-				broadcast.video.enabled?.set(visible);
+				broadcast.source.video.enabled?.set(visible);
 			}
 		});
 
@@ -304,7 +332,7 @@ export class Room {
 		this.#signals.effect(() => {
 			const muted = this.muted.get();
 			for (const broadcast of this.#remotes.values()) {
-				broadcast.audio.enabled.set(muted);
+				broadcast.source.audio.enabled.set(muted);
 			}
 		});
 
@@ -312,7 +340,7 @@ export class Room {
 		this.#signals.effect(() => {
 			const suspended = this.suspended.get();
 			for (const broadcast of this.#remotes.values()) {
-				broadcast.audio.enabled.set(!suspended);
+				broadcast.source.audio.enabled.set(!suspended);
 			}
 		});
 
@@ -383,10 +411,10 @@ export class Room {
 						screen: this.screen.source,
 					});
 
-					this.#remotes.set(update.path, watch);
-					this.broadcasts.set(update.path, broadcast);
+					this.#remotes.set(update.path, broadcast);
+					this.#startBroadcast(broadcast);
 				} else if (existing) {
-					this.#stopBroadcast(update.path);
+					this.#stopBroadcast(existing);
 				}
 			}
 		} finally {
@@ -398,29 +426,48 @@ export class Room {
 		}
 	}
 
-	#broadcastAt(point: Vector): { name: string; broadcast: Broadcast } | undefined {
-		// We need to iterate in reverse order to respect the z-index.
-		// TODO: Shoet-circuit on the first result, but that requires a reverse iterator.
-		let result: { name: string; broadcast: Broadcast } | undefined;
-
-		for (const [name, broadcast] of this.broadcasts) {
+	#broadcastAt(point: Vector): Broadcast | undefined {
+		// Loop in reverse order to respect the z-index.
+		for (let i = this.broadcasts.length - 1; i >= 0; i--) {
+			const broadcast = this.broadcasts[i];
 			if (broadcast.bounds.peek().contains(point)) {
-				result = { name, broadcast };
+				return broadcast;
 			}
 		}
 
-		return result;
+		return undefined;
 	}
 
-	#stopBroadcast(path: string) {
-		const broadcast = this.broadcasts.get(path);
-		if (!broadcast) throw new Error(`Broadcast not found: ${path}`);
+	#startBroadcast(broadcast: Broadcast) {
+		// Put new broadcasts on top of the stack.
+		// NOTE: This is not sent over the network because we did not update source.location.current.z.
+		broadcast.z.set(++this.#maxZ);
 
+		// Insert the broadcast into the room based on it's z-index.
+		this.broadcasts.push(broadcast);
+
+		// Resort the broadcasts when the z-index changes.
+		broadcast.signals.effect(() => {
+			// Get our z-index so we resort when it changes.
+			const z = broadcast.z.get();
+			if (z > this.#maxZ) {
+				// Save the higher z-index so we can use it for new broadcasts.
+				this.#maxZ = z;
+			}
+
+			this.broadcasts.sort(
+				// Peek at the other broadcasts' z-index to avoid re-sorting every time.
+				(a, b) => a.z.peek() - b.z.peek(),
+			);
+		});
+	}
+
+	#stopBroadcast(broadcast: Broadcast) {
 		// Stop downloading it.
 		broadcast.source.enabled.set(false);
 
 		// Move it from the main list to the rip list.
-		this.broadcasts.delete(path);
+		this.broadcasts.splice(this.broadcasts.indexOf(broadcast), 1);
 		this.#rip.push(broadcast);
 
 		// Slowly fade out the offline broadcast.
@@ -586,7 +633,7 @@ export class Room {
 	}
 
 	#updateScale() {
-		if (this.broadcasts.size === 0) {
+		if (this.broadcasts.length === 0) {
 			// Avoid division by zero.
 			return;
 		}
@@ -599,7 +646,7 @@ export class Room {
 		}
 
 		// If we're the only broadcaster, then don't make our avatar huge.
-		if (this.broadcasts.size <= 1) {
+		if (this.broadcasts.length <= 1) {
 			broadcastArea *= 2;
 		}
 
@@ -621,7 +668,7 @@ export class Room {
 		}
 
 		this.#rip = [];
-		this.broadcasts.clear();
+		this.broadcasts = [];
 
 		this.camera.close();
 		this.screen.close();
