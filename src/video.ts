@@ -2,6 +2,7 @@ import { Watch, Publish } from "@kixelated/hang";
 import { Signals } from "@kixelated/signals";
 import { Vector } from "./geometry";
 import { Broadcast } from "./broadcast";
+import Settings from "./settings";
 
 // Local or remote (Hang.Watch.Video) video source.
 /*
@@ -121,7 +122,7 @@ export class Video {
 			}
 				*/
 
-			ctx.imageSmoothingEnabled = true;
+			ctx.imageSmoothingEnabled = !Settings.potato.peek();
 			ctx.drawImage(next.frame, 0, 0, bounds.size.x, bounds.size.y);
 			ctx.restore();
 

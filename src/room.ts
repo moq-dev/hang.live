@@ -604,7 +604,9 @@ export class Room {
 		const ctx = this.#ctx;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+		ctx.save();
 		this.#renderBackground(now);
+		ctx.restore();
 
 		const broadcasts = this.broadcasts.peek();
 		for (const broadcast of broadcasts) {
@@ -646,6 +648,19 @@ export class Room {
 	}
 
 	#renderBackground(now: DOMHighResTimeStamp) {
+		const ctx = this.#ctx;
+
+		if (Settings.potato.peek()) {
+			// Optional: set font and alignment
+			ctx.font = `${(ctx.canvas.width + ctx.canvas.height) / (2 * window.devicePixelRatio)}px sans-serif`;
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+
+			// Draw potato emoji in center
+			ctx.fillText("🥔", ctx.canvas.width / 2, ctx.canvas.height / 2);
+			return;
+		}
+
 		const LINE_SPACING = 64;
 		const LINE_WIDTH = 10;
 		const SEGMENTS = 16;
@@ -655,13 +670,11 @@ export class Room {
 		const WOBBLE_SPEED = 0.0006;
 		const LINE_OVERDRAW = 2;
 
-		const ctx = this.#ctx;
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;
 
 		const LINE_COUNT = Math.ceil(height / LINE_SPACING) + LINE_OVERDRAW * 2;
 
-		ctx.save();
 		ctx.lineWidth = LINE_WIDTH;
 		ctx.lineCap = "round";
 		ctx.globalAlpha = 0.25;
@@ -694,8 +707,6 @@ export class Room {
 
 			ctx.stroke();
 		}
-
-		ctx.restore();
 	}
 
 	#tickScale() {

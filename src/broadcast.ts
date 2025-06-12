@@ -349,15 +349,15 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 
 		const bounds = this.bounds.peek();
-		const scale = Math.sqrt(this.scale);
+		const fontScale = Math.sqrt(this.scale); // NOTE: We don't use the room scale
 
 		ctx.save();
 		ctx.globalAlpha *= alpha;
 
 		// Calculate arrow position and animation
-		const arrowSize = 16 * scale;
+		const arrowSize = 16 * fontScale;
 		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * scale;
+		const offset = 10 * fontScale;
 
 		const gap = 2 * (arrowSize + offset);
 
@@ -374,14 +374,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		ctx.closePath();
 
 		// Style the arrow
-		ctx.lineWidth = 2 * scale;
+		ctx.lineWidth = 2 * fontScale;
 		ctx.strokeStyle = "#000"; // Gold color
 		ctx.fillStyle = "#FFD700";
 		ctx.stroke();
 		ctx.fill();
 
 		// Draw "YOU" text
-		ctx.font = `bold ${14 + 12 * scale}px Arial`;
+		ctx.font = `bold ${14 + 12 * fontScale}px Arial`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillStyle = "#FFD700";
@@ -391,7 +391,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		/*
 		// Add a subtle glow effect
 		ctx.shadowColor = "#FFD700";
-		ctx.shadowBlur = 10 * scale;
+		ctx.shadowBlur = 10 * fontScale;
 		ctx.stroke();
 		*/
 
