@@ -9,6 +9,12 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
 	build: {
 		target: "esnext",
+		rollupOptions: {
+			input: {
+				main: "index.html",
+				about: "about.html",
+			},
+		},
 	},
 
 	plugins: [solid(), Icons({ compiler: "solid" })],
