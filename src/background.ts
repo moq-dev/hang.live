@@ -15,9 +15,9 @@ export function renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResT
 	ctx.save();
 
 	if (Settings.potato.peek()) {
-		// Load the pre-rendered SVG background and use that instead.
+		// Load the pre-rendered SVG instead of rendering it live.
 		potato.src = "/image/background.svg";
-		ctx.drawImage(potato, 0, 0, ctx.canvas.width, ctx.canvas.height);
+		ctx.drawImage(potato, 0, 0);
 		return;
 	}
 
@@ -102,7 +102,8 @@ function generateSvg() {
 	}
 
 	return `<!-- Generated via pnpm tsx src/background.ts -->
-	<svg width="${WIDTH}" height="${HEIGHT}" fill="black" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+	<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+		<rect width="100%" height="100%" fill="black" />
 		<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" stroke-opacity="0.25">
 			${paths.join("\n")}
 		</g>
