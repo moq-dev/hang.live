@@ -1,7 +1,7 @@
 import { cleanup, Memo, signal, Signal, Signals } from "@kixelated/signals";
 
 import { Publish, Watch, Catalog, Container } from "@kixelated/hang";
-import { Audio } from "./audio";
+import { Audio, AudioProps } from "./audio";
 import { Bounds, Vector } from "./geometry";
 import { Video } from "./video";
 
@@ -24,6 +24,9 @@ renderer.link = ({ href, title, text }) => {
 marked.use({ renderer });
 
 export type BroadcastProps = {
+	viewport: Signal<Vector>;
+	audio: AudioProps;
+
 	z?: number;
 	camera?: Publish.Broadcast;
 	screen?: Publish.Broadcast;
@@ -70,14 +73,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
 
-	constructor(source: T, viewport: Signal<Vector>, props?: BroadcastProps) {
+	constructor(source: T, props: BroadcastProps) {
 		this.source = source;
-		this.viewport = viewport;
+		this.viewport = props.viewport;
 		this.messages = signal<ChatMessage[]>([]);
 		this.z = signal(props?.z ?? 0);
 
 		this.video = new Video(this);
-		this.audio = new Audio(this);
+		this.audio = new Audio(this, props.audio);
 
 		// Start them at the center of the screen with a tiiiiny bit of variance to break ties.
 		const start = () => (Math.random() - 0.5) / 100;
@@ -234,6 +237,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				};
 
 				this.messages.set((messages) => [message, ...messages]);
+
+				this.audio.notifications.play("chat");
 
 				// Remove from the DOM after the max fade time.
 				setTimeout(() => {

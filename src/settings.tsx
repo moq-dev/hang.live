@@ -47,8 +47,8 @@ export function Modal(): JSX.Element {
 				checked={Settings.draggable.get()}
 				onChange={() => Settings.draggable.set(!Settings.draggable.get())}
 			/>
-			<span>allow dragging</span>
-			<span title="If we allow other users to move our window. If disabled, then only we can move ourselves by clicking and dragging.">
+			<span>remote dragging</span>
+			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
 				<IconHelp />
 			</span>
 

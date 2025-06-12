@@ -3,10 +3,13 @@ import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { createEffect } from "solid-js";
 import { Broadcast } from "./broadcast";
 import Settings from "./settings";
+import { BroadcastNotifications } from "./notifications";
 
 export type AudioProps = {
-	muted?: boolean;
-	volume?: number;
+	notifications: BroadcastNotifications;
+	muted: Signal<boolean>;
+	volume: Signal<number>;
+
 	pan?: number;
 };
 
@@ -20,16 +23,23 @@ export class Audio {
 
 	#analyser?: AnalyserNode;
 	#analyserBuffer = new Uint8Array(1024);
+	notifications: BroadcastNotifications;
 
 	#volumeSmoothed = 0;
 
 	#signals = new Signals();
 
-	constructor(broadcast: Broadcast, props?: AudioProps) {
+	constructor(broadcast: Broadcast, props: AudioProps) {
 		this.broadcast = broadcast;
-		this.muted = signal(props?.muted ?? false);
-		this.volume = signal(props?.volume ?? 1);
+		this.muted = props.muted;
+		this.volume = props.volume;
 		this.pan = signal(props?.pan ?? 0);
+		this.notifications = props.notifications;
+
+		// Proxy the pan to the notifications.
+		this.#signals.effect(() => {
+			this.notifications.pan.set(this.pan.get());
+		});
 
 		this.#signals.effect(() => this.#init());
 	}

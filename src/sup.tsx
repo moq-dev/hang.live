@@ -37,7 +37,7 @@ export function Sup(props: { user: Signal<string | undefined> }) {
 					There's a ton of things left to implement, so please don't share this with anyone without asking
 					pretty please.
 				</p>
-				<p>Until then, choose a super unique username:</p>
+				<p>Until accounts are implemented, choose a super unique username:</p>
 
 				<input
 					type="text"

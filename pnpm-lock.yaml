@@ -59,6 +59,9 @@ importers:
       '@typescript/lib-dom':
         specifier: npm:@types/web@^0.0.234
         version: '@types/web@0.0.234'
+      tsx:
+        specifier: ^4.20.1
+        version: 4.20.2
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -67,10 +70,10 @@ importers:
         version: 22.1.0
       vite:
         specifier: ^6.3.5
-        version: 6.3.5
+        version: 6.3.5(tsx@4.20.2)
       vite-plugin-solid:
         specifier: ^2.11.0
-        version: 2.11.6(solid-js@1.9.6)(vite@6.3.5)
+        version: 2.11.6(solid-js@1.9.6)(vite@6.3.5(tsx@4.20.2))
 
 packages:
 
@@ -681,6 +684,9 @@ packages:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
 
+  get-tsconfig@4.10.1:
+    resolution: {integrity: sha512-auHyJ4AgMz7vgS8Hp3N6HXSmlMdUyhSUrfBF16w153rxtLIEOE+HGqaBppczZvnHLqQJfiHotCYpNhl0lUROFQ==}
+
   github-markdown-css@5.8.1:
     resolution: {integrity: sha512-8G+PFvqigBQSWLQjyzgpa2ThD9bo7+kDsriUIidGcRhXgmcaAWUIpCZf8DavJgc+xifjbCG+GvMyWr0XMXmc7g==}
     engines: {node: '>=10'}
@@ -775,6 +781,9 @@ packages:
   quansync@0.2.10:
     resolution: {integrity: sha512-t41VRkMYbkHyCYmOvx/6URnN80H7k4X0lLdBMGsz+maAwrJQYB1djpV6vHrQIBE0WBSGqhtEHrK9U3DWWH8v7A==}
 
+  resolve-pkg-maps@1.0.0:
+    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
+
   rollup@4.39.0:
     resolution: {integrity: sha512-thI8kNc02yNvnmJp8dr3fNWJ9tCONDhp6TV35X6HkKGGs9E6q7YWCHbe5vKiTa7TAiNcFEmXKj3X/pG2b3ci0g==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -812,6 +821,11 @@ packages:
   tinyglobby@0.2.13:
     resolution: {integrity: sha512-mEwzpUgrLySlveBwEVDMKk5B57bhLPYovRfPAXD5gA/98Opn0rCDj3GtLwFvCvH5RK9uPCExUROW5NjDwvqkxw==}
     engines: {node: '>=12.0.0'}
+
+  tsx@4.20.2:
+    resolution: {integrity: sha512-He0ZWr41gLa4vD30Au3yuwpe0HXaCZbclvl8RBieUiJ9aFnPMWUPIyvw3RU8+1Crjfcrauvitae2a4tUzRAGsw==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   typescript@5.8.3:
     resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
@@ -1426,6 +1440,10 @@ snapshots:
 
   gensync@1.0.0-beta.2: {}
 
+  get-tsconfig@4.10.1:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
+
   github-markdown-css@5.8.1: {}
 
   globals@11.12.0: {}
@@ -1505,6 +1523,8 @@ snapshots:
 
   quansync@0.2.10: {}
 
+  resolve-pkg-maps@1.0.0: {}
+
   rollup@4.39.0:
     dependencies:
       '@types/estree': 1.0.7
@@ -1563,6 +1583,13 @@ snapshots:
       fdir: 6.4.4(picomatch@4.0.2)
       picomatch: 4.0.2
 
+  tsx@4.20.2:
+    dependencies:
+      esbuild: 0.25.2
+      get-tsconfig: 4.10.1
+    optionalDependencies:
+      fsevents: 2.3.3
+
   typescript@5.8.3: {}
 
   ufo@1.6.1: {}
@@ -1591,7 +1618,7 @@ snapshots:
 
   validate-html-nesting@1.2.2: {}
 
-  vite-plugin-solid@2.11.6(solid-js@1.9.6)(vite@6.3.5):
+  vite-plugin-solid@2.11.6(solid-js@1.9.6)(vite@6.3.5(tsx@4.20.2)):
     dependencies:
       '@babel/core': 7.26.10
       '@types/babel__core': 7.20.5
@@ -1599,12 +1626,12 @@ snapshots:
       merge-anything: 5.1.7
       solid-js: 1.9.6
       solid-refresh: 0.6.3(solid-js@1.9.6)
-      vite: 6.3.5
-      vitefu: 1.0.6(vite@6.3.5)
+      vite: 6.3.5(tsx@4.20.2)
+      vitefu: 1.0.6(vite@6.3.5(tsx@4.20.2))
     transitivePeerDependencies:
       - supports-color
 
-  vite@6.3.5:
+  vite@6.3.5(tsx@4.20.2):
     dependencies:
       esbuild: 0.25.2
       fdir: 6.4.4(picomatch@4.0.2)
@@ -1614,10 +1641,11 @@ snapshots:
       tinyglobby: 0.2.13
     optionalDependencies:
       fsevents: 2.3.3
+      tsx: 4.20.2
 
-  vitefu@1.0.6(vite@6.3.5):
+  vitefu@1.0.6(vite@6.3.5(tsx@4.20.2)):
     optionalDependencies:
-      vite: 6.3.5
+      vite: 6.3.5(tsx@4.20.2)
 
   webpack-virtual-modules@0.6.2: {}
 

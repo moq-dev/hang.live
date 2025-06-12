@@ -1,5 +1,5 @@
 import { Connection, Support } from "@kixelated/hang";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { Controls } from "./controls";
