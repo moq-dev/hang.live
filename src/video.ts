@@ -152,7 +152,7 @@ export class Video {
 			ctx.save();
 			ctx.globalAlpha *= 1 - this.transition;
 
-			if (this.broadcast.avatar.complete) {
+			if (this.broadcast.avatar) {
 				ctx.drawImage(this.broadcast.avatar, 0, 0, bounds.size.x, bounds.size.y);
 			} else {
 				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y);
