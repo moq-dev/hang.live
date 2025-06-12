@@ -3,7 +3,8 @@ import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import Settings from "./settings";
-import { ReactiveMap } from "@solid-primitives/map";
+import { Notifications } from "./notifications";
+import { renderBackground } from "./background";
 
 export type RoomProps = {
 	user?: string;
@@ -24,7 +25,7 @@ export class Room {
 	broadcasts = signal<Broadcast[]>([]);
 
 	// Remote broadcasts are stored separately so we treat them differently.
-	#remotes = new ReactiveMap<string, Broadcast<Watch.Broadcast>>();
+	#remotes = new Map<string, Broadcast<Watch.Broadcast>>();
 
 	// The broadcasts that have been closed and are fading away.
 	#rip: Broadcast[] = [];
@@ -67,6 +68,9 @@ export class Room {
 	camera: Broadcast<Publish.Broadcast>;
 	screen: Broadcast<Publish.Broadcast>;
 
+	// Notifications use a shared AudioContext.
+	#notifications: Notifications;
+
 	#signals = new Signals();
 
 	constructor(connection: Connection, canvas: HTMLCanvasElement, props?: RoomProps) {
@@ -77,6 +81,11 @@ export class Room {
 		this.volume = signal(props?.volume ?? 0.5);
 		this.viewport = signal(Vector.create(canvas.width, canvas.height));
 		this.user = signal(props?.user);
+
+		this.#notifications = new Notifications({
+			volume: this.volume,
+			muted: this.muted,
+		});
 
 		const camera = new Publish.Broadcast(connection, {
 			device: "camera",
@@ -89,20 +98,27 @@ export class Room {
 			},
 			user: {
 				name: props?.user,
-				avatar: "/avatar.png",
+				avatar: "/avatar/kixel.png",
 			},
 			chat: {
 				enabled: true,
 				ttl: 10000, // Save messages for at most 10 seconds.
 			},
 		});
-		this.camera = new Broadcast(camera, this.viewport);
+		this.camera = new Broadcast(camera, {
+			viewport: this.viewport,
+			audio: {
+				notifications: this.#notifications.broadcast(),
+				muted: this.muted,
+				volume: this.volume,
+			},
+		});
 
 		const screen = new Publish.Broadcast(connection, {
 			device: "screen",
 			user: {
 				name: props?.user ? `${props?.user} (Screen)` : undefined,
-				avatar: "/avatar.png",
+				avatar: "/avatar/kixel.png",
 			},
 			// Publish our screen's location, starting at a random position.
 			location: {
@@ -112,7 +128,14 @@ export class Room {
 				peering: Settings.draggable.get(),
 			},
 		});
-		this.screen = new Broadcast(screen, this.viewport);
+		this.screen = new Broadcast(screen, {
+			viewport: this.viewport,
+			audio: {
+				notifications: this.#notifications.broadcast(),
+				muted: this.muted,
+				volume: this.volume,
+			},
+		});
 
 		// Update everything when a username is selected.
 		camera.signals.effect(() => {
@@ -191,14 +214,7 @@ export class Room {
 
 		// Check if the user needs to click the page to unmute the audio.
 		// TODO do this in a UI element.
-		this.suspended = signal(
-			(() => {
-				const ctx = new AudioContext();
-				const suspended = ctx.state === "suspended";
-				ctx.close();
-				return suspended;
-			})(),
-		);
+		this.suspended = signal(this.#notifications.suspended);
 
 		const ctx = this.canvas.getContext("2d");
 		if (!ctx) {
@@ -316,8 +332,13 @@ export class Room {
 		);
 
 		// Determine when the user has interacted with the page so we can potentially unmute audio.
-		window.addEventListener("click", () => this.suspended.set(false), { once: true });
-		window.addEventListener("keydown", () => this.suspended.set(false), { once: true });
+		const unsuspend = () => {
+			this.suspended.set(false);
+			this.#notifications.resume();
+		};
+
+		window.addEventListener("click", unsuspend, { once: true });
+		window.addEventListener("keydown", unsuspend, { once: true });
 
 		window.addEventListener("keydown", (e) => {
 			// Only handle arrows when no text input is focused
@@ -444,9 +465,15 @@ export class Room {
 						chat: { enabled: true },
 					});
 
-					const broadcast = new Broadcast(watch, this.viewport, {
+					const broadcast = new Broadcast(watch, {
+						viewport: this.viewport,
 						camera: this.camera.source,
 						screen: this.screen.source,
+						audio: {
+							notifications: this.#notifications.broadcast(),
+							muted: this.muted,
+							volume: this.volume,
+						},
 					});
 
 					this.#remotes.set(update.path, broadcast);
@@ -481,6 +508,7 @@ export class Room {
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network because we did not update source.location.current.z.
 		broadcast.z.set(++this.#maxZ);
+		broadcast.audio.notifications.play("sup");
 
 		// Insert the broadcast into the room based on it's z-index.
 		this.broadcasts.set((prev) => [...prev, broadcast]);
@@ -506,6 +534,7 @@ export class Room {
 	#stopBroadcast(broadcast: Broadcast) {
 		// Stop downloading it.
 		broadcast.source.enabled.set(false);
+		broadcast.audio.notifications.play("bye");
 
 		// Move it from the main list to the rip list.
 		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));
@@ -514,12 +543,16 @@ export class Room {
 		// Slowly fade out the offline broadcast.
 		const fade = () => {
 			broadcast.online -= 0.01;
-
-			if (broadcast.online <= 0) {
-				this.#rip.splice(this.#rip.indexOf(broadcast), 1);
-				broadcast.close();
-			} else {
+			if (broadcast.online > 0) {
 				requestAnimationFrame(fade);
+				return;
+			}
+
+			this.#rip.splice(this.#rip.indexOf(broadcast), 1);
+
+			// Don't close local broadcasts, we keep them open and toggle instead.
+			if (broadcast.source instanceof Watch.Broadcast) {
+				broadcast.close();
 			}
 		};
 
@@ -604,9 +637,7 @@ export class Room {
 		const ctx = this.#ctx;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-		ctx.save();
-		this.#renderBackground(now);
-		ctx.restore();
+		renderBackground(ctx, now);
 
 		const broadcasts = this.broadcasts.peek();
 		for (const broadcast of broadcasts) {
@@ -645,68 +676,6 @@ export class Room {
 		// Render the locator arrows for our broadcasts on join.
 		this.camera.renderLocator(now, ctx);
 		this.screen.renderLocator(now, ctx);
-	}
-
-	#renderBackground(now: DOMHighResTimeStamp) {
-		const ctx = this.#ctx;
-
-		if (Settings.potato.peek()) {
-			// Optional: set font and alignment
-			ctx.font = `${(ctx.canvas.width + ctx.canvas.height) / (2 * window.devicePixelRatio)}px sans-serif`;
-			ctx.textAlign = "center";
-			ctx.textBaseline = "middle";
-
-			// Draw potato emoji in center
-			ctx.fillText("🥔", ctx.canvas.width / 2, ctx.canvas.height / 2);
-			return;
-		}
-
-		const LINE_SPACING = 64;
-		const LINE_WIDTH = 10;
-		const SEGMENTS = 16;
-		const WOBBLE_AMPLITUDE = 10;
-		const BEND_AMPLITUDE = 16;
-		const BEND_PROBABILITY = 0.2;
-		const WOBBLE_SPEED = 0.0006;
-		const LINE_OVERDRAW = 2;
-
-		const width = ctx.canvas.width;
-		const height = ctx.canvas.height;
-
-		const LINE_COUNT = Math.ceil(height / LINE_SPACING) + LINE_OVERDRAW * 2;
-
-		ctx.lineWidth = LINE_WIDTH;
-		ctx.lineCap = "round";
-		ctx.globalAlpha = 0.25;
-
-		for (let i = 0; i < LINE_COUNT; i++) {
-			const hue = (i * 25 + now * 0.03) % 360;
-			ctx.strokeStyle = `hsl(${hue}, 75%, 50%)`;
-
-			const baseY = (i - LINE_OVERDRAW) * LINE_SPACING;
-			const wobble = Math.sin(now * WOBBLE_SPEED + i) * WOBBLE_AMPLITUDE;
-
-			ctx.beginPath();
-
-			for (let s = 0; s <= SEGMENTS; s++) {
-				const t = s / SEGMENTS;
-				const xBase = -100 + t * (width + 200);
-				const xWobble = Math.sin(now * WOBBLE_SPEED + s + i) * WOBBLE_AMPLITUDE;
-				const x = xBase + xWobble;
-
-				const seed = (s * 31 + i * 17) % 100;
-				const bend = seed / 100 < BEND_PROBABILITY ? (seed % 2 === 0 ? 1 : -1) * BEND_AMPLITUDE : 0;
-
-				const y = baseY + wobble + bend + t * 200;
-				if (s === 0) {
-					ctx.moveTo(x, y);
-				} else {
-					ctx.lineTo(x, y);
-				}
-			}
-
-			ctx.stroke();
-		}
 	}
 
 	#tickScale() {
@@ -750,5 +719,6 @@ export class Room {
 
 		this.camera.close();
 		this.screen.close();
+		this.#notifications.close();
 	}
 }

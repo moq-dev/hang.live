@@ -90,21 +90,19 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Elem
 	const toggle = () => {
 		// We need to batch otherwise we'll request the device twice.
 		batch(() => {
-			props.video.constraints.set(
-				props.video.constraints.peek()
-					? undefined
-					: {
-							frameRate: { ideal: 60 },
-							resizeMode: "none",
-						},
-			);
-			props.audio.constraints.set(
-				props.audio.constraints.peek()
-					? undefined
-					: {
-							channelCount: { ideal: 2, max: 2 },
-						},
-			);
+			props.video.constraints.set((prev) => {
+				if (prev) return undefined;
+				return {
+					frameRate: { ideal: 60 },
+					resizeMode: "none",
+				};
+			});
+			props.audio.constraints.set((prev) => {
+				if (prev) return undefined;
+				return {
+					channelCount: { ideal: 2, max: 2 },
+				};
+			});
 		});
 	};
 
@@ -124,7 +122,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
-		return `${Math.min(100, 100 - (power() ?? 0) * 100)}%`;
+		return `${Math.max(0, 100 - (power() ?? 0) * 100)}%`;
 	});
 
 	const color = createMemo(() => {
