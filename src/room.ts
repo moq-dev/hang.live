@@ -69,7 +69,7 @@ export class Room {
 	screen: Broadcast<Publish.Broadcast>;
 
 	// Notifications use a shared AudioContext.
-	#notifications: Notifications;
+	notifications: Notifications;
 
 	#signals = new Signals();
 
@@ -82,13 +82,33 @@ export class Room {
 		this.viewport = signal(Vector.create(canvas.width, canvas.height));
 		this.user = signal(props?.user);
 
-		this.#notifications = new Notifications({
+		this.notifications = new Notifications({
 			volume: this.volume,
 			muted: this.muted,
 		});
 
 		const camera = new Publish.Broadcast(connection, {
 			device: "camera",
+			video: {
+				enabled: false, // TODO local storage?
+				constraints: {
+					// 480p but square, so the browser can choose the best aspect ratio.
+					width: { ideal: 640 },
+					height: { ideal: 640 },
+					frameRate: { ideal: 60 },
+					facingMode: { ideal: "user" },
+					resizeMode: "none",
+				},
+			},
+			audio: {
+				enabled: false, // TODO local storage
+				constraints: {
+					channelCount: { ideal: 2, max: 2 },
+					echoCancellation: { ideal: true },
+					autoGainControl: { ideal: true },
+					noiseSuppression: { ideal: true },
+				},
+			},
 			// Publish our camera's location, starting at a random position.
 			location: {
 				enabled: true,
@@ -105,10 +125,17 @@ export class Room {
 				ttl: 10000, // Save messages for at most 10 seconds.
 			},
 		});
+
+		this.#signals.effect(() => {
+			if (camera.video.media.get() || camera.audio.media.get()) {
+				this.notifications.play("select");
+			}
+		});
+
 		this.camera = new Broadcast(camera, {
 			viewport: this.viewport,
 			audio: {
-				notifications: this.#notifications.broadcast(),
+				notifications: this.notifications.broadcast(),
 				muted: this.muted,
 				volume: this.volume,
 			},
@@ -116,6 +143,19 @@ export class Room {
 
 		const screen = new Publish.Broadcast(connection, {
 			device: "screen",
+			audio: {
+				enabled: false,
+				constraints: {
+					channelCount: { ideal: 2, max: 2 },
+				},
+			},
+			video: {
+				enabled: false,
+				constraints: {
+					frameRate: { ideal: 60 },
+					resizeMode: "none",
+				},
+			},
 			user: {
 				name: props?.user ? `${props?.user} (Screen)` : undefined,
 				avatar: "/avatar/kixel.png",
@@ -131,10 +171,16 @@ export class Room {
 		this.screen = new Broadcast(screen, {
 			viewport: this.viewport,
 			audio: {
-				notifications: this.#notifications.broadcast(),
+				notifications: this.notifications.broadcast(),
 				muted: this.muted,
 				volume: this.volume,
 			},
+		});
+
+		this.#signals.effect(() => {
+			if (screen.video.media.get() || screen.audio.media.get()) {
+				this.notifications.play("select");
+			}
 		});
 
 		// Update everything when a username is selected.
@@ -214,7 +260,7 @@ export class Room {
 
 		// Check if the user needs to click the page to unmute the audio.
 		// TODO do this in a UI element.
-		this.suspended = signal(this.#notifications.suspended);
+		this.suspended = signal(this.notifications.suspended);
 
 		const ctx = this.canvas.getContext("2d");
 		if (!ctx) {
@@ -334,7 +380,7 @@ export class Room {
 		// Determine when the user has interacted with the page so we can potentially unmute audio.
 		const unsuspend = () => {
 			this.suspended.set(false);
-			this.#notifications.resume();
+			this.notifications.resume();
 		};
 
 		window.addEventListener("click", unsuspend, { once: true });
@@ -374,7 +420,7 @@ export class Room {
 			if (!visible) return;
 
 			this.#animation = requestAnimationFrame(this.#tick.bind(this));
-			return () => cancelAnimationFrame(this.#animation ?? 0);
+			cleanup(() => cancelAnimationFrame(this.#animation ?? 0));
 		});
 
 		// Apply the visible signal to remote broadcasts.
@@ -470,15 +516,17 @@ export class Room {
 						camera: this.camera.source,
 						screen: this.screen.source,
 						audio: {
-							notifications: this.#notifications.broadcast(),
+							notifications: this.notifications.broadcast(),
 							muted: this.muted,
 							volume: this.volume,
 						},
 					});
 
 					this.#remotes.set(update.path, broadcast);
+					this.notifications.play("sup");
 					this.#startBroadcast(broadcast);
 				} else if (existing) {
+					this.notifications.play("bye");
 					this.#stopBroadcast(existing);
 				}
 			}
@@ -508,7 +556,6 @@ export class Room {
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network because we did not update source.location.current.z.
 		broadcast.z.set(++this.#maxZ);
-		broadcast.audio.notifications.play("sup");
 
 		// Insert the broadcast into the room based on it's z-index.
 		this.broadcasts.set((prev) => [...prev, broadcast]);
@@ -534,7 +581,6 @@ export class Room {
 	#stopBroadcast(broadcast: Broadcast) {
 		// Stop downloading it.
 		broadcast.source.enabled.set(false);
-		broadcast.audio.notifications.play("bye");
 
 		// Move it from the main list to the rip list.
 		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));
@@ -719,6 +765,6 @@ export class Room {
 
 		this.camera.close();
 		this.screen.close();
-		this.#notifications.close();
+		this.notifications.close();
 	}
 }

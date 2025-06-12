@@ -1,5 +1,5 @@
 import { Signal } from "@kixelated/signals";
-import { createEffect, createSignal, Setter, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 
 // Ask the user for their user name.
 // Obviously this should be replaced with a proper auth system.

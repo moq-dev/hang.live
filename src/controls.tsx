@@ -21,8 +21,8 @@ export function Controls(props: {
 	return (
 		<div class="controls pointer-gaps">
 			<Microphone audio={props.camera.audio} />
-			<Camera video={props.camera.video} />
-			<Screen video={props.screen.video} audio={props.screen.audio} />
+			<Camera video={props.camera.video} room={props.room} />
+			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
 			<Chat broadcast={props.camera} />
 			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
 			<Volume room={props.room} />
@@ -34,15 +34,7 @@ export function Controls(props: {
 
 function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	const toggle = () => {
-		const audio = props.audio.constraints.peek()
-			? undefined
-			: {
-					channelCount: { ideal: 2, max: 2 },
-					echoCancellation: { ideal: true },
-					autoGainControl: { ideal: true },
-					noiseCancellation: { ideal: true },
-				};
-		props.audio.constraints.set(audio);
+		props.audio.enabled.set((prev) => !prev);
 	};
 
 	return (
@@ -60,20 +52,17 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	);
 }
 
-function Camera(props: { video: Publish.Video }): JSX.Element {
+function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const toggle = () => {
-		const video: Publish.VideoConstraints | undefined = props.video.constraints.peek()
-			? undefined
-			: {
-					// 480p but square, so the browser can choose the best aspect ratio.
-					width: { ideal: 640 },
-					height: { ideal: 640 },
-					frameRate: { ideal: 60 },
-					facingMode: { ideal: "user" },
-					resizeMode: "none",
-				};
-		props.video.constraints.set(video);
+		props.video.enabled.set((prev) => !prev);
 	};
+
+	// Play a sound when a media device is selected.
+	createEffect(() => {
+		if (props.video.media.get()) {
+			props.room.notifications.play("select");
+		}
+	});
 
 	return (
 		<button
@@ -86,25 +75,21 @@ function Camera(props: { video: Publish.Video }): JSX.Element {
 	);
 }
 
-function Screen(props: { video: Publish.Video; audio: Publish.Audio }): JSX.Element {
+function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room }): JSX.Element {
 	const toggle = () => {
 		// We need to batch otherwise we'll request the device twice.
 		batch(() => {
-			props.video.constraints.set((prev) => {
-				if (prev) return undefined;
-				return {
-					frameRate: { ideal: 60 },
-					resizeMode: "none",
-				};
-			});
-			props.audio.constraints.set((prev) => {
-				if (prev) return undefined;
-				return {
-					channelCount: { ideal: 2, max: 2 },
-				};
-			});
+			props.video.enabled.set((prev) => !prev);
+			props.audio.enabled.set((prev) => !prev);
 		});
 	};
+
+	// Play a sound when a media device is selected.
+	createEffect(() => {
+		if (props.video.media.get()) {
+			props.room.notifications.play("select");
+		}
+	});
 
 	return (
 		<button

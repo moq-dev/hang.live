@@ -8,7 +8,7 @@ const SOUNDS = {
 	sup: "/audio/sup.opus",
 } as const;
 
-export type SoundName = keyof typeof SOUNDS;
+export type NotificationSound = keyof typeof SOUNDS;
 
 export interface NotificationsProps {
 	volume: Signal<number>;
@@ -19,7 +19,7 @@ export class Notifications {
 	ctx: AudioContext;
 	gain: GainNode;
 
-	#sounds: Map<SoundName, Promise<AudioBuffer[]>>;
+	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Signals();
 
 	constructor(props: NotificationsProps) {
@@ -54,13 +54,13 @@ export class Notifications {
 	}
 
 	// Return a buffer for the sound, randomly selecting one if there are multiple.
-	async load(sound: SoundName): Promise<AudioBuffer> {
+	async load(sound: NotificationSound): Promise<AudioBuffer> {
 		const buffers = await this.#sounds.get(sound);
 		if (!buffers) throw new Error(`Sound "${String(sound)}" not loaded`);
 		return buffers[Math.floor(Math.random() * buffers.length)];
 	}
 
-	async play(sound: SoundName) {
+	async play(sound: NotificationSound) {
 		const buffer = await this.load(sound);
 		const source = new AudioBufferSourceNode(this.ctx, { buffer });
 		source.connect(this.ctx.destination);
@@ -106,7 +106,7 @@ export class BroadcastNotifications {
 		});
 	}
 
-	async play(sound: SoundName) {
+	async play(sound: NotificationSound) {
 		const buffer = await this.#parent.load(sound);
 		const source = new AudioBufferSourceNode(this.#parent.ctx, { buffer });
 		source.connect(this.#panner);
