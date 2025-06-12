@@ -1,4 +1,6 @@
+import { JSX } from "solid-js/jsx-runtime";
 import Settings from "./settings";
+import { onCleanup } from "solid-js";
 
 const LINE_SPACING = 64;
 const LINE_WIDTH = 10;
@@ -108,6 +110,55 @@ function generateSvg() {
 			${paths.join("\n")}
 		</g>
 	</svg>`;
+}
+
+// Create a background canvas, for non-room pages.
+export function Background(): JSX.Element {
+	const canvas = (
+		<canvas
+			style={{
+				display: "block",
+				"background-color": "#000",
+				width: "100%",
+				height: "100%",
+				position: "fixed",
+				top: 0,
+				left: 0,
+				right: 0,
+				bottom: 0,
+				"z-index": -1,
+			}}
+		/>
+	) as HTMLCanvasElement;
+
+	const resize = () => {
+		canvas.width = window.devicePixelRatio * window.innerWidth;
+		canvas.height = window.devicePixelRatio * window.innerHeight;
+	};
+
+	resize();
+	window.addEventListener("resize", resize);
+
+	const ctx = canvas.getContext("2d");
+	if (!ctx) {
+		throw new Error("Failed to get canvas context");
+	}
+
+	let cancel: number;
+
+	const render = (now: DOMHighResTimeStamp) => {
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		renderBackground(ctx, now);
+		cancel = requestAnimationFrame(render);
+	};
+
+	cancel = requestAnimationFrame(render);
+
+	onCleanup(() => {
+		cancelAnimationFrame(cancel);
+	});
+
+	return canvas;
 }
 
 /* UNCOMMENT TO GENERATE SVG

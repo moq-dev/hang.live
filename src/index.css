@@ -129,3 +129,11 @@ header {
 .fade.fade-out {
 	opacity: 0;
 }
+
+.content {
+	width: 100%;
+	max-width: 900px;
+	margin: 0 auto;
+
+	font-family: "Montserrat Variable", system-ui, sans-serif;
+}
