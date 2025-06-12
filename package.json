@@ -17,7 +17,6 @@
 		"@kixelated/hang": "^0.2",
 		"@kixelated/moq": "^0.6",
 		"@kixelated/signals": "^0.2",
-		"@solid-primitives/map": "^0.7.1",
 		"@tauri-apps/api": "^2",
 		"@tauri-apps/plugin-opener": "^2",
 		"dompurify": "^3.2.6",

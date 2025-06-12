@@ -1,9 +1,13 @@
 import { signal, Signals } from "@kixelated/signals";
 import { JSX } from "solid-js/jsx-runtime";
 
+import IconHelp from "~icons/mdi/help-box";
+import IconPotato from "~icons/mdi/fried-potatoes";
+
 const Settings = {
 	draggable: signal(localStorage.getItem("settings.draggable") !== "false"),
 	volume: signal(localStorage.getItem("settings.volume") ?? "100"),
+	potato: signal(localStorage.getItem("settings.potato") === "true"),
 };
 
 const signals = new Signals();
@@ -16,6 +20,18 @@ signals.effect(() => {
 	localStorage.setItem("settings.volume", Settings.volume.get().toString());
 });
 
+signals.effect(() => {
+	localStorage.setItem("settings.potato", Settings.potato.get().toString());
+});
+
+signals.effect(() => {
+	if (Settings.potato.get()) {
+		document.documentElement.classList.add("potato");
+	} else {
+		document.documentElement.classList.remove("potato");
+	}
+});
+
 // Mostly just to avoid console warnings about signals not being closed
 document.addEventListener("unload", () => {
 	signals.close();
@@ -25,18 +41,26 @@ export default Settings;
 
 export function Modal(): JSX.Element {
 	return (
-		<>
-			<div
-				style={{ display: "flex", "align-items": "center", gap: "8px" }}
-				title="If we allow other users to move our window. If disabled, then only we can move ourselves by clicking and dragging."
-			>
-				<input
-					type="checkbox"
-					checked={Settings.draggable.get()}
-					onChange={() => Settings.draggable.set(!Settings.draggable.get())}
-				/>
-				<span>allow dragging</span>
-			</div>
-		</>
+		<div style={{ display: "grid", "grid-template-columns": "1fr auto 1fr", "align-items": "center", gap: "8px" }}>
+			<input
+				type="checkbox"
+				checked={Settings.draggable.get()}
+				onChange={() => Settings.draggable.set(!Settings.draggable.get())}
+			/>
+			<span>allow dragging</span>
+			<span title="If we allow other users to move our window. If disabled, then only we can move ourselves by clicking and dragging.">
+				<IconHelp />
+			</span>
+
+			<input
+				type="checkbox"
+				checked={Settings.potato.get()}
+				onChange={() => Settings.potato.set(!Settings.potato.get())}
+			/>
+			<span>potato mode</span>
+			<span title="Disable special effects and laggy animations.">
+				<IconPotato />
+			</span>
+		</div>
 	);
 }

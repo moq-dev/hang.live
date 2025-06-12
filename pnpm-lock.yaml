@@ -25,9 +25,6 @@ importers:
       '@kixelated/signals':
         specifier: link:../../Library/pnpm/global/5/node_modules/@kixelated/signals
         version: link:../../Library/pnpm/global/5/node_modules/@kixelated/signals
-      '@solid-primitives/map':
-        specifier: ^0.7.1
-        version: 0.7.1(solid-js@1.9.6)
       '@tauri-apps/api':
         specifier: ^2
         version: 2.4.1
@@ -496,21 +493,6 @@ packages:
     resolution: {integrity: sha512-yAkUOkIKZlK5dl7u6dg897doBgLXmUHhIINM2c+sND3DZwnrdQkkSiDh7N75Ll4mM4dxSkYfXqU9fW3lLkMFug==}
     cpu: [x64]
     os: [win32]
-
-  '@solid-primitives/map@0.7.1':
-    resolution: {integrity: sha512-0Fo5gToY+XPZVQLwzm8dc/3vVLdYLboUJD+kyoW+V64YPHs0qPDEekJuRUV7Mp9uiyHnD1DArfy1CrHAezTDZQ==}
-    peerDependencies:
-      solid-js: ^1.6.12
-
-  '@solid-primitives/trigger@1.2.1':
-    resolution: {integrity: sha512-pvNmddYs5AYUpiH373F7wbQOlcc10SSNHY8kUiu4UHoDlv4jhSnlNXzbFkmt33hq4ODKdN5gVm00jCnAJ+wm8Q==}
-    peerDependencies:
-      solid-js: ^1.6.12
-
-  '@solid-primitives/utils@6.3.1':
-    resolution: {integrity: sha512-4/Z59nnwu4MPR//zWZmZm2yftx24jMqQ8CSd/JobL26TPfbn4Ph8GKNVJfGJWShg1QB98qObJSskqizbTvcLLA==}
-    peerDependencies:
-      solid-js: ^1.6.12
 
   '@tauri-apps/api@2.4.1':
     resolution: {integrity: sha512-5sYwZCSJb6PBGbBL4kt7CnE5HHbBqwH+ovmOW6ZVju3nX4E3JX6tt2kRklFEH7xMOIwR0btRkZktuLhKvyEQYg==}
@@ -1269,20 +1251,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.39.0':
     optional: true
-
-  '@solid-primitives/map@0.7.1(solid-js@1.9.6)':
-    dependencies:
-      '@solid-primitives/trigger': 1.2.1(solid-js@1.9.6)
-      solid-js: 1.9.6
-
-  '@solid-primitives/trigger@1.2.1(solid-js@1.9.6)':
-    dependencies:
-      '@solid-primitives/utils': 6.3.1(solid-js@1.9.6)
-      solid-js: 1.9.6
-
-  '@solid-primitives/utils@6.3.1(solid-js@1.9.6)':
-    dependencies:
-      solid-js: 1.9.6
 
   '@tauri-apps/api@2.4.1': {}
 

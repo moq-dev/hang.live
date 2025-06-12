@@ -50,11 +50,6 @@ header {
 	gap: 8px;
 	padding: 8px;
 
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-
 	text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
 
 	a {
@@ -119,4 +114,18 @@ header {
 	> * {
 		pointer-events: auto;
 	}
+}
+
+.potato * {
+	/* I think this is expensive, so we disable it in potato mode. */
+	backdrop-filter: none !important;
+}
+
+.fade {
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+.fade.fade-out {
+	opacity: 0;
 }
