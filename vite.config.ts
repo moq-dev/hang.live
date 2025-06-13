@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import Icons from "unplugin-icons/vite";
+import tailwindcss from "@tailwindcss/vite";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -17,7 +18,7 @@ export default defineConfig(async () => ({
 		},
 	},
 
-	plugins: [solid(), Icons({ compiler: "solid" })],
+	plugins: [solid(), Icons({ compiler: "solid" }), tailwindcss()],
 
 	// prevent vite from obscuring rust errors
 	clearScreen: false,
