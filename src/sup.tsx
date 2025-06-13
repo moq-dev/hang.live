@@ -18,19 +18,8 @@ export function Sup(props: { user: Signal<string | undefined> }) {
 
 	return (
 		<Show when={!props.user.get()}>
-			<div
-				style={{
-					"text-align": "center",
-					"font-family": "Montserrat Variable, system-ui, sans-serif",
-					"font-size": "1.25rem",
-					"backdrop-filter": "blur(4px)",
-					"border-radius": "4px",
-					padding: "1rem",
-					"max-width": "800px",
-					margin: "0 auto",
-				}}
-			>
-				<h1 style={{ "text-shadow": "0 0 10px rgba(0, 0, 0, 0.5)" }}>Sup</h1>
+			<main class="text-center">
+				<h1 class="text-shadow-lg text-2xl">Sup</h1>
 
 				<p>This is an early #alpha build of Hang.</p>
 				<p>
@@ -44,29 +33,17 @@ export function Sup(props: { user: Signal<string | undefined> }) {
 					placeholder="Choose a name"
 					value={name()}
 					onInput={(e) => setName(e.target.value)}
-					style={{
-						padding: "0.5rem",
-						"border-radius": "4px",
-						border: "1px solid rgba(0, 0, 0, 0.5)",
-						"background-color": "rgba(0, 0, 0, 0.5)",
-						margin: "0.5rem",
-					}}
+					class="p-2 rounded border border-black/50 bg-black/50 m-2"
 				/>
 
 				<button
 					type="button"
 					onClick={() => props.user.set(name())}
-					style={{
-						padding: "0.5rem",
-						margin: "0.5rem",
-						"border-radius": "4px",
-						border: "1px solid rgba(255, 255, 255, 0.5)",
-						background: "transparent",
-					}}
+					class="p-2 m-2 rounded border border-white/50 bg-transparent"
 				>
 					Hang
 				</button>
-			</div>
+			</main>
 		</Show>
 	);
 }

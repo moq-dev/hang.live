@@ -41,7 +41,7 @@ export default Settings;
 
 export function Modal(): JSX.Element {
 	return (
-		<div style={{ display: "grid", "grid-template-columns": "1fr auto 1fr", "align-items": "center", gap: "8px" }}>
+		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
 			<input
 				type="checkbox"
 				checked={Settings.draggable.get()}

@@ -19,7 +19,7 @@ export function renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResT
 	if (Settings.potato.peek()) {
 		// Load the pre-rendered SVG instead of rendering it live.
 		potato.src = "/image/background.svg";
-		ctx.drawImage(potato, 0, 0);
+		ctx.drawImage(potato, 0, 0, ctx.canvas.width, ctx.canvas.height);
 		return;
 	}
 
@@ -69,6 +69,7 @@ function lineColor(now: DOMHighResTimeStamp, i: number) {
 }
 
 // A node function to output the above as a <svg>
+// @ts-ignore Not unused, just commented out below.
 function generateSvg() {
 	const now = 0;
 	const WIDTH = 1920;

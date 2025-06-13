@@ -1,6 +1,10 @@
 @import "@fontsource-variable/montserrat";
 @import "tailwindcss";
 
+@theme {
+	--font-montserrat: "Montserrat Variable", system-ui, sans-serif;
+}
+
 :root {
 	font-family: system-ui, sans-serif;
 	line-height: 1.5;
@@ -18,10 +22,12 @@
 
 a {
 	color: inherit;
-	text-decoration-color: orange;
+	text-decoration: underline;
+	text-decoration-color: hsl(140, 75%, 50%);
 	text-underline-offset: 0.125em;
 	text-decoration-thickness: 0.075em;
 	transition: text-decoration-color 0.2s ease-in-out;
+	@apply font-bold;
 }
 
 /*
@@ -37,104 +43,91 @@ body {
 
 	display: flex;
 	flex-direction: column;
-	height: 100vh;
-	overflow: hidden;
 }
 
 header {
-	color: white;
-	font-family: "Montserrat Variable", system-ui, sans-serif;
+	@apply text-white font-montserrat flex items-center justify-between gap-2 p-2 text-shadow-lg;
 
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	padding: 8px;
+	#status {
+		font-size: 0.5em;
+		vertical-align: -0.2em;
 
-	text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+		/* default color */
+		color: hsl(140, 75%, 50%);
+	}
 
 	a {
-		text-decoration: none;
+		@apply no-underline;
 	}
 
 	> .logo,
 	> nav {
-		border-radius: 4px;
-		backdrop-filter: blur(4px);
-		padding: 6px 14px;
+		@apply rounded backdrop-blur-sm p-[6px_14px];
 	}
 
 	> .logo {
-		font-size: 1.5em;
+		@apply text-[1.5em];
 	}
 
 	> nav {
-		display: flex;
-		gap: 16px;
+		@apply flex gap-4;
 	}
 }
 
 .controls {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	display: flex;
-	align-items: flex-end;
-	gap: 8px;
-	padding: 8px 12px;
-	font-size: 1.5em;
+	@apply fixed bottom-0 left-0 right-0 flex items-center gap-2 p-[8px_12px] text-shadow-lg;
 
-	text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+	input {
+		@apply py-1 px-2;
+	}
+
+	button {
+		@apply p-2;
+	}
 
 	input,
 	button {
-		border: 1px solid transparent;
-		backdrop-filter: blur(4px);
-		border-radius: 4px;
-		padding: 6px 10px;
-		background: transparent;
+		@apply border border-transparent backdrop-blur-sm rounded bg-transparent;
 	}
 
 	input:focus {
-		outline: none;
+		@apply outline-none;
 	}
 
 	button {
-		cursor: pointer;
+		@apply cursor-pointer;
 	}
 
 	button:focus:not(:focus-visible) {
-		outline: none;
+		@apply outline-none;
 	}
 }
 
 .pointer-gaps {
-	pointer-events: none;
+	@apply pointer-events-none;
+}
 
-	> * {
-		pointer-events: auto;
-	}
+.pointer-gaps > * {
+	@apply pointer-events-auto;
 }
 
 .potato * {
 	/* I think this is expensive, so we disable it in potato mode. */
-	backdrop-filter: none !important;
+	@apply backdrop-filter-none;
 }
 
-.fade {
-	opacity: 1;
-	transition: opacity 0.3s ease;
+.wrapper {
+	@apply backdrop-blur-sm rounded p-4 max-w-[900px] mx-auto w-full;
 }
 
-.fade.fade-out {
-	opacity: 0;
+main {
+	@apply w-full py-2 px-4;
+
+	p {
+		@apply m-4;
+	}
 }
 
-.content {
-	width: 100%;
-	max-width: 900px;
-	margin: 0 auto;
-
-	font-family: "Montserrat Variable", system-ui, sans-serif;
+footer {
+	@apply text-center text-sm text-gray-500 mt-4;
 }

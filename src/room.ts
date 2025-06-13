@@ -391,7 +391,7 @@ export class Room {
 			if (
 				document.activeElement instanceof HTMLInputElement ||
 				document.activeElement instanceof HTMLTextAreaElement ||
-				document.activeElement?.getAttribute("contenteditable") === "true"
+				document.activeElement?.getAttribute("contenteditable") !== null
 			) {
 				return;
 			}
