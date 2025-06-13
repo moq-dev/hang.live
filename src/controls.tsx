@@ -189,6 +189,9 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 		)
 			return;
 
+		if (message().length !== 0) return;
+		setMessage(e.key);
+
 		input()?.focus();
 	};
 

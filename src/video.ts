@@ -29,6 +29,10 @@ export class Video {
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
 
+	// The meme video we're rendering, if any.
+	meme?: HTMLVideoElement;
+	#memeOpacity = 0;
+
 	#nameOpacity = 0;
 
 	#signals = new Signals();
@@ -159,6 +163,37 @@ export class Video {
 			}
 
 			ctx.restore();
+		}
+
+		if (this.meme) {
+			// Don't draw until the second frame to ensure we've loaded the video.
+			// Our WebM videos are transparent, so it's important to avoid a black screen on load.
+			if (this.meme.currentTime > 0) {
+				ctx.save();
+				ctx.globalAlpha = this.#memeOpacity;
+
+				// Figure out the correct aspect ratio.
+				const aspectRatio = this.meme.videoWidth / this.meme.videoHeight;
+				const width = bounds.size.x;
+				const height = width / aspectRatio;
+
+				// Center the video.
+				const x = bounds.size.x / 2 - width / 2;
+				const y = bounds.size.y / 2 - height / 2;
+
+				ctx.drawImage(this.meme, x, y, width, height);
+				ctx.restore();
+			}
+
+			if (this.meme.ended) {
+				this.#memeOpacity += (0 - this.#memeOpacity) * 0.1;
+				if (this.#memeOpacity <= 0) {
+					this.meme.pause();
+					this.meme = undefined;
+				}
+			} else {
+				this.#memeOpacity += (1 - this.#memeOpacity) * 0.1;
+			}
 		}
 
 		// Cancel the clip

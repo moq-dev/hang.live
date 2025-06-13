@@ -7,9 +7,16 @@ import { Video } from "./video";
 
 import DOMPurify from "dompurify";
 import { marked } from "marked";
+import { loadMeme } from "./meme";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
-export type ChatMessage = { markdown: string; received: DOMHighResTimeStamp; expires: DOMHighResTimeStamp };
+export type ChatMessage = {
+	audio?: HTMLAudioElement;
+	video?: HTMLVideoElement;
+	element: Node;
+	received: DOMHighResTimeStamp;
+	expires: DOMHighResTimeStamp;
+};
 
 // Create a markdown renderer that opens links in a new tab.
 const renderer = new marked.Renderer();
@@ -222,16 +229,47 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				const next = await decoder.next();
 				if (!next) break;
 
+				console.log("next", next);
+
+				// First, try to match the message to a known video/sound file.
+				if (next.startsWith("!")) {
+					const meme = loadMeme(next.slice(1));
+					if (meme instanceof HTMLVideoElement) {
+						// TODO change the video's volume to match the user's preference.
+						this.video.meme?.pause();
+						this.video.meme = meme;
+						continue;
+					}
+					if (meme) {
+						// TODO don't render audio elements as chat messages.
+						meme.controls = true;
+
+						const message: ChatMessage = {
+							element: meme,
+							received: performance.now(),
+							expires: performance.now() + 10000, // TODO length of the audio clip
+						};
+
+						this.messages.set((messages) => [message, ...messages]);
+						this.audio.notifications.play("chat");
+
+						continue;
+					}
+				}
+
 				// Convert markdown to HTML.
 				// TODO: Run in a web worker to prevent DoS attacks apparently?
 				const markdown = marked.parse(next, { async: false });
 
 				// Sanitize the resulting HTML.
 				// ChatGPT says that allowing target is ONLY safe with noopener noreferrer,
-				const sanitized = DOMPurify.sanitize(markdown, { ADD_ATTR: ["target", "rel"] });
+				const sanitized = DOMPurify.sanitize(markdown, {
+					ADD_ATTR: ["target", "rel"],
+					RETURN_DOM_FRAGMENT: true,
+				});
 
 				const message = {
-					markdown: sanitized,
+					element: sanitized,
 					received: performance.now(),
 					expires: performance.now() + 10000, // 10 seconds
 				};

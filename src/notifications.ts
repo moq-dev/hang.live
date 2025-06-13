@@ -1,11 +1,17 @@
 import { signal, Signal, Signals } from "@kixelated/signals";
 
 const SOUNDS = {
-	bup: "/audio/bup.opus",
-	bye: "/audio/bye.opus",
-	chat: ["/audio/chat1.opus", "/audio/chat2.opus", "/audio/chat3.opus", "/audio/chat4.opus", "/audio/chat5.opus"],
-	select: "/audio/select.opus",
-	sup: "/audio/sup.opus",
+	bup: "/notification/bup.opus",
+	bye: "/notification/bye.opus",
+	chat: [
+		"/notification/chat1.opus",
+		"/notification/chat2.opus",
+		"/notification/chat3.opus",
+		"/notification/chat4.opus",
+		"/notification/chat5.opus",
+	],
+	select: "/notification/select.opus",
+	sup: "/notification/sup.opus",
 } as const;
 
 export type NotificationSound = keyof typeof SOUNDS;

@@ -137,8 +137,9 @@ function Message(props: {
 					"pointer-events": state() === "active" ? "auto" : "none",
 					"font-size": `${font()}px`,
 				}}
-				innerHTML={props.message.markdown}
-			/>
+			>
+				{props.message.element}
+			</div>
 		</div>
 	);
 }
