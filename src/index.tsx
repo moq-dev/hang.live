@@ -11,22 +11,7 @@ import { Sup } from "./sup";
 const RELAY = "http://localhost:4443";
 
 export function Hang({ connection }: { connection: Connection }): JSX.Element {
-	const canvas = (
-		<canvas
-			style={{
-				display: "block",
-				"background-color": "#000",
-				width: "100%",
-				height: "100%",
-				position: "fixed",
-				top: 0,
-				left: 0,
-				right: 0,
-				bottom: 0,
-				"z-index": -1,
-			}}
-		/>
-	) as HTMLCanvasElement;
+	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
 
 	const room = new Room(connection, canvas, {
 		user: localStorage.getItem("user_name") ?? undefined,

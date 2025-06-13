@@ -71,6 +71,11 @@ function Message(props: {
 		return 1;
 	});
 
+	const zIndex = createMemo(() => {
+		// Older messages are on top because they're fading out.
+		return 100 + props.index();
+	});
+
 	const [box, setBox] = createSignal<HTMLDivElement>();
 
 	const maxWidth = createMemo(() => {
@@ -115,32 +120,23 @@ function Message(props: {
 	return (
 		<div
 			ref={setBox}
+			class="fixed transition-[opacity,transform] duration-1000 pointer-events-none text-center box-border"
 			style={{
-				position: "fixed",
-				transition: "opacity 1.0s, transform 1.0s",
 				opacity: opacity(),
-				"pointer-events": "none",
 				transform: `translateY(${translate()}px) scale(${scale()})`,
 				top: `${round(top())}px`,
 				left: `${round(left())}px`,
 				"max-width": `${round(maxWidth())}px`,
 				"max-height": `${round(maxHeight())}px`,
-				"text-align": "center",
-				"box-sizing": "border-box",
+				"z-index": zIndex(),
 			}}
 		>
 			<div
+				class="inline-block backdrop-blur-sm rounded bg-black/50 text-white px-3 chat-message markdown-body"
 				style={{
-					display: "inline-block",
-					"backdrop-filter": "blur(4px)",
-					"border-radius": "4px",
 					"pointer-events": state() === "active" ? "auto" : "none",
-					background: "rgba(0, 0, 0, 0.5)",
-					color: "white",
-					padding: "0 12px",
 					"font-size": `${font()}px`,
 				}}
-				class="chat-message markdown-body"
 				innerHTML={props.message.markdown}
 			/>
 		</div>

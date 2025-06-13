@@ -41,10 +41,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 		<button
 			type="button"
 			onClick={toggle}
-			style={{
-				position: "relative",
-				"border-color": props.audio.media.get() ? "white" : "transparent",
-			}}
+			class={`relative ${props.audio.media.get() ? "border-white" : "border-transparent"}`}
 		>
 			<Visualize audio={props.audio} />
 			<IconMicrophone />
@@ -165,11 +162,8 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 
 	return (
 		<div
+			class="absolute bottom-0 left-0 w-full"
 			style={{
-				position: "absolute",
-				bottom: "0",
-				left: "0",
-				width: "100%",
 				top: top(),
 				"background-color": color(),
 			}}
@@ -188,6 +182,8 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 			e.metaKey ||
 			["Tab", "Escape"].includes(e.key) ||
 			document.activeElement instanceof HTMLInputElement ||
+			document.activeElement instanceof HTMLTextAreaElement ||
+			document.activeElement?.getAttribute("contenteditable") !== null ||
 			e.key.length !== 1 || // Filters out keys like "ArrowLeft", "Escape", etc.
 			e.key === " "
 		)
@@ -214,16 +210,16 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	};
 
 	return (
-		<form onSubmit={submit} style={{ "flex-grow": "1" }}>
+		<form onSubmit={submit} class="flex-1 min-w-48">
 			<input
-				ref={setInput}
 				type="text"
+				autocomplete="off"
+				placeholder="chat"
+				ref={setInput}
 				value={message()}
 				onInput={(e) => setMessage(e.currentTarget.value)}
 				aria-label="Chat message"
-				placeholder="chat"
-				autocomplete="off"
-				style={{ width: "100%", height: "24px" }}
+				class="w-full"
 			/>
 		</form>
 	);
@@ -238,10 +234,7 @@ function Volume(props: { room: Room }): JSX.Element {
 
 	return (
 		<div
-			style={{
-				position: "relative",
-				display: "inline-block",
-			}}
+			class="relative inline-block"
 			onMouseEnter={() => setShowSlider(true)}
 			onMouseLeave={() => setShowSlider(false)}
 			onFocusIn={() => setShowSlider(true)}
@@ -252,15 +245,7 @@ function Volume(props: { room: Room }): JSX.Element {
 			</button>
 			<Show when={showSlider()}>
 				<div
-					style={{
-						position: "absolute",
-						bottom: "100%",
-						left: "50%",
-						transform: "translateX(-50%)",
-						display: "flex",
-						"align-items": "center",
-						"justify-content": "center",
-					}}
+					class="absolute bottom-full left-1/2 -translate-x-1/2 flex items-center justify-center"
 					onMouseEnter={() => setShowSlider(true)}
 					onMouseLeave={() => setShowSlider(false)}
 				>
@@ -270,11 +255,8 @@ function Volume(props: { room: Room }): JSX.Element {
 						max="100"
 						value={props.room.volume.get() * 100}
 						onInput={(e) => props.room.volume.set(Number(e.currentTarget.value) / 100)}
-						style={{
-							transform: "rotate(-90deg) translate(50px)",
-							cursor: "pointer",
-							padding: "14px 6px",
-						}}
+						style={{ transform: "rotate(-90deg) translate(60px)" }}
+						class="cursor-pointer px-2 py-1"
 					/>
 				</div>
 			</Show>
@@ -315,19 +297,7 @@ function Settings(): JSX.Element {
 			</button>
 
 			<Show when={showSettings()}>
-				<div
-					ref={setModal}
-					style={{
-						position: "fixed",
-						"z-index": 999,
-						padding: "16px",
-						"border-radius": "8px",
-						"backdrop-filter": "blur(4px)",
-						right: 0,
-						bottom: "42px",
-						"font-size": "0.5em",
-					}}
-				>
+				<div ref={setModal} class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm">
 					<Modal />
 				</div>
 			</Show>
