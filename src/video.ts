@@ -29,10 +29,7 @@ export class Video {
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
 
-	// The meme video we're rendering, if any.
-	meme?: HTMLVideoElement;
 	#memeOpacity = 0;
-
 	#nameOpacity = 0;
 
 	#signals = new Signals();
@@ -51,8 +48,15 @@ export class Video {
 			this.targetSize = Vector.create(next.frame.displayWidth, next.frame.displayHeight);
 		} else {
 			this.transition = Math.max(this.transition - 0.05, 0);
+			// TODO do this once, not on every frame.
 			if (this.broadcast.avatar.complete) {
 				this.targetSize = Vector.create(this.broadcast.avatar.width, this.broadcast.avatar.height);
+
+				// If the avatar is larger than 256x256, then shrink it to match the target area.
+				const ratio = Math.sqrt(this.targetSize.x * this.targetSize.y) / 256;
+				if (ratio > 1) {
+					this.targetSize = this.targetSize.div(ratio);
+				}
 			}
 		}
 	}
@@ -165,31 +169,50 @@ export class Video {
 			ctx.restore();
 		}
 
-		if (this.meme) {
-			// Don't draw until the second frame to ensure we've loaded the video.
-			// Our WebM videos are transparent, so it's important to avoid a black screen on load.
-			if (this.meme.currentTime > 0) {
+		const meme = this.broadcast.meme.peek();
+		if (meme) {
+			if (meme.currentTime > 0) {
 				ctx.save();
-				ctx.globalAlpha = this.#memeOpacity;
+				ctx.globalAlpha *= this.#memeOpacity;
 
-				// Figure out the correct aspect ratio.
-				const aspectRatio = this.meme.videoWidth / this.meme.videoHeight;
-				const width = bounds.size.x;
-				const height = width / aspectRatio;
+				if (meme instanceof HTMLVideoElement) {
+					// Figure out the correct aspect ratio such that we fill the bounds.
+					const aspectRatio = meme.videoWidth / meme.videoHeight;
+					let width: number;
+					let height: number;
 
-				// Center the video.
-				const x = bounds.size.x / 2 - width / 2;
-				const y = bounds.size.y / 2 - height / 2;
+					// Calculate dimensions to fill the bounds while maintaining aspect ratio
+					if (aspectRatio > bounds.size.x / bounds.size.y) {
+						// Video is wider than bounds - use height to fill
+						height = bounds.size.y;
+						width = height * aspectRatio;
+					} else {
+						// Video is taller than bounds - use width to fill
+						width = bounds.size.x;
+						height = width / aspectRatio;
+					}
 
-				ctx.drawImage(this.meme, x, y, width, height);
+					// Center the video.
+					const x = bounds.size.x / 2 - width / 2;
+					const y = bounds.size.y / 2 - height / 2;
+
+					ctx.drawImage(meme, x, y, width, height);
+				} else {
+					const fontSize = 32 + 32 * Math.sqrt(scale);
+					// Draw an audio symbol.
+					ctx.fillStyle = "white";
+					ctx.font = `bold ${fontSize}px Arial`;
+					// Render it at the bottom center of the bounds.
+					ctx.fillText("🔊", bounds.size.x / 2 - fontSize / 2, bounds.size.y - fontSize / 2);
+				}
+
 				ctx.restore();
 			}
 
-			if (this.meme.ended) {
+			if (meme.ended || (meme.paused && meme.currentTime > 0)) {
 				this.#memeOpacity += (0 - this.#memeOpacity) * 0.1;
 				if (this.#memeOpacity <= 0) {
-					this.meme.pause();
-					this.meme = undefined;
+					this.broadcast.meme.set(undefined);
 				}
 			} else {
 				this.#memeOpacity += (1 - this.#memeOpacity) * 0.1;

@@ -5,6 +5,7 @@ import { Vector } from "./geometry";
 import Settings from "./settings";
 import { Notifications } from "./notifications";
 import { renderBackground } from "./background";
+import { getDefaultAvatar } from "./avatar";
 
 export type RoomProps = {
 	user?: string;
@@ -86,6 +87,7 @@ export class Room {
 			volume: this.volume,
 			muted: this.muted,
 		});
+		const avatar = getDefaultAvatar();
 
 		const camera = new Publish.Broadcast(connection, {
 			device: "camera",
@@ -118,7 +120,7 @@ export class Room {
 			},
 			user: {
 				name: props?.user,
-				avatar: "/avatar/kixel.png",
+				avatar,
 			},
 			chat: {
 				enabled: true,
@@ -135,7 +137,7 @@ export class Room {
 		this.camera = new Broadcast(camera, {
 			viewport: this.viewport,
 			audio: {
-				notifications: this.notifications.broadcast(),
+				notifications: this.notifications,
 				muted: this.muted,
 				volume: this.volume,
 			},
@@ -158,7 +160,7 @@ export class Room {
 			},
 			user: {
 				name: props?.user ? `${props?.user} (Screen)` : undefined,
-				avatar: "/avatar/kixel.png",
+				avatar,
 			},
 			// Publish our screen's location, starting at a random position.
 			location: {
@@ -171,7 +173,7 @@ export class Room {
 		this.screen = new Broadcast(screen, {
 			viewport: this.viewport,
 			audio: {
-				notifications: this.notifications.broadcast(),
+				notifications: this.notifications,
 				muted: this.muted,
 				volume: this.volume,
 			},
@@ -516,7 +518,7 @@ export class Room {
 						camera: this.camera.source,
 						screen: this.screen.source,
 						audio: {
-							notifications: this.notifications.broadcast(),
+							notifications: this.notifications,
 							muted: this.muted,
 							volume: this.volume,
 						},
@@ -738,15 +740,10 @@ export class Room {
 			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y;
 		}
 
-		// If we're the only broadcaster, then don't make our avatar huge.
-		if (broadcasts.length <= 1) {
-			broadcastArea *= 2;
-		}
-
 		const fillRatio = broadcastArea / canvasArea;
 		const targetFill = 0.25;
 
-		this.#scale = Math.sqrt(targetFill / fillRatio);
+		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 2);
 	}
 
 	close() {

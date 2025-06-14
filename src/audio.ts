@@ -3,10 +3,10 @@ import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { createEffect } from "solid-js";
 import { Broadcast } from "./broadcast";
 import Settings from "./settings";
-import { BroadcastNotifications } from "./notifications";
+import { Notifications, PannedNotifications } from "./notifications";
 
 export type AudioProps = {
-	notifications: BroadcastNotifications;
+	notifications: Notifications;
 	muted: Signal<boolean>;
 	volume: Signal<number>;
 
@@ -23,7 +23,10 @@ export class Audio {
 
 	#analyser?: AnalyserNode;
 	#analyserBuffer = new Uint8Array(1024);
-	notifications: BroadcastNotifications;
+
+	// We use a different AudioContext for notifications, so we need a separate analyser.
+	// TODO reuse if the sample rate is the same?
+	notifications: PannedNotifications;
 
 	#volumeSmoothed = 0;
 
@@ -34,14 +37,21 @@ export class Audio {
 		this.muted = props.muted;
 		this.volume = props.volume;
 		this.pan = signal(props?.pan ?? 0);
-		this.notifications = props.notifications;
 
-		// Proxy the pan to the notifications.
-		this.#signals.effect(() => {
-			this.notifications.pan.set(this.pan.get());
-		});
+		this.notifications = new PannedNotifications(props.notifications, this.pan);
 
 		this.#signals.effect(() => this.#init());
+
+		this.#signals.effect(() => {
+			const meme = this.broadcast.meme.get();
+			if (!meme) return;
+
+			const source = new MediaElementAudioSourceNode(this.notifications.context, { mediaElement: meme });
+
+			// Use the existing notifications context so we don't need to create our own panner/volume.
+			this.notifications.connect(source);
+			cleanup(() => source.disconnect());
+		});
 	}
 
 	#init() {
@@ -118,8 +128,6 @@ export class Audio {
 	}
 
 	render(ctx: CanvasRenderingContext2D) {
-		if (!this.#analyser) return;
-
 		const bounds = this.broadcast.bounds.peek();
 		const scale = this.broadcast.scale;
 
@@ -131,11 +139,23 @@ export class Audio {
 		const PADDING = 32;
 
 		// Compute average volume
-		this.#analyser.getByteTimeDomainData(this.#analyserBuffer);
+		const analyserBuffer = this.notifications.analyze();
+
+		// If the audio is playing, combine the buffers.
+		if (this.#analyser) {
+			if (this.#analyserBuffer.length !== analyserBuffer.length) {
+				throw new Error("analyser buffer length mismatch");
+			}
+
+			this.#analyser.getByteTimeDomainData(this.#analyserBuffer);
+			for (let i = 0; i < this.#analyserBuffer.length; i++) {
+				this.#analyserBuffer[i] += analyserBuffer[i];
+			}
+		}
 
 		let sum = 0;
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {
-			const sample = Math.abs(this.#analyserBuffer[i] - 128);
+			const sample = Math.abs(analyserBuffer[i] - 128);
 			sum += sample * sample;
 		}
 		const volume = Math.sqrt(sum) / this.#analyserBuffer.length;

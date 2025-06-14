@@ -14,9 +14,9 @@ const SOUNDS = {
 	discord: "/meme/discord.mp3",
 	error: "/meme/error.mp3",
 	fbi: "/meme/fbi.mp3",
-	fartReverb: "/meme/fart-reverb.mp3",
+	fart: "/meme/fart-reverb.mp3",
 	helloThere: "/meme/hello-there.mp3",
-	hubIntro: "/meme/hub-intro.mp3",
+	hub: "/meme/hub-intro.mp3",
 	huh: "/meme/huh.mp3",
 	incorrect: "/meme/incorrect.mp3",
 	knock: "/meme/knock.mp3",
@@ -52,14 +52,12 @@ export type MemeVideo = keyof typeof VIDEOS;
 export function loadMeme(name: string): HTMLAudioElement | HTMLVideoElement | undefined {
 	const videoPath = VIDEOS[name as MemeVideo];
 	const audioPath = SOUNDS[name as MemeSound];
-	console.log("videoPath", videoPath, "audioPath", audioPath);
 
 	// Use the video if it's available, unless the user has potato mode enabled and would prefer audio.
 	if (videoPath && (!audioPath || !Settings.potato.peek())) {
 		const video = document.createElement("video") as HTMLVideoElement;
 		video.src = videoPath;
-		video.autoplay = true;
-		video.load();
+		video.play();
 		return video;
 	}
 

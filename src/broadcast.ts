@@ -73,6 +73,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Once we learn the real z-index over the network, we'll replace it with the real value.
 	z: Signal<number>;
 
+	// The meme video/audio we're rendering, if any.
+	meme = signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
+
 	#locationPeer?: Publish.LocationPeer;
 
 	signals = new Signals();
@@ -229,29 +232,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				const next = await decoder.next();
 				if (!next) break;
 
-				console.log("next", next);
-
 				// First, try to match the message to a known video/sound file.
 				if (next.startsWith("!")) {
 					const meme = loadMeme(next.slice(1));
-					if (meme instanceof HTMLVideoElement) {
-						// TODO change the video's volume to match the user's preference.
-						this.video.meme?.pause();
-						this.video.meme = meme;
-						continue;
-					}
 					if (meme) {
-						// TODO don't render audio elements as chat messages.
-						meme.controls = true;
-
-						const message: ChatMessage = {
-							element: meme,
-							received: performance.now(),
-							expires: performance.now() + 10000, // TODO length of the audio clip
-						};
-
-						this.messages.set((messages) => [message, ...messages]);
-						this.audio.notifications.play("chat");
+						this.meme.set((prev) => {
+							prev?.pause();
+							return meme;
+						});
 
 						continue;
 					}
