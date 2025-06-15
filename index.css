@@ -6,6 +6,11 @@
 }
 
 :root {
+	/* Slowly rotated via JavaScript. */
+	--link-hue: 140;
+}
+
+:root {
 	font-family: system-ui, sans-serif;
 	line-height: 1.5;
 	font-weight: 400;
@@ -23,10 +28,9 @@
 a {
 	color: inherit;
 	text-decoration: underline;
-	text-decoration-color: hsl(140, 75%, 50%);
+	text-decoration-color: hsl(var(--link-hue), 75%, 50%);
 	text-underline-offset: 0.125em;
 	text-decoration-thickness: 0.075em;
-	transition: text-decoration-color 0.2s ease-in-out;
 	@apply font-bold;
 }
 
