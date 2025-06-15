@@ -9,6 +9,7 @@ import { getDefaultAvatar } from "./avatar";
 
 export type RoomProps = {
 	user?: string;
+	avatar?: string;
 	visible?: boolean;
 	volume?: number;
 	muted?: boolean;
@@ -21,6 +22,9 @@ export class Room {
 
 	// The user ID of the local user.
 	user: Signal<string | undefined>;
+
+	// The avatar of the local user.
+	avatar: Signal<string>;
 
 	// All of the broadcasts stored in z-index order.
 	broadcasts = signal<Broadcast[]>([]);
@@ -82,12 +86,12 @@ export class Room {
 		this.volume = signal(props?.volume ?? 0.5);
 		this.viewport = signal(Vector.create(canvas.width, canvas.height));
 		this.user = signal(props?.user);
+		this.avatar = signal(props?.avatar ?? getDefaultAvatar());
 
 		this.notifications = new Notifications({
 			volume: this.volume,
 			muted: this.muted,
 		});
-		const avatar = getDefaultAvatar();
 
 		const camera = new Publish.Broadcast(connection, {
 			device: "camera",
@@ -120,7 +124,7 @@ export class Room {
 			},
 			user: {
 				name: props?.user,
-				avatar,
+				avatar: props?.avatar,
 			},
 			chat: {
 				enabled: true,
@@ -160,7 +164,7 @@ export class Room {
 			},
 			user: {
 				name: props?.user ? `${props?.user} (Screen)` : undefined,
-				avatar,
+				avatar: props?.avatar,
 			},
 			// Publish our screen's location, starting at a random position.
 			location: {
@@ -202,6 +206,14 @@ export class Room {
 
 			this.#startBroadcast(this.camera);
 			cleanup(() => this.#stopBroadcast(this.camera));
+		});
+
+		camera.signals.effect(() => {
+			const avatar = this.avatar.get();
+			if (!avatar) return;
+
+			camera.user.set((prev) => ({ ...prev, avatar }));
+			screen.user.set((prev) => ({ ...prev, avatar }));
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.

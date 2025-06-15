@@ -14,7 +14,8 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
 
 	const room = new Room(connection, canvas, {
-		user: localStorage.getItem("user_name") ?? undefined,
+		user: localStorage.getItem("user.name") ?? undefined,
+		avatar: localStorage.getItem("user.avatar") ?? undefined,
 	});
 
 	onCleanup(() => room.close());
@@ -23,9 +24,19 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	createEffect(() => {
 		const n = room.user.get();
 		if (n) {
-			localStorage.setItem("user_name", n);
+			localStorage.setItem("user.name", n);
 		} else {
-			localStorage.removeItem("user_name");
+			localStorage.removeItem("user.name");
+		}
+	});
+
+	// Save the avatar to localStorage.
+	createEffect(() => {
+		const a = room.avatar.get();
+		if (a) {
+			localStorage.setItem("user.avatar", a);
+		} else {
+			localStorage.removeItem("user.avatar");
 		}
 	});
 

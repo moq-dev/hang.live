@@ -8,6 +8,7 @@ const Settings = {
 	draggable: signal(localStorage.getItem("settings.draggable") !== "false"),
 	volume: signal(localStorage.getItem("settings.volume") ?? "100"),
 	potato: signal(localStorage.getItem("settings.potato") === "true"),
+	pan: signal(localStorage.getItem("settings.pan") !== "false"),
 };
 
 const signals = new Signals();
@@ -22,6 +23,10 @@ signals.effect(() => {
 
 signals.effect(() => {
 	localStorage.setItem("settings.potato", Settings.potato.get().toString());
+});
+
+signals.effect(() => {
+	localStorage.setItem("settings.pan", Settings.pan.get().toString());
 });
 
 signals.effect(() => {
@@ -42,6 +47,16 @@ export default Settings;
 export function Modal(): JSX.Element {
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+			<input
+				type="checkbox"
+				checked={Settings.pan.get()}
+				onChange={() => Settings.pan.set(!Settings.pan.get())}
+			/>
+			<span>audio panning</span>
+			<span title="Play audio from left/right speakers based on a user's position. Use headphones for the best experience.">
+				<IconHelp />
+			</span>
+
 			<input
 				type="checkbox"
 				checked={Settings.draggable.get()}

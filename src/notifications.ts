@@ -1,4 +1,5 @@
-import { Signal, Signals } from "@kixelated/signals";
+import { cleanup, Signal, Signals } from "@kixelated/signals";
+import Settings from "./settings";
 
 const SOUNDS = {
 	bup: "/notification/bup.opus",
@@ -88,7 +89,8 @@ export class PannedNotifications {
 	#parent: Notifications;
 	#panner: StereoPannerNode;
 
-	analyser: AnalyserNode;
+	// Optional, disabled in potato mode.
+	analyser?: AnalyserNode;
 	#buffer = new Uint8Array(1024);
 
 	pan: Signal<number>;
@@ -101,13 +103,25 @@ export class PannedNotifications {
 		this.#panner = new StereoPannerNode(parent.context, { pan: pan.peek() });
 		this.#panner.connect(parent.gain);
 
-		this.analyser = new AnalyserNode(parent.context, { fftSize: this.#buffer.length });
-		this.#panner.connect(this.analyser);
-
 		this.pan = pan;
 
+		// Only create the analyser if we're not in potato mode.
 		this.#signals.effect(() => {
-			this.#panner.pan.value = this.pan.get();
+			if (Settings.potato.get()) return;
+
+			const analyser = new AnalyserNode(this.#parent.context, { fftSize: this.#buffer.length });
+			this.#panner.connect(analyser);
+
+			this.analyser = analyser;
+
+			cleanup(() => {
+				analyser.disconnect();
+				this.analyser = undefined;
+			});
+		});
+
+		this.#signals.effect(() => {
+			this.#panner.pan.value = Settings.pan.get() ? Math.max(-1, Math.min(1, this.pan.get() * 2)) : 0;
 		});
 	}
 
@@ -131,7 +145,8 @@ export class PannedNotifications {
 	}
 
 	// NOTE: The buffer is reused, so don't hold on to it.
-	analyze(): Uint8Array {
+	analyze(): Uint8Array | undefined {
+		if (!this.analyser) return undefined;
 		this.analyser.getByteTimeDomainData(this.#buffer);
 		return this.#buffer;
 	}
@@ -139,6 +154,6 @@ export class PannedNotifications {
 	close() {
 		this.#signals.close();
 		this.#panner.disconnect();
-		this.analyser.disconnect();
+		this.analyser?.disconnect();
 	}
 }

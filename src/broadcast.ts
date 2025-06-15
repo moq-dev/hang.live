@@ -8,6 +8,7 @@ import { Video } from "./video";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { loadMeme } from "./meme";
+import { getDefaultAvatar } from "./avatar";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
 export type ChatMessage = {
@@ -121,12 +122,17 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			this.targetScale = location.scale ?? this.targetScale;
 		});
 
+		// Set a random default avatar while the user details are loading.
+		// TODO Only start a broadcast after receiving the catalog to avoid this.
+		this.avatar.src = `/avatar/${getDefaultAvatar()}`;
+
 		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
 		this.signals.effect(() => {
 			const user = this.source.user.get();
-			if (user?.avatar) {
-				this.avatar.src = user.avatar;
-			}
+			if (!user?.avatar) return;
+
+			// TODO I think this is safe enough? The avatar can't be on another website?
+			this.avatar.src = `/avatar/${user.avatar}`;
 		});
 
 		// The display name is the user's name or the path if they don't have a name.

@@ -1,3 +1,3 @@
 # Remove the green screen if needed.
 # We produce webm because it's transparent.
-ffmpeg -i oiia.mp4 -vf "chromakey=0x00FF00:0.3:0.05" -c:v libvpx-vp9 -auto-alt-ref 0 -pix_fmt yuva420p oiia.webm
+ffmpeg -i nice.mp4 -vf "chromakey=0x00FF00:0.3:0.05,scale=-1:360" -c:v libvpx-vp9 -auto-alt-ref 0 -pix_fmt yuva420p nice.webm

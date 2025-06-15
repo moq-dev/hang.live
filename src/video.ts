@@ -196,7 +196,8 @@ export class Video {
 					const x = bounds.size.x / 2 - width / 2;
 					const y = bounds.size.y / 2 - height / 2;
 
-					ctx.drawImage(meme, x, y, width, height);
+					// Add a pixel in each direction to account for any rounding errors.
+					ctx.drawImage(meme, x - 1, y - 1, width + 2, height + 2);
 				} else {
 					const fontSize = 32 + 32 * Math.sqrt(scale);
 					// Draw an audio symbol.
@@ -240,7 +241,7 @@ export class Video {
 			ctx.fillStyle = "white";
 			ctx.strokeStyle = "black";
 			ctx.lineWidth = 1 + 2 * Math.sqrt(scale);
-			const offset = 16 + 8 * Math.sqrt(scale);
+			const offset = 10 + 16 * Math.sqrt(scale);
 			ctx.strokeText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();

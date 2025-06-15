@@ -13,12 +13,12 @@ function lineColor(now: DOMHighResTimeStamp, i: number) {
 }
 
 // A node function to output the above as a <svg>
-function generateSvg() {
+function generateSvg(small: boolean) {
 	const now = 0;
-	const WIDTH = 256;
-	const HEIGHT = 256;
+	const WIDTH = small ? 256 : 512;
+	const HEIGHT = small ? 256 : 512;
 
-	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW * 2;
+	const LINE_COUNT = (Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW) * (small ? 1 : 2);
 
 	const paths = [];
 	for (let i = 0; i < LINE_COUNT; i++) {
@@ -47,7 +47,7 @@ function generateSvg() {
 		paths.push(`<path stroke="${color}" d="${d}" />`);
 	}
 
-	return `<!-- Generated via pnpm tsx src/favicon.ts -->
+	return `<!-- Generated via pnpm tsx src/icon.ts -->
 	<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
 		<defs>
 			<clipPath id="rounded-corner">
@@ -61,6 +61,7 @@ function generateSvg() {
 				${paths.join("\n")}
 			</g>
 		</g>
+		<text x="${WIDTH / 2}" y="${(3 * HEIGHT) / 2}" text-anchor="middle" dominant-baseline="middle" font-size="${small ? "100" : "200"}" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke" opacity="0.9">hang</text>
 	</svg>`;
 }
 
@@ -69,6 +70,9 @@ import fs from "node:fs";
 
 // @ts-expect-error no node types yet
 if (import.meta.url === `file://${process.argv[1]}`) {
-	fs.writeFileSync("public/image/favicon.svg", generateSvg());
-	console.log("SVG written to public/image/favicon.svg");
+	fs.writeFileSync("public/image/icon.svg", generateSvg(false));
+	console.log("SVG written to public/image/icon.svg");
+
+	fs.writeFileSync("public/image/icon-small.svg", generateSvg(true));
+	console.log("SVG written to public/image/icon-small.svg");
 }

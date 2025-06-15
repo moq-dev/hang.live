@@ -52,6 +52,27 @@ export class Audio {
 			this.notifications.connect(source);
 			cleanup(() => source.disconnect());
 		});
+
+		this.#signals.effect(() => {
+			// Don't analyze the audio in potato mode.
+			// TODO I'm just assuming this is slow. Use SIMD?
+			if (Settings.potato.get()) return;
+
+			const audio = this.broadcast.source.audio.root.get();
+			if (!audio) return;
+
+			const { context, node } = audio;
+
+			// We analyze the audio to get the volume before gain/pan.
+			const analyser = new AnalyserNode(context, { fftSize: this.#analyserBuffer.length });
+			this.#analyser = analyser;
+			node.connect(analyser);
+
+			cleanup(() => {
+				analyser.disconnect();
+				this.#analyser = undefined;
+			});
+		});
 	}
 
 	#init() {
@@ -59,16 +80,6 @@ export class Audio {
 		if (!audio) return;
 
 		const { context, node } = audio;
-
-		// We analyze the audio to get the volume before gain/pan.
-		const analyser = new AnalyserNode(context, { fftSize: this.#analyserBuffer.length });
-		this.#analyser = analyser;
-		node.connect(analyser);
-
-		cleanup(() => {
-			analyser.disconnect();
-			this.#analyser = undefined;
-		});
 
 		const gain = new GainNode(context, { gain: this.volume.peek() });
 		cleanup(() => gain.disconnect());
@@ -87,13 +98,12 @@ export class Audio {
 
 		const audioPanner = new StereoPannerNode(context, {
 			channelCount: node.channelCount,
-			pan: this.pan.peek(),
 		});
 		cleanup(() => audioPanner.disconnect());
 
 		// Update the pan when the pan changes.
 		createEffect(() => {
-			audioPanner.pan.value = this.pan.get();
+			audioPanner.pan.value = Settings.pan.get() ? Math.max(-1, Math.min(1, this.pan.get() * 2)) : 0;
 		});
 
 		gain.connect(audioPanner);
@@ -128,6 +138,10 @@ export class Audio {
 	}
 
 	render(ctx: CanvasRenderingContext2D) {
+		// Compute average volume
+		const analyserBuffer = this.notifications.analyze();
+		if (!analyserBuffer) return; // undefined in potato mode
+
 		const bounds = this.broadcast.bounds.peek();
 		const scale = this.broadcast.scale;
 
@@ -137,9 +151,6 @@ export class Audio {
 		const cornerRadius = 32 * scale;
 		const fillAlphaBase = 0.3;
 		const PADDING = 32;
-
-		// Compute average volume
-		const analyserBuffer = this.notifications.analyze();
 
 		// If the audio is playing, combine the buffers.
 		if (this.#analyser) {
