@@ -32,6 +32,7 @@
 		"@tauri-apps/cli": "^2",
 		"@types/dom-mediacapture-transform": "^0.1.11",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.234",
+		"sharp": "^0.34.2",
 		"tsx": "^4.20.1",
 		"typescript": "~5.8.3",
 		"unplugin-icons": "^22.1.0",

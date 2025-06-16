@@ -305,9 +305,9 @@ export class Room {
 			});
 
 			if (broadcast.locked()) {
-				this.canvas.style.cursor = "not-allowed";
+				document.body.style.cursor = "not-allowed";
 			} else {
-				this.canvas.style.cursor = "grabbing";
+				document.body.style.cursor = "grabbing";
 			}
 		});
 
@@ -327,11 +327,11 @@ export class Room {
 				this.#hovering = broadcast;
 
 				if (!broadcast.locked()) {
-					this.canvas.style.cursor = "grab";
+					document.body.style.cursor = "grab";
 				}
 			} else {
 				this.#hovering = undefined;
-				this.canvas.style.cursor = "default";
+				document.body.style.cursor = "default";
 			}
 		});
 
@@ -339,7 +339,7 @@ export class Room {
 			if (this.#dragging) {
 				this.#dragging = undefined;
 				this.#hovering = undefined;
-				this.canvas.style.cursor = "default";
+				document.body.style.cursor = "default";
 			}
 		});
 
@@ -347,7 +347,7 @@ export class Room {
 			if (this.#dragging) {
 				this.#dragging = undefined;
 				this.#hovering = undefined;
-				this.canvas.style.cursor = "default";
+				document.body.style.cursor = "default";
 			}
 		});
 
@@ -367,15 +367,15 @@ export class Room {
 				}
 
 				if (broadcast.locked()) {
-					this.canvas.style.cursor = "not-allowed";
+					document.body.style.cursor = "not-allowed";
 					return;
 				}
 
 				const scale = e.deltaY * 0.001;
 				if (scale < 0) {
-					this.canvas.style.cursor = "zoom-out";
+					document.body.style.cursor = "zoom-out";
 				} else if (scale > 0) {
-					this.canvas.style.cursor = "zoom-in";
+					document.body.style.cursor = "zoom-in";
 				}
 
 				const location = broadcast.source.location.current.peek();
