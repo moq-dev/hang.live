@@ -1,5 +1,5 @@
-const LINE_SPACING = 64;
-const LINE_WIDTH = 10;
+const LINE_SPACING = 56;
+const LINE_WIDTH = 16;
 const SEGMENTS = 16;
 const WOBBLE_AMPLITUDE = 10;
 const BEND_AMPLITUDE = 16;
@@ -18,7 +18,7 @@ function generateSvg(small: boolean) {
 	const WIDTH = small ? 256 : 512;
 	const HEIGHT = small ? 256 : 512;
 
-	const LINE_COUNT = (Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW) * (small ? 1 : 2);
+	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW;
 
 	const paths = [];
 	for (let i = 0; i < LINE_COUNT; i++) {
@@ -60,19 +60,25 @@ function generateSvg(small: boolean) {
 			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none">
 				${paths.join("\n")}
 			</g>
+			<text x="${small ? WIDTH / 2 : WIDTH - 148}" y="${HEIGHT - 64}" text-anchor="middle" dominant-baseline="middle" font-size="100" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">hang</text>
 		</g>
-		<text x="${WIDTH / 2}" y="${(3 * HEIGHT) / 2}" text-anchor="middle" dominant-baseline="middle" font-size="${small ? "100" : "200"}" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke" opacity="0.9">hang</text>
 	</svg>`;
 }
 
 // @ts-expect-error no node types yet
 import fs from "node:fs";
+import sharp from "sharp";
 
 // @ts-expect-error no node types yet
 if (import.meta.url === `file://${process.argv[1]}`) {
-	fs.writeFileSync("public/image/icon.svg", generateSvg(false));
+	const small = generateSvg(true);
+	fs.writeFileSync("public/image/icon.svg", small);
 	console.log("SVG written to public/image/icon.svg");
 
-	fs.writeFileSync("public/image/icon-small.svg", generateSvg(true));
-	console.log("SVG written to public/image/icon-small.svg");
+	const large = generateSvg(false);
+	fs.writeFileSync("public/image/icon-large.svg", large);
+	console.log("SVG written to public/image/icon-large.svg");
+
+	sharp(small).toFile("public/image/icon.png");
+	sharp(large).toFile("public/image/icon-large.png");
 }

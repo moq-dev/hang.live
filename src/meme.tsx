@@ -3,7 +3,7 @@ import Settings from "./settings";
 const SOUNDS = {
 	amongus: "among-us.mp3",
 	aww: "aww.mp3",
-	berightback: "be-right-back.mp3",
+	brb: "be-right-back.mp3",
 	bluetooth: "bluetooth.mp3",
 	bonk: "bonk.mp3",
 	bruh: "bruh.mp3",
@@ -42,7 +42,7 @@ const VIDEOS = {
 	anotherone: "another-one.webm",
 	momentslater: "a-few-moments-later.mp4",
 	// TODO contain, not fill
-	berightback: "be-right-back.webm",
+	brb: "be-right-back.webm",
 	// TODO: align to bottom left, make sure top is filled
 	bingchilling: "bing-chilling.webm",
 	cry: "crying.webm",
