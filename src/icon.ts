@@ -1,11 +1,13 @@
 const LINE_SPACING = 56;
-const LINE_WIDTH = 16;
+const LINE_WIDTH = 12;
 const SEGMENTS = 16;
 const WOBBLE_AMPLITUDE = 10;
 const BEND_AMPLITUDE = 16;
 const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
+const WIDTH = 256;
+const HEIGHT = 256;
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
 	const hue = (i * 50 + now * 0.03) % 360;
@@ -15,8 +17,6 @@ function lineColor(now: DOMHighResTimeStamp, i: number) {
 // A node function to output the above as a <svg>
 function generateSvg(small: boolean) {
 	const now = 0;
-	const WIDTH = small ? 256 : 512;
-	const HEIGHT = small ? 256 : 512;
 
 	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW;
 
@@ -47,6 +47,9 @@ function generateSvg(small: boolean) {
 		paths.push(`<path stroke="${color}" d="${d}" />`);
 	}
 
+	const textX = small ? (3 * WIDTH) / 4 : WIDTH / 2;
+	const textY = HEIGHT - 64;
+
 	return `<!-- Generated via pnpm tsx src/icon.ts -->
 	<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
 		<defs>
@@ -57,17 +60,16 @@ function generateSvg(small: boolean) {
 
 		<g clip-path="url(#rounded-corner)">
 			<rect width="100%" height="100%" fill="black" />
-			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none">
+			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="0.85">
 				${paths.join("\n")}
 			</g>
-			<text x="${small ? WIDTH / 2 : WIDTH - 148}" y="${HEIGHT - 64}" text-anchor="middle" dominant-baseline="middle" font-size="100" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">hang</text>
+			<text x="${textX}" y="${textY}" text-anchor="middle" dominant-baseline="middle" font-size="96" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">${small ? "h" : "hang"}</text>
 		</g>
 	</svg>`;
 }
 
 // @ts-expect-error no node types yet
 import fs from "node:fs";
-import sharp from "sharp";
 
 // @ts-expect-error no node types yet
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -78,7 +80,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	const large = generateSvg(false);
 	fs.writeFileSync("public/image/icon-large.svg", large);
 	console.log("SVG written to public/image/icon-large.svg");
-
-	sharp(small).toFile("public/image/icon.png");
-	sharp(large).toFile("public/image/icon-large.png");
 }

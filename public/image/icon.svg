@@ -8,7 +8,7 @@
 
 		<g clip-path="url(#rounded-corner)">
 			<rect width="100%" height="100%" fill="black" />
-			<g stroke-linecap="round" stroke-width="16" fill="none">
+			<g stroke-linecap="round" stroke-width="12" fill="none" opacity="0.85">
 				<path stroke="hsl(0, 75%, 50%)" d="M -100.0, -96.0 L -63.1, -99.5 L -33.9, -87.0 L -13.1, -74.5 L 6.4, -62.0 L 32.9, -49.5 L 68.2, -37.0 L 106.1, -40.5 L 137.9, -12.0 L 160.6, 0.5 L 179.6, 29.0 L 203.5, 25.5 L 236.6, 38.0 L 274.7, 34.5 L 308.9, 63.0 L 334.0, 75.5 L 353.1, 88.0" />
 <path stroke="hsl(50, 75%, 50%)" d="M -91.6, -63.6 L -62.4, -35.1 L -41.6, -22.6 L -22.1, 5.9 L 4.4, 2.4 L 39.7, 14.9 L 77.6, 11.4 L 109.4, 39.9 L 132.1, 52.4 L 151.1, 64.9 L 175.0, 77.4 L 208.1, 89.9 L 246.2, 102.4 L 280.4, 114.9 L 305.5, 127.4 L 324.6, 139.9 L 346.4, 136.4" />
 <path stroke="hsl(100, 75%, 50%)" d="M -90.9, 9.1 L -70.1, 21.6 L -50.6, 34.1 L -24.1, 46.6 L 11.2, 59.1 L 49.1, 71.6 L 80.9, 84.1 L 103.6, 96.6 L 122.6, 109.1 L 146.5, 105.6 L 179.6, 134.1 L 217.7, 146.6 L 251.9, 175.1 L 277.0, 171.6 L 296.1, 184.1 L 317.9, 196.6 L 348.5, 209.1" />
@@ -17,6 +17,6 @@
 <path stroke="hsl(250, 75%, 50%)" d="M -109.6, 158.4 L -74.3, 186.9 L -36.4, 183.4 L -4.6, 195.9 L 18.1, 192.4 L 37.1, 220.9 L 61.0, 233.4 L 94.1, 261.9 L 132.2, 258.4 L 166.4, 270.9 L 191.5, 283.4 L 210.6, 295.9 L 232.4, 308.4 L 263.0, 320.9 L 300.5, 317.4 L 336.6, 345.9 L 364.4, 358.4" />
 <path stroke="hsl(300, 75%, 50%)" d="M -102.8, 237.2 L -64.9, 233.7 L -33.1, 246.2 L -10.4, 258.7 L 8.6, 271.2 L 32.5, 283.7 L 65.6, 296.2 L 103.7, 292.7 L 137.9, 321.2 L 163.0, 333.7 L 182.1, 362.2 L 203.9, 358.7 L 234.5, 371.2 L 272.0, 367.7 L 308.1, 396.2 L 335.9, 408.7 L 355.9, 421.2" />
 			</g>
-			<text x="128" y="192" text-anchor="middle" dominant-baseline="middle" font-size="100" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke" opacity="0.9">hang</text>
+			<text x="192" y="192" text-anchor="middle" dominant-baseline="middle" font-size="96" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">h</text>
 		</g>
 	</svg>
