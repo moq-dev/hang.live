@@ -2,13 +2,11 @@ import { Connection, Support } from "@kixelated/hang";
 import { createEffect, onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
+import { Chat } from "./chat";
 import { Controls } from "./controls";
 import { Room } from "./room";
 import { Status } from "./status";
-import { Chat } from "./chat";
 import { Sup } from "./sup";
-
-const RELAY = "http://localhost:4443";
 
 export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
@@ -50,7 +48,7 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	);
 }
 
-const url = new URL(`${RELAY}/demo/`);
+const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/anon/`);
 const connection = new Connection({ url });
 
 const hang = document.getElementById("hang");

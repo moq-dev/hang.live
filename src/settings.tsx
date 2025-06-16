@@ -1,8 +1,8 @@
-import { signal, Signals } from "@kixelated/signals";
+import { Signals, signal } from "@kixelated/signals";
 import { JSX } from "solid-js/jsx-runtime";
 
-import IconHelp from "~icons/mdi/help-box";
 import IconPotato from "~icons/mdi/fried-potatoes";
+import IconHelp from "~icons/mdi/help-box";
 
 const Settings = {
 	draggable: signal(localStorage.getItem("settings.draggable") !== "false"),

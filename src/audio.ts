@@ -1,9 +1,9 @@
-import { Watch, Publish } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
 import { createEffect } from "solid-js";
 import { Broadcast } from "./broadcast";
-import Settings from "./settings";
 import { Notifications, PannedNotifications } from "./notifications";
+import Settings from "./settings";
 
 export type AudioProps = {
 	notifications: Notifications;

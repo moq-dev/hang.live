@@ -1,4 +1,4 @@
-import { cleanup, Signal, Signals } from "@kixelated/signals";
+import { Signal, Signals, cleanup } from "@kixelated/signals";
 import Settings from "./settings";
 
 const SOUNDS = {

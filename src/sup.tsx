@@ -1,5 +1,5 @@
 import { Signal } from "@kixelated/signals";
-import { createEffect, createSignal, Show } from "solid-js";
+import { Show, createEffect, createSignal } from "solid-js";
 import IconArrowRight from "~icons/mdi/arrow-right-box";
 
 // Ask the user for their user name.

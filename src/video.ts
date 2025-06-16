@@ -1,7 +1,7 @@
-import { Watch, Publish } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import { Signals } from "@kixelated/signals";
-import { Vector } from "./geometry";
 import { Broadcast } from "./broadcast";
+import { Vector } from "./geometry";
 import Settings from "./settings";
 
 // Local or remote (Hang.Watch.Video) video source.

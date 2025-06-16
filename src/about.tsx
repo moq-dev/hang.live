@@ -1,6 +1,6 @@
+import { createMemo, createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { Background } from "./background";
-import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
 const background = document.getElementById("bg");
 if (!background) {
@@ -18,16 +18,12 @@ const offset = Math.round(Math.random() * 360);
 const SPEED = 4;
 
 const [now, setNow] = createSignal(offset);
-let cancel: number;
 const animate = () => {
 	setNow(offset + performance.now() / 1000);
-	cancel = requestAnimationFrame(animate);
+	requestAnimationFrame(animate);
 };
 
-cancel = requestAnimationFrame(animate);
-//onCleanup(() => {
-// cancelAnimationFrame(cancel);
-//});
+requestAnimationFrame(animate);
 
 render(() => {
 	const start = createMemo(() => Math.round(now() * SPEED) % 360);

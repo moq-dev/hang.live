@@ -1,6 +1,6 @@
-import { Accessor, createMemo, createSignal, For, onMount } from "solid-js";
-import { Room } from "./room";
+import { Accessor, For, createMemo, createSignal, onMount } from "solid-js";
 import { Broadcast, ChatMessage } from "./broadcast";
+import { Room } from "./room";
 
 import { Bounds, Vector } from "./geometry";
 

@@ -4,13 +4,13 @@ import { JSX } from "solid-js/jsx-runtime";
 import { Room } from "./room";
 import { Modal } from "./settings";
 
-import IconMicrophone from "~icons/mdi/microphone";
 import IconCamera from "~icons/mdi/camera";
-import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconSettings from "~icons/mdi/cog";
 import IconFullscreen from "~icons/mdi/fullscreen";
-import IconVolumeMute from "~icons/mdi/volume-mute";
+import IconMicrophone from "~icons/mdi/microphone";
+import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
+import IconVolumeMute from "~icons/mdi/volume-mute";
 
 export function Controls(props: {
 	room: Room;
