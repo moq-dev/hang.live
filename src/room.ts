@@ -1,11 +1,11 @@
 import { Connection, Moq, Publish, Watch } from "@kixelated/hang";
 import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
+import { getDefaultAvatar } from "./avatar";
+import { renderBackground } from "./background";
 import { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
-import Settings from "./settings";
 import { Notifications } from "./notifications";
-import { renderBackground } from "./background";
-import { getDefaultAvatar } from "./avatar";
+import Settings from "./settings";
 
 export type RoomProps = {
 	user?: string;

@@ -1,6 +1,6 @@
+import { onCleanup } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import Settings from "./settings";
-import { onCleanup } from "solid-js";
 
 const LINE_SPACING = 64;
 const LINE_WIDTH = 10;
