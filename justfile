@@ -50,9 +50,9 @@ build:
 	pnpm i
 	pnpm run build
 
-# Run pnpm link
-link:
-	pnpm link @kixelated/moq @kixelated/hang
+# Deploy the site to Cloudflare Pages
+deploy: build
+	pnpm wrangler pages deploy dist
 
 dev:
 	pnpm i
