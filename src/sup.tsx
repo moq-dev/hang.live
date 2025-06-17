@@ -7,9 +7,11 @@ import IconArrowRight from "~icons/mdi/arrow-right-box";
 export function Sup(props: { user: Signal<string | undefined> }) {
 	const [name, setName] = createSignal(localStorage.getItem("user_name") ?? "");
 
+	const user = props.user.solid();
+
 	// Save the user name to localStorage.
 	createEffect(() => {
-		const n = props.user.get();
+		const n = user();
 		if (n) {
 			localStorage.setItem("user_name", n);
 		} else {
@@ -18,14 +20,15 @@ export function Sup(props: { user: Signal<string | undefined> }) {
 	});
 
 	return (
-		<Show when={!props.user.get()}>
+		<Show when={!user()}>
 			<main class="text-center wrapper">
-				<h1 class="text-shadow-lg text-2xl">Sup</h1>
+				<h1 class="text-shadow-lg text-4xl font-bold">Sup</h1>
 
 				<p>This is an early #alpha build of Hang.</p>
 				<p>
 					There's a ton of things left to implement, so please don't share this secret link with anyone
-					without asking pretty please.
+					without asking pretty please. Chrome is the only tested browser, Firefox should work in theory, and
+					Safari is a dumpster fire.
 				</p>
 				<p>Until accounts are implemented, choose a super unique username:</p>
 

@@ -1,4 +1,4 @@
-import { Memo, Signal, Signals, cleanup, signal } from "@kixelated/signals";
+import { Computed, Root, Signal } from "@kixelated/signals";
 
 import { Catalog, Container, Publish, Watch } from "@kixelated/hang";
 import { Audio, AudioProps } from "./audio";
@@ -63,7 +63,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	transition = 0;
 
 	// The display name of the broadcaster.
-	display: Memo<string>;
+	display: Computed<string>;
 	avatar = new Image();
 
 	// Returns the most recent chat messages.
@@ -75,11 +75,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	z: Signal<number>;
 
 	// The meme video/audio we're rendering, if any.
-	meme = signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
+	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
 
 	#locationPeer?: Publish.LocationPeer;
 
-	signals = new Signals();
+	signals = new Root();
 
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
@@ -87,8 +87,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	constructor(source: T, props: BroadcastProps) {
 		this.source = source;
 		this.viewport = props.viewport;
-		this.messages = signal<ChatMessage[]>([]);
-		this.z = signal(props?.z ?? 0);
+		this.messages = new Signal<ChatMessage[]>([]);
+		this.z = new Signal(props?.z ?? 0);
 
 		this.video = new Video(this);
 		this.audio = new Audio(this, props.audio);
@@ -102,11 +102,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		// TODO This seems kinda buggy?
 		const startPosition = this.targetPosition.normalize().mult(canvas.length()).add(canvas.div(2));
 
-		this.bounds = signal(new Bounds(startPosition, this.video.targetSize));
+		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
-		this.signals.effect(() => {
-			if (!this.source.enabled.get()) {
+		this.signals.effect((effect) => {
+			if (!effect.get(this.source.enabled)) {
 				// Change the target position to somewhere outside the screen.
 				this.targetPosition = this.targetPosition.normalize().mult(2);
 
@@ -114,7 +114,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			}
 
 			// Update the target position from the network.
-			const location = this.source.location.current.get();
+			const location = effect.get(this.source.location.current);
 			if (!location) return;
 
 			this.targetPosition.x = location.x ?? this.targetPosition.x;
@@ -127,8 +127,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.avatar.src = `/avatar/${getDefaultAvatar()}`;
 
 		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
-		this.signals.effect(() => {
-			const user = this.source.user.get();
+		this.signals.effect((effect) => {
+			const user = effect.get(this.source.user);
 			if (!user?.avatar) return;
 
 			// TODO I think this is safe enough? The avatar can't be on another website?
@@ -136,31 +136,31 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 
 		// The display name is the user's name or the path if they don't have a name.
-		this.display = this.signals.memo(() => {
-			return this.source.user.get()?.name ?? this.source.path.get();
+		this.display = this.signals.computed((effect) => {
+			return effect.get(this.source.user)?.name ?? effect.get(this.source.path);
 		});
 
-		this.signals.effect(() => {
-			if (!this.source.chat.enabled.get()) return;
+		this.signals.effect((effect) => {
+			if (!effect.get(this.source.chat.enabled)) return;
 
 			let consumer: Container.ChatConsumer | undefined;
 			if (this.source instanceof Watch.Broadcast) {
-				consumer = this.source.chat.track.get();
+				consumer = effect.get(this.source.chat.track);
 				if (!consumer) return;
 			} else {
 				consumer = this.source.chat.consume();
 			}
 
-			cleanup(() => consumer.close());
-			void this.#runChat(consumer);
+			effect.cleanup(() => consumer.close());
+			effect.spawn(this.#runChat.bind(this, consumer));
 		});
 
 		// Update our local z-index when the remote z-index changes.
 		// The local z-index starts at max+1 while the remote z-index starts at undefined.
 		// This way we'll appear on top until we discover all other broadcasts and their z-index to +1 them.
 		// That's why we don't use the remote z-index directly, but rather proxy it.
-		this.signals.effect(() => {
-			const z = this.source.location.current.get()?.z;
+		this.signals.effect((effect) => {
+			const z = effect.get(this.source.location.current)?.z;
 			if (z === undefined) return;
 			this.z.set(z);
 		});
@@ -180,16 +180,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.cleanup(() => screenUpdates.close());
 
 		// Update the handle when our path changes.
-		this.signals.effect(() => {
-			cameraUpdates.handle.set(camera.path.get());
-		});
+		this.signals.subscribe(camera.path, (path) => cameraUpdates.handle.set(path));
 
 		// Request the position we should use from this remote broadcast.
-		this.signals.effect(() => {
+		this.signals.effect((effect) => {
 			// Only update the camera position if the local broadcast allows it.
-			if (!camera.location.peering.get()) return;
+			if (!effect.get(camera.location.peering)) return;
 
-			const position = cameraUpdates.location.get();
+			const position = effect.get(cameraUpdates.location);
 			if (!position) return;
 
 			// Merge in the new position, keeping existing values when undefined.
@@ -198,15 +196,13 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		if (screen) {
 			// Update the handle when our path changes.
-			this.signals.effect(() => {
-				screenUpdates.handle.set(screen.path.get());
-			});
+			this.signals.subscribe(screen.path, (path) => screenUpdates.handle.set(path));
 
-			this.signals.effect(() => {
+			this.signals.effect((effect) => {
 				// Only update the screen position if the local broadcast allows it.
-				if (!screen.location.peering.get()) return;
+				if (!effect.get(screen.location.peering)) return;
 
-				const position = screenUpdates.location.get();
+				const position = effect.get(screenUpdates.location);
 				if (!position) return;
 
 				// Merge in the new position, keeping existing values when undefined.
@@ -218,24 +214,24 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const peer = camera.location.peer();
 		this.signals.cleanup(() => peer.close());
 
-		this.signals.effect(() => {
+		this.signals.effect((effect) => {
 			// Make sure we're actually publishing.
-			if (!camera.published.get()) return;
+			if (!effect.get(camera.published)) return;
 
 			// Only set the handle if the broadcast allows peering.
-			if (!this.source.location.peering.get()) return;
+			if (!effect.get(this.source.location.peering)) return;
 
-			peer.handle.set(this.source.path.get());
-			cleanup(() => peer.handle.set(undefined));
+			peer.handle.set(effect.get(this.source.path));
+			effect.cleanup(() => peer.handle.set(undefined));
 		});
 
 		this.#locationPeer = peer;
 	}
 
-	async #runChat(decoder: Container.ChatConsumer) {
+	async #runChat(decoder: Container.ChatConsumer, cancel: Promise<void>) {
 		try {
 			for (;;) {
-				const next = await decoder.next();
+				const next = await Promise.race([decoder.next(), cancel]);
 				if (!next) break;
 
 				// First, try to match the message to a known video/sound file.
@@ -357,7 +353,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns true if the broadcaster is locked to a position.
 	locked(): boolean {
 		if (this.source instanceof Watch.Broadcast) {
-			return !this.source.location.peering.get();
+			return !this.source.location.peering.peek();
 		}
 
 		return false;
@@ -367,13 +363,13 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		if (this.source instanceof Publish.Broadcast) {
 			this.source.location.current.set((old) => ({ ...old, ...position }));
 		} else if (this.#locationPeer) {
-			this.#locationPeer.producer.get()?.update(position);
+			this.#locationPeer.producer.peek()?.update(position);
 		}
 	}
 
 	// Render a locator arrow for our local broadcasts on join
 	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
-		if (!this.source.enabled.get()) return;
+		if (!this.source.enabled.peek()) return;
 
 		if (!this.#locatorStart) {
 			this.#locatorStart = now;
@@ -438,7 +434,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	close() {
 		this.signals.close();
 		this.source.close();
-		this.video.close();
 		this.audio.close();
 	}
 }

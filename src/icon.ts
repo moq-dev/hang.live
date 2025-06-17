@@ -8,6 +8,10 @@ const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
 const WIDTH = 256;
 const HEIGHT = 256;
+const SHADOW_X = -7;
+const SHADOW_Y = 5;
+const SHADOW_OPACITY = 0.3;
+const ROUNDED = 48;
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
 	const hue = (i * 50 + now * 0.03) % 360;
@@ -21,12 +25,15 @@ function generateSvg(small: boolean) {
 	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW;
 
 	const paths = [];
+	const shadows = [];
+
 	for (let i = 0; i < LINE_COUNT; i++) {
 		const color = lineColor(now, i);
 		const baseY = (i - LINE_OVERDRAW) * LINE_SPACING;
 		const wobble = Math.sin(now * WOBBLE_SPEED + i) * WOBBLE_AMPLITUDE;
 
 		const commands = [];
+		const shadowCommands = [];
 
 		for (let s = 0; s <= SEGMENTS; s++) {
 			const t = s / SEGMENTS;
@@ -40,11 +47,16 @@ function generateSvg(small: boolean) {
 			const y = baseY + wobble + bend + t * 200;
 			const cmd = `${s === 0 ? "M" : "L"} ${x.toFixed(1)}, ${y.toFixed(1)}`;
 			commands.push(cmd);
+
+			const shadowCmd = `${s === 0 ? "M" : "L"} ${(x + SHADOW_X).toFixed(1)}, ${(y + SHADOW_Y).toFixed(1)}`;
+			shadowCommands.push(shadowCmd);
 		}
 
 		const d = commands.join(" ");
+		const shadowD = shadowCommands.join(" ");
 
 		paths.push(`<path stroke="${color}" d="${d}" />`);
+		shadows.push(`<path stroke="${color}" d="${shadowD}" />`);
 	}
 
 	const textX = small ? (3 * WIDTH) / 4 : WIDTH / 2;
@@ -54,16 +66,19 @@ function generateSvg(small: boolean) {
 	<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
 		<defs>
 			<clipPath id="rounded-corner">
-				<rect x="0" y="0" width="100%" height="100%" rx="32" ry="32" />
+				<rect x="0" y="0" width="100%" height="100%" rx="${ROUNDED}" ry="${ROUNDED}" />
 			</clipPath>
 		</defs>
 
 		<g clip-path="url(#rounded-corner)">
 			<rect width="100%" height="100%" fill="black" />
-			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="0.85">
+			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="${SHADOW_OPACITY}">
+				${shadows.join("\n")}
+			</g>
+			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="0.75">
 				${paths.join("\n")}
 			</g>
-			<text x="${textX}" y="${textY}" text-anchor="middle" dominant-baseline="middle" font-size="96" font-family="Monserrat, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">${small ? "h" : "hang"}</text>
+			<text x="${textX}" y="${textY}" font-weight="bold" text-anchor="middle" dominant-baseline="middle" font-size="96" font-family="Monserrat, Helvetica, Arial, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">${small ? "h" : "hang"}</text>
 		</g>
 	</svg>`;
 }

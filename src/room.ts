@@ -1,5 +1,5 @@
 import { Connection, Moq, Publish, Watch } from "@kixelated/hang";
-import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
+import { Effect, Root, Signal } from "@kixelated/signals";
 import { getDefaultAvatar } from "./avatar";
 import { renderBackground } from "./background";
 import { Broadcast } from "./broadcast";
@@ -27,7 +27,7 @@ export class Room {
 	avatar: Signal<string>;
 
 	// All of the broadcasts stored in z-index order.
-	broadcasts = signal<Broadcast[]>([]);
+	broadcasts = new Signal<Broadcast[]>([]);
 
 	// Remote broadcasts are stored separately so we treat them differently.
 	#remotes = new Map<string, Broadcast<Watch.Broadcast>>();
@@ -76,17 +76,17 @@ export class Room {
 	// Notifications use a shared AudioContext.
 	notifications: Notifications;
 
-	#signals = new Signals();
+	#signals = new Root();
 
 	constructor(connection: Connection, canvas: HTMLCanvasElement, props?: RoomProps) {
 		this.connection = connection;
 		this.canvas = canvas;
-		this.muted = signal(props?.muted ?? false);
-		this.visible = signal(props?.visible ?? true);
-		this.volume = signal(props?.volume ?? 0.5);
-		this.viewport = signal(Vector.create(canvas.width, canvas.height));
-		this.user = signal(props?.user);
-		this.avatar = signal(props?.avatar ?? getDefaultAvatar());
+		this.muted = new Signal(props?.muted ?? false);
+		this.visible = new Signal(props?.visible ?? true);
+		this.volume = new Signal(props?.volume ?? 0.5);
+		this.viewport = new Signal(Vector.create(canvas.width, canvas.height));
+		this.user = new Signal(props?.user);
+		this.avatar = new Signal(props?.avatar ?? getDefaultAvatar());
 
 		this.notifications = new Notifications({
 			volume: this.volume,
@@ -120,7 +120,7 @@ export class Room {
 				enabled: true,
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 				// Allow other users to move our camera.
-				peering: Settings.draggable.get(),
+				peering: Settings.draggable.peek(),
 			},
 			user: {
 				name: props?.user,
@@ -132,8 +132,13 @@ export class Room {
 			},
 		});
 
-		this.#signals.effect(() => {
-			if (camera.video.media.get() || camera.audio.media.get()) {
+		this.#signals.subscribe(Settings.draggable, (draggable) => {
+			// Allow other users to move our camera.
+			camera.location.peering.set(draggable);
+		});
+
+		this.#signals.effect((effect) => {
+			if (effect.get(camera.video.media) || effect.get(camera.audio.media)) {
 				this.notifications.play("select");
 			}
 		});
@@ -170,8 +175,6 @@ export class Room {
 			location: {
 				enabled: true,
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-				// Allow other users to move our screen.
-				peering: Settings.draggable.get(),
 			},
 		});
 		this.screen = new Broadcast(screen, {
@@ -183,15 +186,20 @@ export class Room {
 			},
 		});
 
-		this.#signals.effect(() => {
-			if (screen.video.media.get() || screen.audio.media.get()) {
+		this.#signals.subscribe(Settings.draggable, (draggable) => {
+			// Allow other users to move our screen.
+			screen.location.peering.set(draggable);
+		});
+
+		this.#signals.effect((effect) => {
+			if (effect.get(screen.video.media) || effect.get(screen.audio.media)) {
 				this.notifications.play("select");
 			}
 		});
 
 		// Update everything when a username is selected.
-		camera.signals.effect(() => {
-			const user = this.user.get();
+		camera.signals.effect((effect) => {
+			const user = effect.get(this.user);
 			if (!user) return;
 
 			// Update the username
@@ -199,17 +207,17 @@ export class Room {
 			screen.user.set((prev) => ({ ...prev, name: user ? `${user} (Screen)` : undefined }));
 
 			camera.enabled.set(true);
-			cleanup(() => camera.enabled.set(false));
+			effect.cleanup(() => camera.enabled.set(false));
 
 			const path = `${user}/camera.hang`;
 			camera.path.set(path);
 
 			this.#startBroadcast(this.camera);
-			cleanup(() => this.#stopBroadcast(this.camera));
+			effect.cleanup(() => this.#stopBroadcast(this.camera));
 		});
 
-		camera.signals.effect(() => {
-			const avatar = this.avatar.get();
+		camera.signals.effect((effect) => {
+			const avatar = effect.get(this.avatar);
 			if (!avatar) return;
 
 			camera.user.set((prev) => ({ ...prev, avatar }));
@@ -217,38 +225,38 @@ export class Room {
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
-		camera.signals.effect(() => {
-			if (!camera.enabled.get()) return;
-			if (!camera.video.media.get() && !camera.audio.media.get()) return;
+		camera.signals.effect((effect) => {
+			if (!effect.get(camera.enabled)) return;
+			if (!effect.get(camera.video.media) && !effect.get(camera.audio.media)) return;
 			this.camera.setLocation({
 				z: ++this.#maxZ,
 			});
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
-		screen.signals.effect(() => {
-			if (!screen.enabled.get()) return;
-			if (!screen.video.media.get() && !screen.audio.media.get()) return;
+		screen.signals.effect((effect) => {
+			if (!effect.get(screen.enabled)) return;
+			if (!effect.get(screen.video.media) && !effect.get(screen.audio.media)) return;
 			this.screen.setLocation({
 				z: ++this.#maxZ,
 			});
 		});
 
-		screen.signals.effect(() => {
-			const user = this.user.get();
+		screen.signals.effect((effect) => {
+			const user = effect.get(this.user);
 			if (!user) return;
 
-			const active = !!screen.video.media.get() || !!screen.audio.media.get();
+			const active = !!effect.get(screen.video.media) || !!effect.get(screen.audio.media);
 			if (!active) return;
 
 			const path = `${user}/screen.hang`;
 			screen.path.set(path);
 
 			screen.enabled.set(true);
-			cleanup(() => screen.enabled.set(false));
+			effect.cleanup(() => screen.enabled.set(false));
 
 			this.#startBroadcast(this.screen);
-			cleanup(() => this.#stopBroadcast(this.screen));
+			effect.cleanup(() => this.#stopBroadcast(this.screen));
 		});
 
 		const resize = () => {
@@ -274,7 +282,7 @@ export class Room {
 
 		// Check if the user needs to click the page to unmute the audio.
 		// TODO do this in a UI element.
-		this.suspended = signal(this.notifications.suspended);
+		this.suspended = new Signal(this.notifications.suspended);
 
 		const ctx = this.canvas.getContext("2d");
 		if (!ctx) {
@@ -429,18 +437,16 @@ export class Room {
 		});
 
 		// Only render the canvas when it's visible.
-		this.#signals.effect(() => {
-			const visible = this.visible.get();
+		this.#signals.effect((effect) => {
+			const visible = effect.get(this.visible);
 			if (!visible) return;
 
 			this.#animation = requestAnimationFrame(this.#tick.bind(this));
-			cleanup(() => cancelAnimationFrame(this.#animation ?? 0));
+			effect.cleanup(() => cancelAnimationFrame(this.#animation ?? 0));
 		});
 
 		// Apply the visible signal to remote broadcasts.
-		this.#signals.effect(() => {
-			const visible = this.visible.get();
-
+		this.#signals.subscribe(this.visible, (visible) => {
 			for (const broadcast of this.#remotes.values()) {
 				broadcast.source.video.enabled?.set(visible);
 			}
@@ -448,24 +454,22 @@ export class Room {
 
 		// Apply the muted signal to the broadcasts.
 		// NOTE: We don't pause audio so we still get visualizations.
-		this.#signals.effect(() => {
-			const muted = this.muted.get();
+		this.#signals.subscribe(this.muted, (muted) => {
 			for (const broadcast of this.#remotes.values()) {
 				broadcast.source.audio.enabled.set(muted);
 			}
 		});
 
 		// Don't download audio if the AudioContext is suspended.
-		this.#signals.effect(() => {
-			const suspended = this.suspended.get();
+		this.#signals.subscribe(this.suspended, (suspended) => {
 			for (const broadcast of this.#remotes.values()) {
 				broadcast.source.audio.enabled.set(!suspended);
 			}
 		});
 
 		// Set the volume to 0 when muted.
-		this.#signals.effect(() => {
-			const muted = this.muted.get();
+		this.#signals.effect((effect) => {
+			const muted = effect.get(this.muted);
 			if (muted) {
 				this.#unmuteVolume = this.volume.peek() || 0.5;
 				this.volume.set(0);
@@ -475,28 +479,27 @@ export class Room {
 		});
 
 		// Set unmute when the volume is non-zero.
-		this.#signals.effect(() => {
-			const volume = this.volume.get();
+		this.#signals.subscribe(this.volume, (volume) => {
 			this.muted.set(volume === 0);
 		});
 
-		this.#signals.effect(() => this.#init());
+		this.#signals.effect(this.#init.bind(this));
 	}
 
-	#init() {
-		const connection = this.connection.established.get();
+	#init(effect: Effect) {
+		const connection = effect.get(this.connection.established);
 		if (!connection) return;
 
 		const announced = connection.announced();
-		cleanup(() => announced.close());
+		effect.cleanup(() => announced.close());
 
-		void this.#runRemotes(announced);
+		effect.spawn(this.#runRemotes.bind(this, announced));
 	}
 
-	async #runRemotes(announced: Moq.AnnouncedConsumer) {
+	async #runRemotes(announced: Moq.AnnouncedConsumer, cancel: Promise<void>) {
 		try {
 			for (;;) {
-				const update = await announced.next();
+				const update = await Promise.race([announced.next(), cancel]);
 
 				// We're donezo.
 				if (!update) break;
@@ -575,9 +578,9 @@ export class Room {
 		this.broadcasts.set((prev) => [...prev, broadcast]);
 
 		// Resort the broadcasts when the z-index changes.
-		broadcast.signals.effect(() => {
+		broadcast.signals.effect((effect) => {
 			// Get our z-index so we resort when it changes.
-			const z = broadcast.z.get();
+			const z = effect.get(broadcast.z);
 			if (z > this.#maxZ) {
 				// Save the higher z-index so we can use it for new broadcasts.
 				this.#maxZ = z;

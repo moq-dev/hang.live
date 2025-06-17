@@ -8,20 +8,22 @@ import { Room } from "./room";
 import { Status } from "./status";
 import { Sup } from "./sup";
 
-export function Hang(props: { connection: Connection }): JSX.Element {
+export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
 
-	// eslint-disable-next-line solid/reactivity
-	const room = new Room(props.connection, canvas, {
+	const room = new Room(connection, canvas, {
 		user: localStorage.getItem("user.name") ?? undefined,
 		avatar: localStorage.getItem("user.avatar") ?? undefined,
 	});
 
 	onCleanup(() => room.close());
 
+	const user = room.user.solid();
+	const avatar = room.avatar.solid();
+
 	// Save the user name to localStorage.
 	createEffect(() => {
-		const n = room.user.get();
+		const n = user();
 		if (n) {
 			localStorage.setItem("user.name", n);
 		} else {
@@ -31,7 +33,7 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 
 	// Save the avatar to localStorage.
 	createEffect(() => {
-		const a = room.avatar.get();
+		const a = avatar();
 		if (a) {
 			localStorage.setItem("user.avatar", a);
 		} else {
@@ -40,12 +42,14 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 	});
 
 	return (
-		<div>
-			{canvas}
-			<Sup user={room.user} />
-			<Chat room={room} />
-			<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />
-		</div>
+		<>
+			<div>
+				{canvas}
+				<Sup user={room.user} />
+				<Chat room={room} />
+				<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />
+			</div>
+		</>
 	);
 }
 
