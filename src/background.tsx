@@ -69,8 +69,7 @@ function lineColor(now: DOMHighResTimeStamp, i: number) {
 }
 
 // A node function to output the above as a <svg>
-// @ts-ignore Not unused, just commented out below.
-function generateSvg() {
+export function generateSvg() {
 	const now = 0;
 	const WIDTH = 1920;
 	const HEIGHT = 1080;

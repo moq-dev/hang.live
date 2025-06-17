@@ -8,10 +8,11 @@ import { Room } from "./room";
 import { Status } from "./status";
 import { Sup } from "./sup";
 
-export function Hang({ connection }: { connection: Connection }): JSX.Element {
+export function Hang(props: { connection: Connection }): JSX.Element {
 	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
 
-	const room = new Room(connection, canvas, {
+	// eslint-disable-next-line solid/reactivity
+	const room = new Room(props.connection, canvas, {
 		user: localStorage.getItem("user.name") ?? undefined,
 		avatar: localStorage.getItem("user.avatar") ?? undefined,
 	});
@@ -48,7 +49,7 @@ export function Hang({ connection }: { connection: Connection }): JSX.Element {
 	);
 }
 
-const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/anon/`);
+const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/hang/`);
 const connection = new Connection({ url });
 
 const hang = document.getElementById("hang");

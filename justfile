@@ -30,6 +30,9 @@ fix:
 	# Format and lint
 	pnpm exec biome check --fix
 
+	# Some additional linting.
+	pnpm exec eslint . --fix
+
 	# Make sure the JS packages are not vulnerable
 	pnpm exec pnpm audit --fix
 
@@ -49,6 +52,9 @@ upgrade:
 build:
 	pnpm i
 	pnpm run build
+
+prod: build
+	pnpm prod
 
 # Deploy the site to Cloudflare Pages
 deploy: build

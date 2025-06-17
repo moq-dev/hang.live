@@ -23,17 +23,13 @@ export function Chat(props: { room: Room }) {
 	);
 }
 
-function Broadcaster({
-	broadcast,
-	now,
-	viewport,
-}: { broadcast: Broadcast; now: Accessor<number>; viewport: Accessor<Vector> }) {
-	const bounds = createMemo(() => broadcast.bounds.get().div(window.devicePixelRatio));
+function Broadcaster(props: { broadcast: Broadcast; now: Accessor<number>; viewport: Accessor<Vector> }) {
+	const bounds = createMemo(() => props.broadcast.bounds.get().div(window.devicePixelRatio));
 
 	return (
-		<For each={broadcast.messages.get()}>
+		<For each={props.broadcast.messages.get()}>
 			{(message, index) => (
-				<Message index={index} message={message} bounds={bounds} now={now} viewport={viewport} />
+				<Message index={index} message={message} bounds={bounds} now={props.now} viewport={props.viewport} />
 			)}
 		</For>
 	);
@@ -90,8 +86,8 @@ function Message(props: {
 		return Math.min(viewport.y, Math.max(3 * bounds.size.y, 300));
 	});
 
-	const [width, setWidth] = createSignal(maxWidth());
-	const [height, setHeight] = createSignal(maxHeight());
+	const [width, setWidth] = createSignal(0);
+	const [height, setHeight] = createSignal(0);
 
 	onMount(() => {
 		const b = box();

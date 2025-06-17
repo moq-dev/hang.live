@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "vite --open",
 		"build": "tsc -b && vite build",
-		"preview": "vite build && vite preview",
+		"prod": "vite preview --open",
 		"check": "tsc --noEmit",
 		"tauri": "tauri"
 	},
@@ -28,10 +28,15 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
+		"@eslint/js": "^9.29.0",
+		"eslint": "^9.29.0",
+		"eslint-plugin-solid": "^0.14.5",
+		"typescript-eslint": "^8.34.1",
 		"@iconify-json/mdi": "^1.2.3",
 		"@tauri-apps/cli": "^2",
 		"@types/dom-mediacapture-transform": "^0.1.11",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.234",
+		"globals": "^16.2.0",
 		"tsx": "^4.20.1",
 		"typescript": "~5.8.3",
 		"unplugin-icons": "^22.1.0",
