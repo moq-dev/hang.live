@@ -14,9 +14,9 @@
 	"license": "MIT",
 	"dependencies": {
 		"@fontsource-variable/montserrat": "^5.2.5",
-		"@kixelated/hang": "^0.2",
-		"@kixelated/moq": "^0.6",
-		"@kixelated/signals": "^0.3",
+		"@kixelated/hang": "file:../moq/js/hang",
+		"@kixelated/moq": "file:../moq/js/moq",
+		"@kixelated/signals": "file:../moq/js/signals",
 		"@tailwindcss/vite": "^4.1.10",
 		"@tauri-apps/api": "^2",
 		"@tauri-apps/plugin-opener": "^2",
