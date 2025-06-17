@@ -8,6 +8,7 @@ interface ViteTypeOptions {
 
 interface ImportMetaEnv {
 	readonly VITE_RELAY_HOST: string;
+	readonly VITE_ROOM: string;
 }
 
 interface ImportMeta {

@@ -53,7 +53,7 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 	);
 }
 
-const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/hang/`);
+const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/${import.meta.env.VITE_ROOM}/`);
 const connection = new Connection({ url });
 
 const hang = document.getElementById("hang");

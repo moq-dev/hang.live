@@ -5,6 +5,9 @@ import { JSX } from "solid-js/jsx-runtime";
 export function Status(props: { connection: Connection }): JSX.Element {
 	const status = props.connection.status.solid();
 
+	//const [status, setStatus] = createSignal<ConnectionStatus>("disconnected");
+	//props.connection.status.subscribe((status) => setStatus(status));
+
 	const color = createMemo(() => {
 		if (status() === "connected") return "hsl(140, 75%, 50%)";
 		if (status() === "connecting") return "hsl(40, 75%, 50%)";

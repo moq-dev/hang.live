@@ -75,7 +75,7 @@ function generateSvg(small: boolean) {
 			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="${SHADOW_OPACITY}">
 				${shadows.join("\n")}
 			</g>
-			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="0.75">
+			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="0.8">
 				${paths.join("\n")}
 			</g>
 			<text x="${textX}" y="${textY}" font-weight="bold" text-anchor="middle" dominant-baseline="middle" font-size="96" font-family="Monserrat, Helvetica, Arial, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">${small ? "h" : "hang"}</text>
