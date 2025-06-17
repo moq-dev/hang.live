@@ -8,10 +8,10 @@ import { Room } from "./room";
 import { Status } from "./status";
 import { Sup } from "./sup";
 
-export function Hang({ connection }: { connection: Connection }): JSX.Element {
+export function Hang(props: { connection: Connection }): JSX.Element {
 	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
 
-	const room = new Room(connection, canvas, {
+	const room = new Room(props.connection, canvas, {
 		user: localStorage.getItem("user.name") ?? undefined,
 		avatar: localStorage.getItem("user.avatar") ?? undefined,
 	});
