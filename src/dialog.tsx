@@ -2,7 +2,7 @@ import { Signal, signal } from "@kixelated/signals";
 import { Show } from "solid-js";
 
 export function Dialog(props: { name: Signal<string | undefined> }) {
-	const input = signal(props.name.peek() ?? "");
+	const input = signal("");
 
 	const submit = () => {
 		const trimmed = input.get()?.trim();

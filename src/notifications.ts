@@ -29,14 +29,14 @@ export class Notifications {
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Signals();
 
-	constructor(props: NotificationsProps) {
+	constructor(args: NotificationsProps) {
 		this.context = new AudioContext();
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
 
 		this.#signals.effect(() => {
 			// Reduce the volume for notifications so we can hear them over everything else.
-			this.gain.gain.value = props.muted.get() ? 0 : props.volume.get() / 2;
+			this.gain.gain.value = args.muted.get() ? 0 : args.volume.get() / 2;
 		});
 
 		const sounds = new Map();
