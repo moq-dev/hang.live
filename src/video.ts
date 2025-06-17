@@ -1,5 +1,4 @@
 import { Publish, Watch } from "@kixelated/hang";
-import { Signals } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import Settings from "./settings";
@@ -31,8 +30,6 @@ export class Video {
 
 	#memeOpacity = 0;
 	#nameOpacity = 0;
-
-	#signals = new Signals();
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
@@ -262,9 +259,5 @@ export class Video {
 		*/
 
 		ctx.restore();
-	}
-
-	close() {
-		this.#signals.close();
 	}
 }

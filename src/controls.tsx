@@ -36,13 +36,10 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	const toggle = () => {
 		props.audio.enabled.set((prev) => !prev);
 	};
+	const media = props.audio.media.solid();
 
 	return (
-		<button
-			type="button"
-			onClick={toggle}
-			class={`relative ${props.audio.media.get() ? "border-white" : "border-transparent"}`}
-		>
+		<button type="button" onClick={toggle} class={`relative ${media() ? "border-white" : "border-transparent"}`}>
 			<Visualize audio={props.audio} />
 			<IconMicrophone />
 		</button>
@@ -53,20 +50,10 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const toggle = () => {
 		props.video.enabled.set((prev) => !prev);
 	};
-
-	// Play a sound when a media device is selected.
-	createEffect(() => {
-		if (props.video.media.get()) {
-			props.room.notifications.play("select");
-		}
-	});
+	const media = props.video.media.solid();
 
 	return (
-		<button
-			type="button"
-			style={{ "border-color": props.video.media.get() ? "white" : "transparent" }}
-			onClick={toggle}
-		>
+		<button type="button" style={{ "border-color": media() ? "white" : "transparent" }} onClick={toggle}>
 			<IconCamera />
 		</button>
 	);
@@ -80,20 +67,10 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 			props.audio.enabled.set((prev) => !prev);
 		});
 	};
-
-	// Play a sound when a media device is selected.
-	createEffect(() => {
-		if (props.video.media.get()) {
-			props.room.notifications.play("select");
-		}
-	});
+	const media = props.video.media.solid();
 
 	return (
-		<button
-			type="button"
-			style={{ "border-color": props.video.media.get() ? "white" : "transparent" }}
-			onClick={toggle}
-		>
+		<button type="button" style={{ "border-color": media() ? "white" : "transparent" }} onClick={toggle}>
 			<IconScreen />
 		</button>
 	);
@@ -113,16 +90,17 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		const hue = 2 ** p * 100 + 135;
 		return `hsla(${hue}, 80%, 40%, 0.75)`;
 	});
+	const media = props.audio.media.solid();
 
 	createEffect(() => {
-		const media = props.audio.media.get();
-		if (!media) {
+		const m = media();
+		if (!m) {
 			setPower(undefined);
 			return;
 		}
 
 		const context = new AudioContext({
-			sampleRate: media.getSettings().sampleRate,
+			sampleRate: m.getSettings().sampleRate,
 		});
 		onCleanup(() => context.close());
 
@@ -131,7 +109,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		});
 		onCleanup(() => analyzer.disconnect());
 
-		const source = context.createMediaStreamSource(new MediaStream([media]));
+		const source = context.createMediaStreamSource(new MediaStream([m]));
 		source.connect(analyzer);
 		onCleanup(() => source.disconnect());
 
@@ -206,7 +184,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 		const m = message();
 		if (!m) return;
 
-		if (!props.broadcast.chat.enabled.get()) return;
+		if (!props.broadcast.chat.enabled.peek()) return;
 		props.broadcast.chat.publish(m);
 
 		setMessage("");
@@ -232,8 +210,11 @@ function Volume(props: { room: Room }): JSX.Element {
 	const [showSlider, setShowSlider] = createSignal(false);
 
 	const toggle = () => {
-		props.room.muted.set(!props.room.muted.get());
+		props.room.muted.set((prev) => !prev);
 	};
+
+	const muted = props.room.muted.solid();
+	const volume = props.room.volume.solid();
 
 	return (
 		<div
@@ -244,7 +225,7 @@ function Volume(props: { room: Room }): JSX.Element {
 			onFocusOut={() => setShowSlider(false)}
 		>
 			<button type="button" onClick={toggle}>
-				{props.room.muted.get() ? <IconVolumeMute /> : <IconVolumeHigh />}
+				{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
 			</button>
 			<Show when={showSlider()}>
 				<div
@@ -256,7 +237,7 @@ function Volume(props: { room: Room }): JSX.Element {
 						type="range"
 						min="0"
 						max="100"
-						value={props.room.volume.get() * 100}
+						value={volume() * 100}
 						onInput={(e) => props.room.volume.set(Number(e.currentTarget.value) / 100)}
 						style={{ transform: "rotate(-90deg) translate(60px)" }}
 						class="cursor-pointer px-2 py-1"

@@ -1,6 +1,5 @@
 import { Publish, Watch } from "@kixelated/hang";
-import { Signal, Signals, cleanup, signal } from "@kixelated/signals";
-import { createEffect } from "solid-js";
+import { Effect, Root, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Notifications, PannedNotifications } from "./notifications";
 import Settings from "./settings";
@@ -24,90 +23,111 @@ export class Audio {
 	#analyser?: AnalyserNode;
 	#analyserBuffer = new Uint8Array(1024);
 
+	#gain = new Signal<GainNode | undefined>(undefined);
+	#panner = new Signal<StereoPannerNode | undefined>(undefined);
+
 	// We use a different AudioContext for notifications, so we need a separate analyser.
 	// TODO reuse if the sample rate is the same?
 	notifications: PannedNotifications;
 
 	#volumeSmoothed = 0;
 
-	#signals = new Signals();
+	#signals = new Root();
 
 	constructor(broadcast: Broadcast, props: AudioProps) {
 		this.broadcast = broadcast;
 		this.muted = props.muted;
 		this.volume = props.volume;
-		this.pan = signal(props?.pan ?? 0);
+		this.pan = new Signal(props?.pan ?? 0);
 
 		this.notifications = new PannedNotifications(props.notifications, this.pan);
 
-		this.#signals.effect(() => this.#init());
+		this.#signals.effect(this.#init.bind(this));
 
-		this.#signals.effect(() => {
-			const meme = this.broadcast.meme.get();
+		this.#signals.effect((effect) => {
+			const meme = effect.get(this.broadcast.meme);
 			if (!meme) return;
 
 			const source = new MediaElementAudioSourceNode(this.notifications.context, { mediaElement: meme });
 
 			// Use the existing notifications context so we don't need to create our own panner/volume.
 			this.notifications.connect(source);
-			cleanup(() => source.disconnect());
+			effect.cleanup(() => source.disconnect());
 		});
 
-		this.#signals.effect(() => {
+		this.#signals.effect((effect) => {
 			// Don't analyze the audio in potato mode.
 			// TODO I'm just assuming this is slow. Use SIMD?
-			if (Settings.potato.get()) return;
+			if (effect.get(Settings.potato)) return;
 
-			const audio = this.broadcast.source.audio.root.get();
+			const audio = effect.get(this.broadcast.source.audio.root);
 			if (!audio) return;
 
-			const { context, node } = audio;
+			const root = effect.get(this.broadcast.source.audio.root);
+			if (!root) return;
 
 			// We analyze the audio to get the volume before gain/pan.
-			const analyser = new AnalyserNode(context, { fftSize: this.#analyserBuffer.length });
+			const analyser = new AnalyserNode(root.context, { fftSize: this.#analyserBuffer.length });
 			this.#analyser = analyser;
-			node.connect(analyser);
+			root.connect(analyser);
 
-			cleanup(() => {
+			effect.cleanup(() => {
 				analyser.disconnect();
 				this.#analyser = undefined;
 			});
 		});
-	}
 
-	#init() {
-		const audio = this.broadcast.source.audio.root.get();
-		if (!audio) return;
+		this.#signals.effect((effect) => {
+			const panner = effect.get(this.#panner);
+			if (!panner) return;
 
-		const { context, node } = audio;
-
-		const gain = new GainNode(context, { gain: this.volume.peek() });
-		cleanup(() => gain.disconnect());
-
-		createEffect(() => {
-			// Update the gain when the volume changes.
-			gain.gain.value = this.muted.get() ? 0 : this.volume.get();
+			const pan = effect.get(this.pan);
+			panner.pan.value = Math.max(-1, Math.min(1, pan * 2));
 		});
 
-		node.connect(gain);
+		this.#signals.effect((effect) => {
+			const gain = effect.get(this.#gain);
+			if (!gain) return;
 
-		if (node.channelCount < 2) {
-			gain.connect(context.destination); // output to the speakers
+			gain.gain.value = effect.get(this.muted) ? 0 : effect.get(this.volume);
+		});
+	}
+
+	#init(effect: Effect) {
+		const audio = effect.get(this.broadcast.source.audio.root);
+		if (!audio) return;
+
+		const root = effect.get(this.broadcast.source.audio.root);
+		if (!root) return;
+
+		const gain = new GainNode(root.context, { gain: this.volume.peek() });
+		effect.cleanup(() => gain.disconnect());
+
+		this.#gain.set(gain);
+		effect.cleanup(() => this.#gain.set(undefined));
+
+		root.connect(gain);
+
+		if (root.channelCount < 2) {
+			gain.connect(root.context.destination); // output to the speakers
 			return;
 		}
 
-		const audioPanner = new StereoPannerNode(context, {
-			channelCount: node.channelCount,
-		});
-		cleanup(() => audioPanner.disconnect());
+		if (effect.get(Settings.pan)) {
+			const audioPanner = new StereoPannerNode(root.context, {
+				channelCount: root.channelCount,
+				pan: this.pan.peek() * 2,
+			});
+			effect.cleanup(() => audioPanner.disconnect());
 
-		// Update the pan when the pan changes.
-		createEffect(() => {
-			audioPanner.pan.value = Settings.pan.get() ? Math.max(-1, Math.min(1, this.pan.get() * 2)) : 0;
-		});
+			this.#panner.set(audioPanner);
+			effect.cleanup(() => this.#panner.set(undefined));
 
-		gain.connect(audioPanner);
-		audioPanner.connect(context.destination);
+			gain.connect(audioPanner);
+			audioPanner.connect(root.context.destination);
+		} else {
+			gain.connect(root.context.destination);
+		}
 	}
 
 	renderBackground(ctx: CanvasRenderingContext2D) {

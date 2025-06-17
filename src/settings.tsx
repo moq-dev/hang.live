@@ -1,36 +1,36 @@
-import { Signals, signal } from "@kixelated/signals";
+import { Root, Signal } from "@kixelated/signals";
 import { JSX } from "solid-js/jsx-runtime";
 
 import IconPotato from "~icons/mdi/fried-potatoes";
 import IconHelp from "~icons/mdi/help-box";
 
 const Settings = {
-	draggable: signal(localStorage.getItem("settings.draggable") !== "false"),
-	volume: signal(localStorage.getItem("settings.volume") ?? "100"),
-	potato: signal(localStorage.getItem("settings.potato") === "true"),
-	pan: signal(localStorage.getItem("settings.pan") !== "false"),
+	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
+	volume: new Signal(localStorage.getItem("settings.volume") ?? "100"),
+	potato: new Signal(localStorage.getItem("settings.potato") === "true"),
+	pan: new Signal(localStorage.getItem("settings.pan") !== "false"),
 };
 
-const signals = new Signals();
+const signals = new Root();
 
-signals.effect(() => {
-	localStorage.setItem("settings.draggable", Settings.draggable.get().toString());
+signals.subscribe(Settings.draggable, (draggable) => {
+	localStorage.setItem("settings.draggable", draggable.toString());
 });
 
-signals.effect(() => {
-	localStorage.setItem("settings.volume", Settings.volume.get().toString());
+signals.subscribe(Settings.volume, (volume) => {
+	localStorage.setItem("settings.volume", volume.toString());
 });
 
-signals.effect(() => {
-	localStorage.setItem("settings.potato", Settings.potato.get().toString());
+signals.subscribe(Settings.potato, (potato) => {
+	localStorage.setItem("settings.potato", potato.toString());
 });
 
-signals.effect(() => {
-	localStorage.setItem("settings.pan", Settings.pan.get().toString());
+signals.subscribe(Settings.pan, (pan) => {
+	localStorage.setItem("settings.pan", pan.toString());
 });
 
-signals.effect(() => {
-	if (Settings.potato.get()) {
+signals.subscribe(Settings.potato, (potato) => {
+	if (potato) {
 		document.documentElement.classList.add("potato");
 	} else {
 		document.documentElement.classList.remove("potato");
@@ -45,33 +45,25 @@ document.addEventListener("unload", () => {
 export default Settings;
 
 export function Modal(): JSX.Element {
+	const pan = Settings.pan.solid();
+	const draggable = Settings.draggable.solid();
+	const potato = Settings.potato.solid();
+
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-			<input
-				type="checkbox"
-				checked={Settings.pan.get()}
-				onChange={() => Settings.pan.set(!Settings.pan.get())}
-			/>
+			<input type="checkbox" checked={pan()} onChange={() => Settings.pan.set(!pan())} />
 			<span>audio panning</span>
 			<span title="Play audio from left/right speakers based on a user's position. Use headphones for the best experience.">
 				<IconHelp />
 			</span>
 
-			<input
-				type="checkbox"
-				checked={Settings.draggable.get()}
-				onChange={() => Settings.draggable.set(!Settings.draggable.get())}
-			/>
+			<input type="checkbox" checked={draggable()} onChange={() => Settings.draggable.set(!draggable())} />
 			<span>remote dragging</span>
 			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
 				<IconHelp />
 			</span>
 
-			<input
-				type="checkbox"
-				checked={Settings.potato.get()}
-				onChange={() => Settings.potato.set(!Settings.potato.get())}
-			/>
+			<input type="checkbox" checked={potato()} onChange={() => Settings.potato.set(!potato())} />
 			<span>potato mode</span>
 			<span title="Disable special effects and laggy animations.">
 				<IconPotato />

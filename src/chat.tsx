@@ -14,20 +14,24 @@ export function Chat(props: { room: Room }) {
 	};
 	updateNow();
 
-	const viewport = createMemo(() => props.room.viewport.get().div(window.devicePixelRatio));
+	const viewportUnscaled = props.room.viewport.solid();
+	const viewport = createMemo(() => viewportUnscaled().div(window.devicePixelRatio));
+	const broadcasts = props.room.broadcasts.solid();
 
 	return (
-		<For each={props.room.broadcasts.get()}>
+		<For each={broadcasts()}>
 			{(broadcast) => <Broadcaster broadcast={broadcast} now={now} viewport={viewport} />}
 		</For>
 	);
 }
 
 function Broadcaster(props: { broadcast: Broadcast; now: Accessor<number>; viewport: Accessor<Vector> }) {
-	const bounds = createMemo(() => props.broadcast.bounds.get().div(window.devicePixelRatio));
+	const boundsUnscaled = props.broadcast.bounds.solid();
+	const bounds = createMemo(() => boundsUnscaled().div(window.devicePixelRatio));
+	const messages = props.broadcast.messages.solid();
 
 	return (
-		<For each={props.broadcast.messages.get()}>
+		<For each={messages()}>
 			{(message, index) => (
 				<Message index={index} message={message} bounds={bounds} now={props.now} viewport={props.viewport} />
 			)}

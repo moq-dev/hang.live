@@ -1,4 +1,4 @@
-import { Signal, Signals, cleanup } from "@kixelated/signals";
+import { Root, Signal } from "@kixelated/signals";
 import Settings from "./settings";
 
 const SOUNDS = {
@@ -27,16 +27,16 @@ export class Notifications {
 	gain: GainNode;
 
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
-	#signals = new Signals();
+	#signals = new Root();
 
 	constructor(args: NotificationsProps) {
 		this.context = new AudioContext();
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
 
-		this.#signals.effect(() => {
+		this.#signals.effect((effect) => {
 			// Reduce the volume for notifications so we can hear them over everything else.
-			this.gain.gain.value = args.muted.get() ? 0 : args.volume.get() / 2;
+			this.gain.gain.value = effect.get(args.muted) ? 0 : effect.get(args.volume) / 2;
 		});
 
 		const sounds = new Map();
@@ -95,7 +95,7 @@ export class PannedNotifications {
 
 	pan: Signal<number>;
 
-	#signals = new Signals();
+	#signals = new Root();
 
 	constructor(parent: Notifications, pan: Signal<number>) {
 		this.#parent = parent;
@@ -106,22 +106,28 @@ export class PannedNotifications {
 		this.pan = pan;
 
 		// Only create the analyser if we're not in potato mode.
-		this.#signals.effect(() => {
-			if (Settings.potato.get()) return;
+		this.#signals.effect((effect) => {
+			if (effect.get(Settings.potato)) return;
 
 			const analyser = new AnalyserNode(this.#parent.context, { fftSize: this.#buffer.length });
 			this.#panner.connect(analyser);
 
 			this.analyser = analyser;
 
-			cleanup(() => {
+			effect.cleanup(() => {
 				analyser.disconnect();
 				this.analyser = undefined;
 			});
 		});
 
-		this.#signals.effect(() => {
-			this.#panner.pan.value = Settings.pan.get() ? Math.max(-1, Math.min(1, this.pan.get() * 2)) : 0;
+		this.#signals.effect((effect) => {
+			if (!effect.get(Settings.pan)) {
+				this.#panner.pan.value = 0;
+				return;
+			}
+
+			const pan = effect.get(this.pan);
+			this.#panner.pan.value = Math.max(-1, Math.min(1, pan * 2));
 		});
 	}
 

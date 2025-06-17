@@ -16,6 +16,7 @@ export default defineConfig(async () => ({
 				about: "about.html",
 			},
 		},
+		sourcemap: true,
 	},
 
 	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
