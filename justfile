@@ -53,6 +53,10 @@ build:
 	pnpm i
 	pnpm run build
 
+tauri:
+	pnpm i
+	pnpm tauri dev
+
 prod: build
 	pnpm prod
 

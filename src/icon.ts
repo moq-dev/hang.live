@@ -68,10 +68,14 @@ function generateSvg(small: boolean) {
 			<clipPath id="rounded-corner">
 				<rect x="0" y="0" width="100%" height="100%" rx="${ROUNDED}" ry="${ROUNDED}" />
 			</clipPath>
+			<linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+				<stop offset="0%" stop-color="hsl(240, 30%, 10%)" />
+				<stop offset="100%" stop-color="black" />
+			</linearGradient>
 		</defs>
 
 		<g clip-path="url(#rounded-corner)">
-			<rect width="100%" height="100%" fill="black" />
+			<rect width="100%" height="100%" fill="url(#bg)" />
 			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="${SHADOW_OPACITY}">
 				${shadows.join("\n")}
 			</g>
