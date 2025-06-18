@@ -100,7 +100,7 @@ export class PannedNotifications {
 	constructor(parent: Notifications, pan: Signal<number>) {
 		this.#parent = parent;
 
-		this.#panner = new StereoPannerNode(parent.context, { pan: pan.peek() });
+		this.#panner = new StereoPannerNode(parent.context);
 		this.#panner.connect(parent.gain);
 
 		this.pan = pan;

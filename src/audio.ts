@@ -1,5 +1,5 @@
 import { Publish, Watch } from "@kixelated/hang";
-import { Effect, Root, Signal } from "@kixelated/signals";
+import { Signal, Root, Effect } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Notifications, PannedNotifications } from "./notifications";
 import Settings from "./settings";
@@ -42,8 +42,6 @@ export class Audio {
 
 		this.notifications = new PannedNotifications(props.notifications, this.pan);
 
-		this.#signals.effect(this.#init.bind(this));
-
 		this.#signals.effect((effect) => {
 			const meme = effect.get(this.broadcast.meme);
 			if (!meme) return;
@@ -60,10 +58,8 @@ export class Audio {
 			// TODO I'm just assuming this is slow. Use SIMD?
 			if (effect.get(Settings.potato)) return;
 
-			const audio = effect.get(this.broadcast.source.audio.root);
-			if (!audio) return;
-
 			const root = effect.get(this.broadcast.source.audio.root);
+			console.log("root", root);
 			if (!root) return;
 
 			// We analyze the audio to get the volume before gain/pan.
@@ -72,6 +68,7 @@ export class Audio {
 			root.connect(analyser);
 
 			effect.cleanup(() => {
+				console.log("disconnecting analyser");
 				analyser.disconnect();
 				this.#analyser = undefined;
 			});
@@ -91,12 +88,11 @@ export class Audio {
 
 			gain.gain.value = effect.get(this.muted) ? 0 : effect.get(this.volume);
 		});
+
+		this.#signals.effect(this.#init.bind(this));
 	}
 
 	#init(effect: Effect) {
-		const audio = effect.get(this.broadcast.source.audio.root);
-		if (!audio) return;
-
 		const root = effect.get(this.broadcast.source.audio.root);
 		if (!root) return;
 
@@ -116,7 +112,6 @@ export class Audio {
 		if (effect.get(Settings.pan)) {
 			const audioPanner = new StereoPannerNode(root.context, {
 				channelCount: root.channelCount,
-				pan: this.pan.peek() * 2,
 			});
 			effect.cleanup(() => audioPanner.disconnect());
 
@@ -172,6 +167,11 @@ export class Audio {
 		const fillAlphaBase = 0.3;
 		const PADDING = 32;
 
+		// Take the absolute value of the distance from 128, which is silence.
+		for (let i = 0; i < this.#analyserBuffer.length; i++) {
+			analyserBuffer[i] = Math.abs(analyserBuffer[i] - 128);
+		}
+
 		// If the audio is playing, combine the buffers.
 		if (this.#analyser) {
 			if (this.#analyserBuffer.length !== analyserBuffer.length) {
@@ -180,16 +180,16 @@ export class Audio {
 
 			this.#analyser.getByteTimeDomainData(this.#analyserBuffer);
 			for (let i = 0; i < this.#analyserBuffer.length; i++) {
-				this.#analyserBuffer[i] += analyserBuffer[i];
+				analyserBuffer[i] += Math.abs(this.#analyserBuffer[i] - 128);
 			}
 		}
 
 		let sum = 0;
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {
-			const sample = Math.abs(analyserBuffer[i] - 128);
+			const sample = analyserBuffer[i];
 			sum += sample * sample;
 		}
-		const volume = Math.sqrt(sum) / this.#analyserBuffer.length;
+		const volume = (2 * Math.sqrt(sum)) / this.#analyserBuffer.length;
 		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
 
 		// Colored fill based on volume (inside → outside)

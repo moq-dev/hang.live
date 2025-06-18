@@ -37,10 +37,18 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	const toggle = () => {
 		props.audio.enabled.set((prev) => !prev);
 	};
-	const media = solid(props.audio.media);
+	const root = solid(props.audio.root);
 
 	return (
-		<button type="button" onClick={toggle} class={`relative ${media() ? "border-white" : "border-transparent"}`}>
+		<button
+			type="button"
+			onClick={toggle}
+			class="relative border"
+			classList={{
+				"border-white": !!root(),
+				"border-transparent": !root(),
+			}}
+		>
 			<Visualize audio={props.audio} />
 			<IconMicrophone />
 		</button>
@@ -54,7 +62,15 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const media = solid(props.video.media);
 
 	return (
-		<button type="button" style={{ "border-color": media() ? "white" : "transparent" }} onClick={toggle}>
+		<button
+			type="button"
+			onClick={toggle}
+			class="relative border"
+			classList={{
+				"border-white": !!media(),
+				"border-transparent": !media(),
+			}}
+		>
 			<IconCamera />
 		</button>
 	);
@@ -71,7 +87,15 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 	const media = solid(props.video.media);
 
 	return (
-		<button type="button" style={{ "border-color": media() ? "white" : "transparent" }} onClick={toggle}>
+		<button
+			type="button"
+			onClick={toggle}
+			class="relative border"
+			classList={{
+				"border-white": !!media(),
+				"border-transparent": !media(),
+			}}
+		>
 			<IconScreen />
 		</button>
 	);
@@ -91,28 +115,19 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		const hue = 2 ** p * 100 + 135;
 		return `hsla(${hue}, 80%, 40%, 0.75)`;
 	});
-	const media = solid(props.audio.media);
+
+	const root = solid(props.audio.root);
 
 	createEffect(() => {
-		const m = media();
-		if (!m) {
-			setPower(undefined);
-			return;
-		}
+		const node = root();
+		if (!node) return;
 
-		const context = new AudioContext({
-			sampleRate: m.getSettings().sampleRate,
+		const analyzer = new AnalyserNode(node.context, {
+			fftSize: 512,
 		});
-		onCleanup(() => context.close());
 
-		const analyzer = new AnalyserNode(context, {
-			fftSize: 2048,
-		});
+		node.connect(analyzer);
 		onCleanup(() => analyzer.disconnect());
-
-		const source = context.createMediaStreamSource(new MediaStream([m]));
-		source.connect(analyzer);
-		onCleanup(() => source.disconnect());
 
 		const data = new Uint8Array(analyzer.frequencyBinCount);
 
@@ -137,11 +152,12 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 
 		animation = requestAnimationFrame(updatePower);
 		onCleanup(() => cancelAnimationFrame(animation ?? 0));
+		onCleanup(() => setPower(undefined));
 	});
 
 	return (
 		<div
-			class="absolute bottom-0 left-0 w-full"
+			class="absolute bottom-0 left-0 w-full rounded"
 			style={{
 				top: top(),
 				"background-color": color(),
@@ -225,7 +241,7 @@ function Volume(props: { room: Room }): JSX.Element {
 			onFocusIn={() => setShowSlider(true)}
 			onFocusOut={() => setShowSlider(false)}
 		>
-			<button type="button" onClick={toggle}>
+			<button type="button" onClick={toggle} classList={{ "text-red-500": muted() }}>
 				{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
 			</button>
 			<Show when={showSlider()}>
