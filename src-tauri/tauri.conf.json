@@ -12,9 +12,10 @@
 	"app": {
 		"windows": [
 			{
-				"title": "hang",
-				"width": 800,
-				"height": 600
+				"title": "hang.live",
+				"width": 1280,
+				"height": 720,
+				"resizable": true
 			}
 		],
 		"security": {
