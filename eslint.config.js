@@ -9,4 +9,18 @@ export default tseslint.config(
 	eslint.configs.recommended,
 	tseslint.configs.recommended,
 	solid,
+	{
+		rules: {
+			// Too many false positives, and it's based on the names of variables...
+			"solid/reactivity": "off",
+			// We use _ to indicate unused variables.
+			"@typescript-eslint/no-unused-vars": [
+				"error",
+				{
+					argsIgnorePattern: "^_",
+					varsIgnorePattern: "^_",
+				},
+			],
+		},
+	},
 );

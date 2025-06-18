@@ -1,9 +1,9 @@
 import { Publish } from "@kixelated/hang";
+import solid from "@kixelated/signals/solid";
 import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { Room } from "./room";
 import { Modal } from "./settings";
-import solid from "@kixelated/signals/solid";
 
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";

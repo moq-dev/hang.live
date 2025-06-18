@@ -1,7 +1,7 @@
 import { Signal } from "@kixelated/signals";
+import solid from "@kixelated/signals/solid";
 import { Show, createEffect, createSignal } from "solid-js";
 import IconArrowRight from "~icons/mdi/arrow-right-box";
-import solid from "@kixelated/signals/solid";
 
 // Ask the user for their user name.
 // Obviously this should be replaced with a proper auth system.
