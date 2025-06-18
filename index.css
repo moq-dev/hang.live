@@ -91,7 +91,7 @@ header {
 
 	input,
 	button {
-		@apply border border-transparent backdrop-blur-sm rounded bg-transparent;
+		@apply backdrop-blur-sm rounded bg-transparent;
 	}
 
 	input:focus {
