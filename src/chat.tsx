@@ -1,6 +1,7 @@
 import { Accessor, For, createMemo, createSignal, onMount } from "solid-js";
 import { Broadcast, ChatMessage } from "./broadcast";
 import { Room } from "./room";
+import solid from "@kixelated/signals/solid";
 
 import { Bounds, Vector } from "./geometry";
 
@@ -14,9 +15,9 @@ export function Chat(props: { room: Room }) {
 	};
 	updateNow();
 
-	const viewportUnscaled = props.room.viewport.solid();
+	const viewportUnscaled = solid(props.room.viewport);
 	const viewport = createMemo(() => viewportUnscaled().div(window.devicePixelRatio));
-	const broadcasts = props.room.broadcasts.solid();
+	const broadcasts = solid(props.room.broadcasts);
 
 	return (
 		<For each={broadcasts()}>
@@ -26,9 +27,9 @@ export function Chat(props: { room: Room }) {
 }
 
 function Broadcaster(props: { broadcast: Broadcast; now: Accessor<number>; viewport: Accessor<Vector> }) {
-	const boundsUnscaled = props.broadcast.bounds.solid();
+	const boundsUnscaled = solid(props.broadcast.bounds);
 	const bounds = createMemo(() => boundsUnscaled().div(window.devicePixelRatio));
-	const messages = props.broadcast.messages.solid();
+	const messages = solid(props.broadcast.messages);
 
 	return (
 		<For each={messages()}>

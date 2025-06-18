@@ -1,4 +1,5 @@
 import { Signal } from "@kixelated/signals";
+import solid from "@kixelated/signals/solid";
 import { Show, createSignal } from "solid-js";
 
 export function Dialog(props: { name: Signal<string | undefined> }) {
@@ -11,7 +12,7 @@ export function Dialog(props: { name: Signal<string | undefined> }) {
 		}
 	};
 
-	const name = props.name.solid();
+	const name = solid(props.name);
 
 	return (
 		<Show when={!name()}>

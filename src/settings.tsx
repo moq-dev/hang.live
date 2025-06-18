@@ -1,4 +1,5 @@
 import { Root, Signal } from "@kixelated/signals";
+import solid from "@kixelated/signals/solid";
 import { JSX } from "solid-js/jsx-runtime";
 
 import IconPotato from "~icons/mdi/fried-potatoes";
@@ -45,9 +46,9 @@ document.addEventListener("unload", () => {
 export default Settings;
 
 export function Modal(): JSX.Element {
-	const pan = Settings.pan.solid();
-	const draggable = Settings.draggable.solid();
-	const potato = Settings.potato.solid();
+	const pan = solid(Settings.pan);
+	const draggable = solid(Settings.draggable);
+	const potato = solid(Settings.potato);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
