@@ -21,6 +21,10 @@ export default defineConfig(async () => ({
 
 	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
 
+	resolve: {
+		dedupe: ["solid-js"],
+	},
+
 	// prevent vite from obscuring rust errors
 	clearScreen: false,
 	server: {
