@@ -2,7 +2,6 @@ onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@tailwindcss/oxide'
   - esbuild
-  - sharp
   - workerd
 overrides:
   '@kixelated/hang': link:../moq/js/hang
