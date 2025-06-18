@@ -3,6 +3,7 @@ import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount
 import { JSX } from "solid-js/jsx-runtime";
 import { Room } from "./room";
 import { Modal } from "./settings";
+import solid from "@kixelated/signals/solid";
 
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";
@@ -36,7 +37,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	const toggle = () => {
 		props.audio.enabled.set((prev) => !prev);
 	};
-	const media = props.audio.media.solid();
+	const media = solid(props.audio.media);
 
 	return (
 		<button type="button" onClick={toggle} class={`relative ${media() ? "border-white" : "border-transparent"}`}>
@@ -50,7 +51,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const toggle = () => {
 		props.video.enabled.set((prev) => !prev);
 	};
-	const media = props.video.media.solid();
+	const media = solid(props.video.media);
 
 	return (
 		<button type="button" style={{ "border-color": media() ? "white" : "transparent" }} onClick={toggle}>
@@ -67,7 +68,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 			props.audio.enabled.set((prev) => !prev);
 		});
 	};
-	const media = props.video.media.solid();
+	const media = solid(props.video.media);
 
 	return (
 		<button type="button" style={{ "border-color": media() ? "white" : "transparent" }} onClick={toggle}>
@@ -90,7 +91,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		const hue = 2 ** p * 100 + 135;
 		return `hsla(${hue}, 80%, 40%, 0.75)`;
 	});
-	const media = props.audio.media.solid();
+	const media = solid(props.audio.media);
 
 	createEffect(() => {
 		const m = media();
@@ -213,8 +214,8 @@ function Volume(props: { room: Room }): JSX.Element {
 		props.room.muted.set((prev) => !prev);
 	};
 
-	const muted = props.room.muted.solid();
-	const volume = props.room.volume.solid();
+	const muted = solid(props.room.muted);
+	const volume = solid(props.room.volume);
 
 	return (
 		<div

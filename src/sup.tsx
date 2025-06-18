@@ -1,13 +1,14 @@
 import { Signal } from "@kixelated/signals";
 import { Show, createEffect, createSignal } from "solid-js";
 import IconArrowRight from "~icons/mdi/arrow-right-box";
+import solid from "@kixelated/signals/solid";
 
 // Ask the user for their user name.
 // Obviously this should be replaced with a proper auth system.
 export function Sup(props: { user: Signal<string | undefined> }) {
 	const [name, setName] = createSignal(localStorage.getItem("user_name") ?? "");
 
-	const user = props.user.solid();
+	const user = solid(props.user);
 
 	// Save the user name to localStorage.
 	createEffect(() => {
