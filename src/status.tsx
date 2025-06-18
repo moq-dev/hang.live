@@ -1,7 +1,7 @@
 import { Connection } from "@kixelated/hang";
+import solid from "@kixelated/signals/solid";
 import { createMemo } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
-import solid from "@kixelated/signals/solid";
 
 export function Status(props: { connection: Connection }): JSX.Element {
 	const status = solid(props.connection.status);
