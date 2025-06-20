@@ -150,6 +150,8 @@ export class Room {
 				muted: this.muted,
 				volume: this.volume,
 			},
+			// Wait until we get an announcement before rendering ourselves as online.
+			online: false,
 		});
 
 		const screen = new Publish.Broadcast(connection, {
@@ -184,6 +186,8 @@ export class Room {
 				muted: this.muted,
 				volume: this.volume,
 			},
+			// Wait until we get an announcement before rendering ourselves as online.
+			online: false,
 		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
@@ -211,9 +215,6 @@ export class Room {
 
 			const path = `${user}/camera.hang`;
 			camera.path.set(path);
-
-			this.#startBroadcast(this.camera);
-			effect.cleanup(() => this.#stopBroadcast(this.camera));
 		});
 
 		camera.signals.effect((effect) => {
@@ -254,9 +255,6 @@ export class Room {
 
 			screen.enabled.set(true);
 			effect.cleanup(() => screen.enabled.set(false));
-
-			this.#startBroadcast(this.screen);
-			effect.cleanup(() => this.#stopBroadcast(this.screen));
 		});
 
 		const resize = () => {
@@ -504,7 +502,21 @@ export class Room {
 				// We're donezo.
 				if (!update) break;
 
-				if (update.path === this.camera.source.path.peek() || update.path === this.screen.source.path.peek()) {
+				if (update.path === this.camera.source.path.peek()) {
+					if (update.active) {
+						this.#startBroadcast(this.camera);
+					} else {
+						this.#stopBroadcast(this.camera);
+					}
+					continue;
+				}
+
+				if (update.path === this.screen.source.path.peek()) {
+					if (update.active) {
+						this.#startBroadcast(this.screen);
+					} else {
+						this.#stopBroadcast(this.screen);
+					}
 					continue;
 				}
 
@@ -537,6 +549,7 @@ export class Room {
 							muted: this.muted,
 							volume: this.volume,
 						},
+						online: true,
 					});
 
 					this.#remotes.set(update.path, broadcast);
@@ -577,6 +590,8 @@ export class Room {
 		// Insert the broadcast into the room based on it's z-index.
 		this.broadcasts.set((prev) => [...prev, broadcast]);
 
+		broadcast.online.set(true);
+
 		// Resort the broadcasts when the z-index changes.
 		broadcast.signals.effect((effect) => {
 			// Get our z-index so we resort when it changes.
@@ -596,30 +611,22 @@ export class Room {
 	}
 
 	#stopBroadcast(broadcast: Broadcast) {
-		// Stop downloading it.
-		broadcast.source.enabled.set(false);
-
 		// Move it from the main list to the rip list.
 		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));
 		this.#rip.push(broadcast);
 
 		// Slowly fade out the offline broadcast.
-		const fade = () => {
-			broadcast.online -= 0.01;
-			if (broadcast.online > 0) {
-				requestAnimationFrame(fade);
-				return;
-			}
+		broadcast.online.set(false);
 
+		// Wait for the fade to complete, roughly.
+		setTimeout(() => {
 			this.#rip.splice(this.#rip.indexOf(broadcast), 1);
 
 			// Don't close local broadcasts, we keep them open and toggle instead.
 			if (broadcast.source instanceof Watch.Broadcast) {
 				broadcast.close();
 			}
-		};
-
-		requestAnimationFrame(fade);
+		}, 1000);
 	}
 
 	#tick(now: DOMHighResTimeStamp) {
@@ -711,11 +718,9 @@ export class Room {
 			broadcast.audio.render(ctx);
 		}
 
+		// Broadcasts fading out don't have collision so they're in a separate structure.
 		for (const broadcast of this.#rip) {
-			ctx.save();
-			ctx.globalAlpha *= broadcast.online; // Fade the opacity when the broadcaster is offline.
 			broadcast.video.render(now, ctx);
-			ctx.restore();
 		}
 
 		for (const broadcast of broadcasts) {

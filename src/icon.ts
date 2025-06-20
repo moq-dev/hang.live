@@ -11,7 +11,7 @@ const HEIGHT = 256;
 const SHADOW_X = -7;
 const SHADOW_Y = 5;
 const SHADOW_OPACITY = 0.3;
-const ROUNDED = 48;
+const BORDER = 40;
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
 	const hue = (i * 50 + now * 0.03) % 360;
@@ -19,10 +19,11 @@ function lineColor(now: DOMHighResTimeStamp, i: number) {
 }
 
 // A node function to output the above as a <svg>
-function generateSvg(small: boolean) {
+function generateSvg(variant?: "full" | "discord") {
 	const now = 0;
 
 	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING) + LINE_OVERDRAW;
+	const ROUNDED = variant === "discord" ? 64 : 48;
 
 	const paths = [];
 	const shadows = [];
@@ -59,8 +60,10 @@ function generateSvg(small: boolean) {
 		shadows.push(`<path stroke="${color}" d="${shadowD}" />`);
 	}
 
-	const textX = small ? (3 * WIDTH) / 4 : WIDTH / 2;
-	const textY = HEIGHT - 64;
+	const textX = variant !== "full" ? (3 * WIDTH) / 4 - ROUNDED / 4 : WIDTH / 2;
+	const textY = HEIGHT - 64 - ROUNDED / 4;
+	const text = variant !== "full" ? "h" : "hang";
+	const fontSize = variant !== "full" ? 96 : 72;
 
 	return `<!-- Generated via pnpm tsx src/icon.ts -->
 	<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -68,21 +71,20 @@ function generateSvg(small: boolean) {
 			<clipPath id="rounded-corner">
 				<rect x="0" y="0" width="100%" height="100%" rx="${ROUNDED}" ry="${ROUNDED}" />
 			</clipPath>
-			<linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-				<stop offset="0%" stop-color="hsl(240, 30%, 10%)" />
-				<stop offset="100%" stop-color="black" />
-			</linearGradient>
 		</defs>
 
 		<g clip-path="url(#rounded-corner)">
-			<rect width="100%" height="100%" fill="url(#bg)" />
+			<rect width="100%" height="100%" fill="black" />
+
 			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="${SHADOW_OPACITY}">
 				${shadows.join("\n")}
 			</g>
 			<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" opacity="0.8">
 				${paths.join("\n")}
 			</g>
-			<text x="${textX}" y="${textY}" font-weight="bold" text-anchor="middle" dominant-baseline="middle" font-size="96" font-family="Monserrat, Helvetica, Arial, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">${small ? "h" : "hang"}</text>
+			<text x="${textX}" y="${textY}" font-weight="bold" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="Monserrat, Helvetica, Arial, sans-serif" fill="white" stroke="black" stroke-width="30" paint-order="stroke">${text}</text>
+
+			<rect x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${ROUNDED}" ry="${ROUNDED}" stroke="black" stroke-width="${BORDER}" fill="none" />
 		</g>
 	</svg>`;
 }
@@ -92,11 +94,15 @@ import fs from "node:fs";
 
 // @ts-expect-error no node types yet
 if (import.meta.url === `file://${process.argv[1]}`) {
-	const small = generateSvg(true);
+	const small = generateSvg();
 	fs.writeFileSync("public/image/icon.svg", small);
 	console.log("SVG written to public/image/icon.svg");
 
-	const large = generateSvg(false);
-	fs.writeFileSync("public/image/icon-large.svg", large);
-	console.log("SVG written to public/image/icon-large.svg");
+	const large = generateSvg("full");
+	fs.writeFileSync("public/image/icon-full.svg", large);
+	console.log("SVG written to public/image/icon-full.svg");
+
+	const discord = generateSvg("discord");
+	fs.writeFileSync("public/image/icon-discord.svg", discord);
+	console.log("SVG written to public/image/icon-discord.svg");
 }
