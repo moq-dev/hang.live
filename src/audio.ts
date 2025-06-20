@@ -192,7 +192,7 @@ export class Audio {
 			const sample = analyserBuffer[i];
 			sum += sample * sample;
 		}
-		const volume = (2 * Math.sqrt(sum)) / this.#analyserBuffer.length;
+		const volume = Math.sqrt(sum) / this.#analyserBuffer.length;
 		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
 
 		// Colored fill based on volume (inside → outside)

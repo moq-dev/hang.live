@@ -237,7 +237,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				if (!next) break;
 
 				// First, try to match the message to a known video/sound file.
-				if (next.startsWith("!")) {
+				if (next.startsWith("/")) {
 					const meme = loadMeme(next.slice(1));
 					if (meme) {
 						this.meme.set((prev) => {
