@@ -1,14 +1,14 @@
 import { Publish, Watch } from "@kixelated/hang";
-import { Signal, Root, Effect } from "@kixelated/signals";
+import { Effect, Root, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Notifications, PannedNotifications } from "./notifications";
 import Settings from "./settings";
 
+const FADE_TIME = 0.2;
+const GAIN_MIN = 0.001;
+
 export type AudioProps = {
 	notifications: Notifications;
-	muted: Signal<boolean>;
-	volume: Signal<number>;
-
 	pan?: number;
 };
 
@@ -16,8 +16,6 @@ export type AudioSource = Watch.Audio | Publish.Audio;
 
 export class Audio {
 	broadcast: Broadcast;
-	muted: Signal<boolean>;
-	volume: Signal<number>;
 	pan: Signal<number>;
 
 	#analyser?: AnalyserNode;
@@ -36,8 +34,6 @@ export class Audio {
 
 	constructor(broadcast: Broadcast, props: AudioProps) {
 		this.broadcast = broadcast;
-		this.muted = props.muted;
-		this.volume = props.volume;
 		this.pan = new Signal(props?.pan ?? 0);
 
 		this.notifications = new PannedNotifications(props.notifications, this.pan);
@@ -62,7 +58,8 @@ export class Audio {
 			if (!root) return;
 
 			// We analyze the audio to get the volume before gain/pan.
-			const analyser = new AnalyserNode(root.context, { fftSize: this.#analyserBuffer.length });
+			// NOTE: fftSize is always twice the buffer length.
+			const analyser = new AnalyserNode(root.context, { fftSize: 2 * this.#analyserBuffer.length });
 			this.#analyser = analyser;
 			root.connect(analyser);
 
@@ -76,25 +73,40 @@ export class Audio {
 			const panner = effect.get(this.#panner);
 			if (!panner) return;
 
-			const pan = effect.get(this.pan);
-			panner.pan.value = Math.max(-1, Math.min(1, pan * 2));
+			effect.cleanup(() => panner.pan.cancelScheduledValues(panner.context.currentTime));
+
+			const pan = Math.max(-1, Math.min(1, effect.get(this.pan)));
+			panner.pan.linearRampToValueAtTime(pan, panner.context.currentTime + FADE_TIME);
 		});
 
 		this.#signals.effect((effect) => {
 			const gain = effect.get(this.#gain);
 			if (!gain) return;
 
-			gain.gain.value = effect.get(this.muted) ? 0 : effect.get(this.volume);
+			// Cancel any scheduled transitions on change.
+			effect.cleanup(() => gain.gain.cancelScheduledValues(gain.context.currentTime));
+
+			const volume = effect.get(Settings.muted) ? 0 : effect.get(Settings.volume);
+			if (volume < GAIN_MIN) {
+				gain.gain.exponentialRampToValueAtTime(GAIN_MIN, gain.context.currentTime + FADE_TIME);
+				gain.gain.setValueAtTime(0, gain.context.currentTime + FADE_TIME + 0.01);
+			} else {
+				gain.gain.exponentialRampToValueAtTime(volume, gain.context.currentTime + FADE_TIME);
+			}
 		});
 
-		this.#signals.effect(this.#init.bind(this));
+		// Output to the speakers unless it's a local broadcast.
+		// NOTE: We will still analyze the audio in local broadcasts.
+		if (this.broadcast.source instanceof Watch.Broadcast) {
+			this.#signals.effect(this.#runOutput.bind(this));
+		}
 	}
 
-	#init(effect: Effect) {
+	#runOutput(effect: Effect) {
 		const root = effect.get(this.broadcast.source.audio.root);
 		if (!root) return;
 
-		const gain = new GainNode(root.context, { gain: this.volume.peek() });
+		const gain = new GainNode(root.context, { gain: Settings.volume.peek() });
 		effect.cleanup(() => gain.disconnect());
 
 		this.#gain.set(gain);
@@ -102,12 +114,7 @@ export class Audio {
 
 		root.connect(gain);
 
-		if (root.channelCount < 2) {
-			gain.connect(root.context.destination); // output to the speakers
-			return;
-		}
-
-		if (effect.get(Settings.pan)) {
+		if (root.channelCount > 1 && effect.get(Settings.pan)) {
 			const audioPanner = new StereoPannerNode(root.context, {
 				channelCount: root.channelCount,
 			});
@@ -162,7 +169,6 @@ export class Audio {
 		ctx.translate(bounds.position.x, bounds.position.y);
 
 		const cornerRadius = 32 * scale;
-		const fillAlphaBase = 0.3;
 
 		// Take the absolute value of the distance from 128, which is silence.
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {
@@ -203,7 +209,7 @@ export class Audio {
 		);
 
 		const hue = 180 + this.#volumeSmoothed * 120;
-		const alpha = fillAlphaBase + this.#volumeSmoothed * 0.4;
+		const alpha = 0.3 + this.#volumeSmoothed * 0.4;
 		ctx.fillStyle = `hsla(${hue}, 80%, 45%, ${alpha})`;
 		ctx.fill();
 		ctx.restore();

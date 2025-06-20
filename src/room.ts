@@ -11,8 +11,6 @@ export type RoomProps = {
 	user?: string;
 	avatar?: string;
 	visible?: boolean;
-	volume?: number;
-	muted?: boolean;
 };
 
 export class Room {
@@ -49,18 +47,8 @@ export class Room {
 	// I really don't understand why browsers do this.
 	suspended: Signal<boolean>;
 
-	// When true, no audio will be emitted.
-	muted: Signal<boolean>;
-
-	// The volume of the audio being emitted.
-	volume: Signal<number>;
-
 	// When false, no video will be downloaded or rendered.
 	visible: Signal<boolean>;
-
-	// The last volume that was set.
-	// This is used to restore the volume on unmute.
-	#unmuteVolume = 0.5;
 
 	// The highest z-index of any broadcast that we've seen.
 	#maxZ = 0;
@@ -81,17 +69,12 @@ export class Room {
 	constructor(connection: Connection, canvas: HTMLCanvasElement, props?: RoomProps) {
 		this.connection = connection;
 		this.canvas = canvas;
-		this.muted = new Signal(props?.muted ?? false);
 		this.visible = new Signal(props?.visible ?? true);
-		this.volume = new Signal(props?.volume ?? 0.5);
 		this.viewport = new Signal(Vector.create(canvas.width, canvas.height));
 		this.user = new Signal(props?.user);
 		this.avatar = new Signal(props?.avatar ?? getDefaultAvatar());
 
-		this.notifications = new Notifications({
-			volume: this.volume,
-			muted: this.muted,
-		});
+		this.notifications = new Notifications();
 
 		const camera = new Publish.Broadcast(connection, {
 			device: "camera",
@@ -147,8 +130,6 @@ export class Room {
 			viewport: this.viewport,
 			audio: {
 				notifications: this.notifications,
-				muted: this.muted,
-				volume: this.volume,
 			},
 			// Wait until we get an announcement before rendering ourselves as online.
 			online: false,
@@ -183,8 +164,6 @@ export class Room {
 			viewport: this.viewport,
 			audio: {
 				notifications: this.notifications,
-				muted: this.muted,
-				volume: this.volume,
 			},
 			// Wait until we get an announcement before rendering ourselves as online.
 			online: false,
@@ -452,9 +431,9 @@ export class Room {
 
 		// Apply the muted signal to the broadcasts.
 		// NOTE: We don't pause audio so we still get visualizations.
-		this.#signals.subscribe(this.muted, (muted) => {
+		this.#signals.subscribe(Settings.muted, (muted) => {
 			for (const broadcast of this.#remotes.values()) {
-				broadcast.source.audio.enabled.set(muted);
+				broadcast.source.audio.enabled.set(!muted);
 			}
 		});
 
@@ -463,22 +442,6 @@ export class Room {
 			for (const broadcast of this.#remotes.values()) {
 				broadcast.source.audio.enabled.set(!suspended);
 			}
-		});
-
-		// Set the volume to 0 when muted.
-		this.#signals.effect((effect) => {
-			const muted = effect.get(this.muted);
-			if (muted) {
-				this.#unmuteVolume = this.volume.peek() || 0.5;
-				this.volume.set(0);
-			} else {
-				this.volume.set(this.#unmuteVolume);
-			}
-		});
-
-		// Set unmute when the volume is non-zero.
-		this.#signals.subscribe(this.volume, (volume) => {
-			this.muted.set(volume === 0);
 		});
 
 		this.#signals.effect(this.#init.bind(this));
@@ -546,8 +509,6 @@ export class Room {
 						screen: this.screen.source,
 						audio: {
 							notifications: this.notifications,
-							muted: this.muted,
-							volume: this.volume,
 						},
 						online: true,
 					});

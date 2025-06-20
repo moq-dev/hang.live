@@ -1,9 +1,9 @@
 import { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { Accessor, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { Room } from "./room";
-import { Modal } from "./settings";
+import Settings, { Modal } from "./settings";
 
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";
@@ -26,8 +26,8 @@ export function Controls(props: {
 			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
 			<Chat broadcast={props.camera} />
 			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
-			<Volume room={props.room} />
-			<Settings />
+			<Volume />
+			<Advanced />
 			<Fullscreen canvas={props.canvas} />
 		</div>
 	);
@@ -39,19 +39,53 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	};
 	const root = solid(props.audio.root);
 
+	const [hover, setHover] = createSignal(false);
+	const opacity = Opacity(() => hover() && !!root());
+
+	const volume = solid(props.audio.volume);
+	Settings.microphoneGain.subscribe((gain) => {
+		props.audio.volume.set(gain);
+	});
+
 	return (
-		<button
-			type="button"
-			onClick={toggle}
-			class="relative border"
-			classList={{
-				"border-white": !!root(),
-				"border-transparent": !root(),
-			}}
+		<div
+			class="flex flex-col-reverse"
+			onMouseEnter={() => setHover(true)}
+			onMouseLeave={() => setHover(false)}
+			onFocusIn={() => setHover(true)}
+			onFocusOut={() => setHover(false)}
 		>
-			<Visualize audio={props.audio} />
-			<IconMicrophone />
-		</button>
+			<button
+				type="button"
+				onClick={toggle}
+				class="relative border"
+				classList={{
+					"border-white": !!root(),
+					"border-transparent": !root(),
+					"text-red-500": root() && volume() === 0,
+				}}
+			>
+				<Visualize audio={props.audio} />
+				<IconMicrophone />
+			</button>
+			<Show when={opacity() > 0}>
+				<input
+					type="range"
+					min="0"
+					step="0.01"
+					max="2"
+					value={volume()}
+					onInput={(e) => Settings.microphoneGain.set(Number(e.currentTarget.value))}
+					class="cursor-pointer"
+					aria-label="Microphone volume"
+					style={{
+						"writing-mode": "vertical-rl",
+						direction: "rtl",
+						opacity: opacity(),
+					}}
+				/>
+			</Show>
+		</div>
 	);
 }
 
@@ -112,8 +146,9 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const color = createMemo(() => {
 		const p = power();
 		if (!p) return "transparent";
-		const hue = 2 ** p * 100 + 135;
-		return `hsla(${hue}, 80%, 40%, 0.75)`;
+		const hue = 180 + p * 120;
+		const alpha = 0.3 + p * 0.4;
+		return `hsla(${hue}, 80%, 40%, ${alpha})`;
 	});
 
 	const root = solid(props.audio.root);
@@ -123,13 +158,12 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		if (!node) return;
 
 		const analyzer = new AnalyserNode(node.context, {
-			fftSize: 512,
+			fftSize: 1024,
 		});
+		const data = new Uint8Array(analyzer.frequencyBinCount); // half of fftSize
 
 		node.connect(analyzer);
 		onCleanup(() => analyzer.disconnect());
-
-		const data = new Uint8Array(analyzer.frequencyBinCount);
 
 		let animation: number | undefined;
 		let smoothed = 0;
@@ -217,25 +251,37 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 				value={message()}
 				onInput={(e) => setMessage(e.currentTarget.value)}
 				aria-label="Chat message"
+				tabIndex={0}
 				class="w-full"
 			/>
 		</form>
 	);
 }
 
-function Volume(props: { room: Room }): JSX.Element {
+function Volume(): JSX.Element {
 	const [showSlider, setShowSlider] = createSignal(false);
 
 	const toggle = () => {
-		props.room.muted.set((prev) => !prev);
+		Settings.muted.set((prev) => !prev);
 	};
 
-	const muted = solid(props.room.muted);
-	const volume = solid(props.room.volume);
+	const muted = solid(Settings.muted);
+	const volume = solid(Settings.volume);
+	const opacity = Opacity(() => showSlider());
+
+	const setVolume = (v: number) => {
+		if (v === 0) {
+			Settings.muted.set(true);
+			Settings.volume.set(1.0);
+		} else {
+			Settings.muted.set(false);
+			Settings.volume.set(v);
+		}
+	};
 
 	return (
 		<div
-			class="relative inline-block"
+			class="flex flex-col-reverse"
 			onMouseEnter={() => setShowSlider(true)}
 			onMouseLeave={() => setShowSlider(false)}
 			onFocusIn={() => setShowSlider(true)}
@@ -244,28 +290,29 @@ function Volume(props: { room: Room }): JSX.Element {
 			<button type="button" onClick={toggle} classList={{ "text-red-500": muted() }}>
 				{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
 			</button>
-			<Show when={showSlider()}>
-				<div
-					class="absolute bottom-full left-1/2 -translate-x-1/2 flex items-center justify-center"
-					onMouseEnter={() => setShowSlider(true)}
-					onMouseLeave={() => setShowSlider(false)}
-				>
-					<input
-						type="range"
-						min="0"
-						max="100"
-						value={volume() * 100}
-						onInput={(e) => props.room.volume.set(Number(e.currentTarget.value) / 100)}
-						style={{ transform: "rotate(-90deg) translate(60px)" }}
-						class="cursor-pointer px-2 py-1"
-					/>
-				</div>
+			<Show when={opacity() > 0}>
+				<input
+					type="range"
+					min="0"
+					step="0.01"
+					max="2"
+					value={muted() ? 0 : volume()}
+					onInput={(e) => setVolume(Number(e.currentTarget.value))}
+					class="cursor-pointer"
+					aria-label="Output Volume"
+					style={{
+						"writing-mode": "vertical-rl",
+						direction: "rtl",
+						"vertical-align": "middle",
+						opacity: opacity(),
+					}}
+				/>
 			</Show>
 		</div>
 	);
 }
 
-function Settings(): JSX.Element {
+function Advanced(): JSX.Element {
 	const [showSettings, setShowSettings] = createSignal(false);
 	const [button, setButton] = createSignal<HTMLButtonElement | undefined>(undefined);
 	const [modal, setModal] = createSignal<HTMLDivElement | undefined>(undefined);
@@ -320,4 +367,43 @@ function Fullscreen(props: { canvas: HTMLCanvasElement }): JSX.Element {
 			<IconFullscreen />
 		</button>
 	);
+}
+
+// A function that transitions between 0 and 1 based on the input function.
+function Opacity(fn: () => boolean): Accessor<number> {
+	let animation: number | undefined;
+
+	const [opacity, setOpacity] = createSignal(0);
+
+	const updateOpacity = () => {
+		if (fn()) {
+			setOpacity((prev) => Math.min(1, prev + 0.1));
+		} else {
+			setOpacity((prev) => Math.max(0, prev - 0.025));
+		}
+
+		// Only animate if we're not at 0 or 1.
+		if (opacity() !== 0 && opacity() !== 1) {
+			animation = requestAnimationFrame(updateOpacity);
+		} else {
+			animation = undefined;
+		}
+	};
+
+	// Request an animation frame when the function changes.
+	createEffect(() => {
+		fn();
+		if (animation) {
+			cancelAnimationFrame(animation);
+		}
+		animation = requestAnimationFrame(updateOpacity);
+	});
+
+	onCleanup(() => {
+		if (animation) {
+			cancelAnimationFrame(animation);
+		}
+	});
+
+	return opacity;
 }

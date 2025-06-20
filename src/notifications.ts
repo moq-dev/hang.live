@@ -1,4 +1,4 @@
-import { Root, Signal } from "@kixelated/signals";
+import { Effect, Root, Signal } from "@kixelated/signals";
 import Settings from "./settings";
 
 const SOUNDS = {
@@ -16,11 +16,8 @@ const SOUNDS = {
 } as const;
 
 export type NotificationSound = keyof typeof SOUNDS;
-
-export interface NotificationsProps {
-	volume: Signal<number>;
-	muted: Signal<boolean>;
-}
+const FADE_TIME = 0.2;
+const GAIN_MIN = 0.001;
 
 export class Notifications {
 	context: AudioContext;
@@ -29,15 +26,10 @@ export class Notifications {
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Root();
 
-	constructor(args: NotificationsProps) {
+	constructor() {
 		this.context = new AudioContext();
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
-
-		this.#signals.effect((effect) => {
-			// Reduce the volume for notifications so we can hear them over everything else.
-			this.gain.gain.value = effect.get(args.muted) ? 0 : effect.get(args.volume) / 2;
-		});
 
 		const sounds = new Map();
 
@@ -54,6 +46,23 @@ export class Notifications {
 		}
 
 		this.#sounds = sounds;
+
+		this.#signals.effect(this.#runGain.bind(this));
+	}
+
+	#runGain(effect: Effect) {
+		// Reduce the volume for notifications so we can hear them over everything else.
+		const volume = effect.get(Settings.muted) ? 0 : effect.get(Settings.volume) / 2;
+
+		// Cancel any scheduled transitions on change.
+		effect.cleanup(() => this.gain.gain.cancelScheduledValues(this.gain.context.currentTime));
+
+		if (volume < GAIN_MIN) {
+			this.gain.gain.exponentialRampToValueAtTime(GAIN_MIN, this.gain.context.currentTime + FADE_TIME);
+			this.gain.gain.setValueAtTime(0, this.gain.context.currentTime + FADE_TIME + 0.01);
+		} else {
+			this.gain.gain.exponentialRampToValueAtTime(volume, this.gain.context.currentTime + FADE_TIME);
+		}
 	}
 
 	get suspended() {
@@ -121,13 +130,10 @@ export class PannedNotifications {
 		});
 
 		this.#signals.effect((effect) => {
-			if (!effect.get(Settings.pan)) {
-				this.#panner.pan.value = 0;
-				return;
-			}
+			effect.cleanup(() => this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime));
 
-			const pan = effect.get(this.pan);
-			this.#panner.pan.value = Math.max(-1, Math.min(1, pan * 2));
+			const pan = effect.get(Settings.pan) ? Math.max(-1, Math.min(1, effect.get(this.pan) * 2)) : 0;
+			this.#panner.pan.linearRampToValueAtTime(pan, this.#panner.context.currentTime + FADE_TIME);
 		});
 	}
 
