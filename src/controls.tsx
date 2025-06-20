@@ -177,7 +177,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 				const sample = data[i] - 128;
 				sum += sample * sample;
 			}
-			const power = (2 * Math.sqrt(sum)) / data.length;
+			const power = Math.sqrt(sum) / data.length;
 			smoothed = smoothed * 0.7 + power * 0.3;
 
 			setPower(smoothed);
