@@ -28,6 +28,9 @@ export class Video {
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
 
+	// The opacity from 0 to 1, where 0 is offline and 1 is online.
+	online = 0;
+
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
@@ -56,6 +59,12 @@ export class Video {
 				}
 			}
 		}
+
+		if (this.broadcast.online.peek()) {
+			this.online += (1 - this.online) * 0.1;
+		} else {
+			this.online += (0 - this.online) * 0.1;
+		}
 	}
 
 	// Try to avoid any mutations in this function; do it in tick instead.
@@ -73,6 +82,7 @@ export class Video {
 		const scale = this.broadcast.scale;
 
 		ctx.translate(bounds.position.x, bounds.position.y);
+		ctx.globalAlpha *= this.online;
 		ctx.fillStyle = "#000";
 
 		ctx.save();
@@ -231,7 +241,7 @@ export class Video {
 		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
 
 		if (this.#nameOpacity > 0) {
-			const fontSize = 10 + 16 * Math.sqrt(scale);
+			const fontSize = 10 + 12 * Math.sqrt(scale);
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;

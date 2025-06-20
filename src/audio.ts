@@ -59,7 +59,6 @@ export class Audio {
 			if (effect.get(Settings.potato)) return;
 
 			const root = effect.get(this.broadcast.source.audio.root);
-			console.log("root", root);
 			if (!root) return;
 
 			// We analyze the audio to get the volume before gain/pan.
@@ -68,7 +67,6 @@ export class Audio {
 			root.connect(analyser);
 
 			effect.cleanup(() => {
-				console.log("disconnecting analyser");
 				analyser.disconnect();
 				this.#analyser = undefined;
 			});
@@ -165,7 +163,6 @@ export class Audio {
 
 		const cornerRadius = 32 * scale;
 		const fillAlphaBase = 0.3;
-		const PADDING = 32;
 
 		// Take the absolute value of the distance from 128, which is silence.
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {
@@ -193,7 +190,7 @@ export class Audio {
 		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
 
 		// Colored fill based on volume (inside → outside)
-		const expand = PADDING * Math.min(1, this.#volumeSmoothed - 0.01);
+		const expand = cornerRadius * Math.min(1, this.#volumeSmoothed - 0.01);
 
 		ctx.beginPath();
 		this.#roundedRectPath(

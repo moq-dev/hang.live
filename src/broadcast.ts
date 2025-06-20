@@ -38,6 +38,8 @@ export type BroadcastProps = {
 	z?: number;
 	camera?: Publish.Broadcast;
 	screen?: Publish.Broadcast;
+
+	online?: boolean;
 };
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
@@ -56,8 +58,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
 	targetScale = 1.0; // 1 is 100%
 
-	// 1 when the broadcaster is online, 0 when they're offline.
-	online = 1;
+	online: Signal<boolean>;
 
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
@@ -89,6 +90,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.viewport = props.viewport;
 		this.messages = new Signal<ChatMessage[]>([]);
 		this.z = new Signal(props?.z ?? 0);
+		this.online = new Signal(props?.online ?? true);
 
 		this.video = new Video(this);
 		this.audio = new Audio(this, props.audio);
@@ -370,6 +372,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Render a locator arrow for our local broadcasts on join
 	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
 		if (!this.source.enabled.peek()) return;
+
+		if (!this.online.peek()) {
+			this.#locatorStart = undefined;
+			return;
+		}
 
 		if (!this.#locatorStart) {
 			this.#locatorStart = now;
