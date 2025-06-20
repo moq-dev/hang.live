@@ -79,9 +79,9 @@ header {
 }
 
 .controls {
-	@apply fixed bottom-0 left-0 right-0 flex items-center gap-2 p-[8px_12px] text-shadow-lg;
+	@apply fixed bottom-0 left-0 right-0 flex items-end gap-2 p-[8px_12px] text-shadow-lg;
 
-	input {
+	input:not([type="range"]) {
 		@apply py-1 px-2;
 	}
 

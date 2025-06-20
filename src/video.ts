@@ -218,7 +218,7 @@ export class Video {
 			}
 
 			if (meme.ended || (meme.paused && meme.currentTime > 0)) {
-				this.#memeOpacity += (0 - this.#memeOpacity) * 0.1;
+				this.#memeOpacity += -this.#memeOpacity * 0.1;
 				if (this.#memeOpacity <= 0) {
 					this.broadcast.meme.set(undefined);
 				}

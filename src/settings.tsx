@@ -7,9 +7,12 @@ import IconHelp from "~icons/mdi/help-box";
 
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
-	volume: new Signal(localStorage.getItem("settings.volume") ?? "100"),
+	volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.volume") ?? "1")),
+	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
 	potato: new Signal(localStorage.getItem("settings.potato") === "true"),
 	pan: new Signal(localStorage.getItem("settings.pan") !== "false"),
+
+	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 };
 
 const signals = new Root();
@@ -22,12 +25,20 @@ signals.subscribe(Settings.volume, (volume) => {
 	localStorage.setItem("settings.volume", volume.toString());
 });
 
+signals.subscribe(Settings.muted, (muted) => {
+	localStorage.setItem("settings.muted", muted.toString());
+});
+
 signals.subscribe(Settings.potato, (potato) => {
 	localStorage.setItem("settings.potato", potato.toString());
 });
 
 signals.subscribe(Settings.pan, (pan) => {
 	localStorage.setItem("settings.pan", pan.toString());
+});
+
+signals.subscribe(Settings.microphoneGain, (gain) => {
+	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
 signals.subscribe(Settings.potato, (potato) => {
