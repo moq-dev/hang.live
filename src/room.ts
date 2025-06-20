@@ -90,11 +90,13 @@ export class Room {
 				},
 			},
 			audio: {
-				enabled: false, // TODO local storage
+				enabled: false, // TODO automatically enable the microphone on join..?
 				constraints: {
 					channelCount: { ideal: 2, max: 2 },
-					echoCancellation: { ideal: true },
-					autoGainControl: { ideal: true },
+					// We need to disable some defaults because they're pretty terrible.
+					echoCancellation: { ideal: false },
+					autoGainControl: { ideal: false },
+					// noiseSuppression is fine
 					noiseSuppression: { ideal: true },
 				},
 			},
