@@ -52,6 +52,9 @@ body {
 header {
 	@apply text-white font-montserrat flex items-start justify-between gap-2 p-2 text-shadow-lg;
 
+	/* Prevent text selection. */
+	user-select: none;
+
 	#status {
 		font-size: 0.5em;
 		vertical-align: -0.2em;
@@ -79,7 +82,7 @@ header {
 }
 
 .controls {
-	@apply fixed bottom-0 left-0 right-0 flex items-end gap-2 p-[8px_12px] text-shadow-lg;
+	@apply fixed bottom-0 left-0 right-0 flex items-end gap-2 p-[8px_12px] text-shadow-lg text-xl;
 
 	input:not([type="range"]) {
 		@apply py-1 px-2;

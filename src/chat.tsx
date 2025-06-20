@@ -73,8 +73,8 @@ function Message(props: {
 	});
 
 	const zIndex = createMemo(() => {
-		// Older messages are on top because they're fading out.
-		return 100 + props.index();
+		// Old messages are behind new messages.
+		return 100 - props.index();
 	});
 
 	const [box, setBox] = createSignal<HTMLDivElement>();
@@ -115,7 +115,7 @@ function Message(props: {
 
 	// The font size increases slowly for large bounds.
 	const font = createMemo(() => {
-		return 8 + Math.sqrt(maxWidth() / 10);
+		return 12 + Math.sqrt(maxWidth() / 10);
 	});
 
 	return (
