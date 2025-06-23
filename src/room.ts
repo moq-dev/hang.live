@@ -93,9 +93,11 @@ export class Room {
 				enabled: false, // TODO automatically enable the microphone on join..?
 				constraints: {
 					channelCount: { ideal: 2, max: 2 },
-					// We need to disable some defaults because they're pretty terrible.
-					echoCancellation: { ideal: false },
-					autoGainControl: { ideal: false },
+					// TODO: Chrome has a long-standing bug where echoCancellation is not working with WebAudio.
+					// See and bump: https://issues.chromium.org/issues/40504498
+					echoCancellation: { exact: false },
+					// TODO: Not sure about this one.
+					autoGainControl: { ideal: true },
 					// noiseSuppression is fine
 					noiseSuppression: { ideal: true },
 				},
