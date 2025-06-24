@@ -433,14 +433,6 @@ export class Room {
 			}
 		});
 
-		// Apply the muted signal to the broadcasts.
-		// NOTE: We don't pause audio so we still get visualizations.
-		this.#signals.subscribe(Settings.muted, (muted) => {
-			for (const broadcast of this.#remotes.values()) {
-				broadcast.source.audio.enabled.set(!muted);
-			}
-		});
-
 		// Don't download audio if the AudioContext is suspended.
 		this.#signals.subscribe(this.suspended, (suspended) => {
 			for (const broadcast of this.#remotes.values()) {
