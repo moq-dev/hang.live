@@ -1,5 +1,5 @@
-import WebTransport from "tauri-plugin-web-transport";
-export { WebTransport };
+//import WebTransport from "tauri-plugin-web-transport";
+//export { WebTransport };
 
 import { Connection } from "@kixelated/hang";
 import "@kixelated/hang/support/element";
@@ -54,7 +54,7 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 			<div>
 				{canvas}
 				<Show when={!username()}>
-					<Sup set={room.user.set} />
+					<Sup set={(name) => room.user.set(name)} />
 				</Show>
 				<Chat room={room} />
 				<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />

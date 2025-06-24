@@ -139,8 +139,8 @@ export class Audio {
 
 		ctx.translate(bounds.position.x, bounds.position.y);
 
-		const cornerRadius = 32 * this.broadcast.scale;
-		const PADDING = 32;
+		const RADIUS = 32 * this.broadcast.scale;
+		const PADDING = 8 + 16 * Math.sqrt(this.broadcast.scale);
 
 		// Background outline
 		ctx.beginPath();
@@ -150,7 +150,7 @@ export class Audio {
 			-PADDING,
 			bounds.size.x + PADDING * 2,
 			bounds.size.y + PADDING * 2,
-			cornerRadius,
+			RADIUS,
 		);
 		ctx.fillStyle = "#000";
 		ctx.fill();
@@ -168,7 +168,8 @@ export class Audio {
 		ctx.save();
 		ctx.translate(bounds.position.x, bounds.position.y);
 
-		const cornerRadius = 32 * scale;
+		const PADDING = 8 + 16 * Math.sqrt(scale);
+		const RADIUS = 32 * scale;
 
 		// Take the absolute value of the distance from 128, which is silence.
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {
@@ -196,17 +197,10 @@ export class Audio {
 		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
 
 		// Colored fill based on volume (inside → outside)
-		const expand = cornerRadius * Math.min(1, this.#volumeSmoothed - 0.01);
+		const expand = PADDING * Math.min(1, this.#volumeSmoothed - 0.01);
 
 		ctx.beginPath();
-		this.#roundedRectPath(
-			ctx,
-			-expand,
-			-expand,
-			bounds.size.x + expand * 2,
-			bounds.size.y + expand * 2,
-			cornerRadius,
-		);
+		this.#roundedRectPath(ctx, -expand, -expand, bounds.size.x + expand * 2, bounds.size.y + expand * 2, RADIUS);
 
 		const hue = 180 + this.#volumeSmoothed * 120;
 		const alpha = 0.3 + this.#volumeSmoothed * 0.4;
