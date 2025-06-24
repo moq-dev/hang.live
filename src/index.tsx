@@ -1,8 +1,11 @@
+import WebTransport from "tauri-plugin-web-transport";
+export { WebTransport };
+
 import { Connection } from "@kixelated/hang";
 import "@kixelated/hang/support/element";
 
 import solid from "@kixelated/signals/solid";
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect, onCleanup, Show } from "solid-js";
 import { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { Chat } from "./chat";
@@ -44,11 +47,15 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 		}
 	});
 
+	const username = solid(room.user);
+
 	return (
 		<>
 			<div>
 				{canvas}
-				<Sup user={room.user} />
+				<Show when={!username()}>
+					<Sup set={room.user.set} />
+				</Show>
 				<Chat room={room} />
 				<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />
 			</div>

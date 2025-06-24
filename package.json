@@ -24,7 +24,8 @@
 		"github-markdown-css": "^5.8.1",
 		"marked": "^15.0.12",
 		"solid-js": "^1.9.7",
-		"tailwindcss": "^4.1.10"
+		"tailwindcss": "^4.1.10",
+		"tauri-plugin-web-transport": "^0.1.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
