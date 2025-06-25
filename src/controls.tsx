@@ -251,7 +251,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	};
 
 	return (
-		<form onSubmit={submit} class="flex-1 min-w-48">
+		<form id="chat" onSubmit={submit} class="flex-1 min-w-48">
 			<input
 				type="text"
 				autocomplete="off"
@@ -336,8 +336,7 @@ function Advanced(): JSX.Element {
 
 	// Reposition on show
 	const toggle = () => {
-		const next = !showSettings();
-		setShowSettings(next);
+		setShowSettings((prev) => !prev);
 	};
 
 	// Hide if clicked outside
@@ -369,14 +368,14 @@ function Advanced(): JSX.Element {
 			</button>
 
 			<Show when={showSettings()}>
-				<dialog
+				<div
 					ref={setModal}
 					class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm"
 					aria-label="Settings"
 					aria-modal="true"
 				>
 					<Modal />
-				</dialog>
+				</div>
 			</Show>
 		</>
 	);
