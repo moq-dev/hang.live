@@ -281,9 +281,15 @@ export class Room {
 		window.addEventListener("mousedown", (e) => {
 			const mouse = mousePosition(e);
 
+			this.#dragging = undefined;
+
 			const broadcast = this.#broadcastAt(mouse);
-			this.#dragging = broadcast;
 			if (!broadcast) return;
+
+			if (broadcast.locked()) {
+				document.body.style.cursor = "not-allowed";
+				return;
+			}
 
 			// Bump the z-index unless we're already at the top.
 			broadcast.targetPosition.set((prev) => ({
@@ -293,11 +299,8 @@ export class Room {
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
 
-			if (broadcast.locked()) {
-				document.body.style.cursor = "not-allowed";
-			} else {
-				document.body.style.cursor = "grabbing";
-			}
+			document.body.style.cursor = "grabbing";
+			this.#dragging = broadcast;
 		});
 
 		window.addEventListener("mousemove", (e) => {

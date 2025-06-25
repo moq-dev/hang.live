@@ -1,4 +1,4 @@
-import { Publish, Watch } from "@kixelated/hang";
+import { type Publish, Watch } from "@kixelated/hang";
 import { type Effect, Root, Signal } from "@kixelated/signals";
 import type { Broadcast } from "./broadcast";
 import { type Notifications, PannedNotifications } from "./notifications";
