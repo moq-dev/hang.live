@@ -19,7 +19,7 @@ export function Controls(props: {
 	canvas: HTMLCanvasElement;
 }): JSX.Element {
 	return (
-		<div class="controls pointer-gaps">
+		<div class="controls pointer-gaps" role="toolbar" aria-label="Media controls">
 			<Microphone audio={props.camera.audio} />
 			<Camera video={props.camera.video} room={props.room} />
 			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
@@ -47,8 +47,9 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	});
 
 	return (
-		<div
+		<fieldset
 			class="flex flex-col-reverse"
+			aria-label="Microphone controls"
 			onMouseEnter={() => setHover(true)}
 			onMouseLeave={() => setHover(false)}
 			onFocusIn={() => setHover(true)}
@@ -58,6 +59,9 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 				type="button"
 				onClick={toggle}
 				class="relative border"
+				role="switch"
+				aria-checked={!!root()}
+				aria-label="Toggle microphone"
 				classList={{
 					"border-white": !!root(),
 					"border-transparent": !root(),
@@ -84,7 +88,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 					}}
 				/>
 			</Show>
-		</div>
+		</fieldset>
 	);
 }
 
@@ -99,6 +103,9 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 			type="button"
 			onClick={toggle}
 			class="relative border"
+			role="switch"
+			aria-checked={!!media()}
+			aria-label="Toggle camera"
 			classList={{
 				"border-white": !!media(),
 				"border-transparent": !media(),
@@ -124,6 +131,9 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 			type="button"
 			onClick={toggle}
 			class="relative border"
+			role="switch"
+			aria-checked={!!media()}
+			aria-label="Toggle screen sharing"
 			classList={{
 				"border-white": !!media(),
 				"border-transparent": !media(),
@@ -279,14 +289,22 @@ function Volume(): JSX.Element {
 	};
 
 	return (
-		<div
+		<fieldset
 			class="flex flex-col-reverse"
+			aria-label="Volume controls"
 			onMouseEnter={() => setShowSlider(true)}
 			onMouseLeave={() => setShowSlider(false)}
 			onFocusIn={() => setShowSlider(true)}
 			onFocusOut={() => setShowSlider(false)}
 		>
-			<button type="button" onClick={toggle} classList={{ "text-red-500": muted() }}>
+			<button
+				type="button"
+				onClick={toggle}
+				role="switch"
+				aria-checked={!muted()}
+				aria-label="Toggle mute"
+				classList={{ "text-red-500": muted() }}
+			>
 				{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
 			</button>
 			<Show when={opacity() > 0}>
@@ -307,7 +325,7 @@ function Volume(): JSX.Element {
 					}}
 				/>
 			</Show>
-		</div>
+		</fieldset>
 	);
 }
 
@@ -339,14 +357,26 @@ function Advanced(): JSX.Element {
 
 	return (
 		<>
-			<button type="button" onClick={toggle} ref={setButton}>
+			<button
+				type="button"
+				onClick={toggle}
+				ref={setButton}
+				aria-label="Settings"
+				aria-expanded={showSettings()}
+				aria-haspopup="dialog"
+			>
 				<IconSettings />
 			</button>
 
 			<Show when={showSettings()}>
-				<div ref={setModal} class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm">
+				<dialog
+					ref={setModal}
+					class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm"
+					aria-label="Settings"
+					aria-modal="true"
+				>
 					<Modal />
-				</div>
+				</dialog>
 			</Show>
 		</>
 	);
@@ -362,7 +392,7 @@ function Fullscreen(props: { canvas: HTMLCanvasElement }): JSX.Element {
 	};
 
 	return (
-		<button type="button" onClick={toggle}>
+		<button type="button" onClick={toggle} aria-label="Toggle fullscreen">
 			<IconFullscreen />
 		</button>
 	);
