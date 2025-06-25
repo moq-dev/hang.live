@@ -37,6 +37,10 @@ signals.subscribe(Settings.potato, (potato) => {
 
 signals.subscribe(Settings.headphones, (headphones) => {
 	localStorage.setItem("settings.headphones", headphones.toString());
+	if (headphones) {
+		// TODO Apply echo cancellation instead.
+		Settings.echo.set(false);
+	}
 });
 
 signals.subscribe(Settings.microphoneGain, (gain) => {
@@ -78,9 +82,14 @@ export function Modal(): JSX.Element {
 				<IconCursorMove />
 			</span>
 
-			<input type="checkbox" checked={echo()} onChange={() => Settings.echo.set((p) => !p)} />
-			<span>echo audio</span>
-			<span title="Listen to your own audio. This is useful if you want to hear your own voice for debugging.">
+			<input
+				type="checkbox"
+				checked={echo()}
+				disabled={!headphones()}
+				onChange={() => Settings.echo.set((p) => !p)}
+			/>
+			<span>echo mode</span>
+			<span title="Play back your own audio. This is useful for debugging what you *actually* sound like, but headphones are required.">
 				<IconMicrophone />
 			</span>
 

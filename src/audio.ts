@@ -1,4 +1,4 @@
-import { Publish, type Watch } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import { type Effect, Root, Signal } from "@kixelated/signals";
 import type { Broadcast } from "./broadcast";
 import { type Notifications, PannedNotifications } from "./notifications";
@@ -95,15 +95,13 @@ export class Audio {
 			}
 		});
 
-		this.#signals.effect(this.#runOutput.bind(this));
+		// Don't output to the speakers if we're publishing the broadcast.
+		if (this.broadcast.source instanceof Watch.Broadcast) {
+			this.#signals.effect(this.#runOutput.bind(this));
+		}
 	}
 
 	#runOutput(effect: Effect) {
-		// Don't output to the speakers if we're publishing the broadcast.
-		// Unless the user wants it I guess.
-		const echo = effect.get(Settings.echo);
-		if (!echo && this.broadcast.source instanceof Publish.Broadcast) return;
-
 		const root = effect.get(this.broadcast.source.audio.root);
 		if (!root) return;
 

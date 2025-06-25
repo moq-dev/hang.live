@@ -58,8 +58,8 @@ export class Room {
 
 	// The local broadcasts.
 	// The camera/avatar is always published while the screen share is conditionally published.
-	camera: Broadcast<Publish.Broadcast>;
-	screen: Broadcast<Publish.Broadcast>;
+	camera: Publish.Broadcast;
+	screen: Publish.Broadcast;
 
 	// Notifications use a shared AudioContext.
 	notifications: Notifications;
@@ -76,7 +76,7 @@ export class Room {
 
 		this.notifications = new Notifications();
 
-		const camera = new Publish.Broadcast(connection, {
+		this.camera = new Publish.Broadcast(connection, {
 			device: "camera",
 			video: {
 				enabled: false, // TODO local storage?
@@ -123,7 +123,7 @@ export class Room {
 			const echo = effect.get(Settings.echo);
 			const enabled = !echo && !headphones;
 
-			camera.audio.constraints.set((prev) => ({
+			this.camera.audio.constraints.set((prev) => ({
 				...prev,
 				echoCancellation: enabled ? { ideal: true } : { exact: false },
 			}));
@@ -131,33 +131,25 @@ export class Room {
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
 			// Allow other users to move our camera.
-			camera.location.peering.set(draggable);
+			this.camera.location.peering.set(draggable);
 		});
 
 		this.#signals.effect((effect) => {
-			if (effect.get(camera.video.media) || effect.get(camera.audio.media)) {
+			if (effect.get(this.camera.video.media) || effect.get(this.camera.audio.media)) {
 				this.notifications.play("select");
 			}
 		});
 
-		this.camera = new Broadcast(camera, {
-			viewport: this.viewport,
-			audio: {
-				notifications: this.notifications,
-			},
-			// Wait until we get an announcement before rendering ourselves as online.
-			online: false,
-		});
-
-		const screen = new Publish.Broadcast(connection, {
+		this.screen = new Publish.Broadcast(connection, {
 			device: "screen",
 			audio: {
 				enabled: false,
 				constraints: {
 					channelCount: { ideal: 2, max: 2 },
 					autoGainControl: { ideal: true }, // TODO test it?
-					echoCancellation: { exact: false },
-					noiseSuppression: { exact: false },
+					// Just to be safe:
+					echoCancellation: { ideal: false },
+					noiseSuppression: { ideal: false },
 				},
 			},
 			video: {
@@ -177,86 +169,76 @@ export class Room {
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 			},
 		});
-		this.screen = new Broadcast(screen, {
-			viewport: this.viewport,
-			audio: {
-				notifications: this.notifications,
-			},
-			// Wait until we get an announcement before rendering ourselves as online.
-			online: false,
-		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
 			// Allow other users to move our screen.
-			screen.location.peering.set(draggable);
+			this.screen.location.peering.set(draggable);
 		});
 
 		this.#signals.effect((effect) => {
-			if (effect.get(screen.video.media) || effect.get(screen.audio.media)) {
+			if (effect.get(this.screen.video.media) || effect.get(this.screen.audio.media)) {
 				this.notifications.play("select");
 			}
 		});
 
 		// Update everything when a username is selected.
-		camera.signals.effect((effect) => {
+		this.camera.signals.effect((effect) => {
 			const user = effect.get(this.user);
 			if (!user) return;
 
 			// Update the username
-			camera.user.set((prev) => ({ ...prev, name: user }));
-			screen.user.set((prev) => ({ ...prev, name: user ? `${user} (Screen)` : undefined }));
+			this.camera.user.set((prev) => ({ ...prev, name: user }));
+			this.screen.user.set((prev) => ({ ...prev, name: user ? `${user} (Screen)` : undefined }));
 
-			camera.enabled.set(true);
-			effect.cleanup(() => camera.enabled.set(false));
+			this.camera.enabled.set(true);
+			effect.cleanup(() => this.camera.enabled.set(false));
 
 			const path = `${user}/camera.hang`;
-			camera.path.set(path);
+			this.camera.path.set(path);
 		});
 
-		camera.signals.effect((effect) => {
+		this.camera.signals.effect((effect) => {
 			const avatar = effect.get(this.avatar);
 			if (!avatar) return;
 
-			camera.user.set((prev) => ({ ...prev, avatar }));
-			screen.user.set((prev) => ({ ...prev, avatar }));
+			this.camera.user.set((prev) => ({ ...prev, avatar }));
+			this.screen.user.set((prev) => ({ ...prev, avatar }));
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
-		camera.signals.effect((effect) => {
-			if (!effect.get(camera.enabled)) return;
-			if (!effect.get(camera.video.media) && !effect.get(camera.audio.media)) return;
+		this.camera.signals.effect((effect) => {
+			if (!effect.get(this.camera.enabled)) return;
+			if (!effect.get(this.camera.video.media) && !effect.get(this.camera.audio.media)) return;
 
-			this.camera.targetPosition.set((prev) => ({
+			this.camera.location.current.set((prev) => ({
 				...prev,
 				z: ++this.#maxZ,
 			}));
-			this.camera.publishPosition();
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
-		screen.signals.effect((effect) => {
-			if (!effect.get(screen.enabled)) return;
-			if (!effect.get(screen.video.media) && !effect.get(screen.audio.media)) return;
+		this.screen.signals.effect((effect) => {
+			if (!effect.get(this.screen.enabled)) return;
+			if (!effect.get(this.screen.video.media) && !effect.get(this.screen.audio.media)) return;
 
-			this.screen.targetPosition.set((prev) => ({
+			this.screen.location.current.set((prev) => ({
 				...prev,
 				z: ++this.#maxZ,
 			}));
-			this.screen.publishPosition();
 		});
 
-		screen.signals.effect((effect) => {
+		this.screen.signals.effect((effect) => {
 			const user = effect.get(this.user);
 			if (!user) return;
 
-			const active = !!effect.get(screen.video.media) || !!effect.get(screen.audio.media);
+			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
 			if (!active) return;
 
 			const path = `${user}/screen.hang`;
-			screen.path.set(path);
+			this.screen.path.set(path);
 
-			screen.enabled.set(true);
-			effect.cleanup(() => screen.enabled.set(false));
+			this.screen.enabled.set(true);
+			effect.cleanup(() => this.screen.enabled.set(false));
 		});
 
 		const resize = () => {
@@ -469,6 +451,23 @@ export class Room {
 		});
 
 		this.#signals.effect(this.#init.bind(this));
+
+		// When the echo setting changes, recreate any local broadcasts.
+		this.#signals.subscribe(Settings.echo, () => {
+			const broadcasts = this.broadcasts.peek();
+
+			// Recreate any previews.
+			for (const broadcast of broadcasts) {
+				const path = broadcast.source.path.peek();
+				if (path === this.camera.path.peek()) {
+					this.#stopBroadcast(path);
+					this.#startPreview(this.camera);
+				} else if (path === this.screen.path.peek()) {
+					this.#stopBroadcast(path);
+					this.#startPreview(this.screen);
+				}
+			}
+		});
 	}
 
 	#init(effect: Effect) {
@@ -489,28 +488,23 @@ export class Room {
 				// We're donezo.
 				if (!update) break;
 
-				if (update.path === this.camera.source.path.peek()) {
+				if (update.path === this.camera.path.peek()) {
 					if (update.active) {
-						this.#startBroadcast(this.camera);
+						this.#startPreview(this.camera);
 					} else {
-						this.#stopBroadcast(this.camera);
+						this.#stopBroadcast(update.path);
 					}
 					continue;
 				}
 
-				if (update.path === this.screen.source.path.peek()) {
+				if (update.path === this.screen.path.peek()) {
 					if (update.active) {
-						this.#startBroadcast(this.screen);
+						this.#startPreview(this.screen);
 					} else {
-						this.#stopBroadcast(this.screen);
+						this.#stopBroadcast(update.path);
 					}
 					continue;
 				}
-
-				console.debug("new broadcast:", update.path);
-
-				const existing = this.#remotes.get(update.path);
-				this.#remotes.delete(update.path);
 
 				if (update.active) {
 					const watch = new Watch.Broadcast(this.connection, {
@@ -529,8 +523,8 @@ export class Room {
 
 					const broadcast = new Broadcast(watch, {
 						viewport: this.viewport,
-						camera: this.camera.source,
-						screen: this.screen.source,
+						camera: this.camera,
+						screen: this.screen,
 						audio: {
 							notifications: this.notifications,
 						},
@@ -540,9 +534,8 @@ export class Room {
 					this.#remotes.set(update.path, broadcast);
 					this.notifications.play("sup");
 					this.#startBroadcast(broadcast);
-				} else if (existing) {
-					this.notifications.play("bye");
-					this.#stopBroadcast(existing);
+				} else {
+					this.#stopBroadcast(update.path);
 				}
 			}
 		} finally {
@@ -565,6 +558,51 @@ export class Room {
 		}
 
 		return undefined;
+	}
+
+	#startPreview(source: Publish.Broadcast): Broadcast {
+		let broadcast: Broadcast;
+
+		if (Settings.echo.peek()) {
+			const watch = new Watch.Broadcast(this.connection, {
+				enabled: true,
+				path: source.path.peek(),
+				reload: false,
+				// Download video unless the window is hidden.
+				video: { enabled: this.visible.peek() },
+				// Download audio unless the AudioContext is suspended.
+				audio: { enabled: !this.suspended.peek() },
+				// Download the location of the broadcaster.
+				location: { enabled: true },
+				// Download the chat of the broadcaster.
+				chat: { enabled: true },
+			});
+
+			// Replace the entry with a remote broadcast.
+			broadcast = new Broadcast(watch, {
+				viewport: this.viewport,
+				// TODO Figure out location stuff
+				camera: this.camera,
+				screen: this.screen,
+				audio: {
+					notifications: this.notifications,
+				},
+				online: true,
+			});
+		} else {
+			broadcast = new Broadcast(source, {
+				viewport: this.viewport,
+				audio: {
+					notifications: this.notifications,
+				},
+				// Wait until we get an announcement before rendering ourselves as online.
+				online: false,
+			});
+		}
+
+		this.#startBroadcast(broadcast);
+
+		return broadcast;
 	}
 
 	#startBroadcast(broadcast: Broadcast) {
@@ -598,7 +636,16 @@ export class Room {
 		});
 	}
 
-	#stopBroadcast(broadcast: Broadcast) {
+	#stopBroadcast(path: string) {
+		const broadcast = this.broadcasts.peek().find((b) => b.source.path.peek() === path);
+		if (!broadcast) {
+			console.warn("stopping unknown broadcast:", path);
+			return;
+		}
+
+		this.notifications.play("bye");
+		this.#remotes.delete(path);
+
 		// Move it from the main list to the rip list.
 		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));
 		this.#rip.push(broadcast);
@@ -669,7 +716,7 @@ export class Room {
 		// TODO: Figure out a way that we can also move the screen.
 		const keysDown = this.#keysDown;
 
-		const position = this.camera.targetPosition.peek();
+		const position = this.camera.location.current.peek() ?? {};
 
 		if (keysDown.has("ArrowLeft")) {
 			position.x = Math.max((position.x ?? 0) - 0.02, -0.5);
@@ -687,10 +734,7 @@ export class Room {
 			position.y = Math.min((position.y ?? 0) + 0.02, 0.5);
 		}
 
-		this.camera.targetPosition.set(position);
-
-		// TODO: publish after a short delay so we don't spam the network.
-		this.camera.publishPosition();
+		this.camera.location.current.set(position);
 	}
 
 	#render(now: DOMHighResTimeStamp) {
@@ -732,8 +776,8 @@ export class Room {
 		}
 
 		// Render the locator arrows for our broadcasts on join.
-		this.camera.renderLocator(now, ctx);
-		this.screen.renderLocator(now, ctx);
+		//this.camera.renderLocator(now, ctx);
+		// this.screen.renderLocator(now, ctx);
 	}
 
 	#tickScale() {

@@ -56,7 +56,7 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 					<Sup set={(name) => room.user.set(name)} />
 				</Show>
 				<Chat room={room} />
-				<Controls room={room} camera={room.camera.source} screen={room.screen.source} canvas={canvas} />
+				<Controls room={room} camera={room.camera} screen={room.screen} canvas={canvas} />
 			</div>
 		</>
 	);
