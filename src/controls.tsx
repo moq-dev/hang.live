@@ -1,10 +1,7 @@
-import { Publish } from "@kixelated/hang";
+import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { Accessor, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { JSX } from "solid-js/jsx-runtime";
-import { Room } from "./room";
-import Settings, { Modal } from "./settings";
-
+import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import type { JSX } from "solid-js/jsx-runtime";
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";
 import IconFullscreen from "~icons/mdi/fullscreen";
@@ -12,6 +9,8 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
+import type { Room } from "./room";
+import Settings, { Modal } from "./settings";
 
 export function Controls(props: {
 	room: Room;

@@ -1,12 +1,11 @@
-//import WebTransport from "tauri-plugin-web-transport";
-//export { WebTransport };
+import "tauri-plugin-web-transport";
 
 import { Connection } from "@kixelated/hang";
 import "@kixelated/hang/support/element";
 
 import solid from "@kixelated/signals/solid";
 import { createEffect, onCleanup, Show } from "solid-js";
-import { JSX } from "solid-js/jsx-runtime";
+import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { Chat } from "./chat";
 import { Controls } from "./controls";

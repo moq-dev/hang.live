@@ -1,14 +1,12 @@
-import { Computed, Root, Signal } from "@kixelated/signals";
-
-import { Catalog, Container, Publish, Watch } from "@kixelated/hang";
-import { Audio, AudioProps } from "./audio";
-import { Bounds, Vector } from "./geometry";
-import { Video } from "./video";
-
+import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
+import { type Computed, Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
+import { Audio, type AudioProps } from "./audio";
 import { getDefaultAvatar } from "./avatar";
+import { Bounds, Vector } from "./geometry";
 import { loadMeme } from "./meme";
+import { Video } from "./video";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
 export type ChatMessage = {
@@ -35,11 +33,19 @@ export type BroadcastProps = {
 	viewport: Signal<Vector>;
 	audio: AudioProps;
 
-	z?: number;
+	position?: Catalog.Position;
 	camera?: Publish.Broadcast;
 	screen?: Publish.Broadcast;
 
 	online?: boolean;
+};
+
+// Catalog.Position but all fields are required.
+type Position = {
+	x: number;
+	y: number;
+	z: number;
+	scale: number;
 };
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
@@ -55,8 +61,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
-	targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
-	targetScale = 1.0; // 1 is 100%
+	// Replaced by position
+	//targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
+	//targetScale = 1.0; // 1 is 100%
 
 	online: Signal<boolean>;
 
@@ -70,10 +77,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns the most recent chat messages.
 	messages: Signal<ChatMessage[]>;
 
-	// The z-index of the broadcast.
-	// This is separate from the source.location.current.z so we can replace the initial undefined with maxZ.
-	// Once we learn the real z-index over the network, we'll replace it with the real value.
-	z: Signal<number>;
+	// The target position of the broadcast, while bounds contains the actual position.
+	// This is separate from the source.location.current so we can temporarily use our own value.
+	// After we learn the real position over the network, we'll replace it.
+	targetPosition: Signal<Position>;
 
 	// The meme video/audio we're rendering, if any.
 	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
@@ -89,28 +96,40 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.source = source;
 		this.viewport = props.viewport;
 		this.messages = new Signal<ChatMessage[]>([]);
-		this.z = new Signal(props?.z ?? 0);
 		this.online = new Signal(props?.online ?? true);
+
+		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
+		const start = () => (Math.random() - 0.5) / 100;
+		const position = {
+			x: props?.position?.x ?? start(),
+			y: props?.position?.y ?? start(),
+			z: props?.position?.z ?? 0,
+			scale: props?.position?.scale ?? 1,
+		};
+
+		this.targetPosition = new Signal(position);
 
 		this.video = new Video(this);
 		this.audio = new Audio(this, props.audio);
 
-		// Start them at the center of the screen with a tiiiiny bit of variance to break ties.
-		const start = () => (Math.random() - 0.5) / 100;
-		this.targetPosition = Vector.create(start(), start());
-
 		const canvas = this.viewport.peek();
 
+		// Actually start the
 		// TODO This seems kinda buggy?
-		const startPosition = this.targetPosition.normalize().mult(canvas.length()).add(canvas.div(2));
-
+		const startPosition = Vector.create(position.x, position.y)
+			.normalize()
+			.mult(canvas.length())
+			.add(canvas.div(2));
 		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
 		this.signals.effect((effect) => {
 			if (!effect.get(this.source.enabled)) {
 				// Change the target position to somewhere outside the screen.
-				this.targetPosition = this.targetPosition.normalize().mult(2);
+				this.targetPosition.set((prev) => {
+					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
+					return { ...prev, x: offscreen.x, y: offscreen.y };
+				});
 
 				return;
 			}
@@ -119,9 +138,15 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const location = effect.get(this.source.location.current);
 			if (!location) return;
 
-			this.targetPosition.x = location.x ?? this.targetPosition.x;
-			this.targetPosition.y = location.y ?? this.targetPosition.y;
-			this.targetScale = location.scale ?? this.targetScale;
+			this.targetPosition.set((prev) => {
+				return {
+					...prev,
+					x: location.x ?? prev.x,
+					y: location.y ?? prev.y,
+					z: location.z ?? prev.z,
+					scale: location.scale ?? prev.scale,
+				};
+			});
 		});
 
 		// Set a random default avatar while the user details are loading.
@@ -155,16 +180,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 			effect.cleanup(() => consumer.close());
 			effect.spawn(this.#runChat.bind(this, consumer));
-		});
-
-		// Update our local z-index when the remote z-index changes.
-		// The local z-index starts at max+1 while the remote z-index starts at undefined.
-		// This way we'll appear on top until we discover all other broadcasts and their z-index to +1 them.
-		// That's why we don't use the remote z-index directly, but rather proxy it.
-		this.signals.effect((effect) => {
-			const z = effect.get(this.source.location.current)?.z;
-			if (z === undefined) return;
-			this.z.set(z);
 		});
 
 		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
@@ -290,10 +305,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const bounds = this.bounds.peek().clone(); //  clone is needed so SolidJS can track changes
 		const viewport = this.viewport.peek();
 
+		const targetPosition = this.targetPosition.peek();
+
 		// Guide the body towards the target position with a bit of force.
-		const target = Vector.create(this.targetPosition.x * viewport.x, this.targetPosition.y * viewport.y).add(
-			viewport.div(2),
-		);
+		const target = Vector.create((targetPosition.x + 0.5) * viewport.x, (targetPosition.y + 0.5) * viewport.y);
 
 		// Make sure the target position is within the viewport.
 		target.x = Math.max(0, Math.min(target.x, viewport.x));
@@ -332,7 +347,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Apply everything now.
 		const targetSize = this.video.targetSize.mult(this.scale * scale);
-		this.scale += (this.targetScale - this.scale) * 0.1;
+		this.scale += (targetPosition.scale - this.scale) * 0.1;
 
 		// Apply the velocity.
 		bounds.position = bounds.position.add(this.velocity.div(50));
@@ -361,7 +376,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		return false;
 	}
 
-	setLocation(position: Catalog.Position) {
+	// Publish our current position to the network.
+	publishPosition() {
+		const position = this.targetPosition.peek();
+
 		if (this.source instanceof Publish.Broadcast) {
 			this.source.location.current.set((old) => ({ ...old, ...position }));
 		} else if (this.#locationPeer) {

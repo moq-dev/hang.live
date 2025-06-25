@@ -1,9 +1,8 @@
 import solid from "@kixelated/signals/solid";
-import { Accessor, For, createMemo, createSignal, onMount } from "solid-js";
-import { Broadcast, ChatMessage } from "./broadcast";
-import { Room } from "./room";
-
-import { Bounds, Vector } from "./geometry";
+import { type Accessor, createMemo, createSignal, For, onMount } from "solid-js";
+import type { Broadcast, ChatMessage } from "./broadcast";
+import type { Bounds, Vector } from "./geometry";
+import type { Room } from "./room";
 
 import "github-markdown-css/github-markdown-dark.css";
 
