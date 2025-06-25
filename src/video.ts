@@ -1,5 +1,5 @@
-import { Publish, Watch } from "@kixelated/hang";
-import { Broadcast } from "./broadcast";
+import type { Publish, Watch } from "@kixelated/hang";
+import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import Settings from "./settings";
 
@@ -94,7 +94,7 @@ export class Video {
 		ctx.shadowOffsetY = 4 * scale;
 
 		// Create a rounded rectangle path
-		const radius = 32 * scale;
+		const radius = 8 + 16 * Math.sqrt(scale);
 		const w = bounds.size.x;
 		const h = bounds.size.y;
 

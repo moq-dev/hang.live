@@ -1,7 +1,7 @@
-import { Publish, Watch } from "@kixelated/hang";
-import { Effect, Root, Signal } from "@kixelated/signals";
-import { Broadcast } from "./broadcast";
-import { Notifications, PannedNotifications } from "./notifications";
+import { Publish, type Watch } from "@kixelated/hang";
+import { type Effect, Root, Signal } from "@kixelated/signals";
+import type { Broadcast } from "./broadcast";
+import { type Notifications, PannedNotifications } from "./notifications";
 import Settings from "./settings";
 
 const FADE_TIME = 0.2;
@@ -95,14 +95,15 @@ export class Audio {
 			}
 		});
 
-		// Output to the speakers unless it's a local broadcast.
-		// NOTE: We will still analyze the audio in local broadcasts.
-		if (this.broadcast.source instanceof Watch.Broadcast) {
-			this.#signals.effect(this.#runOutput.bind(this));
-		}
+		this.#signals.effect(this.#runOutput.bind(this));
 	}
 
 	#runOutput(effect: Effect) {
+		// Don't output to the speakers if we're publishing the broadcast.
+		// Unless the user wants it I guess.
+		const echo = effect.get(Settings.echo);
+		if (!echo && this.broadcast.source instanceof Publish.Broadcast) return;
+
 		const root = effect.get(this.broadcast.source.audio.root);
 		if (!root) return;
 
@@ -114,7 +115,7 @@ export class Audio {
 
 		root.connect(gain);
 
-		if (root.channelCount > 1 && effect.get(Settings.pan)) {
+		if (root.channelCount > 1 && effect.get(Settings.headphones)) {
 			const audioPanner = new StereoPannerNode(root.context, {
 				channelCount: root.channelCount,
 			});

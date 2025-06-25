@@ -1,5 +1,5 @@
-import { Connection, Moq, Publish, Watch } from "@kixelated/hang";
-import { Effect, Root, Signal } from "@kixelated/signals";
+import { type Connection, type Moq, Publish, Watch } from "@kixelated/hang";
+import { type Effect, Root, Signal } from "@kixelated/signals";
 import { getDefaultAvatar } from "./avatar";
 import { renderBackground } from "./background";
 import { Broadcast } from "./broadcast";
@@ -93,12 +93,7 @@ export class Room {
 				enabled: false, // TODO automatically enable the microphone on join..?
 				constraints: {
 					channelCount: { ideal: 2, max: 2 },
-					// TODO: Chrome has a long-standing bug where echoCancellation is not working with WebAudio.
-					// See and bump: https://issues.chromium.org/issues/40504498
-					echoCancellation: { exact: false },
-					// TODO: Not sure about this one.
-					autoGainControl: { ideal: true },
-					// noiseSuppression is fine
+					autoGainControl: { ideal: true }, // TODO not sure if this should be enabled given we apply a gain node?
 					noiseSuppression: { ideal: true },
 				},
 			},
@@ -117,6 +112,21 @@ export class Room {
 				enabled: true,
 				ttl: 10000, // Save messages for at most 10 seconds.
 			},
+		});
+
+		// Apply echo cancellation based on the headphones setting.
+		this.#signals.effect((effect) => {
+			const headphones = effect.get(Settings.headphones);
+
+			// Disable echo cancelation when we explicitly cause an echo.
+			// Otherwise the browser gets very very confused, even when using headphones.
+			const echo = effect.get(Settings.echo);
+			const enabled = !echo && !headphones;
+
+			camera.audio.constraints.set((prev) => ({
+				...prev,
+				echoCancellation: enabled ? { ideal: true } : { exact: false },
+			}));
 		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
@@ -145,6 +155,9 @@ export class Room {
 				enabled: false,
 				constraints: {
 					channelCount: { ideal: 2, max: 2 },
+					autoGainControl: { ideal: true }, // TODO test it?
+					echoCancellation: { exact: false },
+					noiseSuppression: { exact: false },
 				},
 			},
 			video: {
@@ -212,18 +225,24 @@ export class Room {
 		camera.signals.effect((effect) => {
 			if (!effect.get(camera.enabled)) return;
 			if (!effect.get(camera.video.media) && !effect.get(camera.audio.media)) return;
-			this.camera.setLocation({
+
+			this.camera.targetPosition.set((prev) => ({
+				...prev,
 				z: ++this.#maxZ,
-			});
+			}));
+			this.camera.publishPosition();
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
 		screen.signals.effect((effect) => {
 			if (!effect.get(screen.enabled)) return;
 			if (!effect.get(screen.video.media) && !effect.get(screen.audio.media)) return;
-			this.screen.setLocation({
+
+			this.screen.targetPosition.set((prev) => ({
+				...prev,
 				z: ++this.#maxZ,
-			});
+			}));
+			this.screen.publishPosition();
 		});
 
 		screen.signals.effect((effect) => {
@@ -285,13 +304,12 @@ export class Room {
 			if (!broadcast) return;
 
 			// Bump the z-index unless we're already at the top.
-			const z = broadcast.z.peek() === this.#maxZ ? this.#maxZ : ++this.#maxZ;
-
-			broadcast.setLocation({
+			broadcast.targetPosition.set((prev) => ({
+				...prev,
 				x: mouse.x / this.canvas.width - 0.5,
 				y: mouse.y / this.canvas.height - 0.5,
-				z,
-			});
+				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
+			}));
 
 			if (broadcast.locked()) {
 				document.body.style.cursor = "not-allowed";
@@ -304,10 +322,12 @@ export class Room {
 			const mouse = mousePosition(e);
 
 			if (this.#dragging) {
-				this.#dragging.setLocation({
+				// Update the position but don't publish it yet.
+				this.#dragging.targetPosition.set((prev) => ({
+					...prev,
 					x: mouse.x / this.canvas.width - 0.5,
 					y: mouse.y / this.canvas.height - 0.5,
-				});
+				}));
 				return;
 			}
 
@@ -326,6 +346,8 @@ export class Room {
 
 		window.addEventListener("mouseup", () => {
 			if (this.#dragging) {
+				this.#dragging.publishPosition();
+
 				this.#dragging = undefined;
 				this.#hovering = undefined;
 				document.body.style.cursor = "default";
@@ -334,6 +356,8 @@ export class Room {
 
 		window.addEventListener("mouseleave", () => {
 			if (this.#dragging) {
+				this.#dragging.publishPosition();
+
 				this.#dragging = undefined;
 				this.#hovering = undefined;
 				document.body.style.cursor = "default";
@@ -353,6 +377,12 @@ export class Room {
 					if (!broadcast) return;
 
 					this.#hovering = broadcast;
+
+					// Bump the z-index unless we're already at the top.
+					broadcast.targetPosition.set((prev) => ({
+						...prev,
+						z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
+					}));
 				}
 
 				if (broadcast.locked()) {
@@ -367,15 +397,13 @@ export class Room {
 					document.body.style.cursor = "zoom-in";
 				}
 
-				const location = broadcast.source.location.current.peek();
+				// Update the scale, publishing it.
+				broadcast.targetPosition.set((prev) => ({
+					...prev,
+					scale: Math.max(Math.min((prev.scale ?? 1) + scale, 4), 0.25),
+				}));
 
-				// Bump the z-index unless we're already at the top.
-				const z = broadcast.z.peek() === this.#maxZ ? this.#maxZ : ++this.#maxZ;
-
-				broadcast.setLocation({
-					scale: Math.max(Math.min((location?.scale ?? 1) + scale, 4), 0.25),
-					z,
-				});
+				broadcast.publishPosition();
 			},
 			{ passive: false },
 		);
@@ -541,8 +569,11 @@ export class Room {
 
 	#startBroadcast(broadcast: Broadcast) {
 		// Put new broadcasts on top of the stack.
-		// NOTE: This is not sent over the network because we did not update source.location.current.z.
-		broadcast.z.set(++this.#maxZ);
+		// NOTE: This is not sent over the network.
+		broadcast.targetPosition.set((prev) => ({
+			...prev,
+			z: ++this.#maxZ,
+		}));
 
 		// Insert the broadcast into the room based on it's z-index.
 		this.broadcasts.set((prev) => [...prev, broadcast]);
@@ -552,7 +583,7 @@ export class Room {
 		// Resort the broadcasts when the z-index changes.
 		broadcast.signals.effect((effect) => {
 			// Get our z-index so we resort when it changes.
-			const z = effect.get(broadcast.z);
+			const z = effect.get(broadcast.targetPosition).z;
 			if (z > this.#maxZ) {
 				// Save the higher z-index so we can use it for new broadcasts.
 				this.#maxZ = z;
@@ -561,7 +592,7 @@ export class Room {
 			this.broadcasts.set((prev) =>
 				prev.sort(
 					// Peek at the other broadcasts' z-index to avoid re-sorting every time.
-					(a, b) => a.z.peek() - b.z.peek(),
+					(a, b) => a.targetPosition.peek().z - b.targetPosition.peek().z,
 				),
 			);
 		});
@@ -638,26 +669,28 @@ export class Room {
 		// TODO: Figure out a way that we can also move the screen.
 		const keysDown = this.#keysDown;
 
-		const position = this.camera.source.location.current.peek();
-		if (position) {
-			if (keysDown.has("ArrowLeft")) {
-				position.x = Math.max((position.x ?? 0) - 0.02, -0.5);
-			}
+		const position = this.camera.targetPosition.peek();
 
-			if (keysDown.has("ArrowRight")) {
-				position.x = Math.min((position.x ?? 0) + 0.02, 0.5);
-			}
-
-			if (keysDown.has("ArrowUp")) {
-				position.y = Math.max((position.y ?? 0) - 0.02, -0.5);
-			}
-
-			if (keysDown.has("ArrowDown")) {
-				position.y = Math.min((position.y ?? 0) + 0.02, 0.5);
-			}
-
-			this.camera.setLocation(position);
+		if (keysDown.has("ArrowLeft")) {
+			position.x = Math.max((position.x ?? 0) - 0.02, -0.5);
 		}
+
+		if (keysDown.has("ArrowRight")) {
+			position.x = Math.min((position.x ?? 0) + 0.02, 0.5);
+		}
+
+		if (keysDown.has("ArrowUp")) {
+			position.y = Math.max((position.y ?? 0) - 0.02, -0.5);
+		}
+
+		if (keysDown.has("ArrowDown")) {
+			position.y = Math.min((position.y ?? 0) + 0.02, 0.5);
+		}
+
+		this.camera.targetPosition.set(position);
+
+		// TODO: publish after a short delay so we don't spam the network.
+		this.camera.publishPosition();
 	}
 
 	#render(now: DOMHighResTimeStamp) {

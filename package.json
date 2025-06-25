@@ -28,7 +28,7 @@
 		"tauri-plugin-web-transport": "^0.1.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.0.5",
 		"@eslint/js": "^9.29.0",
 		"@iconify-json/mdi": "^1.2.3",
 		"@tauri-apps/cli": "^2",

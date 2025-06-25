@@ -1,6 +1,6 @@
-import { Signal } from "@kixelated/signals";
+import type { Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
-import { Show, createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 
 export function Dialog(props: { name: Signal<string | undefined> }) {
 	const [input, setInput] = createSignal("");
