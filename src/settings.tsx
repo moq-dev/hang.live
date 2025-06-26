@@ -1,6 +1,8 @@
 import { Root, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
+
+import IconBug from "~icons/mdi/bug";
 import IconCursorMove from "~icons/mdi/cursor-move";
 import IconPotato from "~icons/mdi/fried-potatoes";
 import IconHeadphones from "~icons/mdi/headphones";
@@ -11,7 +13,8 @@ const Settings = {
 	volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.volume") ?? "1")),
 	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
 	potato: new Signal(localStorage.getItem("settings.potato") === "true"),
-	headphones: new Signal(localStorage.getItem("settings.headphones") !== "false"),
+	headphones: new Signal(localStorage.getItem("settings.headphones") === "true"),
+	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 	echo: new Signal(false), // never saved, it's just for testing
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
@@ -47,6 +50,10 @@ signals.subscribe(Settings.microphoneGain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
+signals.subscribe(Settings.debug, (debug) => {
+	localStorage.setItem("settings.debug", debug.toString());
+});
+
 signals.subscribe(Settings.potato, (potato) => {
 	if (potato) {
 		document.documentElement.classList.add("potato");
@@ -67,6 +74,7 @@ export function Modal(): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const potato = solid(Settings.potato);
 	const echo = solid(Settings.echo);
+	const debug = solid(Settings.debug);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -97,6 +105,12 @@ export function Modal(): JSX.Element {
 			<span>potato mode</span>
 			<span title="Disable special effects and laggy animations.">
 				<IconPotato />
+			</span>
+
+			<input type="checkbox" checked={debug()} onChange={() => Settings.debug.set((p) => !p)} />
+			<span>debug</span>
+			<span title="Show debug visualizations.">
+				<IconBug />
 			</span>
 		</div>
 	);
