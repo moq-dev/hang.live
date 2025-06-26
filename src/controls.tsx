@@ -368,12 +368,7 @@ function Advanced(): JSX.Element {
 			</button>
 
 			<Show when={showSettings()}>
-				<div
-					ref={setModal}
-					class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm"
-					aria-label="Settings"
-					aria-modal="true"
-				>
+				<div ref={setModal} class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm">
 					<Modal />
 				</div>
 			</Show>

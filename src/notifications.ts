@@ -132,7 +132,7 @@ export class PannedNotifications {
 		this.#signals.effect((effect) => {
 			effect.cleanup(() => this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime));
 
-			const pan = effect.get(Settings.headphones) ? Math.max(-1, Math.min(1, effect.get(this.pan) * 2)) : 0;
+			const pan = Math.max(-1, Math.min(1, effect.get(this.pan) * 2));
 			this.#panner.pan.linearRampToValueAtTime(pan, this.#panner.context.currentTime + FADE_TIME);
 		});
 	}

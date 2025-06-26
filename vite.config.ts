@@ -21,11 +21,6 @@ export default defineConfig(async () => ({
 		sourcemap: true,
 	},
 
-	optimizeDeps: {
-		// Workaround for: https://github.com/vitejs/vite/issues/8427
-		exclude: ["@kixelated/hang"],
-	},
-
 	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
 
 	resolve: {
