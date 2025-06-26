@@ -92,8 +92,10 @@ export class Room {
 			audio: {
 				enabled: false, // TODO automatically enable the microphone on join..?
 				constraints: {
-					channelCount: { ideal: 2, max: 2 },
-					autoGainControl: { ideal: true }, // TODO not sure if this should be enabled given we apply a gain node?
+					// mono is fine? for microphone audio.
+					channelCount: { ideal: 1, max: 2 },
+					echoCancellation: Settings.headphones.peek() ? { exact: false } : { ideal: true },
+					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
 			},
@@ -117,15 +119,9 @@ export class Room {
 		// Apply echo cancellation based on the headphones setting.
 		this.#signals.effect((effect) => {
 			const headphones = effect.get(Settings.headphones);
-
-			// Disable echo cancelation when we explicitly cause an echo.
-			// Otherwise the browser gets very very confused, even when using headphones.
-			const echo = effect.get(Settings.echo);
-			const enabled = !echo && !headphones;
-
 			this.camera.audio.constraints.set((prev) => ({
 				...prev,
-				echoCancellation: enabled ? { ideal: true } : { exact: false },
+				echoCancellation: headphones ? { exact: false } : { ideal: true },
 			}));
 		});
 
@@ -146,8 +142,8 @@ export class Room {
 				enabled: false,
 				constraints: {
 					channelCount: { ideal: 2, max: 2 },
-					autoGainControl: { ideal: true }, // TODO test it?
-					// Just to be safe:
+					// Disable audio processing primarily for music playback.
+					autoGainControl: { ideal: false },
 					echoCancellation: { ideal: false },
 					noiseSuppression: { ideal: false },
 				},

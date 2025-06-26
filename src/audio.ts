@@ -113,7 +113,7 @@ export class Audio {
 
 		root.connect(gain);
 
-		if (root.channelCount > 1 && effect.get(Settings.headphones)) {
+		if (root.channelCount > 1) {
 			const audioPanner = new StereoPannerNode(root.context, {
 				channelCount: root.channelCount,
 			});
