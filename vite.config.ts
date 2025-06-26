@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import Icons from "unplugin-icons/vite";
 import { defineConfig } from "vite";
@@ -19,6 +21,11 @@ export default defineConfig(async () => ({
 		sourcemap: true,
 	},
 
+	optimizeDeps: {
+		// Workaround for: https://github.com/vitejs/vite/issues/8427
+		exclude: ["@kixelated/hang"],
+	},
+
 	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
 
 	resolve: {
@@ -35,6 +42,13 @@ export default defineConfig(async () => ({
 		watch: {
 			// 3. tell vite to ignore watching `src-tauri`
 			ignored: ["**/src-tauri/**"],
+		},
+		fs: {
+			allow: [
+				".",
+				// Allow `npm link @kixelated/hang`
+				fs.realpathSync(path.resolve("node_modules/@kixelated/hang")),
+			],
 		},
 	},
 }));

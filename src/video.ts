@@ -1,4 +1,4 @@
-import type { Publish, Watch } from "@kixelated/hang";
+import { type Publish, Watch } from "@kixelated/hang";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import Settings from "./settings";
@@ -33,6 +33,9 @@ export class Video {
 
 	#memeOpacity = 0;
 	#nameOpacity = 0;
+
+	#buffered = 0;
+	#bufferedWhen: DOMHighResTimeStamp = 0;
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
@@ -227,6 +230,20 @@ export class Video {
 			}
 		}
 
+		// Draw a crude buffer indicator
+		if (this.broadcast.source instanceof Watch.Broadcast && Settings.debug.peek()) {
+			if (this.broadcast.source.audio.buffered !== this.#buffered || this.#bufferedWhen === 0) {
+				this.#buffered = this.broadcast.source.audio.buffered;
+				this.#bufferedWhen = now;
+			}
+
+			// Apply a discount to the bufffered amount over time.
+			const buffered = Math.max(0, this.#buffered - (now - this.#bufferedWhen));
+			const percent = Math.min(buffered / this.broadcast.source.audio.latency.peek(), 1);
+			ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
+			ctx.fillRect(0, 0, percent * bounds.size.x, 10);
+		}
+
 		// Cancel the clip
 		ctx.restore();
 
@@ -248,7 +265,7 @@ export class Video {
 			ctx.fillStyle = "white";
 			ctx.strokeStyle = "black";
 			ctx.lineWidth = 1 + 2 * Math.sqrt(scale);
-			const offset = 10 + 16 * Math.sqrt(scale);
+			const offset = 16 * Math.sqrt(scale);
 			ctx.strokeText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();
