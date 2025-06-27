@@ -664,48 +664,52 @@ export class Room {
 	}
 
 	#tick(now: DOMHighResTimeStamp) {
-		this.#tickScale();
-		this.#tickKeyboard();
+		try {
+			this.#tickScale();
+			this.#tickKeyboard();
 
-		for (const broadcast of this.#rip) {
-			broadcast.tick(now, this.#scale);
-		}
-
-		const broadcasts = this.broadcasts.peek();
-		for (const broadcast of broadcasts) {
-			broadcast.tick(now, this.#scale);
-		}
-
-		// Check for collisions.
-		// We might need to optimize this with a quadtree or something.
-		for (let i = 0; i < broadcasts.length; i++) {
-			const a = broadcasts[i];
-			const abounds = a.bounds.peek();
-
-			for (let j = i + 1; j < broadcasts.length; j++) {
-				const b = broadcasts[j];
-				const bbounds = b.bounds.peek();
-
-				// Compute the intersection rectangle.
-				const intersection = abounds.intersects(bbounds);
-				if (!intersection) {
-					continue;
-				}
-
-				// Repel each other based on the size of the intersection.
-				const strength = (2 * intersection.area()) / (abounds.area() + bbounds.area());
-				let force = abounds.middle().sub(bbounds.middle()).mult(strength);
-
-				if (this.#dragging !== a && this.#dragging !== b) {
-					force = force.mult(10);
-				}
-
-				a.velocity = a.velocity.add(force);
-				b.velocity = b.velocity.sub(force);
+			for (const broadcast of this.#rip) {
+				broadcast.tick(now, this.#scale);
 			}
-		}
 
-		this.#render(now);
+			const broadcasts = this.broadcasts.peek();
+			for (const broadcast of broadcasts) {
+				broadcast.tick(now, this.#scale);
+			}
+
+			// Check for collisions.
+			// We might need to optimize this with a quadtree or something.
+			for (let i = 0; i < broadcasts.length; i++) {
+				const a = broadcasts[i];
+				const abounds = a.bounds.peek();
+
+				for (let j = i + 1; j < broadcasts.length; j++) {
+					const b = broadcasts[j];
+					const bbounds = b.bounds.peek();
+
+					// Compute the intersection rectangle.
+					const intersection = abounds.intersects(bbounds);
+					if (!intersection) {
+						continue;
+					}
+
+					// Repel each other based on the size of the intersection.
+					const strength = (2 * intersection.area()) / (abounds.area() + bbounds.area());
+					let force = abounds.middle().sub(bbounds.middle()).mult(strength);
+
+					if (this.#dragging !== a && this.#dragging !== b) {
+						force = force.mult(10);
+					}
+
+					a.velocity = a.velocity.add(force);
+					b.velocity = b.velocity.sub(force);
+				}
+			}
+
+			this.#render(now);
+		} catch (err) {
+			console.error("tick error", err);
+		}
 
 		this.#animation = requestAnimationFrame(this.#tick.bind(this));
 	}
