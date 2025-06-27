@@ -140,8 +140,7 @@ export class Video {
 			}
 				*/
 
-			ctx.imageSmoothingEnabled = !Settings.potato.peek();
-			ctx.drawImage(next.frame, 0, 0, bounds.size.x, bounds.size.y);
+			ctx.drawImage(next.frame, 1, 1, bounds.size.x - 2, bounds.size.y - 2);
 			ctx.restore();
 
 			/*
