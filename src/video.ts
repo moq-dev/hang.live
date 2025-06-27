@@ -239,7 +239,7 @@ export class Video {
 
 			// Apply a discount to the bufffered amount over time.
 			const buffered = Math.max(0, this.#buffered - (now - this.#bufferedWhen));
-			const percent = Math.min(buffered / this.broadcast.source.audio.latency.peek(), 1);
+			const percent = Math.min(buffered / this.broadcast.source.audio.latency, 1);
 			ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
 			ctx.fillRect(0, 0, percent * bounds.size.x, 10);
 		}
