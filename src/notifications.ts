@@ -77,6 +77,9 @@ export class Notifications {
 	}
 
 	async play(sound: NotificationSound) {
+		// Can't play sounds when the context is suspended, and we don't want to queue them either.
+		if (this.context.state === "suspended") return;
+
 		const buffer = await this.load(sound);
 		const source = new AudioBufferSourceNode(this.context, { buffer });
 		source.connect(this.context.destination);
