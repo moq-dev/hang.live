@@ -138,7 +138,11 @@ export class PannedNotifications {
 	}
 
 	async play(sound: NotificationSound) {
+		// Can't play sounds when the context is suspended, and we don't want to queue them either.
+		if (this.#parent.context.state === "suspended") return;
+
 		const buffer = await this.#parent.load(sound);
+
 		const source = new AudioBufferSourceNode(this.#parent.context, { buffer });
 		source.connect(this.#panner);
 

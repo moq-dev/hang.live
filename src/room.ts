@@ -189,7 +189,7 @@ export class Room {
 			this.camera.enabled.set(true);
 			effect.cleanup(() => this.camera.enabled.set(false));
 
-			const path = `${user}/camera.hang`;
+			const path = `${user}/camera`;
 			this.camera.path.set(path);
 		});
 
@@ -230,7 +230,7 @@ export class Room {
 			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
 			if (!active) return;
 
-			const path = `${user}/screen.hang`;
+			const path = `${user}/screen`;
 			this.screen.path.set(path);
 
 			this.screen.enabled.set(true);

@@ -25,7 +25,7 @@ export function Controls(props: {
 			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
 			<Chat broadcast={props.camera} />
 			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
-			<Volume />
+			<Volume room={props.room} />
 			<Advanced />
 			<Fullscreen canvas={props.canvas} />
 		</div>
@@ -267,16 +267,28 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	);
 }
 
-function Volume(): JSX.Element {
+function Volume(props: { room: Room }): JSX.Element {
 	const [showSlider, setShowSlider] = createSignal(false);
 
 	const toggle = () => {
+		// If we were just suspended due to autoplay policies, then don't toggle mute.
+		// This seems racey but maybe it works.
+		if (props.room.suspended.peek()) {
+			props.room.suspended.set(false);
+
+			// If we unmuted but appeared to be muted, then don't toggle mute.
+			if (!Settings.muted.peek()) {
+				return;
+			}
+		}
+
 		Settings.muted.set((prev) => !prev);
 	};
 
 	const muted = solid(Settings.muted);
 	const volume = solid(Settings.volume);
 	const opacity = Opacity(() => showSlider());
+	const suspended = solid(props.room.suspended);
 
 	const setVolume = (v: number) => {
 		if (v === 0) {
@@ -303,7 +315,7 @@ function Volume(): JSX.Element {
 				role="switch"
 				aria-checked={!muted()}
 				aria-label="Toggle mute"
-				classList={{ "text-red-500": muted() }}
+				classList={{ "text-red-500": muted() || suspended() }}
 			>
 				{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
 			</button>
