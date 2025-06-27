@@ -743,6 +743,7 @@ export class Room {
 	#render(now: DOMHighResTimeStamp) {
 		const ctx = this.#ctx;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		ctx.imageSmoothingEnabled = !Settings.potato.peek();
 
 		renderBackground(ctx, now);
 
