@@ -47,18 +47,29 @@ export function Hang(props: { connection: Connection }): JSX.Element {
 	});
 
 	const username = solid(room.user);
+	const suspended = solid(room.suspended);
 
 	return (
 		<>
 			<div>
 				{canvas}
-				<Show when={!username()}>
+				<Show when={!username()} fallback={<Autoplay suspended={suspended()} />}>
 					<Sup set={(name) => room.user.set(name)} />
 				</Show>
 				<Chat room={room} />
 				<Controls room={room} camera={room.camera} screen={room.screen} canvas={canvas} />
 			</div>
 		</>
+	);
+}
+
+function Autoplay(props: { suspended: boolean }): JSX.Element {
+	return (
+		<Show when={props.suspended}>
+			<div class="absolute inset-0 bg-black/50 flex items-center justify-center">
+				<div class="text-white text-2xl font-bold">Click anywhere to enable audio.</div>
+			</div>
+		</Show>
 	);
 }
 
