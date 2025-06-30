@@ -35,8 +35,8 @@ export default defineConfig(async () => ({
 		host: host || false,
 		hmr: false,
 		watch: {
-			// 3. tell vite to ignore watching `src-tauri`
-			ignored: ["**/src-tauri/**"],
+			// 3. tell vite to ignore watching `tauri`
+			ignored: ["**/tauri/**"],
 		},
 		fs: {
 			allow: [

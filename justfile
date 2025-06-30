@@ -6,60 +6,31 @@
 default:
   just --list
 
+dev:
+	cd frontend && pnpm i
+
+	# Then run the relay with a slight head start.
+	# It doesn't matter if the web beats BBB because we support automatic reloading.
+	./frontend/node_modules/.bin/concurrently --kill-others --names api,web --prefix-colors auto \
+		"just --justfile backend/justfile dev" \
+		"sleep 1 && just --justfile frontend/justfile dev"
+
 # Run the CI checks
 check:
-	pnpm i
-
-	# Lint the JS packages
-	pnpm exec biome check
-
-	# Make sure Typescript compiles
-	pnpm run check
-
-	# Make sure the JS packages are not vulnerable
-	pnpm exec pnpm audit
-
-	# TODO: Check for unused imports (fix the false positives)
-	# pnpm exec knip --no-exit-code
+	just --justfile frontend/justfile check
+	just --justfile backend/justfile check
 
 # Automatically fix some issues.
 fix:
-	# Fix the JS packages
-	pnpm i
-
-	# Format and lint
-	pnpm exec biome check --fix
-
-	# Some additional linting.
-	pnpm exec eslint . --fix
-
-	# Make sure the JS packages are not vulnerable
-	pnpm exec pnpm audit --fix
-
-# Run any CI tests
-test:
-	# Run the JS tests via node.
-	pnpm test
+	just --justfile frontend/justfile fix
+	just --justfile backend/justfile fix
 
 # Upgrade any tooling
 upgrade:
-	# Update the NPM dependencies
-	pnpm self-update
-	pnpm update
-	pnpm outdated
+	just --justfile frontend/justfile upgrade
+	just --justfile backend/justfile upgrade
 
 # Build the packages
 build:
-	pnpm i
-	pnpm run build
-
-prod: build
-	pnpm prod
-
-# Deploy the site to Cloudflare Pages
-deploy: build
-	pnpm wrangler pages deploy dist
-
-dev:
-	pnpm i
-	pnpm tauri dev
+	just --justfile frontend/justfile build
+	just --justfile backend/justfile build

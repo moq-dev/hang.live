@@ -1,0 +1,3 @@
+[workspace]
+members = ["frontend/tauri", "backend"]
+resolver = "2"

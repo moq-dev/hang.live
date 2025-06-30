@@ -22,9 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-/src-tauri/target
-/src-tauri/gen/schemas
-
-# Source files for some memes
-/meme
