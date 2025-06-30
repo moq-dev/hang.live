@@ -1,6 +1,6 @@
-use std::env;
+use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +11,9 @@ pub struct Config {
 	pub google_client_secret: String,
 	pub storage: StorageConfig,
 	pub base_url: String,
+
+	#[serde(default = "default_port")]
+	pub port: u16,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,32 +36,18 @@ pub enum StorageConfig {
 }
 
 impl Config {
-	pub fn from_env() -> Result<Self> {
-		let storage = match env::var("STORAGE_TYPE").as_deref().unwrap_or("local") {
-			"local" => StorageConfig::Local {
-				base_path: env::var("STORAGE_LOCAL_PATH").unwrap_or_else(|_| "./uploads".to_string()),
-			},
-			"s3" => StorageConfig::S3 {
-				bucket: env::var("STORAGE_S3_BUCKET")?,
-				region: env::var("STORAGE_S3_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
-				access_key_id: env::var("AWS_ACCESS_KEY_ID").ok(),
-				secret_access_key: env::var("AWS_SECRET_ACCESS_KEY").ok(),
-				endpoint: env::var("STORAGE_S3_ENDPOINT").ok(),
-			},
-			"gcs" => StorageConfig::Gcs {
-				bucket: env::var("STORAGE_GCS_BUCKET")?,
-				project_id: env::var("STORAGE_GCS_PROJECT_ID")?,
-			},
-			other => anyhow::bail!("Unknown storage type: {}", other),
-		};
-
-		Ok(Config {
-			database_url: env::var("DATABASE_URL")?,
-			jwt_secret: env::var("JWT_SECRET")?,
-			google_client_id: env::var("GOOGLE_CLIENT_ID")?,
-			google_client_secret: env::var("GOOGLE_CLIENT_SECRET")?,
-			base_url: env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3001".to_string()),
-			storage,
+	pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+		let config = toml_env::initialize::<Config>(toml_env::Args {
+			config_path: Some(path.as_ref()),
+			..Default::default()
 		})
+		.context("failed to load config file")?
+		.context("no config file found")?;
+
+		Ok(config)
 	}
+}
+
+fn default_port() -> u16 {
+	3000
 }

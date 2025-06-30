@@ -2,17 +2,15 @@
 
 # Using Just: https://github.com/casey/just?tab=readme-ov-file#installation
 
+# PostgreSQL data directory (persistent)
+pg_data := ".pgdata"
+
+export DATABASE_URL := "postgres:///hang?host=/tmp"
+export SQLX_OFFLINE := "true"
+
 # List all of the available commands.
 default:
   just --list
-
-# Install any required dependencies.
-setup:
-	cargo install cargo-shear cargo-sort cargo-upgrades cargo-edit cargo-audit
-
-# Run a localhost server
-dev:
-	cargo run
 
 # Run the CI checks
 check flags="":
@@ -28,6 +26,10 @@ check flags="":
 
 	# requires: cargo install cargo-audit
 	cargo audit
+
+	# Make sure the database schema is up to date.
+	# TODO: This requires running the database, right?
+	#cargo sqlx prepare --check
 
 # Automatically fix some issues.
 fix flags="":
@@ -59,31 +61,30 @@ upgrade:
 build:
 	cargo build
 
-db:
-	# Check if we already have a running postgres on port 5432
-	if pg_isready -h localhost -p 5432 2>/dev/null; then
-		echo "✅ PostgreSQL already running on localhost:5432"
-		exit 0
+# Run the API server in the foreground.
+# Use nix to install any required dependencies.
+dev:
+	@nix develop --command just dev-nix
+
+dev-nix:
+	@pg_ctl -D "{{pg_data}}" stop || true
+
+	# Initialize a local PostgreSQL database if it doesn't exist.
+	if [ ! -d "{{pg_data}}" ]; then \
+		initdb -D "{{pg_data}}" --auth-local=trust; \
 	fi
 
-	# Try to use nix first (most reliable for development)
-	if command -v nix >/dev/null 2>&1; then
-		echo "🔨 Starting PostgreSQL with Nix..."
-		nix develop --command start-postgres
-	# Fallback to local postgres if available
-	elif command -v pg_ctl >/dev/null 2>&1; then
-		echo "🔨 Starting PostgreSQL with local installation..."
-		# Try to start local postgres (this is system-specific)
-		if [[ "$OSTYPE" == "darwin"* ]]; then
-			# macOS with Homebrew
-			if command -v brew >/dev/null 2>&1; then
-				brew services start postgresql@15 || brew services start postgresql || echo "⚠️  Could not start postgres with brew, try: just db-nix-up"
-			fi
-		elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-			# Linux
-			sudo systemctl start postgresql || echo "⚠️  Could not start postgres with systemctl, try: just db-nix-up"
-		fi
-	else
-		echo "❌ Neither nix nor PostgreSQL found. Please install nix or PostgreSQL locally."
-		exit 1
-	fi
+	# Start the database in the background.
+	pg_ctl -D "{{pg_data}}" -w start
+
+	# Create the database (if it doesn't exist).
+	sqlx database create
+
+	# Run any pending migrations.
+	sqlx migrate run
+
+	# Save the database schema so we can build without the database running.
+	cargo sqlx prepare
+
+	# Run the API server.
+	cargo run -- dev.toml
