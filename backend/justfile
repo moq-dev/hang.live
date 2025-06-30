@@ -1,0 +1,89 @@
+#!/usr/bin/env just --justfile
+
+# Using Just: https://github.com/casey/just?tab=readme-ov-file#installation
+
+# List all of the available commands.
+default:
+  just --list
+
+# Install any required dependencies.
+setup:
+	cargo install cargo-shear cargo-sort cargo-upgrades cargo-edit cargo-audit
+
+# Run a localhost server
+dev:
+	cargo run
+
+# Run the CI checks
+check flags="":
+	cargo test --all-targets --all-features {{flags}}
+	cargo clippy --all-targets --all-features {{flags}} -- -D warnings
+	cargo fmt --all --check
+
+	# requires: cargo install cargo-shear
+	cargo shear
+
+	# requires: cargo install cargo-sort
+	cargo sort --workspace --check
+
+	# requires: cargo install cargo-audit
+	cargo audit
+
+# Automatically fix some issues.
+fix flags="":
+	cargo fix --allow-staged --all-targets --all-features {{flags}}
+	cargo clippy --fix --allow-staged --all-targets --all-features {{flags}}
+	cargo fmt --all
+
+	# requires: cargo install cargo-shear
+	cargo shear --fix
+
+	# requires: cargo install cargo-sort
+	cargo sort --workspace
+
+	# requires: cargo install cargo-audit
+	cargo audit
+
+	# Update any patch versions
+	cargo update
+
+# Upgrade any tooling
+upgrade:
+	# Update any patch versions
+	cargo update
+
+	# Requires: cargo install cargo-upgrades cargo-edit
+	cargo upgrade --incompatible
+
+# Build the packages
+build:
+	cargo build
+
+db:
+	# Check if we already have a running postgres on port 5432
+	if pg_isready -h localhost -p 5432 2>/dev/null; then
+		echo "✅ PostgreSQL already running on localhost:5432"
+		exit 0
+	fi
+
+	# Try to use nix first (most reliable for development)
+	if command -v nix >/dev/null 2>&1; then
+		echo "🔨 Starting PostgreSQL with Nix..."
+		nix develop --command start-postgres
+	# Fallback to local postgres if available
+	elif command -v pg_ctl >/dev/null 2>&1; then
+		echo "🔨 Starting PostgreSQL with local installation..."
+		# Try to start local postgres (this is system-specific)
+		if [[ "$OSTYPE" == "darwin"* ]]; then
+			# macOS with Homebrew
+			if command -v brew >/dev/null 2>&1; then
+				brew services start postgresql@15 || brew services start postgresql || echo "⚠️  Could not start postgres with brew, try: just db-nix-up"
+			fi
+		elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+			# Linux
+			sudo systemctl start postgresql || echo "⚠️  Could not start postgres with systemctl, try: just db-nix-up"
+		fi
+	else
+		echo "❌ Neither nix nor PostgreSQL found. Please install nix or PostgreSQL locally."
+		exit 1
+	fi

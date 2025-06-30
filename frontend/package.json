@@ -31,6 +31,7 @@
 		"@biomejs/biome": "^2.0.5",
 		"@eslint/js": "^9.29.0",
 		"@iconify-json/mdi": "^1.2.3",
+		"concurrently": "^9.1.2",
 		"@tauri-apps/cli": "^2",
 		"@types/node": "^24.0.3",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.234",

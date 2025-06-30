@@ -1,0 +1,89 @@
+[package]
+name = "hang-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros", "multipart", "ws"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = [
+	"fs",
+	"cors",
+	"trace",
+	"request-id",
+	"util",
+] }
+hyper = { version = "1.5", features = ["full"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8", features = [
+	"runtime-tokio-rustls",
+	"postgres",
+	"uuid",
+	"chrono",
+	"migrate",
+	"macros",
+] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Authentication & JWT
+jsonwebtoken = "9.3"
+oauth2 = "4.4"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = [
+	"json",
+	"rustls-tls",
+], default-features = false }
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Password hashing
+argon2 = "0.5"
+
+# Cloud storage
+aws-sdk-s3 = "1.57"
+aws-config = "1.5"
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# File upload
+tempfile = "3.12"
+mime = "0.3"
+
+# Rate limiting
+governor = "0.6"
+
+# Health checks
+tower-http = { version = "0.6", features = ["trace"] }
+
+# OpenAPI documentation
+utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "7.1", features = ["axum"] }
+
+[dev-dependencies]
+tower-test = "0.4"
+axum-test = "15.0"

@@ -1,0 +1,30 @@
+{
+	"name": "@hang/api-client",
+	"version": "0.1.0",
+	"description": "TypeScript client for Hang API",
+	"main": "api.js",
+	"types": "api.d.ts",
+	"files": [
+		"api.js",
+		"api.d.ts",
+		"api.ts"
+	],
+	"scripts": {
+		"build": "tsc api.ts --declaration --outDir .",
+		"prepublishOnly": "npm run build"
+	},
+	"keywords": [
+		"hang",
+		"api",
+		"client",
+		"typescript"
+	],
+	"author": "Hang Team",
+	"license": "MIT",
+	"devDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"peerDependencies": {
+		"typescript": "^4.0.0 || ^5.0.0"
+	}
+}
