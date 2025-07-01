@@ -1,7 +1,7 @@
 use axum::{
 	extract::{Multipart, State},
 	response::Json,
-	routing::{get, patch, post},
+	routing::{get, post},
 	Router,
 };
 
@@ -36,16 +36,15 @@ async fn upload_avatar(
 		let data = field.bytes().await?;
 
 		// Validate file type
-		let allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-		if !allowed_types.contains(&content_type.as_str()) {
-			return Err(Error::Validation(
+		if !["image/jpeg", "image/png", "image/gif", "image/webp"].contains(&content_type.as_str()) {
+			return Err(Error::Forbidden(
 				"Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.".to_string(),
 			));
 		}
 
 		// Validate file size (max 5MB)
 		if data.len() > 5 * 1024 * 1024 {
-			return Err(Error::Validation(
+			return Err(Error::Forbidden(
 				"File size too large. Maximum 5MB allowed.".to_string(),
 			));
 		}
@@ -88,7 +87,7 @@ async fn upload_avatar(
 		})));
 	}
 
-	Err(Error::Validation("No avatar file found in request".to_string()))
+	Err(Error::NotFound("No avatar file found in request".to_string()))
 }
 
 async fn get_avatar(State(state): State<AppState>, user: auth::User) -> Result<Json<serde_json::Value>> {

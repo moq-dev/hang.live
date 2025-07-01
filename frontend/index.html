@@ -5,11 +5,14 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="icon" type="image/svg+xml" href="/image/icon.svg" />
-	<title>About | Hang</title>
+	<title>hang.live</title>
 	<link rel="stylesheet" href="index.css">
 </head>
 
 <body>
+	<!-- The background canvas element -->
+	<canvas id="canvas" class="fixed inset-0 w-full h-full"></canvas>
+
 	<div class="wrapper">
 		<header>
 			<a href="/" class="logo">
@@ -18,29 +21,14 @@
 			</a>
 			<div id="support"></div>
 			<nav>
-				<!--<a href="/about">#alpha</a>-->
+				<a href="/account">account</a>
 			</nav>
 		</header>
 
-		<div id="divider" class="mb-4"></div>
-
-		<main>
-			<p>I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.</p>
-			<p>
-				Unfortunately, you're going to have to wait a bit longer. It's not ready yet. Oops.
-			</p>
-			<p>
-				In the meantime, <a href="https://discord.gg/SRG9gu6BdE">join the Discord</a> or <s><a href="/register">register an account</a></s>.
-				You'll get a notification when the site is ready for human consumption.
-			</p>
-		</main>
+		<div id="hang"></div>
 	</div>
 
-
-	<!-- A canvas that renders the background. -->
-	<div id="bg"></div>
-
-	<script type="module" src="src/about.tsx"></script>
+	<script type="module" src="src/index.tsx"></script>
 </body>
 
 </html>

@@ -1,65 +1,158 @@
 import "tauri-plugin-web-transport";
 
-import { Connection } from "@kixelated/hang";
 import "@kixelated/hang/support/element";
 
 import solid from "@kixelated/signals/solid";
-import { createEffect, onCleanup, Show } from "solid-js";
+import { Route, Router } from "@solidjs/router";
+import { Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
+import { About } from "./about";
+import { Login } from "./account";
+import { type User, authService } from "./auth";
+import { Canvas } from "./canvas";
 import { Chat } from "./chat";
 import { Controls } from "./controls";
 import { Room } from "./room";
-import { Status } from "./status";
-import { Sup } from "./sup";
 
-export function Hang(props: { connection: Connection }): JSX.Element {
-	const canvas = (<canvas class="block bg-black w-full h-full fixed inset-0 -z-10" />) as HTMLCanvasElement;
+export function Hang(): JSX.Element {
+	const [authenticated, setAuthenticated] = createSignal(false);
+	const [authLoaded, setAuthLoaded] = createSignal(false);
 
-	const room = new Room(props.connection, canvas, {
-		user: localStorage.getItem("user.name") ?? undefined,
-		avatar: localStorage.getItem("user.avatar") ?? undefined,
+	const canvas = new Canvas();
+	onCleanup(() => canvas.close());
+
+	onMount(async () => {
+		// Handle OAuth callback first
+		const handled = await authService.handleOAuthCallback();
+		if (handled) {
+			console.log("OAuth callback handled");
+		}
+
+		// Check authentication status
+		setAuthenticated(authService.isAuthenticated());
+		setAuthLoaded(true);
+	});
+
+	/*
+	const handleLogout = () => {
+		authService.logout();
+		setAuthenticated(false);
+		// Navigate to home page after logout
+		window.location.href = "/";
+	};
+	*/
+
+	return (
+		<Show when={authLoaded()} fallback={<div>Loading...</div>}>
+			<Router>
+				<Route path="/" component={About} />
+				<Route path="/account" component={Login} />
+				<Route
+					path="/demo"
+					component={() => (
+						<Show when={authenticated()} fallback={<Login />}>
+							<Demo canvas={canvas} />
+						</Show>
+					)}
+				/>
+			</Router>
+		</Show>
+	);
+}
+
+function Demo(props: { canvas: Canvas }): JSX.Element {
+	const user = authService.getUser();
+
+	const room = new Room(props.canvas, {
+		user: user?.name ?? "Anonymous",
+		avatar: user?.avatar_url ?? undefined,
 	});
 
 	onCleanup(() => room.close());
 
-	const user = solid(room.user);
-	const avatar = solid(room.avatar);
-
-	// Save the user name to localStorage.
-	createEffect(() => {
-		const n = user();
-		if (n) {
-			localStorage.setItem("user.name", n);
-		} else {
-			localStorage.removeItem("user.name");
-		}
-	});
-
-	// Save the avatar to localStorage.
-	createEffect(() => {
-		const a = avatar();
-		if (a) {
-			localStorage.setItem("user.avatar", a);
-		} else {
-			localStorage.removeItem("user.avatar");
-		}
-	});
-
 	const username = solid(room.user);
 	const suspended = solid(room.suspended);
+
+	// Auto-set the user from auth if not already set
+	createEffect(() => {
+		if (user && !username()) {
+			room.user.set(user.name);
+		}
+	});
 
 	return (
 		<>
 			<div>
-				{canvas}
-				<Show when={!username()} fallback={<Autoplay suspended={suspended()} />}>
-					<Sup set={(name) => room.user.set(name)} />
-				</Show>
-				<Chat room={room} />
-				<Controls room={room} camera={room.camera} screen={room.screen} canvas={canvas} />
+				<Autoplay suspended={suspended()} />
+				<Chat canvas={props.canvas} room={room} />
+				<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
 			</div>
 		</>
+	);
+}
+
+function _UserMenu(props: { user: User | null; onLogout: () => void }): JSX.Element {
+	const [isOpen, setIsOpen] = createSignal(false);
+
+	const toggleMenu = () => setIsOpen(!isOpen());
+	const closeMenu = () => setIsOpen(false);
+
+	return (
+		<div class="relative">
+			<button
+				type="button"
+				onClick={toggleMenu}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						toggleMenu();
+					}
+				}}
+				class="flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 text-white hover:bg-black/70 transition-colors"
+			>
+				<Show when={props.user?.avatar_url}>
+					<img src={props.user?.avatar_url} alt={props.user?.name} class="w-6 h-6 rounded-full" />
+				</Show>
+				<span class="text-sm font-medium">{props.user?.name}</span>
+			</button>
+
+			<Show when={isOpen()}>
+				<div class="absolute top-12 right-0 bg-black/80 backdrop-blur-sm rounded-lg border border-white/10 py-2 min-w-[120px]">
+					<button
+						type="button"
+						onClick={() => {
+							props.onLogout();
+							closeMenu();
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								props.onLogout();
+								closeMenu();
+							}
+						}}
+						class="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+					>
+						Sign out
+					</button>
+				</div>
+			</Show>
+
+			{/* Click outside to close */}
+			<Show when={isOpen()}>
+				<div
+					class="fixed inset-0 z-[-1]"
+					onClick={closeMenu}
+					onKeyDown={(e) => {
+						if (e.key === "Escape") {
+							closeMenu();
+						}
+					}}
+					role="presentation"
+				/>
+			</Show>
+		</div>
 	);
 }
 
@@ -73,19 +166,9 @@ function Autoplay(props: { suspended: boolean }): JSX.Element {
 	);
 }
 
-const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/${import.meta.env.VITE_ROOM}/`);
-const connection = new Connection({ url });
-
 const hang = document.getElementById("hang");
 if (!hang) {
 	throw new Error("No hang element found");
 }
 
-render(() => <Hang connection={connection} />, hang);
-
-const status = document.getElementById("status");
-if (!status) {
-	throw new Error("No status element found");
-}
-
-render(() => <Status connection={connection} />, status);
+render(() => <Hang />, hang);

@@ -4,29 +4,9 @@ use validator::Validate;
 
 // Request types
 #[derive(Debug, Serialize, Deserialize, Validate)]
-pub struct CreateRoomRequest {
-	#[validate(length(min = 4, max = 100, message = "Name must be between 4 and 100 characters"))]
-	pub name: String,
-	#[validate(length(max = 500, message = "Description must be less than 500 characters"))]
-	pub description: Option<String>,
-	pub is_public: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct UpdateUserRequest {
 	#[validate(length(min = 4, max = 100, message = "Name must be between 4 and 100 characters"))]
 	pub name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Validate)]
-pub struct JoinRoomRequest {
-	pub room_id: Uuid,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateRoomTokenRequest {
-	pub room_id: Uuid,
-	pub expires_in_minutes: Option<i64>, // Default to 60 minutes
 }
 
 // Response types
@@ -43,38 +23,6 @@ pub struct UserResponse {
 	pub name: String,
 	pub avatar_url: Option<String>,
 	pub created_at: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoomResponse {
-	pub id: Uuid,
-	pub name: String,
-	pub description: Option<String>,
-	pub owner_id: Uuid,
-	pub is_public: bool,
-	pub created_at: String,
-	pub member_count: Option<usize>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoomMemberResponse {
-	pub user: UserResponse,
-	pub role: String,
-	pub joined_at: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoomDetailResponse {
-	pub room: RoomResponse,
-	pub members: Vec<RoomMemberResponse>,
-	pub is_member: bool,
-	pub user_role: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoomTokenResponse {
-	pub token: String,
-	pub expires_in: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

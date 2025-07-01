@@ -1,44 +1,21 @@
-import { createMemo, createSignal } from "solid-js";
-import { render } from "solid-js/web";
-import { Background } from "./background";
+import type { JSX } from "solid-js";
+import { Divider } from "./divider";
 
-const background = document.getElementById("bg");
-if (!background) {
-	throw new Error("No background element found");
-}
-
-render(() => <Background />, background);
-
-const divider = document.getElementById("divider");
-if (!divider) {
-	throw new Error("No divider element found");
-}
-
-const offset = Math.round(Math.random() * 360);
-const SPEED = 4;
-
-const [hue, setHue] = createSignal(offset);
-const animate = () => {
-	const color = Math.round((offset + performance.now() / 1000) * SPEED) % 360;
-	setHue(color);
-	document.documentElement.style.setProperty("--link-hue", color.toString());
-	requestAnimationFrame(animate);
-};
-
-requestAnimationFrame(animate);
-
-render(() => {
-	const start = createMemo(() => hue());
-	const middle = createMemo(() => (hue() + 25) % 360);
-	const end = createMemo(() => (hue() + 50) % 360);
-
+export function About(): JSX.Element {
 	return (
-		<div
-			class="w-full h-1 rounded-full"
-			style={{
-				// TODO: A linear-gradient is incorrect. We really want something like hue-rotate.
-				background: `linear-gradient(to right, hsl(${start()}, 75%, 50%), hsl(${middle()}, 75%, 50%), hsl(${end()}, 75%, 50%))`,
-			}}
-		/>
+		<>
+			<Divider />
+			<main>
+				<p>
+					I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
+				</p>
+				<p>Unfortunately, you're going to have to wait a bit longer. It's not ready yet. Oops.</p>
+				<p>
+					In the meantime, <a href="https://discord.gg/SRG9gu6BdE">join the Discord</a> or{" "}
+					<a href="/account">create an account</a>. You'll get a notification when the site is fit for human
+					consumption.
+				</p>
+			</main>
+		</>
 	);
-}, divider);
+}

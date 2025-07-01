@@ -93,6 +93,10 @@ export class Vector {
 		return Math.sqrt(this.x * this.x + this.y * this.y);
 	}
 
+	area() {
+		return this.x * this.y;
+	}
+
 	clone() {
 		return new Vector(this.x, this.y);
 	}

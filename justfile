@@ -15,10 +15,9 @@ dev:
 
 	# Then run the relay with a slight head start.
 	# It doesn't matter if the web beats BBB because we support automatic reloading.
-	./frontend/node_modules/.bin/concurrently --kill-others --names db,api,web --prefix-colors auto \
-		"just --justfile backend/justfile db" \
-		"sleep 1 && just --justfile backend/justfile api" \
-		"sleep 2 && just --justfile frontend/justfile dev"
+	./frontend/node_modules/.bin/concurrently --kill-others --names back,front --prefix-colors auto \
+		"just --justfile backend/justfile dev" \
+		"sleep 1 && just --justfile frontend/justfile dev"
 
 # Run the CI checks
 check:

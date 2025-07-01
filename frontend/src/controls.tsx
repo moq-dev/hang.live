@@ -1,6 +1,6 @@
 import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { type Accessor, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";
@@ -9,6 +9,7 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
+import type { Canvas } from "./canvas";
 import type { Room } from "./room";
 import Settings, { Modal } from "./settings";
 
@@ -16,7 +17,7 @@ export function Controls(props: {
 	room: Room;
 	camera: Publish.Broadcast;
 	screen: Publish.Broadcast;
-	canvas: HTMLCanvasElement;
+	canvas: Canvas;
 }): JSX.Element {
 	return (
 		<div class="controls pointer-gaps" role="toolbar" aria-label="Media controls">
@@ -388,14 +389,8 @@ function Advanced(): JSX.Element {
 	);
 }
 
-function Fullscreen(props: { canvas: HTMLCanvasElement }): JSX.Element {
-	const toggle = () => {
-		if (document.fullscreenElement === props.canvas) {
-			document.exitFullscreen();
-		} else {
-			props.canvas.requestFullscreen();
-		}
-	};
+function Fullscreen(props: { canvas: Canvas }): JSX.Element {
+	const toggle = () => props.canvas.toggleFullscreen();
 
 	return (
 		<button type="button" onClick={toggle} aria-label="Toggle fullscreen">

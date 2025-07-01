@@ -1,14 +1,9 @@
 use axum::{response::Json, routing::get, Router};
 use chrono::Utc;
 
-use crate::{
-	auth::{OAuthService, UserService},
-	config::Config,
-	storage::StorageProvider,
-	types::HealthResponse,
-};
+use crate::{types::HealthResponse, AppState};
 
-pub fn router() -> Router<(sqlx::PgPool, StorageProvider, Config, OAuthService, UserService)> {
+pub fn router() -> Router<AppState> {
 	Router::new().route("/health", get(health_check))
 }
 

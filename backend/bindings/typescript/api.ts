@@ -45,6 +45,14 @@ export interface UploadUrl {
 	file_url: string;
 }
 
+export interface ProviderInfo {
+	name: string;
+}
+
+export interface ProvidersResponse {
+	providers: ProviderInfo[];
+}
+
 // Request types
 export interface CreateRoomRequest {
 	name: string;
@@ -66,7 +74,7 @@ export class HangApiClient {
 	private baseUrl: string;
 	private token?: string;
 
-	constructor(baseUrl: string = "http://localhost:3001") {
+	constructor(baseUrl = "http://localhost:3001") {
 		this.baseUrl = baseUrl;
 	}
 
@@ -74,11 +82,15 @@ export class HangApiClient {
 		this.token = token;
 	}
 
+	isAuthenticated(): boolean {
+		return !!this.token;
+	}
+
 	private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 		const url = `${this.baseUrl}${endpoint}`;
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
-			...options.headers,
+			...(options.headers as Record<string, string>),
 		};
 
 		if (this.token) {
@@ -104,8 +116,13 @@ export class HangApiClient {
 	}
 
 	// Authentication
-	getGoogleAuthUrl(): string {
-		return `${this.baseUrl}/auth/google`;
+	getAuthUrl(provider: string): string {
+		return `${this.baseUrl}/auth/${provider}`;
+	}
+
+	async getAvailableProviders(): Promise<ProviderInfo[]> {
+		const response = await this.request<ProvidersResponse>("/auth/providers");
+		return response.providers;
 	}
 
 	// Users
@@ -206,7 +223,7 @@ export class ApiError extends Error {
 
 // Helper functions
 export function isAuthenticated(client: HangApiClient): boolean {
-	return !!client["token"];
+	return client.isAuthenticated();
 }
 
 export function createAuthenticatedClient(baseUrl: string, token: string): HangApiClient {
