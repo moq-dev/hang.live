@@ -1,9 +1,0 @@
-[database]
-url = "${DATABASE_URL}"
-
-[auth]
-jwt_secret = "secret"
-
-[storage]
-type = "local"
-base_path = "./uploads"

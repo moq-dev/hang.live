@@ -11,14 +11,10 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
 	build: {
 		target: "esnext",
-		rollupOptions: {
-			input: {
-				main: "index.html",
-				demo: "demo.html",
-				about: "about.html",
-			},
-		},
 		sourcemap: true,
+		rollupOptions: {
+			input: "index.html",
+		},
 	},
 
 	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
@@ -34,6 +30,10 @@ export default defineConfig(async () => ({
 		strictPort: true,
 		host: host || false,
 		hmr: false,
+		// Add client-side routing support
+		historyApiFallback: {
+			rewrites: [{ from: /.*/, to: "/index.html" }],
+		},
 		watch: {
 			// 3. tell vite to ignore watching `tauri`
 			ignored: ["**/tauri/**"],

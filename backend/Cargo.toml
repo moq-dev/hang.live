@@ -38,8 +38,10 @@ serde_json = "1.0"
 
 # Authentication & JWT
 jsonwebtoken = "9.3"
-oauth2 = "5.0"
+openidconnect = "3.5"
+url = "2.5"
 uuid = { version = "1.17", features = ["v4", "serde"] }
+urlencoding = "2.1"
 
 # HTTP client
 reqwest = { version = "0.12", features = [
@@ -83,6 +85,7 @@ governor = "0.10"
 utoipa = { version = "5.4", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 toml-env = "1.2.0"
+toml = "0.8.23"
 
 [dev-dependencies]
 tower-test = "0.4"

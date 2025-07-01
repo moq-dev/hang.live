@@ -1,29 +1,40 @@
-use anyhow::Result;
+pub mod auth;
+pub mod config;
+pub mod db;
+pub mod handlers;
+pub mod storage;
+pub mod types;
+
+mod error;
+mod state;
+
+pub use error::*;
+pub use state::*;
+
 use axum::{
 	extract::DefaultBodyLimit,
-	http::{HeaderValue, Method},
+	http::{HeaderName, HeaderValue, Method},
 	Router,
 };
 use sqlx::PgPool;
 use tower::ServiceBuilder;
 use tower_http::{
-	cors::CorsLayer,
+	cors::{AllowHeaders, CorsLayer},
 	request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
 	services::ServeDir,
 	trace::{DefaultMakeSpan, TraceLayer},
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use hang_api::{
-	auth::{OAuthService, UserService},
-	config::{Config, StorageConfig},
-	handlers::{auth, avatars, health, rooms, user},
-	storage::StorageProvider,
-};
+use auth::{OAuthService, UserService};
+use config::{Config, StorageConfig};
+use handlers::{avatars, health, user};
+use storage::StorageProvider;
 
-#[dotenvy::load]
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
+	dotenvy::dotenv()?;
+
 	// Initialize tracing
 	tracing_subscriber::registry()
 		.with(EnvFilter::from_default_env())
@@ -41,7 +52,7 @@ async fn main() -> Result<()> {
 	let storage = StorageProvider::new(&config).await?;
 
 	// OAuth service
-	let oauth_service = OAuthService::new(&config)?;
+	let oauth_service = OAuthService::new(&config).await?;
 
 	// User service for JWT authentication
 	let user_service = UserService::new(&config.jwt_secret);
@@ -53,24 +64,30 @@ async fn main() -> Result<()> {
 			"https://tauri.localhost".parse::<HeaderValue>()?,
 		])
 		.allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::PATCH])
-		.allow_headers(tower_http::cors::Any)
+		.allow_headers(AllowHeaders::list([
+			HeaderName::from_static("authorization"),
+			HeaderName::from_static("content-type"),
+			HeaderName::from_static("x-requested-with"),
+			HeaderName::from_static("accept"),
+			HeaderName::from_static("origin"),
+			HeaderName::from_static("user-agent"),
+		]))
 		.allow_credentials(true);
 
 	// App state for handlers
-	let app_state = (
-		pool.clone(),
-		storage.clone(),
-		config.clone(),
-		oauth_service,
-		user_service,
-	);
+	let app_state = AppState {
+		auth: user_service,
+		db: pool.clone(),
+		storage: storage.clone(),
+		config: config.clone(),
+		oauth: oauth_service,
+	};
 
 	// All routes (authentication is now handled per-route using JWT extractors)
 	let app_routes = Router::new()
 		.merge(health::router())
-		.merge(auth::router())
+		.merge(handlers::auth::router())
 		.merge(user::router())
-		.merge(rooms::router())
 		.merge(avatars::router())
 		.with_state(app_state);
 
@@ -92,7 +109,7 @@ async fn main() -> Result<()> {
 					.on_response(tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
 			)
 			.layer(cors)
-			.layer(DefaultBodyLimit::max(10 * 1024 * 1024)), // 10MB upload limit
+			.layer(DefaultBodyLimit::max(2 * 1024 * 1024)), // 2MB upload limit
 	);
 
 	let port = config.port;

@@ -15,6 +15,9 @@
 		"rules": {
 			"a11y": {
 				"useMediaCaption": "off"
+			},
+			"style": {
+				"useImportType": "off"
 			}
 		}
 	},

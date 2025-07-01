@@ -1,0 +1,35 @@
+database_url = "postgres:///hang?host=/tmp"
+jwt_secret = "your-super-secret-jwt-key-here"
+api_url = "http://localhost:3000"
+frontend_url = "http://localhost:1420/app"
+port = 3000
+
+# Storage configuration
+[storage]
+type = "local"
+base_path = "./uploads"
+
+# Alternative S3 storage configuration
+# [storage]
+# type = "s3"
+# bucket = "your-bucket-name"
+# region = "us-east-1"
+
+# OpenID Connect providers configuration
+[oidc_providers.google]
+client_id = "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com"
+client_secret = "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"
+issuer_url = "https://accounts.google.com"
+scopes = ["openid", "email", "profile"]
+
+#[oidc_providers.github]
+#client_id = "your-github-client-id"
+#client_secret = "your-github-client-secret"
+#issuer_url = "https://token.actions.githubusercontent.com"
+#scopes = ["openid", "user:email"]
+#
+[oidc_providers.discord]
+client_id = "1389725440020840548"
+client_secret = "5aFK47Syy2nPGzgwrzRa4shQZWYQEwHo"
+issuer_url = "https://discord.com"
+scopes = ["openid", "email"]

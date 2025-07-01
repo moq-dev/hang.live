@@ -5,24 +5,33 @@
 # PostgreSQL data directory (persistent)
 pg_data := ".pgdata"
 
+export RUST_BACKTRACE := "1"
+export RUST_LOG := "debug"
 
 # List all of the available commands.
 default:
   just --list
 
-# (re)initialize the database.
+# Reinitialize everything and install any dependencies.
 setup:
-	@pg_ctl -D "{{pg_data}}" stop || true
+	# Stop the database if it's running.
+	if [ -d "{{pg_data}}" ]; then \
+		pg_ctl -D "{{pg_data}}" -w stop || true; \
+		rm -rf "{{pg_data}}"; \
+	fi
 
-	# Initialize a local PostgreSQL database if it doesn't exist.
-	@rm -rf "{{pg_data}}"
+	# Create a new database.
+	initdb -D "{{pg_data}}" --auth-local=trust; \
 
-	# Initialize the database.
-	initdb -D "{{pg_data}}" --auth-local=trust
+	# Start/migrate the database.
+	just db
 
-migrate:
+# Start/migrate the database.
+db:
 	# Start the database in the background if needed
-	pg_ctl -D "{{pg_data}}" -w start
+	if ! pg_ctl -D "{{pg_data}}" status > /dev/null 2>&1; then \
+		pg_ctl -D "{{pg_data}}" -w start; \
+	fi
 
 	# Create the database (if it doesn't exist).
 	sqlx database create
@@ -83,14 +92,6 @@ build:
 	cargo build
 
 # Run the API server in the foreground.
-dev:
-	# Initialize a local PostgreSQL database if it doesn't exist.
-	if [ ! -d "{{pg_data}}" ]; then \
-		just setup; \
-	fi
-
-	# Run any pending migrations.
-	just migrate
-
+dev: db
 	# Run the API server.
 	cargo run -- dev.toml

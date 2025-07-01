@@ -1,12 +1,13 @@
 import solid from "@kixelated/signals/solid";
-import { type Accessor, createMemo, createSignal, For, onMount } from "solid-js";
+import { type Accessor, For, createMemo, createSignal, onMount } from "solid-js";
 import type { Broadcast, ChatMessage } from "./broadcast";
 import type { Bounds, Vector } from "./geometry";
 import type { Room } from "./room";
 
 import "github-markdown-css/github-markdown-dark.css";
+import { Canvas } from "./canvas";
 
-export function Chat(props: { room: Room }) {
+export function Chat(props: { canvas: Canvas; room: Room }) {
 	const [now, setNow] = createSignal(performance.now());
 	const updateNow = () => {
 		setNow(performance.now());
@@ -14,7 +15,7 @@ export function Chat(props: { room: Room }) {
 	};
 	updateNow();
 
-	const viewportUnscaled = solid(props.room.viewport);
+	const viewportUnscaled = solid(props.canvas.viewport);
 	const viewport = createMemo(() => viewportUnscaled().div(window.devicePixelRatio));
 	const broadcasts = solid(props.room.broadcasts);
 

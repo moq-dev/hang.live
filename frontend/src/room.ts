@@ -1,8 +1,8 @@
-import { type Connection, type Moq, Publish, Watch } from "@kixelated/hang";
+import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { type Effect, Root, Signal } from "@kixelated/signals";
 import { getDefaultAvatar } from "./avatar";
-import { renderBackground } from "./background";
 import { Broadcast } from "./broadcast";
+import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
 import { Notifications } from "./notifications";
 import Settings from "./settings";
@@ -33,11 +33,7 @@ export class Room {
 	// The broadcasts that have been closed and are fading away.
 	#rip: Broadcast[] = [];
 
-	canvas: HTMLCanvasElement;
-	viewport: Signal<Vector>; // The canvas size
-
-	#ctx: CanvasRenderingContext2D;
-	#animation: number | undefined;
+	canvas: Canvas;
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
@@ -46,9 +42,6 @@ export class Room {
 	// When true, the AudioContext is suspended so we can't even visualize audio.
 	// I really don't understand why browsers do this.
 	suspended: Signal<boolean>;
-
-	// When false, no video will be downloaded or rendered.
-	visible: Signal<boolean>;
 
 	// The highest z-index of any broadcast that we've seen.
 	#maxZ = 0;
@@ -66,17 +59,17 @@ export class Room {
 
 	#signals = new Root();
 
-	constructor(connection: Connection, canvas: HTMLCanvasElement, props?: RoomProps) {
-		this.connection = connection;
+	constructor(canvas: Canvas, props?: RoomProps) {
+		const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/${import.meta.env.VITE_ROOM}/`);
+
+		this.connection = new Connection({ url });
 		this.canvas = canvas;
-		this.visible = new Signal(props?.visible ?? true);
-		this.viewport = new Signal(Vector.create(canvas.width, canvas.height));
 		this.user = new Signal(props?.user);
 		this.avatar = new Signal(props?.avatar ?? getDefaultAvatar());
 
 		this.notifications = new Notifications();
 
-		this.camera = new Publish.Broadcast(connection, {
+		this.camera = new Publish.Broadcast(this.connection, {
 			device: "camera",
 			video: {
 				enabled: false, // TODO local storage?
@@ -136,7 +129,7 @@ export class Room {
 			}
 		});
 
-		this.screen = new Publish.Broadcast(connection, {
+		this.screen = new Publish.Broadcast(this.connection, {
 			device: "screen",
 			audio: {
 				enabled: false,
@@ -237,45 +230,12 @@ export class Room {
 			effect.cleanup(() => this.screen.enabled.set(false));
 		});
 
-		const resize = () => {
-			this.canvas.width = window.devicePixelRatio * window.innerWidth;
-			this.canvas.height = window.devicePixelRatio * window.innerHeight;
-			this.viewport.set(Vector.create(this.canvas.width, this.canvas.height));
-		};
-
-		const visible = () => {
-			this.visible.set(document.visibilityState !== "hidden");
-		};
-
-		resize();
-		visible();
-
-		window.addEventListener("resize", resize);
-		document.addEventListener("visibilitychange", visible);
-
-		this.#signals.cleanup(() => {
-			window.removeEventListener("resize", resize);
-			document.removeEventListener("visibilitychange", visible);
-		});
-
 		// Check if the user needs to click the page to unmute the audio.
 		// TODO do this in a UI element.
 		this.suspended = new Signal(this.notifications.suspended);
 
-		const ctx = this.canvas.getContext("2d");
-		if (!ctx) {
-			throw new Error("Failed to get canvas context");
-		}
-
-		this.#ctx = ctx;
-
-		const mousePosition = (e: MouseEvent) => {
-			const rect = this.canvas.getBoundingClientRect();
-			return Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio);
-		};
-
 		window.addEventListener("mousedown", (e) => {
-			const mouse = mousePosition(e);
+			const mouse = this.canvas.mousePosition(e);
 
 			this.#dragging = undefined;
 
@@ -287,11 +247,13 @@ export class Room {
 				return;
 			}
 
+			const viewport = this.canvas.viewport.peek();
+
 			// Bump the z-index unless we're already at the top.
 			broadcast.targetPosition.set((prev) => ({
 				...prev,
-				x: mouse.x / this.canvas.width - 0.5,
-				y: mouse.y / this.canvas.height - 0.5,
+				x: mouse.x / viewport.x - 0.5,
+				y: mouse.y / viewport.y - 0.5,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
 
@@ -300,14 +262,15 @@ export class Room {
 		});
 
 		window.addEventListener("mousemove", (e) => {
-			const mouse = mousePosition(e);
+			const mouse = this.canvas.mousePosition(e);
+			const viewport = this.canvas.viewport.peek();
 
 			if (this.#dragging) {
 				// Update the position but don't publish it yet.
 				this.#dragging.targetPosition.set((prev) => ({
 					...prev,
-					x: mouse.x / this.canvas.width - 0.5,
-					y: mouse.y / this.canvas.height - 0.5,
+					x: mouse.x / viewport.x - 0.5,
+					y: mouse.y / viewport.y - 0.5,
 				}));
 				return;
 			}
@@ -352,7 +315,7 @@ export class Room {
 
 				let broadcast = this.#dragging;
 				if (!broadcast) {
-					const mouse = mousePosition(e);
+					const mouse = this.canvas.mousePosition(e);
 
 					broadcast = this.#broadcastAt(mouse);
 					if (!broadcast) return;
@@ -426,23 +389,8 @@ export class Room {
 			this.#keysDown.delete(e.key);
 		});
 
-		// Only render the canvas when it's visible.
-		this.#signals.effect((effect) => {
-			const visible = effect.get(this.visible);
-			if (!visible) return;
-
-			this.#animation = requestAnimationFrame(this.#tick.bind(this));
-			effect.cleanup(() => cancelAnimationFrame(this.#animation ?? 0));
-		});
-
-		// Apply the visible signal to remote broadcasts.
-		this.#signals.subscribe(this.visible, (visible) => {
-			for (const broadcast of this.#remotes.values()) {
-				broadcast.source.video.enabled?.set(visible);
-			}
-		});
-
 		// Don't download audio if the AudioContext is suspended.
+		// TODO Move this to a separate class.
 		this.#signals.subscribe(this.suspended, (suspended) => {
 			for (const broadcast of this.#remotes.values()) {
 				broadcast.source.audio.enabled.set(!suspended);
@@ -466,6 +414,12 @@ export class Room {
 					this.#startPreview(this.screen);
 				}
 			}
+		});
+
+		// This is a bit of a hack, but register our render method.
+		this.canvas.onRender = this.#tick.bind(this);
+		this.#signals.cleanup(() => {
+			this.canvas.onRender = undefined;
 		});
 	}
 
@@ -510,18 +464,24 @@ export class Room {
 						enabled: true,
 						path: update.path,
 						reload: false,
-						// Download video unless the window is hidden.
-						video: { enabled: this.visible.peek() },
-						// Download audio unless the AudioContext is suspended.
-						audio: { enabled: !this.suspended.peek() },
 						// Download the location of the broadcaster.
 						location: { enabled: true },
 						// Download the chat of the broadcaster.
 						chat: { enabled: true },
 					});
 
+					// Download video when the canvas is visible.
+					watch.signals.subscribe(this.canvas.visible, (visible) => {
+						watch.video.enabled.set(visible);
+					});
+
+					// Download audio when the AudioContext is not suspended.
+					watch.signals.subscribe(this.suspended, (suspended) => {
+						watch.audio.enabled.set(!suspended);
+					});
+
 					const broadcast = new Broadcast(watch, {
-						viewport: this.viewport,
+						viewport: this.canvas.viewport,
 						camera: this.camera,
 						screen: this.screen,
 						audio: {
@@ -567,19 +527,25 @@ export class Room {
 				enabled: true,
 				path: source.path.peek(),
 				reload: false,
-				// Download video unless the window is hidden.
-				video: { enabled: this.visible.peek() },
-				// Download audio unless the AudioContext is suspended.
-				audio: { enabled: !this.suspended.peek() },
 				// Download the location of the broadcaster.
 				location: { enabled: true },
 				// Download the chat of the broadcaster.
 				chat: { enabled: true },
 			});
 
+			// Download video when the canvas is visible.
+			watch.signals.subscribe(this.canvas.visible, (visible) => {
+				watch.video.enabled.set(visible);
+			});
+
+			// Download audio when the AudioContext is not suspended.
+			watch.signals.subscribe(this.suspended, (suspended) => {
+				watch.audio.enabled.set(!suspended);
+			});
+
 			// Replace the entry with a remote broadcast.
 			broadcast = new Broadcast(watch, {
-				viewport: this.viewport,
+				viewport: this.canvas.viewport,
 				// TODO Figure out location stuff
 				camera: this.camera,
 				screen: this.screen,
@@ -590,7 +556,7 @@ export class Room {
 			});
 		} else {
 			broadcast = new Broadcast(source, {
-				viewport: this.viewport,
+				viewport: this.canvas.viewport,
 				audio: {
 					notifications: this.notifications,
 				},
@@ -663,7 +629,7 @@ export class Room {
 		}, 1000);
 	}
 
-	#tick(now: DOMHighResTimeStamp) {
+	#tick(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		try {
 			this.#tickScale();
 			this.#tickKeyboard();
@@ -706,12 +672,10 @@ export class Room {
 				}
 			}
 
-			this.#render(now);
+			this.#render(ctx, now);
 		} catch (err) {
 			console.error("tick error", err);
 		}
-
-		this.#animation = requestAnimationFrame(this.#tick.bind(this));
 	}
 
 	#tickKeyboard() {
@@ -740,13 +704,7 @@ export class Room {
 		this.camera.location.current.set(position);
 	}
 
-	#render(now: DOMHighResTimeStamp) {
-		const ctx = this.#ctx;
-		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		ctx.imageSmoothingEnabled = !Settings.potato.peek();
-
-		renderBackground(ctx, now);
-
+	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		const broadcasts = this.broadcasts.peek();
 		for (const broadcast of broadcasts) {
 			broadcast.audio.renderBackground(ctx);
@@ -791,7 +749,7 @@ export class Room {
 			return;
 		}
 
-		const canvasArea = this.canvas.width * this.canvas.height;
+		const canvasArea = this.canvas.viewport.peek().area();
 
 		let broadcastArea = 0;
 		for (const broadcast of broadcasts) {

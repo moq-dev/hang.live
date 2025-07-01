@@ -53,6 +53,9 @@ pub enum Error {
 	#[error("Multipart error: {0}")]
 	Multipart(#[from] axum::extract::multipart::MultipartError),
 
+	#[error("URL error: {0}")]
+	Url(#[from] url::ParseError),
+
 	#[error("Internal server error")]
 	Internal,
 }
@@ -79,6 +82,8 @@ impl IntoResponse for Error {
 			Error::Uuid(_) => (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()).into_response(),
 			Error::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()).into_response(),
 			Error::UnknownUser => (StatusCode::NOT_FOUND, "Unknown user".to_string()).into_response(),
+			Error::Multipart(_) => (StatusCode::BAD_REQUEST, "Invalid multipart data".to_string()).into_response(),
+			Error::Url(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Invalid URL".to_string()).into_response(),
 		}
 	}
 }

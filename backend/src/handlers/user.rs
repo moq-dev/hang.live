@@ -40,7 +40,7 @@ async fn update_current_user(
 	if let Some(name) = &update_request.name {
 		user = sqlx::query_as!(
 			db::User,
-			"UPDATE users SET name = $1 WHERE id = $2 RETURNING *",
+			"UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
 			name,
 			user.id
 		)

@@ -177,12 +177,12 @@ DATABASE_URL=postgresql://hang_user:hang_password@localhost:5432/hang_db
 # JWT Secret (generate a secure random string in production)
 JWT_SECRET=your-super-secret-jwt-key
 
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
 # Base URL for OAuth redirects
 BASE_URL=http://localhost:3001
+
+# OpenID Connect Providers (add as needed)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Storage (local, s3, gcs)
 STORAGE_TYPE=local
@@ -193,162 +193,26 @@ PORT=3001
 RUST_LOG=hang_api=debug
 ```
 
+You can configure multiple OpenID Connect providers in your config file:
+
+```toml
+[oidc_providers.google]
+client_id = "your-google-client-id"
+client_secret = "your-google-client-secret"
+issuer_url = "https://accounts.google.com"
+
+[oidc_providers.github]
+client_id = "your-github-client-id"
+client_secret = "your-github-client-secret"
+issuer_url = "https://token.actions.githubusercontent.com"
+
+[oidc_providers.discord]
+client_id = "your-discord-client-id"
+client_secret = "your-discord-client-secret"
+issuer_url = "https://discord.com"
+```
+
 ## Storage Backends
 
 ### Local Storage
-```bash
-STORAGE_TYPE=local
-STORAGE_LOCAL_PATH=./uploads
 ```
-
-### Amazon S3
-```bash
-STORAGE_TYPE=s3
-STORAGE_S3_BUCKET=your-bucket
-STORAGE_S3_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-```
-
-### Google Cloud Storage
-```bash
-STORAGE_TYPE=gcs
-STORAGE_GCS_BUCKET=your-bucket
-STORAGE_GCS_PROJECT_ID=your-project-id
-```
-
-## Cloud Deployment
-
-### Google Cloud Platform
-
-1. **Setup Terraform:**
-
-```bash
-just tf-init
-```
-
-2. **Configure variables:**
-
-```bash
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-# Edit terraform.tfvars with your values
-```
-
-3. **Deploy:**
-
-```bash
-just tf-plan
-just tf-apply
-```
-
-### Building Container
-
-For cloud deployment, we use Docker:
-
-```bash
-just api-docker        # Build container
-just api-docker-run    # Test container locally
-```
-
-## TypeScript Client
-
-Install the TypeScript client for your frontend:
-
-```bash
-npm install @hang/api-client
-```
-
-Usage:
-
-```typescript
-import { HangApiClient, createAuthenticatedClient } from '@hang/api-client';
-
-const client = new HangApiClient('http://localhost:3001');
-
-// Authenticate
-window.location.href = client.getGoogleAuthUrl();
-
-// After authentication
-const authenticatedClient = createAuthenticatedClient('http://localhost:3001', token);
-const user = await authenticatedClient.getCurrentUser();
-```
-
-## Database Schema
-
-The service uses PostgreSQL with the following tables:
-
-- `users` - User accounts and profiles
-- `rooms` - Room definitions
-- `room_members` - Many-to-many relationship between users and rooms
-
-Migrations are automatically applied on startup.
-
-## Development Philosophy
-
-This project is designed to be **flexible and developer-friendly**:
-
-### Tool Choice
-- **Use what you have**: If you have Rust installed, use it
-- **Nix for missing pieces**: PostgreSQL via Nix is easier than local install
-- **Reproducible when needed**: `nix develop` gives everyone the same environment
-
-### Workflow Options
-- **Casual**: `just setup && just api-dev`
-- **Nix user**: `nix develop` or `direnv allow`
-- **Docker fan**: `just db-docker-up`
-
-### Smart Defaults
-- Commands try local tools first, fall back to Nix
-- Database prefers Nix (more reliable for development)
-- Production builds prefer Nix (reproducible)
-
-## Development Tips
-
-### First Time Setup
-```bash
-just setup           # One-time setup
-just check-tools     # See what's available
-```
-
-### Daily Development
-```bash
-just db-up          # Start database
-just api-dev        # Start API
-just dev            # Start Tauri app
-```
-
-### Troubleshooting
-```bash
-just check-tools    # Diagnose issues
-just db-reset       # Reset database
-just api-shell      # Enter Nix environment
-```
-
-### Using Direnv (Optional)
-```bash
-# Automatic environment loading
-echo "use flake" > .envrc
-direnv allow
-# Now environment loads automatically when you cd into src-api/
-```
-
-## Architecture
-
-- **Framework**: Axum with Tower middleware
-- **Database**: PostgreSQL with SQLx
-- **Authentication**: OAuth2 + JWT
-- **Storage**: Pluggable backend (Local/S3/GCS)
-- **Development**: Flexible tool chain (local + Nix)
-- **Deployment**: Docker + Terraform
-
-## Why This Approach?
-
-- **Developer Freedom**: Use the tools you're comfortable with
-- **Easy Onboarding**: `just setup` gets anyone started quickly
-- **Reliable Database**: Nix ensures PostgreSQL works the same everywhere
-- **Reproducible Builds**: Nix available when you need exact reproducibility
-- **No Vendor Lock-in**: Works with any combination of local/Nix/Docker tools
-
-## License
-
-MIT License
