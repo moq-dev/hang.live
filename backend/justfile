@@ -5,12 +5,33 @@
 # PostgreSQL data directory (persistent)
 pg_data := ".pgdata"
 
-export DATABASE_URL := "postgres:///hang?host=/tmp"
-export SQLX_OFFLINE := "true"
 
 # List all of the available commands.
 default:
   just --list
+
+# (re)initialize the database.
+setup:
+	@pg_ctl -D "{{pg_data}}" stop || true
+
+	# Initialize a local PostgreSQL database if it doesn't exist.
+	@rm -rf "{{pg_data}}"
+
+	# Initialize the database.
+	initdb -D "{{pg_data}}" --auth-local=trust
+
+migrate:
+	# Start the database in the background if needed
+	pg_ctl -D "{{pg_data}}" -w start
+
+	# Create the database (if it doesn't exist).
+	sqlx database create
+
+	# Run any pending migrations.
+	sqlx migrate run
+
+	# Save the database schema so we can build without the database running.
+	cargo sqlx prepare
 
 # Run the CI checks
 check flags="":
@@ -62,29 +83,14 @@ build:
 	cargo build
 
 # Run the API server in the foreground.
-# Use nix to install any required dependencies.
 dev:
-	@nix develop --command just dev-nix
-
-dev-nix:
-	@pg_ctl -D "{{pg_data}}" stop || true
-
 	# Initialize a local PostgreSQL database if it doesn't exist.
 	if [ ! -d "{{pg_data}}" ]; then \
-		initdb -D "{{pg_data}}" --auth-local=trust; \
+		just setup; \
 	fi
 
-	# Start the database in the background.
-	pg_ctl -D "{{pg_data}}" -w start
-
-	# Create the database (if it doesn't exist).
-	sqlx database create
-
 	# Run any pending migrations.
-	sqlx migrate run
-
-	# Save the database schema so we can build without the database running.
-	cargo sqlx prepare
+	just migrate
 
 	# Run the API server.
 	cargo run -- dev.toml
