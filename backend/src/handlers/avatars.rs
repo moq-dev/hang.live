@@ -1,109 +1,100 @@
 use axum::{
-    extract::{Multipart, Request, State},
-    response::Json,
-    routing::{post, get},
-    Router,
-};
-use sqlx::PgPool;
-
-use crate::{
-    config::Config,
-    db::models::User,
-    middleware::ClaimsExt,
-    storage::StorageProvider,
-    types::UploadUrlResponse,
-    AppError, Result,
+	extract::{Multipart, State},
+	response::Json,
+	routing::{get, patch, post},
+	Router,
 };
 
-type AppState = (PgPool, StorageProvider, Config);
+use crate::{auth, db, AppState, Error, Result};
 
 pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/avatars/upload", post(upload_avatar))
-        .route("/avatars/upload-url", get(get_upload_url))
+	Router::new()
+		.route("/me/avatar", post(upload_avatar))
+		.route("/me/avatar", get(get_avatar))
 }
 
 async fn upload_avatar(
-    State((pool, storage, _)): State<AppState>,
-    request: Request,
-    mut multipart: Multipart,
+	State(state): State<AppState>,
+	user: auth::User,
+	mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>> {
-    let user_id = request.user_id()?;
+	// Get current user to check for existing avatar
+	let user = db::User::find_by_id(&state.db, user.id).await?;
 
-    // Get current user to check for existing avatar
-    let user = User::find_by_id(&pool, user_id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
+	// Process multipart form data
+	while let Some(field) = multipart.next_field().await? {
+		let name = field.name().unwrap_or("");
+		if name != "avatar" {
+			continue;
+		}
 
-    while let Some(field) = multipart.next_field().await.map_err(|e| {
-        AppError::Validation(format!("Invalid multipart data: {}", e))
-    })? {
-        let name = field.name().unwrap_or("").to_string();
+		let _filename = field.file_name().map(|s| s.to_string());
+		let content_type = field
+			.content_type()
+			.map(|s| s.to_string())
+			.unwrap_or_else(|| "image/jpeg".to_string());
+		let data = field.bytes().await?;
 
-        if name == "avatar" {
-            let content_type = field.content_type()
-                .unwrap_or("application/octet-stream")
-                .to_string();
+		// Validate file type
+		let allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+		if !allowed_types.contains(&content_type.as_str()) {
+			return Err(Error::Validation(
+				"Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.".to_string(),
+			));
+		}
 
-            // Validate content type
-            if !content_type.starts_with("image/") {
-                return Err(AppError::Validation("File must be an image".to_string()));
-            }
+		// Validate file size (max 5MB)
+		if data.len() > 5 * 1024 * 1024 {
+			return Err(Error::Validation(
+				"File size too large. Maximum 5MB allowed.".to_string(),
+			));
+		}
 
-            let data = field.bytes().await.map_err(|e| {
-                AppError::Validation(format!("Failed to read file data: {}", e))
-            })?;
+		// Delete old avatar if exists
+		if let Some(old_avatar_url) = &user.avatar_url {
+			// For local storage, extract path from URL
+			if old_avatar_url.starts_with("/uploads/") {
+				let _ = state.storage.delete_file(old_avatar_url).await; // Ignore errors for old file deletion
+			}
+		}
 
-            // Validate file size (max 5MB)
-            if data.len() > 5 * 1024 * 1024 {
-                return Err(AppError::Validation("File size must be less than 5MB".to_string()));
-            }
+		// Determine file extension
+		let extension = match content_type.as_str() {
+			"image/jpeg" => "jpg",
+			"image/png" => "png",
+			"image/gif" => "gif",
+			"image/webp" => "webp",
+			_ => "jpg",
+		};
 
-            // Determine file extension
-            let extension = match content_type.as_str() {
-                "image/jpeg" => "jpg",
-                "image/png" => "png",
-                "image/gif" => "gif",
-                "image/webp" => "webp",
-                _ => return Err(AppError::Validation("Unsupported image format".to_string())),
-            };
+		// Upload file using the storage provider's method
+		let upload_url = state
+			.storage
+			.upload_file(data.to_vec(), &content_type, extension)
+			.await?;
 
-            // Upload file
-            let file_url = storage.upload_file(data.to_vec(), &content_type, extension).await?;
+		// Update user's avatar URL in database
+		sqlx::query!(
+			"UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2",
+			upload_url,
+			user.id
+		)
+		.execute(&state.db)
+		.await?;
 
-            // Delete old avatar if exists
-            if let Some(old_avatar_url) = &user.avatar_url {
-                let _ = storage.delete_file(old_avatar_url).await; // Don't fail if deletion fails
-            }
+		return Ok(Json(serde_json::json!({
+			"avatar_url": upload_url,
+			"message": "Avatar uploaded successfully"
+		})));
+	}
 
-            // Update user's avatar URL
-            User::update_avatar_url(&pool, user_id, &file_url).await?;
-
-            return Ok(Json(serde_json::json!({
-                "message": "Avatar uploaded successfully",
-                "avatar_url": file_url
-            })));
-        }
-    }
-
-    Err(AppError::Validation("No avatar file provided".to_string()))
+	Err(Error::Validation("No avatar file found in request".to_string()))
 }
 
-async fn get_upload_url(
-    State((_, storage, _)): State<AppState>,
-    request: Request,
-) -> Result<Json<UploadUrlResponse>> {
-    let _user_id = request.user_id()?; // Ensure user is authenticated
+async fn get_avatar(State(state): State<AppState>, user: auth::User) -> Result<Json<serde_json::Value>> {
+	let user = db::User::find_by_id(&state.db, user.id).await?;
 
-    // For now, assume JPEG. In a real app, you might want to accept a query parameter
-    let (upload_url, file_url) = storage
-        .get_presigned_upload_url("image/jpeg", "jpg")
-        .await?;
-
-    let response = UploadUrlResponse {
-        upload_url,
-        file_url,
-    };
-
-    Ok(Json(response))
+	Ok(Json(serde_json::json!({
+		"avatar_url": user.avatar_url,
+	})))
 }

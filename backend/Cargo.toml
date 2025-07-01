@@ -19,6 +19,7 @@ hyper = { version = "1.6", features = ["full"] }
 
 # Async runtime
 tokio = { version = "1.45", features = ["full"] }
+async-trait = "0.1"
 
 # Database
 sqlx = { version = "0.8", features = [

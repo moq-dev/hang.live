@@ -1,10 +1,8 @@
-use std::env;
-
 use anyhow::Result;
 use axum::{
 	extract::DefaultBodyLimit,
 	http::{HeaderValue, Method},
-	middleware, Router,
+	Router,
 };
 use sqlx::PgPool;
 use tower::ServiceBuilder;
@@ -14,22 +12,21 @@ use tower_http::{
 	services::ServeDir,
 	trace::{DefaultMakeSpan, TraceLayer},
 };
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use hang_api::{
-	auth::TokenService,
-	config::Config,
-	db::migrate,
-	handlers::{auth, avatars, health, rooms, users},
-	middleware::auth_middleware,
+	auth::{OAuthService, UserService},
+	config::{Config, StorageConfig},
+	handlers::{auth, avatars, health, rooms, user},
 	storage::StorageProvider,
 };
 
+#[dotenvy::load]
 #[tokio::main]
 async fn main() -> Result<()> {
 	// Initialize tracing
 	tracing_subscriber::registry()
-		.with(tracing_subscriber::EnvFilter::from_default_env())
+		.with(EnvFilter::from_default_env())
 		.with(tracing_subscriber::fmt::layer())
 		.init();
 
@@ -43,8 +40,11 @@ async fn main() -> Result<()> {
 	// Storage provider
 	let storage = StorageProvider::new(&config).await?;
 
-	// Token service for middleware
-	let token_service = TokenService::new(&config.jwt_secret);
+	// OAuth service
+	let oauth_service = OAuthService::new(&config)?;
+
+	// User service for JWT authentication
+	let user_service = UserService::new(&config.jwt_secret);
 
 	// CORS configuration
 	let cors = CorsLayer::new()
@@ -56,47 +56,44 @@ async fn main() -> Result<()> {
 		.allow_headers(tower_http::cors::Any)
 		.allow_credentials(true);
 
-	// App state
-	let app_state = (pool.clone(), storage.clone(), config.clone());
+	// App state for handlers
+	let app_state = (
+		pool.clone(),
+		storage.clone(),
+		config.clone(),
+		oauth_service,
+		user_service,
+	);
 
-	// Protected routes that require authentication
-	let protected_routes = Router::new()
-		.merge(users::router())
-		.merge(rooms::router())
-		.merge(avatars::router())
-		.layer(middleware::from_fn_with_state(token_service, auth_middleware))
-		.with_state(app_state.clone());
-
-	// Public routes
-	let public_routes = Router::new()
+	// All routes (authentication is now handled per-route using JWT extractors)
+	let app_routes = Router::new()
 		.merge(health::router())
 		.merge(auth::router())
+		.merge(user::router())
+		.merge(rooms::router())
+		.merge(avatars::router())
 		.with_state(app_state);
 
 	// File serving for local uploads
-	let file_service = if let crate::config::StorageConfig::Local { base_path } = &config.storage {
+	let file_service = if let StorageConfig::Local { base_path } = &config.storage {
 		Router::new().nest_service("/uploads", ServeDir::new(base_path))
 	} else {
 		Router::new()
 	};
 
-	let app = Router::new()
-		.merge(public_routes)
-		.merge(protected_routes)
-		.merge(file_service)
-		.layer(
-			ServiceBuilder::new()
-				.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
-				.layer(PropagateRequestIdLayer::x_request_id())
-				.layer(
-					TraceLayer::new_for_http()
-						.make_span_with(DefaultMakeSpan::new().include_headers(true))
-						.on_request(tower_http::trace::DefaultOnRequest::new().level(tracing::Level::INFO))
-						.on_response(tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
-				)
-				.layer(cors)
-				.layer(DefaultBodyLimit::max(10 * 1024 * 1024)), // 10MB upload limit
-		);
+	let app = Router::new().merge(app_routes).merge(file_service).layer(
+		ServiceBuilder::new()
+			.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+			.layer(PropagateRequestIdLayer::x_request_id())
+			.layer(
+				TraceLayer::new_for_http()
+					.make_span_with(DefaultMakeSpan::new().include_headers(true))
+					.on_request(tower_http::trace::DefaultOnRequest::new().level(tracing::Level::INFO))
+					.on_response(tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
+			)
+			.layer(cors)
+			.layer(DefaultBodyLimit::max(10 * 1024 * 1024)), // 10MB upload limit
+	);
 
 	let port = config.port;
 	let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", port)).await?;

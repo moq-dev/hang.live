@@ -29,10 +29,12 @@ pub enum StorageConfig {
 		secret_access_key: Option<String>,
 		endpoint: Option<String>, // For local development with MinIO
 	},
+	/*
 	Gcs {
 		bucket: String,
 		project_id: String,
 	},
+	*/
 }
 
 impl Config {

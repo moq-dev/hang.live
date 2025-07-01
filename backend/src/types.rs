@@ -5,7 +5,7 @@ use validator::Validate;
 // Request types
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct CreateRoomRequest {
-	#[validate(length(min = 1, max = 100, message = "Name must be between 1 and 100 characters"))]
+	#[validate(length(min = 4, max = 100, message = "Name must be between 4 and 100 characters"))]
 	pub name: String,
 	#[validate(length(max = 500, message = "Description must be less than 500 characters"))]
 	pub description: Option<String>,
@@ -14,7 +14,7 @@ pub struct CreateRoomRequest {
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct UpdateUserRequest {
-	#[validate(length(min = 1, max = 100, message = "Name must be between 1 and 100 characters"))]
+	#[validate(length(min = 4, max = 100, message = "Name must be between 4 and 100 characters"))]
 	pub name: Option<String>,
 }
 

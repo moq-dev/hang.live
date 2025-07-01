@@ -1,26 +1,27 @@
 use axum::{
 	http::StatusCode,
 	response::{IntoResponse, Response},
-	Json,
 };
-use serde_json::json;
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, AppError>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
-pub enum AppError {
-	#[error("Database error: {0}")]
+pub enum Error {
+	#[error("db error: {0}")]
 	Database(#[from] sqlx::Error),
 
-	#[error("Authentication error: {0}")]
-	Auth(String),
+	#[error("authentication error: {0}")]
+	Auth(#[from] crate::auth::Error),
 
-	#[error("Validation error: {0}")]
-	Validation(String),
+	#[error("Unauthorized")]
+	Unauthorized,
 
 	#[error("Not found: {0}")]
 	NotFound(String),
+
+	#[error("Unknown user")]
+	UnknownUser,
 
 	#[error("Forbidden: {0}")]
 	Forbidden(String),
@@ -43,55 +44,41 @@ pub enum AppError {
 	#[error("JWT error: {0}")]
 	Jwt(#[from] jsonwebtoken::errors::Error),
 
+	#[error("Invalid UUID: {0}")]
+	Uuid(#[from] uuid::Error),
+
+	#[error("Validation error: {0}")]
+	Validation(#[from] validator::ValidationErrors),
+
+	#[error("Multipart error: {0}")]
+	Multipart(#[from] axum::extract::multipart::MultipartError),
+
 	#[error("Internal server error")]
 	Internal,
 }
 
-impl IntoResponse for AppError {
+impl IntoResponse for Error {
 	fn into_response(self) -> Response {
-		let (status, error_message) = match self {
-			AppError::Database(err) => {
-				tracing::error!("Database error: {:?}", err);
-				(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+		match self {
+			Error::Database(_) => {
+				(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()).into_response()
 			}
-			AppError::Auth(msg) => (StatusCode::UNAUTHORIZED, msg),
-			AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
-			AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-			AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
-			AppError::Storage(msg) => {
-				tracing::error!("Storage error: {}", msg);
-				(StatusCode::INTERNAL_SERVER_ERROR, "Storage error".to_string())
+			Error::Auth(msg) => msg.into_response(),
+			Error::Jwt(_) => (StatusCode::UNAUTHORIZED, "Invalid token".to_string()).into_response(),
+			Error::Validation(msg) => (StatusCode::BAD_REQUEST, msg.to_string()).into_response(),
+			Error::NotFound(msg) => (StatusCode::NOT_FOUND, msg).into_response(),
+			Error::Forbidden(msg) => (StatusCode::FORBIDDEN, msg).into_response(),
+			Error::Storage(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Storage error".to_string()).into_response(),
+			Error::ExternalService(_) => {
+				(StatusCode::BAD_GATEWAY, "External service error".to_string()).into_response()
 			}
-			AppError::ExternalService(msg) => {
-				tracing::error!("External service error: {}", msg);
-				(StatusCode::BAD_GATEWAY, "External service error".to_string())
-			}
-			AppError::Config(err) => {
-				tracing::error!("Configuration error: {:?}", err);
-				(StatusCode::INTERNAL_SERVER_ERROR, "Configuration error".to_string())
-			}
-			AppError::Json(err) => {
-				tracing::error!("JSON error: {:?}", err);
-				(StatusCode::BAD_REQUEST, "Invalid JSON".to_string())
-			}
-			AppError::Http(err) => {
-				tracing::error!("HTTP error: {:?}", err);
-				(StatusCode::INTERNAL_SERVER_ERROR, "HTTP error".to_string())
-			}
-			AppError::Jwt(err) => {
-				tracing::error!("JWT error: {:?}", err);
-				(StatusCode::UNAUTHORIZED, "Invalid token".to_string())
-			}
-			AppError::Internal => {
-				tracing::error!("Internal server error");
-				(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
-			}
-		};
-
-		let body = Json(json!({
-			"error": error_message,
-		}));
-
-		(status, body).into_response()
+			Error::Config(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Configuration error".to_string()).into_response(),
+			Error::Json(_) => (StatusCode::BAD_REQUEST, "Invalid JSON".to_string()).into_response(),
+			Error::Http(_) => (StatusCode::INTERNAL_SERVER_ERROR, "HTTP error".to_string()).into_response(),
+			Error::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()).into_response(),
+			Error::Uuid(_) => (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()).into_response(),
+			Error::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()).into_response(),
+			Error::UnknownUser => (StatusCode::NOT_FOUND, "Unknown user".to_string()).into_response(),
+		}
 	}
 }
