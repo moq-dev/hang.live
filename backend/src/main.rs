@@ -109,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
 					.on_response(tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
 			)
 			.layer(cors)
-			.layer(DefaultBodyLimit::max(2 * 1024 * 1024)), // 2MB upload limit
+			.layer(DefaultBodyLimit::max(10 * 1024 * 1024)), // 10MB upload limit
 	);
 
 	let port = config.port;

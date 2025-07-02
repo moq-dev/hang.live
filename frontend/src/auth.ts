@@ -1,4 +1,6 @@
-export interface User {
+import { Computed, Root, Signal } from "@kixelated/signals";
+
+export interface AuthUser {
 	id: string;
 	email: string;
 	name: string;
@@ -7,60 +9,65 @@ export interface User {
 }
 
 export interface AuthResponse {
-	user: User;
+	user: AuthUser;
 	token: string;
 }
 
-export interface Provider {
-	name: string;
+export interface AuthConfig {
+	apiUrl: string;
 }
 
-export class AuthService {
-	private baseUrl: string;
-	private token: string | null = null;
-	private user: User | null = null;
+export class Auth {
+	token: Signal<string | null>;
+	user: Signal<AuthUser | null>;
+	authenticated: Computed<boolean>;
 
-	constructor(baseUrl = "http://localhost:3000") {
-		this.baseUrl = baseUrl;
-		this.loadFromStorage();
-	}
+	#config: AuthConfig;
+	#signals = new Root();
 
-	private loadFromStorage() {
-		this.token = localStorage.getItem("auth.token");
-		const userStr = localStorage.getItem("auth.user");
-		if (userStr) {
-			try {
-				this.user = JSON.parse(userStr);
-			} catch (e) {
-				console.error("Failed to parse stored user data:", e);
-				this.clearAuth();
+	constructor(config: AuthConfig) {
+		this.#config = config;
+
+		const urlParams = new URLSearchParams(window.location.search);
+
+		let tokenParam = urlParams.get("token");
+		let userParam = urlParams.get("user");
+
+		if (tokenParam && userParam) {
+			userParam = decodeURIComponent(userParam);
+			window.history.replaceState({}, document.title, window.location.pathname);
+		} else {
+			tokenParam = localStorage.getItem("auth.token") ?? null;
+			userParam = localStorage.getItem("auth.user") ?? null;
+		}
+
+		try {
+			this.token = new Signal(tokenParam);
+			this.user = new Signal(userParam ? JSON.parse(userParam) : null);
+		} catch (e) {
+			this.logout(); // clear the saved state on error
+			throw e;
+		}
+
+		// Update local storage when the token/user changes
+		this.#signals.effect((effect) => {
+			const token = effect.get(this.token);
+			const user = effect.get(this.user);
+
+			if (token && user) {
+				localStorage.setItem("auth.token", token);
+				localStorage.setItem("auth.user", JSON.stringify(user));
+			} else {
+				localStorage.removeItem("auth.token");
+				localStorage.removeItem("auth.user");
 			}
-		}
+		});
+
+		this.authenticated = this.#signals.computed(() => !!this.token.peek() && !!this.user.peek());
 	}
 
-	private saveToStorage() {
-		if (this.token) {
-			localStorage.setItem("auth.token", this.token);
-		} else {
-			localStorage.removeItem("auth.token");
-		}
-
-		if (this.user) {
-			localStorage.setItem("auth.user", JSON.stringify(this.user));
-		} else {
-			localStorage.removeItem("auth.user");
-		}
-	}
-
-	private clearAuth() {
-		this.token = null;
-		this.user = null;
-		localStorage.removeItem("auth.token");
-		localStorage.removeItem("auth.user");
-	}
-
-	async getProviders(): Promise<Provider[]> {
-		const response = await fetch(`${this.baseUrl}/auth/providers`);
+	async providers(): Promise<string[]> {
+		const response = await fetch(`${this.#config.apiUrl}/auth/providers`);
 		if (!response.ok) {
 			throw new Error("Failed to fetch OAuth providers");
 		}
@@ -68,74 +75,40 @@ export class AuthService {
 		return data.providers;
 	}
 
-	initiateOAuth(provider: string) {
+	// Start the OAuth login flow for the given provider
+	login(provider: string) {
 		// Redirect to the OAuth provider
-		window.location.href = `${this.baseUrl}/auth/${provider}`;
-	}
-
-	// Handle OAuth callback (this would be called after redirect)
-	async handleOAuthCallback(): Promise<boolean> {
-		const urlParams = new URLSearchParams(window.location.search);
-		const token = urlParams.get("token");
-		const userParam = urlParams.get("user");
-
-		if (token && userParam) {
-			try {
-				this.token = token;
-				this.user = JSON.parse(decodeURIComponent(userParam));
-				this.saveToStorage();
-
-				// Clean up URL
-				window.history.replaceState({}, document.title, window.location.pathname);
-				return true;
-			} catch (e) {
-				console.error("Failed to handle OAuth callback:", e);
-				return false;
-			}
-		}
-		return false;
+		window.location.href = `${this.#config.apiUrl}/auth/${provider}`;
 	}
 
 	logout() {
-		this.clearAuth();
-
 		// Optionally call the logout endpoint
-		if (this.token) {
-			fetch(`${this.baseUrl}/auth/logout`, {
+		if (this.token.peek()) {
+			this.fetch(`${this.#config.apiUrl}/auth/logout`, {
 				method: "POST",
-				headers: {
-					Authorization: `Bearer ${this.token}`,
-				},
 			}).catch(console.error);
 		}
+
+		this.token.set(null);
+		this.user.set(null);
 	}
 
-	isAuthenticated(): boolean {
-		return !!(this.token && this.user);
-	}
-
-	getUser(): User | null {
-		return this.user;
-	}
-
-	getToken(): string | null {
-		return this.token;
+	close() {
+		this.#signals.close();
 	}
 
 	// Helper method to make authenticated requests
-	async authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
-		if (!this.token) {
+	async fetch(url: string, options: RequestInit = {}): Promise<Response> {
+		const token = this.token.peek();
+		if (!token) {
 			throw new Error("Not authenticated");
 		}
 
 		const headers = {
 			...options.headers,
-			Authorization: `Bearer ${this.token}`,
+			Authorization: `Bearer ${token}`,
 		};
 
 		return fetch(url, { ...options, headers });
 	}
 }
-
-// Create a global auth service instance
-export const authService = new AuthService();
