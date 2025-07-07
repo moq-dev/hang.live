@@ -9,7 +9,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
-import { Auth } from "./auth";
+import * as Api from "./api";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
 import { Controls } from "./controls";
@@ -19,25 +19,28 @@ export function Hang(): JSX.Element {
 	const canvas = new Canvas();
 	onCleanup(() => canvas.close());
 
-	const auth = new Auth({
-		apiUrl: "http://localhost:8080/api",
+	const api = new Api.Client({
+		url: new URL("http://localhost:3000"),
 	});
 
 	return (
 		<Router>
 			<Route path="/" component={About} />
-			<Route path="/account" component={() => <Account auth={auth} />} />
-			<Route path="/demo" component={() => <Demo canvas={canvas} auth={auth} />} />
+			<Route path="/account" component={() => <Account api={api} />} />
+			<Route path="/demo" component={() => <Demo canvas={canvas} api={api} />} />
 		</Router>
 	);
 }
 
-function Demo(props: { canvas: Canvas; auth: Auth }): JSX.Element {
-	const user = solid(props.auth.user);
+function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
+	const room = new Room(props.canvas);
 
-	const room = new Room(props.canvas, {
-		user: user()?.name ?? "Anonymous",
-		avatar: user()?.avatar_url ?? undefined,
+	const account = new Api.Account(props.api);
+
+	createEffect(async () => {
+		const info = await account.info();
+		room.user.set(info.name);
+		room.avatar.set(info.avatar);
 	});
 
 	onCleanup(() => room.close());

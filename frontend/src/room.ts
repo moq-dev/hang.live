@@ -22,7 +22,7 @@ export class Room {
 	user: Signal<string | undefined>;
 
 	// The avatar of the local user.
-	avatar: Signal<string>;
+	avatar: Signal<string | undefined>;
 
 	// All of the broadcasts stored in z-index order.
 	broadcasts = new Signal<Broadcast[]>([]);

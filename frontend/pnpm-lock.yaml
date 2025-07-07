@@ -56,6 +56,9 @@ importers:
       tauri-plugin-web-transport:
         specifier: link:../../tauri-plugin-web-transport
         version: link:../../tauri-plugin-web-transport
+      zod:
+        specifier: ^3.25.69
+        version: 3.25.69
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.0.5
@@ -2202,6 +2205,9 @@ packages:
   zod@3.22.3:
     resolution: {integrity: sha512-EjIevzuJRiRPbVH4mGc8nApb/lVLKVpmUhAaR5R5doKGfAnGJ6Gr3CViAVjP+4FWSxCsybeWQdcgCtbX+7oZug==}
 
+  zod@3.25.69:
+    resolution: {integrity: sha512-cjUx+boz8dfYGssYKLGNTF5VUF6NETpcZCDTN3knhUUXQTAAvErzRhV3pgeCZm2YsL4HOwtEHPonlsshPu2I0A==}
+
 snapshots:
 
   '@ampproject/remapping@2.3.0':
@@ -4053,3 +4059,5 @@ snapshots:
       stacktracey: 2.1.8
 
   zod@3.22.3: {}
+
+  zod@3.25.69: {}
