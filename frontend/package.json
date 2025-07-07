@@ -26,7 +26,8 @@
 		"marked": "^15.0.12",
 		"solid-js": "^1.9.7",
 		"tailwindcss": "^4.1.10",
-		"tauri-plugin-web-transport": "^0.1.0"
+		"tauri-plugin-web-transport": "^0.1.0",
+		"zod": "^3.25.69"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.0.5",
