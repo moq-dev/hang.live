@@ -4,12 +4,12 @@ import "@kixelated/hang/support/element";
 
 import solid from "@kixelated/signals/solid";
 import { Route, Router } from "@solidjs/router";
-import { Show, createEffect, onCleanup } from "solid-js";
+import { createEffect, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
-import * as Api from "./api";
+import * as Api from "@hang/api";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
 import { Controls } from "./controls";
@@ -36,32 +36,23 @@ function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
 	const room = new Room(props.canvas);
 
 	const account = new Api.Account(props.api);
+	const info = solid(account.info);
 
-	createEffect(async () => {
-		const info = await account.info();
-		room.user.set(info.name);
-		room.avatar.set(info.avatar);
+	createEffect(() => {
+		const i = info();
+		room.user.set(i?.name);
+		room.avatar.set(i?.avatar ?? Api.getDefaultAvatar());
 	});
 
 	onCleanup(() => room.close());
 
-	const username = solid(room.user);
 	const suspended = solid(room.suspended);
-
-	// Auto-set the user from auth if not already set
-	createEffect(() => {
-		if (user && !username()) {
-			room.user.set(user.name);
-		}
-	});
 
 	return (
 		<>
-			<div>
-				<Autoplay suspended={suspended()} />
-				<Chat canvas={props.canvas} room={room} />
-				<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
-			</div>
+			<Autoplay suspended={suspended()} />
+			<Chat canvas={props.canvas} room={room} />
+			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
 		</>
 	);
 }

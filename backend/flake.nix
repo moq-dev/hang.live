@@ -52,7 +52,7 @@
           };
         };
 
-        devShells.default = pkgs.mkShell {
+        devShell = pkgs.mkShell {
           packages = common-deps ++ [
             pkgs.postgresql
             pkgs.sqlx-cli

@@ -13,19 +13,22 @@
 	<!-- The background canvas element -->
 	<canvas id="canvas" class="fixed inset-0 w-full h-full"></canvas>
 
-	<div class="wrapper">
-		<header>
-			<a href="/" class="logo">
-				<span>hang</span>
-				<span id="status">live</span>
-			</a>
-			<div id="support"></div>
-			<nav>
-				<a href="/account">account</a>
-			</nav>
-		</header>
+	<div id="hang">
+		<div class="wrapper">
+			<header>
+				<a href="/" class="logo">
+					<span>hang</span>
+					<span id="status">live</span>
+				</a>
+				<div id="support"></div>
+				<nav>
+					<a href="/account">account</a>
+				</nav>
+			</header>
 
-		<div id="hang"></div>
+			<!-- SolidJS will render here -->
+			<div id="hang"></div>
+		</div>
 	</div>
 
 	<script type="module" src="src/index.tsx"></script>

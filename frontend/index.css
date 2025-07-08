@@ -44,13 +44,28 @@ body {
 	margin: 0;
 	min-width: 320px;
 	min-height: 100vh;
+	overflow-x: hidden;
+}
 
+/* Make the hang div take up at least full viewport height */
+#hang {
+	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
+	position: relative;
+}
+
+/* Ensure the wrapper doesn't interfere with full height */
+.wrapper {
+	@apply p-4 max-w-[900px] mx-auto w-full;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 0; /* Allow flex item to shrink */
 }
 
 header {
-	@apply text-white font-montserrat flex items-start justify-between gap-2 p-2 text-shadow-lg;
+	@apply text-white font-montserrat flex justify-between gap-2 text-shadow-lg;
 
 	/* Prevent text selection. */
 	user-select: none;
@@ -83,6 +98,7 @@ header {
 
 .controls {
 	@apply fixed bottom-0 left-0 right-0 flex items-end gap-2 p-[8px_12px] text-shadow-lg text-xl;
+	z-index: 10; /* Ensure controls are above other content */
 
 	input:not([type="range"]) {
 		@apply py-1 px-2;
@@ -123,12 +139,12 @@ header {
 	@apply backdrop-filter-none;
 }
 
-.wrapper {
-	@apply backdrop-blur-sm rounded p-4 max-w-[900px] mx-auto w-full;
-}
-
 main {
 	@apply w-full py-2 px-4;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
 
 	p {
 		@apply m-4;

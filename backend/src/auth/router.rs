@@ -1,14 +1,14 @@
 use axum::{
 	extract::{Path, Query, State},
 	response::{Json, Redirect},
-	routing::{get, post},
+	routing::get,
 	Router,
 };
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{
-	auth::{Provider, User as AuthUser},
-	types::UserResponse,
+	auth::{Provider, Token as AuthUser},
 	AppState, Result,
 };
 
@@ -16,7 +16,6 @@ pub fn router() -> Router<AppState> {
 	Router::new()
 		.route("/auth/{provider}", get(oauth_login))
 		.route("/auth/{provider}/callback", get(oauth_callback))
-		.route("/auth/logout", post(logout))
 		.route("/auth/providers", get(get_providers))
 }
 
@@ -26,19 +25,10 @@ struct OAuthCallbackQuery {
 	state: String,
 }
 
-#[derive(Serialize)]
-struct LogoutResponse {
-	message: String,
-}
-
-#[derive(Serialize)]
-struct ProvidersResponse {
-	providers: Vec<ProviderInfo>,
-}
-
-#[derive(Serialize)]
-struct ProviderInfo {
-	name: String,
+#[derive(TS, Debug, Serialize, Deserialize)]
+#[ts(export, export_to = "generated.ts")]
+struct AuthProviders {
+	names: Vec<String>,
 }
 
 async fn oauth_login(Path(provider): Path<String>, State(state): State<AppState>) -> Result<Redirect> {
@@ -78,45 +68,21 @@ async fn oauth_callback(
 	};
 	let jwt_token = state.auth.encode(&auth_user)?;
 
-	let user_response = UserResponse {
-		id: user.id,
-		email: user.email,
-		name: user.name,
-		avatar_url: user.avatar_url,
-		created_at: user.created_at.to_rfc3339(),
-	};
-
 	// Create redirect URL with token and user data as query parameters
 	let mut redirect_url = state.config.oidc.frontend_url;
 
-	// Serialize user data and URL-encode it
-	let user_json = serde_json::to_string(&user_response)
-		.map_err(|e| crate::Error::Config(anyhow::anyhow!("Failed to serialize user data: {}", e)))?;
-	let encoded_user = urlencoding::encode(&user_json);
-
-	redirect_url
-		.query_pairs_mut()
-		.append_pair("token", &jwt_token)
-		.append_pair("user", &encoded_user);
+	redirect_url.query_pairs_mut().append_pair("token", &jwt_token);
 
 	Ok(Redirect::to(redirect_url.as_str()))
 }
 
-async fn logout(_auth: AuthUser) -> Result<Json<LogoutResponse>> {
-	// With JWT tokens, logout is handled client-side by removing the token
-	// We could implement a token blacklist here if needed
-	Ok(Json(LogoutResponse {
-		message: "Logged out successfully.".to_string(),
-	}))
-}
-
-async fn get_providers(State(state): State<AppState>) -> Result<Json<ProvidersResponse>> {
-	let providers = state
+async fn get_providers(State(state): State<AppState>) -> Result<Json<AuthProviders>> {
+	let names = state
 		.oauth
 		.get_available_providers()
 		.into_iter()
-		.map(|p| ProviderInfo { name: p.name })
+		.map(|p| p.name)
 		.collect();
 
-	Ok(Json(ProvidersResponse { providers }))
+	Ok(Json(AuthProviders { names }))
 }
