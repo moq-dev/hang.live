@@ -7,7 +7,7 @@ use validator::Validate;
 use crate::{auth, db, AppState, Result};
 
 pub fn router() -> Router<AppState> {
-	Router::new().route("/account", get(get_account).patch(update_account))
+	Router::new().route("/account/info", get(get_account).patch(update_account))
 }
 
 #[derive(TS, Debug, Serialize, Deserialize)]

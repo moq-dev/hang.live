@@ -8,19 +8,18 @@ import IconGithub from "~icons/mdi/github";
 import IconGoogle from "~icons/mdi/google";
 import IconLogin from "~icons/mdi/login";
 import IconUpload from "~icons/mdi/upload";
-import { Divider } from "./divider";
 import { useAnimatedGradient } from "./gradient";
+import { Layout } from "./layout";
 
 export function Account(props: { api: Api.Client }): JSX.Element {
 	const authenticated = solid(props.api.authenticated);
 
 	return (
-		<>
-			<Divider />
+		<Layout full={false}>
 			<Show when={authenticated()} fallback={<Login api={props.api} />}>
 				<Settings api={props.api} />
 			</Show>
-		</>
+		</Layout>
 	);
 }
 
@@ -130,214 +129,205 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 	};
 
 	return (
-		<div class="min-h-screen bg-black text-white">
-			<div class="max-w-7xl mx-auto p-4">
-				{/* Header */}
-				<div class="mb-8">
-					<h1 class="text-3xl font-bold">Account Settings</h1>
-					<p class="text-gray-400 mt-2">It's super limited right now. I'm working on it!</p>
+		<div class="max-w-7xl mx-auto p-4">
+			{/* Message */}
+			<Show when={message()}>
+				<div
+					class={`rounded-2xl p-4 text-center mb-8 max-w-2xl ${
+						message()?.type === "success"
+							? "bg-green-500/20 text-green-300 border border-green-400/30"
+							: "bg-red-500/20 text-red-300 border border-red-400/30"
+					}`}
+				>
+					{message()?.text}
 				</div>
+			</Show>
 
-				{/* Message */}
-				<Show when={message()}>
-					<div
-						class={`rounded-2xl p-4 text-center mb-8 max-w-2xl ${
-							message()?.type === "success"
-								? "bg-green-500/20 text-green-300 border border-green-400/30"
-								: "bg-red-500/20 text-red-300 border border-red-400/30"
-						}`}
-					>
-						{message()?.text}
-					</div>
-				</Show>
+			{/* Profile Section - Two Column Layout */}
+			<div class="flex flex-wrap gap-6 mb-8 items-start">
+				{/* Preview Panel */}
+				<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6 flex flex-col items-center justify-center">
+					<h2 class="text-xl font-semibold mb-4 self-start">Preview</h2>
 
-				{/* Profile Section - Two Column Layout */}
-				<div class="flex flex-wrap gap-6 mb-8 items-start">
-					{/* Preview Panel */}
-					<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6 flex flex-col items-center justify-center">
-						<h2 class="text-xl font-semibold mb-4 self-start">Preview</h2>
-
-						{/* Avatar Preview with Name Overlay */}
-						<div class="relative text-center">
-							<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-								<Show when={avatar()} fallback={<IconCamera class="w-8 h-8 text-gray-400" />}>
-									{(avatar) => (
-										<img src={avatar()} alt="Avatar Preview" class="w-full h-full object-cover" />
-									)}
-								</Show>
-							</div>
-
-							{/* Display Name Overlay - Top Left Corner */}
-							<div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded-r-lg rounded-b-lg px-3 py-1 max-w-[calc(100%-1rem)]">
-								<div
-									class="text-sm font-bold truncate"
-									style={{
-										color: "white",
-										"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-									}}
-								>
-									<Show when={!name()} fallback={name()}>
-										<span class="text-gray-400">Your Name</span>
-									</Show>
-								</div>
-							</div>
-
-							{/* Change Indicator */}
-							<Show when={avatar()}>
-								<div class="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-black flex items-center justify-center">
-									<div class="w-2 h-2 bg-white rounded-full" />
-								</div>
+					{/* Avatar Preview with Name Overlay */}
+					<div class="relative text-center">
+						<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
+							<Show when={avatar()} fallback={<IconCamera class="w-8 h-8 text-gray-400" />}>
+								{(avatar) => (
+									<img src={avatar()} alt="Avatar Preview" class="w-full h-full object-cover" />
+								)}
 							</Show>
 						</div>
 
-						{/* Save Changes Button - appears below preview when there are changes */}
-						<div class="mt-6 w-full max-w-sm">
+						{/* Display Name Overlay - Top Left Corner */}
+						<div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded-r-lg rounded-b-lg px-3 py-1 max-w-[calc(100%-1rem)]">
 							<div
-								class={`transition-all duration-500 ease-in-out overflow-hidden ${
-									changed() ? "opacity-100 max-h-32" : "opacity-0 max-h-0"
-								}`}
+								class="text-sm font-bold truncate"
+								style={{
+									color: "white",
+									"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
+								}}
 							>
-								<div class="flex gap-2 p-2">
-									<button
-										type="button"
-										onClick={handleSaveChanges}
-										disabled={saving() || !canSave()}
-										class="flex-1 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-										style={{
-											background: !saving() && canSave() ? gradient.linear() : "rgb(75, 85, 99)",
-											"text-shadow":
-												!saving() && canSave() ? "0 0 2px rgba(0, 0, 0, 0.8)" : "none",
-										}}
-									>
-										<Show when={saving()} fallback="Save">
-											<div class="flex items-center justify-center gap-2">
-												<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-												Saving...
-											</div>
-										</Show>
-									</button>
-									<button
-										type="button"
-										onClick={handleResetChanges}
-										disabled={saving() || !changed()}
-										class="px-4 py-3 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-									>
-										Reset
-									</button>
-								</div>
+								<Show when={!name()} fallback={name()}>
+									<span class="text-gray-400">Your Name</span>
+								</Show>
 							</div>
 						</div>
+
+						{/* Change Indicator */}
+						<Show when={avatar()}>
+							<div class="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-black flex items-center justify-center">
+								<div class="w-2 h-2 bg-white rounded-full" />
+							</div>
+						</Show>
 					</div>
 
-					{/* Form Controls */}
-					<div class="flex-1 min-w-[300px] grow space-y-6">
-						{/* Avatar Section */}
-						<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800 w-full">
-							<h3 class="text-xl font-semibold mb-4">Avatar</h3>
-							<div class="space-y-4">
-								<div class="flex flex-col gap-3">
-									<div class="flex gap-2">
-										<label class="flex-1">
-											<input
-												type="file"
-												accept="image/*"
-												onChange={handleAvatarUpload}
-												class="hidden"
-											/>
-											<span
-												class="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl cursor-pointer transition-all transform hover:scale-105 font-medium w-full justify-center"
-												style={{
-													background: gradient.linear(),
-													"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-												}}
-											>
-												<IconUpload
-													class="w-4 h-4"
-													style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
-												/>
-												{avatar() ? "Choose new avatar" : "Choose an avatar"}
-											</span>
-										</label>
-										<Show when={avatar()}>
-											<button
-												type="button"
-												onClick={() => {
-													setAvatar(undefined);
-													setMessage(undefined);
-												}}
-												class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-											>
-												Remove
-											</button>
-										</Show>
-									</div>
-								</div>
-								<p class="text-sm text-gray-400">
-									JPG, PNG, or GIF • Max 5MB
-									<br />
-									Your friends will judge you for any lewd images.
-								</p>
-								<Show when={avatarChanged()}>
-									<div class="text-sm text-green-400 flex items-center gap-2">
-										<div class="w-2 h-2 bg-green-400 rounded-full" />
-										New avatar ready to save
-									</div>
-								</Show>
-								<Show when={avatarChanged() && avatar() === undefined}>
-									<div class="text-sm text-red-400 flex items-center gap-2">
-										<div class="w-2 h-2 bg-red-400 rounded-full" />
-										Avatar will be deleted
-									</div>
-								</Show>
-							</div>
-						</div>
-
-						{/* Display Name Section */}
-						<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-							<h3 class="text-xl font-semibold mb-4">Display name</h3>
-							<div class="space-y-3">
-								<input
-									type="text"
-									value={name()}
-									onInput={(e) => setName(e.currentTarget.value)}
-									placeholder="Enter your name"
-									class="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
-								/>
-								<p class="text-sm text-gray-400">
-									How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
-								</p>
-								<Show when={nameChanged()}>
-									<div class="text-sm text-green-400 flex items-center gap-2">
-										<div class="w-2 h-2 bg-green-400 rounded-full" />
-										Display name changed
-									</div>
-								</Show>
+					{/* Save Changes Button - appears below preview when there are changes */}
+					<div class="mt-6 w-full max-w-sm">
+						<div
+							class={`transition-all duration-500 ease-in-out overflow-hidden ${
+								changed() ? "opacity-100 max-h-32" : "opacity-0 max-h-0"
+							}`}
+						>
+							<div class="flex gap-2 p-2">
+								<button
+									type="button"
+									onClick={handleSaveChanges}
+									disabled={saving() || !canSave()}
+									class="flex-1 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+									style={{
+										background: !saving() && canSave() ? gradient.linear() : "rgb(75, 85, 99)",
+										"text-shadow": !saving() && canSave() ? "0 0 2px rgba(0, 0, 0, 0.8)" : "none",
+									}}
+								>
+									<Show when={saving()} fallback="Save">
+										<div class="flex items-center justify-center gap-2">
+											<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+											Saving...
+										</div>
+									</Show>
+								</button>
+								<button
+									type="button"
+									onClick={handleResetChanges}
+									disabled={saving() || !changed()}
+									class="px-4 py-3 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								>
+									Reset
+								</button>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				{/* Full Width Sections */}
-				<div class="space-y-6">
-					{/* Action Buttons - Only logout now */}
-					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-						<div class="flex flex-col sm:flex-row gap-4 max-w-2xl">
-							<button
-								type="button"
-								onClick={handleLogout}
-								class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-							>
-								Sign out
-							</button>
+				{/* Form Controls */}
+				<div class="flex-1 min-w-[300px] grow space-y-6">
+					{/* Avatar Section */}
+					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800 w-full">
+						<h3 class="text-xl font-semibold mb-4">Avatar</h3>
+						<div class="space-y-4">
+							<div class="flex flex-col gap-3">
+								<div class="flex gap-2">
+									<label class="flex-1">
+										<input
+											type="file"
+											accept="image/*"
+											onChange={handleAvatarUpload}
+											class="hidden"
+										/>
+										<span
+											class="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl cursor-pointer transition-all transform hover:scale-105 font-medium w-full justify-center"
+											style={{
+												background: gradient.linear(),
+												"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
+											}}
+										>
+											<IconUpload
+												class="w-4 h-4"
+												style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
+											/>
+											{avatar() ? "Choose new avatar" : "Choose an avatar"}
+										</span>
+									</label>
+									<Show when={avatar()}>
+										<button
+											type="button"
+											onClick={() => {
+												setAvatar(undefined);
+												setMessage(undefined);
+											}}
+											class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+										>
+											Remove
+										</button>
+									</Show>
+								</div>
+							</div>
+							<p class="text-sm text-gray-400">
+								JPG, PNG, or GIF • Max 5MB
+								<br />
+								Your friends will judge you for any lewd images.
+							</p>
+							<Show when={avatarChanged()}>
+								<div class="text-sm text-green-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-green-400 rounded-full" />
+									New avatar ready to save
+								</div>
+							</Show>
+							<Show when={avatarChanged() && avatar() === undefined}>
+								<div class="text-sm text-red-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-red-400 rounded-full" />
+									Avatar will be deleted
+								</div>
+							</Show>
 						</div>
 					</div>
 
-					{/* Back to App */}
-					<div class="text-center py-4">
-						<a href="/" class="text-gray-400 hover:text-white transition-colors">
-							← Back to hang
-						</a>
+					{/* Display Name Section */}
+					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
+						<h3 class="text-xl font-semibold mb-4">Display name</h3>
+						<div class="space-y-3">
+							<input
+								type="text"
+								value={name()}
+								onInput={(e) => setName(e.currentTarget.value)}
+								placeholder="Enter your name"
+								class="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
+							/>
+							<p class="text-sm text-gray-400">
+								How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
+							</p>
+							<Show when={nameChanged()}>
+								<div class="text-sm text-green-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-green-400 rounded-full" />
+									Display name changed
+								</div>
+							</Show>
+						</div>
 					</div>
+				</div>
+			</div>
+
+			{/* Full Width Sections */}
+			<div class="space-y-6">
+				{/* Action Buttons - Only logout now */}
+				<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
+					<div class="flex flex-col sm:flex-row gap-4 max-w-2xl">
+						<button
+							type="button"
+							onClick={handleLogout}
+							class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+						>
+							Sign out
+						</button>
+					</div>
+				</div>
+
+				{/* Back to App */}
+				<div class="text-center py-4">
+					<a href="/" class="text-gray-400 hover:text-white transition-colors">
+						← Back to hang
+					</a>
 				</div>
 			</div>
 		</div>
@@ -381,11 +371,10 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 	};
 
 	return (
-		<main class="min-h-screen bg-black text-white flex items-center justify-center p-4">
+		<main class="flex items-center justify-center">
 			<div class="w-full max-w-md">
 				{/* Title */}
-				<div class="text-center mb-12">
-					<h1 class="text-6xl font-bold mb-4 text-white">Hang</h1>
+				<div class="text-center mb-8">
 					<p class="text-xl text-gray-400">ready to join?</p>
 				</div>
 
@@ -427,14 +416,6 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 							)}
 						</For>
 					</Show>
-				</div>
-
-				{/* Footer */}
-				<div class="mt-12 text-center space-y-4">
-					<p class="text-sm text-gray-500">By signing in, you agree to our terms and privacy policy</p>
-					<a href="/" class="text-gray-400 hover:text-white transition-colors">
-						← Browse without signing in
-					</a>
 				</div>
 			</div>
 		</main>

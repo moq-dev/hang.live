@@ -1,9 +1,9 @@
+import { getDefaultAvatar } from "@hang/api";
 import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
 import { type Computed, Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { Audio, type AudioProps } from "./audio";
-import { getDefaultAvatar } from "./avatar";
 import { Bounds, Vector } from "./geometry";
 import { loadMeme } from "./meme";
 import { Video } from "./video";

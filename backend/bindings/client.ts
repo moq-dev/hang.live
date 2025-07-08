@@ -24,13 +24,29 @@ export class Client {
 		const urlParams = new URLSearchParams(window.location.search);
 
 		let tokenParam = urlParams.get("token");
+
+
+		console.log("tokenParam", tokenParam);
 		if (tokenParam) {
-			window.history.replaceState({}, document.title, window.location.pathname);
+			// Check if we have a stored redirect path from before OAuth
+			const path = localStorage.getItem("auth.redirect") || window.location.pathname;
+
+			console.log("redirect path", path);
+
+			// Clear the redirect path
+			localStorage.removeItem("auth.redirect");
+
+			// Navigate to the redirect path using SPA navigation
+			window.history.replaceState({}, document.title, path);
+
+			// Is this needed?
+			//window.dispatchEvent(new PopStateEvent("popstate"));
 		} else {
 			tokenParam = localStorage.getItem("auth.token") ?? null;
 		}
 
-		this.token = new Signal(tokenParam);
+		this.token.set(tokenParam);
+		this.authenticated = this.#signals.computed((effect) => !!effect.get(this.token));
 
 		this.#signals.effect((effect) => {
 			const token = effect.get(this.token);
@@ -41,8 +57,6 @@ export class Client {
 				localStorage.removeItem("auth.token");
 			}
 		});
-
-		this.authenticated = this.#signals.computed(() => !!this.token.peek());
 	}
 
 	async providers(): Promise<AuthProviders> {
@@ -51,8 +65,13 @@ export class Client {
 
 	// Start the OAuth login flow for the given provider
 	login(provider: string) {
+		// Store the current path to redirect back to after OAuth
+		localStorage.setItem("auth.redirect", window.location.pathname);
+
+		console.log("saving redirect path", window.location.pathname);
+
 		// Redirect to the OAuth provider
-		window.location.href = `${this.#config.url}/auth/${provider}`;
+		window.location.href = new URL(`auth/${provider}`, this.#config.url).toString();
 	}
 
 	async logout() {
