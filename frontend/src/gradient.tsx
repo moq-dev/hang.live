@@ -2,7 +2,7 @@ import { createMemo, createSignal } from "solid-js";
 import Settings from "./settings";
 
 const offset = Math.round(Math.random() * 360);
-const SPEED = 2;
+const SPEED = 1;
 
 // Shared animated hue state
 const [hue, setHue] = createSignal(offset);
@@ -17,7 +17,7 @@ const updateHue = () => {
 };
 
 // Only animate when potato mode is disabled
-Settings.potato.subscribe((potato) => {
+Settings.potato.watch((potato) => {
 	if (!potato) {
 		animate = requestAnimationFrame(updateHue);
 	} else {

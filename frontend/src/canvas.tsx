@@ -27,13 +27,8 @@ export class Canvas {
 
 	#signals = new Root();
 
-	constructor() {
-		const element = document.getElementById("canvas");
-		if (!element) {
-			throw new Error("Failed to get canvas element");
-		}
-
-		this.#canvas = element as HTMLCanvasElement;
+	constructor(element: HTMLCanvasElement) {
+		this.#canvas = element;
 
 		// Load the pre-rendered SVG instead of rendering it live.
 		this.#potato = new Image();

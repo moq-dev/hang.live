@@ -35,6 +35,7 @@ signals.subscribe(Settings.muted, (muted) => {
 });
 
 signals.subscribe(Settings.potato, (potato) => {
+	console.log("setting potato", potato);
 	localStorage.setItem("settings.potato", potato.toString());
 });
 

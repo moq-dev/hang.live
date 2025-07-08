@@ -2,6 +2,7 @@ import "tauri-plugin-web-transport";
 
 import "@kixelated/hang/support/element";
 
+import * as Api from "@hang/api";
 import solid from "@kixelated/signals/solid";
 import { Route, Router } from "@solidjs/router";
 import { createEffect, onCleanup, Show } from "solid-js";
@@ -9,14 +10,15 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
-import * as Api from "@hang/api";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
 import { Controls } from "./controls";
+import { Layout } from "./layout";
 import { Room } from "./room";
 
 export function Hang(): JSX.Element {
-	const canvas = new Canvas();
+	const background = (<canvas class="fixed inset-0 w-full h-full"></canvas>) as HTMLCanvasElement;
+	const canvas = new Canvas(background);
 	onCleanup(() => canvas.close());
 
 	const api = new Api.Client({
@@ -24,11 +26,14 @@ export function Hang(): JSX.Element {
 	});
 
 	return (
-		<Router>
-			<Route path="/" component={About} />
-			<Route path="/account" component={() => <Account api={api} />} />
-			<Route path="/demo" component={() => <Demo canvas={canvas} api={api} />} />
-		</Router>
+		<>
+			{background}
+			<Router>
+				<Route path="/" component={About} />
+				<Route path="/account" component={() => <Account api={api} />} />
+				<Route path="/demo" component={() => <Demo canvas={canvas} api={api} />} />
+			</Router>
+		</>
 	);
 }
 
@@ -49,11 +54,11 @@ function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
 	const suspended = solid(room.suspended);
 
 	return (
-		<>
+		<Layout full={true}>
 			<Autoplay suspended={suspended()} />
 			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
-		</>
+		</Layout>
 	);
 }
 
