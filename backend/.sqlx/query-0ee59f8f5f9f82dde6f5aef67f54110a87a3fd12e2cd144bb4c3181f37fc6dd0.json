@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n\t\t\tINSERT INTO user_oauth_providers (user_id, provider_name, provider_user_id)\n\t\t\tVALUES ($1, $2, $3)\n\t\t\tON CONFLICT (user_id, provider_name)\n\t\t\tDO UPDATE SET provider_user_id = $3, updated_at = NOW()\n\t\t\t",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0ee59f8f5f9f82dde6f5aef67f54110a87a3fd12e2cd144bb4c3181f37fc6dd0"
+}

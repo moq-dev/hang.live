@@ -3,14 +3,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::{Error, Result};
+use crate::{auth::OAuthUser, avatars::default_avatar, Error, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct User {
 	pub id: Uuid,
 	pub email: String,
 	pub name: String,
-	pub avatar_url: Option<String>,
+	pub avatar: String,
 	pub created_at: DateTime<Utc>,
 	pub updated_at: DateTime<Utc>,
 }
@@ -31,7 +31,7 @@ impl User {
 			r#"
             INSERT INTO users (email, name)
             VALUES ($1, $2)
-            RETURNING id, email, name, avatar_url, created_at, updated_at
+            RETURNING id, email, name, avatar, created_at, updated_at
             "#,
 			email,
 			name,
@@ -42,25 +42,22 @@ impl User {
 		Ok(user)
 	}
 
-	pub async fn create_with_provider(
-		pool: &PgPool,
-		email: &str,
-		name: &str,
-		provider: &str,
-		provider_id: &str,
-	) -> Result<Self> {
+	pub async fn create_with_provider(pool: &PgPool, info: &OAuthUser) -> Result<Self> {
 		let mut tx = pool.begin().await?;
+
+		let avatar = info.avatar.clone().unwrap_or_else(|| default_avatar());
 
 		// Create user
 		let user = sqlx::query_as!(
 			User,
 			r#"
-			INSERT INTO users (email, name)
-			VALUES ($1, $2)
-			RETURNING id, email, name, avatar_url, created_at, updated_at
+			INSERT INTO users (email, name, avatar)
+			VALUES ($1, $2, $3)
+			RETURNING id, email, name, avatar, created_at, updated_at
 			"#,
-			email,
-			name,
+			info.email,
+			info.name,
+			avatar,
 		)
 		.fetch_one(&mut *tx)
 		.await?;
@@ -72,8 +69,8 @@ impl User {
 			VALUES ($1, $2, $3)
 			"#,
 			user.id,
-			provider,
-			provider_id,
+			info.provider,
+			info.provider_id,
 		)
 		.execute(&mut *tx)
 		.await?;
@@ -85,7 +82,7 @@ impl User {
 	pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<Self> {
 		sqlx::query_as!(
 			User,
-			"SELECT id, email, name, avatar_url, created_at, updated_at FROM users WHERE id = $1",
+			"SELECT id, email, name, avatar, created_at, updated_at FROM users WHERE id = $1",
 			id
 		)
 		.fetch_optional(pool)
@@ -96,7 +93,7 @@ impl User {
 	pub async fn find_by_email(pool: &PgPool, email: &str) -> Result<Option<Self>> {
 		let user = sqlx::query_as!(
 			User,
-			"SELECT id, email, name, avatar_url, created_at, updated_at FROM users WHERE email = $1",
+			"SELECT id, email, name, avatar, created_at, updated_at FROM users WHERE email = $1",
 			email
 		)
 		.fetch_optional(pool)
@@ -109,7 +106,7 @@ impl User {
 		let user = sqlx::query_as!(
 			User,
 			r#"
-			SELECT u.id, u.email, u.name, u.avatar_url, u.created_at, u.updated_at FROM users u
+			SELECT u.id, u.email, u.name, u.avatar, u.created_at, u.updated_at FROM users u
 			JOIN user_oauth_providers uop ON u.id = uop.user_id
 			WHERE uop.provider_name = $1 AND uop.provider_user_id = $2
 			"#,
@@ -141,10 +138,10 @@ impl User {
 		Ok(())
 	}
 
-	pub async fn update_avatar_url(pool: &PgPool, id: Uuid, avatar_url: &str) -> Result<()> {
+	pub async fn update_avatar(pool: &PgPool, id: Uuid, avatar: &str) -> Result<()> {
 		sqlx::query!(
-			"UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2",
-			avatar_url,
+			"UPDATE users SET avatar = $1, updated_at = NOW() WHERE id = $2",
+			avatar,
 			id
 		)
 		.execute(pool)

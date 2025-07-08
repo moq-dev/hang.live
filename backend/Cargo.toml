@@ -88,6 +88,8 @@ toml-env = "1.2.0"
 toml = "0.8.23"
 
 ts-rs = { version = "11.0", features = ["uuid-impl"] }
+serde_with = "3.14.0"
+rand = "0.9.1"
 
 [dev-dependencies]
 tower-test = "0.4"

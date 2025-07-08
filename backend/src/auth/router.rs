@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-	auth::{Provider, Token as AuthUser},
+	auth::{Provider, Token},
 	AppState, Result,
 };
 
@@ -60,13 +60,16 @@ async fn oauth_callback(
 	// Authenticate or create user
 	let user = state.oauth.authenticate_or_create_user(&state.db, &oauth_user).await?;
 
+	let now = std::time::SystemTime::now();
+	let expires_at = now + std::time::Duration::from_secs(60 * 60 * 24 * 365);
+
 	// Create JWT token for auth
-	let auth_user = AuthUser {
+	let token = Token {
 		id: user.id,
-		expires_at: None,
-		issued_at: None,
+		expires_at,
+		issued_at: now,
 	};
-	let jwt_token = state.auth.encode(&auth_user)?;
+	let jwt_token = state.auth.encode(&token)?;
 
 	// Create redirect URL with token and user data as query parameters
 	let mut redirect_url = state.config.oidc.frontend_url;

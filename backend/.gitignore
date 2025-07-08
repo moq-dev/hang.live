@@ -30,4 +30,3 @@ uploads/
 *.log
 
 /.pgdata
-/.sqlx

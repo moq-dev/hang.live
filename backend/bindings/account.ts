@@ -7,7 +7,7 @@ import { EmptySchema, schema } from "./schema";
 const AccountInfoSchema = schema<AccountInfo>()({
 	id: z.string(),
 	name: z.string(),
-	avatar: z.optional(z.string()),
+	avatar: z.string(),
 });
 
 const AccountUpdateSchema = schema<AccountUpdate>()({
@@ -18,6 +18,7 @@ export class Account {
 	#client: Client;
 
 	info: Signal<AccountInfo | undefined>;
+	error = new Signal<string | undefined>(undefined);
 
 	#signals = new Root();
 
@@ -28,9 +29,9 @@ export class Account {
 		let info: AccountInfo | undefined;
 		try {
 			const cached = localStorage.getItem("account.info");
-			info = cached ? JSON.parse(cached) : undefined;
-		} catch (e) {
-			console.error("Failed to parse account info from local storage", e);
+			info = cached ? AccountInfoSchema.parse(JSON.parse(cached)) : undefined;
+		} catch (e: unknown) {
+			this.error.set(`Failed to use cached account info: ${e}`);
 		}
 
 		this.info = new Signal(info);
@@ -45,11 +46,15 @@ export class Account {
 		});
 
 		this.#signals.effect((effect) => {
-			const authenticated = effect.get(this.#client.authenticated);
+			const authenticated = effect.unique(this.#client.authenticated);
 			if (!authenticated) return;
 
+			// Once authenticated, fetch the account info
 			this.#client.get("/account/info", AccountInfoSchema).then((info) => {
 				this.info.set(info);
+				this.error.set(undefined);
+			}).catch((e) => {
+				this.error.set(`Failed to fetch account info: ${e}`);
 			});
 		});
 	}
@@ -67,5 +72,5 @@ const DEFAULTS = 50;
 
 export function getDefaultAvatar() {
 	const index = Math.floor(Math.random() * DEFAULTS);
-	return `${index}.svg`;
+	return `/avatars/${index}.svg`;
 }

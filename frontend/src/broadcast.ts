@@ -1,4 +1,4 @@
-import { getDefaultAvatar } from "@hang/api";
+import * as Api from "@hang/api";
 import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
 import { type Computed, Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
@@ -151,15 +151,13 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Set a random default avatar while the user details are loading.
 		// TODO Only start a broadcast after receiving the catalog to avoid this.
-		this.avatar.src = `/avatar/${getDefaultAvatar()}`;
+		this.avatar.src = Api.getDefaultAvatar();
 
 		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
 		this.signals.effect((effect) => {
 			const user = effect.get(this.source.user);
-			if (!user?.avatar) return;
-
-			// TODO I think this is safe enough? The avatar can't be on another website?
-			this.avatar.src = `/avatar/${user.avatar}`;
+			if (!user?.avatar) return; // don't unset
+			this.avatar.src = user.avatar;
 		});
 
 		// The display name is the user's name or the path if they don't have a name.
