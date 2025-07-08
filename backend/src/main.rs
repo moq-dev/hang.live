@@ -1,9 +1,10 @@
+pub mod account;
 pub mod auth;
+pub mod avatars;
 pub mod config;
 pub mod db;
-pub mod handlers;
+pub mod health;
 pub mod storage;
-pub mod types;
 
 mod error;
 mod state;
@@ -16,6 +17,7 @@ use axum::{
 	http::{HeaderName, HeaderValue, Method},
 	Router,
 };
+
 use sqlx::PgPool;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -28,7 +30,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 use auth::{OAuthService, UserService};
 use config::{Config, StorageConfig};
-use handlers::{avatars, health, user};
 use storage::StorageProvider;
 
 #[tokio::main]
@@ -86,8 +87,8 @@ async fn main() -> anyhow::Result<()> {
 	// All routes (authentication is now handled per-route using JWT extractors)
 	let app_routes = Router::new()
 		.merge(health::router())
-		.merge(handlers::auth::router())
-		.merge(user::router())
+		.merge(auth::router())
+		.merge(account::router())
 		.merge(avatars::router())
 		.with_state(app_state);
 

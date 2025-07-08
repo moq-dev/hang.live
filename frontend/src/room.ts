@@ -1,6 +1,6 @@
+import * as Api from "@hang/api";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { type Effect, Root, Signal } from "@kixelated/signals";
-import { getDefaultAvatar } from "./avatar";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
@@ -22,7 +22,7 @@ export class Room {
 	user: Signal<string | undefined>;
 
 	// The avatar of the local user.
-	avatar: Signal<string | undefined>;
+	avatar: Signal<string>;
 
 	// All of the broadcasts stored in z-index order.
 	broadcasts = new Signal<Broadcast[]>([]);
@@ -65,7 +65,7 @@ export class Room {
 		this.connection = new Connection({ url });
 		this.canvas = canvas;
 		this.user = new Signal(props?.user);
-		this.avatar = new Signal(props?.avatar ?? getDefaultAvatar());
+		this.avatar = new Signal(props?.avatar ?? Api.getDefaultAvatar());
 
 		this.notifications = new Notifications();
 

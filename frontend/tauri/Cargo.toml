@@ -20,6 +20,6 @@ tauri-build = { version = "2", features = ["config-json5"] }
 [dependencies]
 tauri = { version = "2", features = ["config-json5"] }
 tauri-plugin-opener = "2"
-tauri-plugin-web-transport = { path = "../../../tauri-plugin-web-transport" }
+tauri-plugin-web-transport = "0.1.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

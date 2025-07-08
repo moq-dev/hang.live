@@ -13,7 +13,7 @@ use crate::AppState;
 use super::{Error, Result};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct User {
+pub struct Token {
 	#[serde(rename = "sub")]
 	pub id: Uuid,
 
@@ -24,7 +24,7 @@ pub struct User {
 	pub issued_at: Option<i64>,
 }
 
-impl axum::extract::FromRequestParts<AppState> for User {
+impl axum::extract::FromRequestParts<AppState> for Token {
 	type Rejection = Error;
 
 	async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self> {
@@ -37,7 +37,7 @@ impl axum::extract::FromRequestParts<AppState> for User {
 	}
 }
 
-impl axum::extract::OptionalFromRequestParts<AppState> for User {
+impl axum::extract::OptionalFromRequestParts<AppState> for Token {
 	type Rejection = Error;
 
 	async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Option<Self>> {
@@ -67,7 +67,7 @@ impl UserService {
 		}
 	}
 
-	pub fn encode(&self, user: &User) -> Result<String> {
+	pub fn encode(&self, user: &Token) -> Result<String> {
 		let header = jsonwebtoken::Header {
 			alg: Algorithm::HS256,
 			kid: None,
@@ -78,12 +78,12 @@ impl UserService {
 		Ok(token)
 	}
 
-	pub fn decode(&self, token: &str) -> Result<User> {
+	pub fn decode(&self, token: &str) -> Result<Token> {
 		let mut validation = jsonwebtoken::Validation::default();
 		validation.validate_aud = false;
 		validation.validate_exp = false;
 
-		let token = jsonwebtoken::decode::<User>(token, &self.decoding_key, &validation)?;
+		let token = jsonwebtoken::decode::<Token>(token, &self.decoding_key, &validation)?;
 		Ok(token.claims)
 	}
 }

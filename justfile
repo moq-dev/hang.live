@@ -11,13 +11,11 @@ setup:
 	just --justfile backend/justfile setup
 
 dev:
-	cd frontend && pnpm i
-
 	# Then run the relay with a slight head start.
 	# It doesn't matter if the web beats BBB because we support automatic reloading.
-	./frontend/node_modules/.bin/concurrently --kill-others --names back,front --prefix-colors auto \
-		"just --justfile backend/justfile dev" \
-		"sleep 1 && just --justfile frontend/justfile dev"
+	pnpm i && pnpm concurrently --kill-others --names back,front --prefix-colors auto \
+		"trap 'exit 1' TERM INT; just --justfile backend/justfile dev" \
+		"sleep 1 && trap 'exit 1' TERM INT; just --justfile frontend/justfile dev"
 
 # Run the CI checks
 check:

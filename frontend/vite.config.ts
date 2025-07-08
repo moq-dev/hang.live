@@ -43,6 +43,8 @@ export default defineConfig(async () => ({
 				".",
 				// Allow `npm link @kixelated/hang`
 				fs.realpathSync(path.resolve("node_modules/@kixelated/hang")),
+				// Allow access to parent node_modules for workspace dependencies
+				path.resolve("../node_modules"),
 			],
 		},
 	},

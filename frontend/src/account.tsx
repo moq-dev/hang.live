@@ -1,5 +1,6 @@
+import * as Api from "@hang/api";
 import solid from "@kixelated/signals/solid";
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconCamera from "~icons/mdi/camera";
 import IconDiscord from "~icons/mdi/discord";
@@ -7,7 +8,6 @@ import IconGithub from "~icons/mdi/github";
 import IconGoogle from "~icons/mdi/google";
 import IconLogin from "~icons/mdi/login";
 import IconUpload from "~icons/mdi/upload";
-import * as Api from "./api";
 import { Divider } from "./divider";
 import { useAnimatedGradient } from "./gradient";
 
@@ -353,8 +353,8 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 
 	onMount(async () => {
 		try {
-			const availableProviders = await props.api.providers();
-			setProviders(availableProviders);
+			const providers = await props.api.providers();
+			setProviders(providers.names);
 		} catch (err) {
 			console.error("Failed to initialize login:", err);
 			setError("Something went wrong. Try refreshing?");

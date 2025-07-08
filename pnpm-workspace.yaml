@@ -1,0 +1,16 @@
+packages:
+  - '.'
+  - 'frontend'
+  - 'backend/bindings'
+
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - sharp
+  - workerd
+
+overrides:
+  '@kixelated/hang': link:../moq/js/hang
+  '@kixelated/moq': link:../moq/js/moq
+  '@kixelated/signals': link:../moq/js/signals

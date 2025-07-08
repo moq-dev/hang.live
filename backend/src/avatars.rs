@@ -15,7 +15,7 @@ pub fn router() -> Router<AppState> {
 
 async fn upload_avatar(
 	State(state): State<AppState>,
-	user: auth::User,
+	user: auth::Token,
 	mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>> {
 	// Get current user to check for existing avatar
@@ -90,7 +90,7 @@ async fn upload_avatar(
 	Err(Error::NotFound("No avatar file found in request".to_string()))
 }
 
-async fn get_avatar(State(state): State<AppState>, user: auth::User) -> Result<Json<serde_json::Value>> {
+async fn get_avatar(State(state): State<AppState>, user: auth::Token) -> Result<Json<serde_json::Value>> {
 	let user = db::User::find_by_id(&state.db, user.id).await?;
 
 	Ok(Json(serde_json::json!({

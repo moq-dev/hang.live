@@ -28,8 +28,14 @@ setup:
 
 # Start/migrate the database.
 db:
+	# Initialize database if it doesn't exist
+	if [ ! -d "{{pg_data}}" ]; then \
+		echo "Database directory not found. Running setup..."; \
+		just setup; \
+	fi
+
 	# Start the database in the background if needed
-	if ! pg_ctl -D "{{pg_data}}" status > /dev/null 2>&1; then \
+	if [ -d "{{pg_data}}" ] && ! pg_ctl -D "{{pg_data}}" status > /dev/null 2>&1; then \
 		pg_ctl -D "{{pg_data}}" -w start; \
 	fi
 

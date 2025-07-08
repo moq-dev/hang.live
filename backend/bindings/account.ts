@@ -1,6 +1,18 @@
 import { Root, Signal } from "@kixelated/signals";
 import { z } from "zod/v4-mini";
+import { AccountInfo, AccountUpdate } from ".";
 import { Client } from "./client";
+import { EmptySchema, schema } from "./schema";
+
+const AccountInfoSchema = schema<AccountInfo>()({
+	id: z.string(),
+	name: z.string(),
+	avatar: z.optional(z.string()),
+});
+
+const AccountUpdateSchema = schema<AccountUpdate>()({
+	name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
+});
 
 export class Account {
 	#client: Client;
@@ -43,7 +55,7 @@ export class Account {
 	}
 
 	async update(update: AccountUpdate): Promise<void> {
-		await this.#client.post("/account/update", update, z.object({}));
+		await this.#client.post("/account/update", update, AccountUpdateSchema, EmptySchema);
 	}
 
 	close() {
@@ -57,17 +69,3 @@ export function getDefaultAvatar() {
 	const index = Math.floor(Math.random() * DEFAULTS);
 	return `${index}.svg`;
 }
-
-export const AccountInfoSchema = z.object({
-	id: z.string(),
-	name: z.string(),
-	avatar: z.optional(z.string()),
-});
-
-export const AccountUpdateSchema = z.object({
-	name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
-	//avatar: z.optional(z.string()),
-});
-
-export type AccountInfo = z.infer<typeof AccountInfoSchema>;
-export type AccountUpdate = z.infer<typeof AccountUpdateSchema>;

@@ -1,16 +1,11 @@
 import { Computed, Root, Signal } from "@kixelated/signals";
 import { z } from "zod/v4-mini";
+import { AuthProviders } from ".";
+import { Schema, schema } from "./schema";
 
-export const AuthResponseSchema = z.object({
-	token: z.string(),
+const AuthProvidersSchema = schema<AuthProviders>()({
+	names: z.array(z.string()),
 });
-
-export const AuthProvidersSchema = z.object({
-	providers: z.array(z.string()),
-});
-
-export type AuthResponse = z.infer<typeof AuthResponseSchema>;
-export type AuthProviders = z.infer<typeof AuthProvidersSchema>;
 
 export interface ClientConfig {
 	url: URL;
@@ -50,9 +45,8 @@ export class Client {
 		this.authenticated = this.#signals.computed(() => !!this.token.peek());
 	}
 
-	async providers(): Promise<string[]> {
-		const response = await this.get("/auth/providers", AuthProvidersSchema);
-		return response.providers;
+	async providers(): Promise<AuthProviders> {
+		return await this.get("/auth/providers", AuthProvidersSchema);
 	}
 
 	// Start the OAuth login flow for the given provider
@@ -62,11 +56,6 @@ export class Client {
 	}
 
 	async logout() {
-		// Optionally call the logout endpoint
-		if (this.token.peek()) {
-			this.post("/auth/logout", null, z.object({})).catch(console.error);
-		}
-
 		this.token.set(null);
 	}
 
@@ -85,7 +74,18 @@ export class Client {
 		return fetch(url, { ...options, headers });
 	}
 
-	async post<R, W>(path: string, request: R, response: z.ZodMiniType<W>): Promise<W> {
+	async post<R, W>(
+		path: string,
+		request: R,
+		requestSchema: Schema<R>,
+		response: Schema<W>,
+	): Promise<W> {
+		// Make sure the request is valid first
+		const requestResult = requestSchema.safeParse(request);
+		if (!requestResult.success) {
+			throw new Error(`Invalid request: ${requestResult.error.message}`);
+		}
+
 		const options: RequestInit = { method: "POST" };
 
 		// If request is provided, encode it into the body
@@ -106,7 +106,10 @@ export class Client {
 		return this.#parseResponse(response, data);
 	}
 
-	async get<T>(path: string, response: z.ZodMiniType<T>): Promise<T> {
+	async get<T>(
+		path: string,
+		response: Schema<T>,
+	): Promise<T> {
 		const http = await this.fetch(path);
 
 		if (!http.ok) {
@@ -117,11 +120,11 @@ export class Client {
 		return this.#parseResponse(response, data);
 	}
 
-	#parseResponse<T>(schema: z.ZodMiniType<T>, data: unknown): T {
+	#parseResponse<T>(schema: Schema<T>, data: unknown): T {
 		const result = schema.safeParse(data);
 		if (!result.success) {
 			throw new Error(`Invalid API response: ${result.error.message}`);
 		}
-		return result.data;
+		return result.data as T;
 	}
 }

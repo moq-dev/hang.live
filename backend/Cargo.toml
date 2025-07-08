@@ -87,6 +87,8 @@ utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 toml-env = "1.2.0"
 toml = "0.8.23"
 
+ts-rs = { version = "11.0", features = ["uuid-impl"] }
+
 [dev-dependencies]
 tower-test = "0.4"
 axum-test = "17.3"
