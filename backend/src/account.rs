@@ -15,7 +15,7 @@ pub fn router() -> Router<AppState> {
 pub struct AccountInfo {
 	pub id: Uuid,
 	pub name: String,
-	pub avatar: Option<String>,
+	pub avatar: String,
 }
 
 #[derive(TS, Debug, Serialize, Deserialize, Validate)]
@@ -31,7 +31,7 @@ async fn get_account(State(state): State<AppState>, user: auth::Token) -> Result
 	let response = AccountInfo {
 		id: user.id,
 		name: user.name,
-		avatar: user.avatar_url,
+		avatar: user.avatar,
 	};
 
 	Ok(Json(response))
@@ -63,7 +63,7 @@ async fn update_account(
 	let response = AccountInfo {
 		id: user.id,
 		name: user.name,
-		avatar: user.avatar_url,
+		avatar: user.avatar,
 	};
 
 	Ok(Json(response))

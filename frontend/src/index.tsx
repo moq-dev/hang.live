@@ -45,8 +45,12 @@ function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
 
 	createEffect(() => {
 		const i = info();
-		room.user.set(i?.name);
-		room.avatar.set(i?.avatar ?? Api.getDefaultAvatar());
+		if (i instanceof Error) {
+			console.error("Failed to fetch account info", i);
+		} else {
+			room.user.set(i?.name);
+			room.avatar.set(i?.avatar ?? Api.getDefaultAvatar());
+		}
 	});
 
 	onCleanup(() => room.close());

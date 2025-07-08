@@ -33,10 +33,18 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 
 	// Load the account info
 	const info = solid(account.info);
+	const error = solid(account.error);
 
 	createEffect(() => {
-		setName(info()?.name);
-		setAvatar(info()?.avatar);
+		const i = info();
+		setName(i?.name);
+		setAvatar(i?.avatar);
+	});
+
+	createEffect(() => {
+		const e = error();
+		if (!e) return;
+		setMessage({ type: "error", text: e });
 	});
 
 	const avatarChanged = createMemo(() => {
@@ -133,7 +141,7 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 			{/* Message */}
 			<Show when={message()}>
 				<div
-					class={`rounded-2xl p-4 text-center mb-8 max-w-2xl ${
+					class={`rounded-2xl p-4 text-center mb-8 ${
 						message()?.type === "success"
 							? "bg-green-500/20 text-green-300 border border-green-400/30"
 							: "bg-red-500/20 text-red-300 border border-red-400/30"
@@ -312,7 +320,7 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 			<div class="space-y-6">
 				{/* Action Buttons - Only logout now */}
 				<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-					<div class="flex flex-col sm:flex-row gap-4 max-w-2xl">
+					<div class="flex flex-col sm:flex-row gap-4">
 						<button
 							type="button"
 							onClick={handleLogout}

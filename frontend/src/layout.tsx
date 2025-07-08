@@ -15,11 +15,10 @@ export function Layout(props: { children: JSX.Element; full?: boolean }) {
 				</nav>
 			</header>
 
-			<Show when={!props.full}>
+			<Show when={!props.full} fallback={props.children}>
 				<Divider />
+				<main class="flex flex-col relative">{props.children}</main>
 			</Show>
-
-			<main class="flex flex-col relative">{props.children}</main>
 		</div>
 	);
 }

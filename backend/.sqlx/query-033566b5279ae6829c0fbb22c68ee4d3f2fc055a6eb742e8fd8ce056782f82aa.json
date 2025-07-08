@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n\t\t\tINSERT INTO user_oauth_providers (user_id, provider_name, provider_user_id)\n\t\t\tVALUES ($1, $2, $3)\n\t\t\t",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "033566b5279ae6829c0fbb22c68ee4d3f2fc055a6eb742e8fd8ce056782f82aa"
+}

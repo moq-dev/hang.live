@@ -31,7 +31,7 @@ pub struct OAuthUser {
 	pub provider_id: String,
 	pub email: String,
 	pub name: String,
-	pub avatar_url: Option<String>,
+	pub avatar: Option<String>,
 }
 
 #[derive(Clone)]
@@ -168,7 +168,7 @@ impl OAuthService {
 			.and_then(|v| v.as_str())
 			.unwrap_or(email); // Fallback to email if no name
 
-		let avatar_url = user_info
+		let avatar = user_info
 			.get("picture")
 			.or_else(|| user_info.get("avatar_url"))
 			.and_then(|v| v.as_str())
@@ -179,7 +179,7 @@ impl OAuthService {
 			provider_id: sub.to_string(),
 			email: email.to_string(),
 			name: name.to_string(),
-			avatar_url,
+			avatar,
 		})
 	}
 
@@ -202,14 +202,7 @@ impl OAuthService {
 		}
 
 		// User doesn't exist, create new user
-		User::create_with_provider(
-			pool,
-			&oauth_user.email,
-			&oauth_user.name,
-			&oauth_user.provider,
-			&oauth_user.provider_id,
-		)
-		.await
+		User::create_with_provider(pool, &oauth_user).await
 	}
 
 	pub fn get_available_providers(&self) -> Vec<Provider> {

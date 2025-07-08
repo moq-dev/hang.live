@@ -1,16 +1,20 @@
 use axum::{
 	extract::{Multipart, State},
 	response::Json,
-	routing::{get, post},
+	routing::get,
 	Router,
 };
+use rand::Rng;
 
 use crate::{auth, db, AppState, Error, Result};
 
 pub fn router() -> Router<AppState> {
-	Router::new()
-		.route("/me/avatar", post(upload_avatar))
-		.route("/me/avatar", get(get_avatar))
+	Router::new().route("/account/avatar", get(get_avatar).post(upload_avatar))
+}
+
+pub fn default_avatar() -> String {
+	let index = rand::rng().random_range(0..50);
+	return format!("/avatars/{}.svg", index);
 }
 
 async fn upload_avatar(
@@ -49,12 +53,9 @@ async fn upload_avatar(
 			));
 		}
 
-		// Delete old avatar if exists
-		if let Some(old_avatar_url) = &user.avatar_url {
-			// For local storage, extract path from URL
-			if old_avatar_url.starts_with("/uploads/") {
-				let _ = state.storage.delete_file(old_avatar_url).await; // Ignore errors for old file deletion
-			}
+		// For local storage, extract path from URL
+		if user.avatar.starts_with("/uploads/") {
+			let _ = state.storage.delete_file(&user.avatar).await; // Ignore errors for old file deletion
 		}
 
 		// Determine file extension
@@ -67,22 +68,22 @@ async fn upload_avatar(
 		};
 
 		// Upload file using the storage provider's method
-		let upload_url = state
+		let upload = state
 			.storage
 			.upload_file(data.to_vec(), &content_type, extension)
 			.await?;
 
 		// Update user's avatar URL in database
 		sqlx::query!(
-			"UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2",
-			upload_url,
+			"UPDATE users SET avatar = $1, updated_at = NOW() WHERE id = $2",
+			upload,
 			user.id
 		)
 		.execute(&state.db)
 		.await?;
 
 		return Ok(Json(serde_json::json!({
-			"avatar_url": upload_url,
+			"avatar": upload,
 			"message": "Avatar uploaded successfully"
 		})));
 	}
@@ -94,6 +95,6 @@ async fn get_avatar(State(state): State<AppState>, user: auth::Token) -> Result<
 	let user = db::User::find_by_id(&state.db, user.id).await?;
 
 	Ok(Json(serde_json::json!({
-		"avatar_url": user.avatar_url,
+		"avatar": user.avatar,
 	})))
 }

@@ -24,14 +24,9 @@ export class Client {
 		const urlParams = new URLSearchParams(window.location.search);
 
 		let tokenParam = urlParams.get("token");
-
-
-		console.log("tokenParam", tokenParam);
 		if (tokenParam) {
 			// Check if we have a stored redirect path from before OAuth
 			const path = localStorage.getItem("auth.redirect") || window.location.pathname;
-
-			console.log("redirect path", path);
 
 			// Clear the redirect path
 			localStorage.removeItem("auth.redirect");
