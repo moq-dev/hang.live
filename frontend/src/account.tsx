@@ -171,11 +171,13 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 			// Handle avatar upload if we have a file
 			const file = avatarFile();
 			if (file) {
-				await props.account.uploadAvatar(file);
-				setAvatarFile(undefined); // Clear the file since it's now uploaded
+				const url = await props.account.uploadAvatar(file);
+				setAvatar(url);
+				setAvatarFile(undefined);
 			}
 
 			// Handle regular updates (name and/or URL-based avatar)
+			// TODO don't issue if we only updated the avatar? or combine the requests.
 			const update: Api.AccountUpdate = {
 				avatar: avatarChanged() ? avatar() : undefined,
 				name: nameChanged() ? name() : undefined,
@@ -184,6 +186,7 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 
 			setInfo(newInfo);
 			setAvatar(newInfo.avatar); // Update to the server's avatar URL
+			setAvatarFile(undefined); // Clear the file since it's now uploaded
 
 			setMessage({ type: "success", text: "Changes saved" });
 		} catch (e) {
@@ -358,11 +361,7 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 									</Show>
 								</div>
 							</div>
-							<p class="text-sm text-gray-400">
-								JPG, PNG, GIF, SVG, WebP • Max 5MB
-								<br />
-								Your friends may judge you, keep it clean.
-							</p>
+							<p class="text-sm text-gray-400">Your friends will judge you, keep it clean.</p>
 							<Show when={avatarChanged()}>
 								<div class="text-sm text-yellow-400 flex items-center gap-2">
 									<div class="w-2 h-2 bg-yellow-400 rounded-full" />

@@ -24,12 +24,13 @@ impl AccountInfo {
 		// If the avatar starts with /uploads, then it's relative to the API URL.
 		// If the avatar withs with /avatar, then it's relative to the frontend URL.
 		// If the avatar is a full URL, then it's already correct.
-		let avatar = if user.avatar.starts_with("/uploads") {
+		let avatar = if user.avatar.starts_with("/uploads/") {
 			state.config.api_url.join(&user.avatar)?
-		} else if user.avatar.starts_with("/avatar") {
+		} else if user.avatar.starts_with("/avatar/") {
 			state.config.frontend_url.join(&user.avatar)?
 		} else {
-			Url::parse(&user.avatar)?
+			//Url::parse(&user.avatar)?
+			state.config.api_url.join(&user.avatar)?
 		};
 
 		Ok(Self {

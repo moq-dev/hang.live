@@ -109,9 +109,8 @@ async fn main() -> anyhow::Result<()> {
 			.layer(PropagateRequestIdLayer::x_request_id())
 			.layer(
 				TraceLayer::new_for_http()
-					.make_span_with(DefaultMakeSpan::new().include_headers(true))
-					.on_request(tower_http::trace::DefaultOnRequest::new().level(tracing::Level::INFO))
-					.on_response(tower_http::trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
+					.on_request(tower_http::trace::DefaultOnRequest::new().level(tracing::Level::DEBUG))
+					.on_response(tower_http::trace::DefaultOnResponse::new().level(tracing::Level::DEBUG)),
 			)
 			.layer(cors)
 			.layer(DefaultBodyLimit::max(10 * 1024 * 1024)), // 10MB upload limit

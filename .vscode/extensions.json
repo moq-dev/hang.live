@@ -3,16 +3,21 @@
 		// General
 		"jnoortheen.nix-ide",
 		"EditorConfig.EditorConfig",
+
 		// Rust
 		"rust-lang.rust-analyzer",
 		"tamasfe.even-better-toml",
+
 		// Tauri
 		"tauri-apps.tauri-vscode",
+
 		// Javascript
 		"ms-vscode.vscode-json",
 		"biomejs.biome",
 		"ms-vscode.vscode-pnpm",
-		// Demo Only
 		"bradlc.vscode-tailwindcss",
+
+		// Terraform
+		"hashicorp.terraform"
 	]
 }

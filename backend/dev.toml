@@ -16,6 +16,13 @@ base_path = "./uploads"
 # bucket = "your-bucket-name"
 # region = "us-east-1"
 
+# Alternative GCS storage configuration
+# [storage]
+# type = "gcs"
+# bucket = "your-gcs-bucket-name"
+# project_id = "your-gcp-project-id"
+# service_account_key = "/path/to/service-account-key.json"  # Optional: path to key file or JSON content
+
 # OpenID Connect providers configuration
 [oidc.providers.google]
 client_id = "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com"

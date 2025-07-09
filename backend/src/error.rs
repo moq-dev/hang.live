@@ -56,12 +56,16 @@ pub enum Error {
 	#[error("URL error: {0}")]
 	Url(#[from] url::ParseError),
 
+	#[error("Object store error: {0}")]
+	ObjectStore(#[from] object_store::Error),
+
 	#[error("Internal server error")]
 	Internal,
 }
 
 impl IntoResponse for Error {
 	fn into_response(self) -> Response {
+		tracing::warn!(?self, "returning error");
 		match self {
 			Error::Database(_) => {
 				(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()).into_response()
@@ -84,6 +88,7 @@ impl IntoResponse for Error {
 			Error::UnknownUser => (StatusCode::NOT_FOUND, "Unknown user".to_string()).into_response(),
 			Error::Multipart(_) => (StatusCode::BAD_REQUEST, "Invalid multipart data".to_string()).into_response(),
 			Error::Url(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Invalid URL".to_string()).into_response(),
+			Error::ObjectStore(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Storage error".to_string()).into_response(),
 		}
 	}
 }

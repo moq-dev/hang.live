@@ -1,7 +1,8 @@
-use std::path::Path;
+use std::sync::Arc;
 
-use aws_config::{BehaviorVersion, Region};
-use aws_sdk_s3::{config::Builder as S3ConfigBuilder, Client as S3Client};
+use object_store::{
+	aws::AmazonS3Builder, gcp::GoogleCloudStorageBuilder, local::LocalFileSystem, path::Path as ObjectPath, ObjectStore,
+};
 use tokio::fs;
 use uuid::Uuid;
 
@@ -10,10 +11,10 @@ use crate::{
 	Error, Result,
 };
 
-#[derive(Debug, Clone)]
-pub enum StorageProvider {
-	Local { base_path: String },
-	S3 { client: S3Client, bucket: String },
+#[derive(Clone)]
+pub struct StorageProvider {
+	store: Arc<dyn ObjectStore>,
+	base_url: String,
 }
 
 impl StorageProvider {
@@ -25,8 +26,11 @@ impl StorageProvider {
 					.await
 					.map_err(|e| Error::Storage(format!("Failed to create storage directory: {}", e)))?;
 
-				Ok(StorageProvider::Local {
-					base_path: base_path.clone(),
+				let store: Arc<dyn ObjectStore> = Arc::new(LocalFileSystem::new_with_prefix(base_path)?);
+
+				Ok(StorageProvider {
+					store,
+					base_url: "/uploads/".to_string(),
 				})
 			}
 			StorageConfig::S3 {
@@ -36,132 +40,73 @@ impl StorageProvider {
 				secret_access_key,
 				endpoint,
 			} => {
-				let mut aws_config =
-					aws_config::defaults(BehaviorVersion::latest()).region(Region::new(region.clone()));
+				let mut builder = AmazonS3Builder::new().with_bucket_name(bucket).with_region(region);
 
 				// Use custom credentials if provided
 				if let (Some(access_key), Some(secret_key)) = (access_key_id, secret_access_key) {
-					aws_config = aws_config.credentials_provider(aws_sdk_s3::config::Credentials::new(
-						access_key, secret_key, None, None, "hang-api",
-					));
+					builder = builder
+						.with_access_key_id(access_key)
+						.with_secret_access_key(secret_key);
 				}
-
-				let aws_config = aws_config.load().await;
-
-				let mut s3_config_builder = S3ConfigBuilder::from(&aws_config);
 
 				// Use custom endpoint if provided (for MinIO, LocalStack, etc.)
 				if let Some(endpoint_url) = endpoint {
-					s3_config_builder = s3_config_builder.endpoint_url(endpoint_url).force_path_style(true);
+					builder = builder.with_endpoint(endpoint_url).with_allow_http(true);
 				}
 
-				let s3_config = s3_config_builder.build();
-				let client = S3Client::from_conf(s3_config);
+				let store: Arc<dyn ObjectStore> = Arc::new(
+					builder
+						.build()
+						.map_err(|e| Error::Storage(format!("Failed to create S3 client: {}", e)))?,
+				);
 
-				Ok(StorageProvider::S3 {
-					client,
-					bucket: bucket.clone(),
-				})
-			} /*
-			  StorageConfig::Gcs { .. } => {
-				  // TODO: Implement GCS support
-				  Err(Error::Storage("GCS storage not yet implemented".to_string()))
-			  }
-			  */
+				let base_url = if let Some(endpoint) = endpoint {
+					// For custom endpoints (like MinIO), construct URL manually
+					format!("{}/{}", endpoint.trim_end_matches('/'), bucket)
+				} else {
+					// Standard S3 URL format
+					format!("https://{}.s3.{}.amazonaws.com", bucket, region)
+				};
+
+				Ok(StorageProvider { store, base_url })
+			}
+			StorageConfig::Gcs { bucket } => {
+				let store: Arc<dyn ObjectStore> =
+					Arc::new(GoogleCloudStorageBuilder::new().with_bucket_name(bucket).build()?);
+
+				let base_url = format!("https://storage.googleapis.com/{}", bucket);
+
+				Ok(StorageProvider { store, base_url })
+			}
 		}
 	}
 
-	pub async fn upload_file(&self, data: Vec<u8>, content_type: &str, extension: &str) -> Result<String> {
+	pub async fn upload_file(&self, data: Vec<u8>, extension: &str) -> Result<String> {
 		let filename = format!("{}.{}", Uuid::new_v4(), extension);
+		let path = ObjectPath::from(filename.clone());
 
-		match self {
-			StorageProvider::Local { base_path } => {
-				let file_path = Path::new(base_path).join(&filename);
-				fs::write(&file_path, data)
-					.await
-					.map_err(|e| Error::Storage(format!("Failed to write file: {}", e)))?;
+		tracing::info!(?filename, ?path, ?self.base_url, "Uploading file");
 
-				Ok(format!("/uploads/{}", filename))
-			}
-			StorageProvider::S3 { client, bucket } => {
-				client
-					.put_object()
-					.bucket(bucket)
-					.key(&filename)
-					.body(data.into())
-					.content_type(content_type)
-					.send()
-					.await
-					.map_err(|e| Error::Storage(format!("Failed to upload to S3: {}", e)))?;
+		self.store.put(&path, data.into()).await?;
 
-				Ok(format!("https://{}.s3.amazonaws.com/{}", bucket, filename))
-			}
-		}
+		let url = format!("{}/{}", self.base_url, filename);
+		Ok(url)
 	}
 
-	pub async fn delete_file(&self, file_url: &str) -> Result<()> {
-		match self {
-			StorageProvider::Local { base_path } => {
-				// Extract filename from URL (assumes format /uploads/filename)
-				if let Some(filename) = file_url.strip_prefix("/uploads/") {
-					let file_path = Path::new(base_path).join(filename);
-					if file_path.exists() {
-						fs::remove_file(&file_path)
-							.await
-							.map_err(|e| Error::Storage(format!("Failed to delete file: {}", e)))?;
-					}
-				}
-				Ok(())
-			}
-			StorageProvider::S3 { client, bucket } => {
-				// Extract key from S3 URL
-				let key = file_url
-					.split('/')
-					.last()
-					.ok_or_else(|| Error::Storage("Invalid S3 URL".to_string()))?;
+	pub async fn delete_file(&self, url: &str) -> Result<()> {
+		let name = url
+			.strip_prefix(&self.base_url)
+			.ok_or(Error::Storage("Invalid file URL".to_string()))?;
 
-				client
-					.delete_object()
-					.bucket(bucket)
-					.key(key)
-					.send()
-					.await
-					.map_err(|e| Error::Storage(format!("Failed to delete from S3: {}", e)))?;
+		let path = ObjectPath::from(name);
 
-				Ok(())
-			}
-		}
-	}
+		tracing::info!(?name, ?path, ?self.base_url, "Deleting file");
 
-	pub async fn get_presigned_upload_url(&self, content_type: &str, extension: &str) -> Result<(String, String)> {
-		match self {
-			StorageProvider::Local { .. } => {
-				// For local storage, we'll use direct upload
-				Err(Error::Storage(
-					"Presigned URLs not supported for local storage".to_string(),
-				))
-			}
-			StorageProvider::S3 { client, bucket } => {
-				let filename = format!("{}.{}", Uuid::new_v4(), extension);
+		self.store
+			.delete(&path)
+			.await
+			.map_err(|e| Error::Storage(format!("Failed to delete file: {}", e)))?;
 
-				let presigning_config = aws_sdk_s3::presigning::PresigningConfig::expires_in(
-					std::time::Duration::from_secs(3600), // 1 hour
-				)
-				.map_err(|e| Error::Storage(format!("Failed to create presigning config: {}", e)))?;
-
-				let presigned_request = client
-					.put_object()
-					.bucket(bucket)
-					.key(&filename)
-					.content_type(content_type)
-					.presigned(presigning_config)
-					.await
-					.map_err(|e| Error::Storage(format!("Failed to create presigned URL: {}", e)))?;
-
-				let final_url = format!("https://{}.s3.amazonaws.com/{}", bucket, filename);
-
-				Ok((presigned_request.uri().to_string(), final_url))
-			}
-		}
+		Ok(())
 	}
 }
