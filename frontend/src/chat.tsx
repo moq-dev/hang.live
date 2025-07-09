@@ -1,5 +1,5 @@
 import solid from "@kixelated/signals/solid";
-import { type Accessor, For, createMemo, createSignal, onMount } from "solid-js";
+import { type Accessor, createMemo, createSignal, For, onMount } from "solid-js";
 import type { Broadcast, ChatMessage } from "./broadcast";
 import type { Bounds, Vector } from "./geometry";
 import type { Room } from "./room";

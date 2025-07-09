@@ -1,6 +1,6 @@
 import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { type Accessor, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";

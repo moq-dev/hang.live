@@ -45,7 +45,7 @@ impl User {
 	pub async fn create_with_provider(pool: &PgPool, info: &OAuthUser) -> Result<Self> {
 		let mut tx = pool.begin().await?;
 
-		let avatar = info.avatar.clone().unwrap_or_else(|| default_avatar());
+		let avatar = info.avatar.clone().unwrap_or_else(default_avatar);
 
 		// Create user
 		let user = sqlx::query_as!(
