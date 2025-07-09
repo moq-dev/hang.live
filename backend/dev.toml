@@ -1,4 +1,7 @@
+api_url = "http://localhost:3000"
+frontend_url = "http://localhost:1420"
 database_url = "postgres:///hang?host=/tmp"
+
 jwt_secret = "your-super-secret-jwt-key-here"
 port = 3000
 
@@ -12,10 +15,6 @@ base_path = "./uploads"
 # type = "s3"
 # bucket = "your-bucket-name"
 # region = "us-east-1"
-
-[oidc]
-api_url = "http://localhost:3000"
-frontend_url = "http://localhost:1420"
 
 # OpenID Connect providers configuration
 [oidc.providers.google]

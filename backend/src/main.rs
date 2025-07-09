@@ -17,6 +17,7 @@ use axum::{
 	http::{HeaderName, HeaderValue, Method},
 	Router,
 };
+use std::time::Duration;
 
 use sqlx::PgPool;
 use tower::ServiceBuilder;
@@ -61,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
 	// CORS configuration
 	let cors = CorsLayer::new()
 		.allow_origin([
-			"http://localhost:1420".parse::<HeaderValue>()?,
+			config.frontend_url.to_string().parse::<HeaderValue>()?,
 			"https://tauri.localhost".parse::<HeaderValue>()?,
 		])
 		.allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::PATCH])
@@ -73,7 +74,8 @@ async fn main() -> anyhow::Result<()> {
 			HeaderName::from_static("origin"),
 			HeaderName::from_static("user-agent"),
 		]))
-		.allow_credentials(true);
+		.allow_credentials(true)
+		.max_age(Duration::from_secs(3600)); // Cache preflight for 1 hour
 
 	// App state for handlers
 	let app_state = AppState {
