@@ -65,7 +65,7 @@ export class Room {
 		this.connection = new Connection({ url });
 		this.canvas = canvas;
 		this.user = new Signal(props?.user);
-		this.avatar = new Signal(props?.avatar ?? Api.getDefaultAvatar());
+		this.avatar = new Signal(props?.avatar ?? Api.randomAvatar());
 
 		this.notifications = new Notifications();
 

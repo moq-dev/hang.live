@@ -1,6 +1,6 @@
 import * as Api from "@hang/api";
 import solid from "@kixelated/signals/solid";
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconCamera from "~icons/mdi/camera";
 import IconDiscord from "~icons/mdi/discord";
@@ -17,46 +17,97 @@ export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
 		<Layout full={false}>
 			<Show when={authenticated()} fallback={<Login api={props.api} />}>
-				<Settings api={props.api} />
+				<SettingsLoad api={props.api} />
 			</Show>
 		</Layout>
 	);
 }
 
-function Settings(props: { api: Api.Client }): JSX.Element {
+function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 	const account = new Api.Account(props.api);
 
-	const [name, setName] = createSignal<string | undefined>(undefined);
-	const [avatar, setAvatar] = createSignal<string | undefined>(undefined);
+	const [info, setInfo] = createSignal<Api.AccountInfo | undefined>(undefined);
+	const [error, setError] = createSignal<string | undefined>(undefined);
+
+	const handleLogout = () => {
+		props.api.logout();
+	};
+
+	onMount(async () => {
+		try {
+			setInfo(await account.info());
+		} catch (e) {
+			setError(`Failed to load account info: ${e}`);
+		}
+	});
+
+	return (
+		<>
+			<Switch>
+				<Match when={error()}>
+					<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-4 mb-6 text-red-300 text-center">
+						Error: {error()}
+					</div>
+				</Match>
+				<Match when={info()}>{(info) => <Settings account={account} info={info()} />}</Match>
+				<Match when={true}>
+					<div>Loading...</div>
+				</Match>
+			</Switch>
+
+			{/* Full Width Sections */}
+			<div class="space-y-6">
+				{/* Action Buttons - Only logout now */}
+				<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
+					<div class="flex flex-col sm:flex-row gap-4">
+						<button
+							type="button"
+							onClick={handleLogout}
+							class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+						>
+							Sign out
+						</button>
+					</div>
+				</div>
+
+				{/* Back to App */}
+				<div class="text-center py-4">
+					<a href="/" class="text-gray-400 hover:text-white transition-colors">
+						← Back to hang
+					</a>
+				</div>
+			</div>
+		</>
+	);
+}
+
+function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.Element {
+	const [info, setInfo] = createSignal(props.info);
+	const [name, setName] = createSignal<string | undefined>(props.info.name);
+	const [avatar, setAvatar] = createSignal<string | undefined>(props.info.avatar);
+	const [avatarFile, setAvatarFile] = createSignal<File | undefined>(undefined);
 	const [saving, setSaving] = createSignal(false);
 	const [message, setMessage] = createSignal<{ type: "success" | "error"; text: string } | undefined>(undefined);
 
-	// Load the account info
-	const info = solid(account.info);
-	const error = solid(account.error);
-
-	createEffect(() => {
-		const i = info();
-		setName(i?.name);
-		setAvatar(i?.avatar);
-	});
-
-	createEffect(() => {
-		const e = error();
-		if (!e) return;
-		setMessage({ type: "error", text: e });
-	});
-
 	const avatarChanged = createMemo(() => {
-		return avatar() !== info()?.avatar;
+		return avatar() !== info().avatar || avatarFile() !== undefined;
 	});
 
 	const nameChanged = createMemo(() => {
-		return name() !== info()?.name;
+		return name() !== info().name;
 	});
 
 	const changed = createMemo(() => {
 		return nameChanged() || avatarChanged();
+	});
+
+	// Get the current avatar URL for display (either uploaded file preview or string URL)
+	const currentAvatarUrl = createMemo(() => {
+		const file = avatarFile();
+		if (file) {
+			return URL.createObjectURL(file);
+		}
+		return avatar();
 	});
 
 	const gradient = useAnimatedGradient();
@@ -69,7 +120,14 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 	};
 
 	window.addEventListener("beforeunload", handleBeforeUnload);
-	onCleanup(() => window.removeEventListener("beforeunload", handleBeforeUnload));
+	onCleanup(() => {
+		window.removeEventListener("beforeunload", handleBeforeUnload);
+		// Clean up object URLs to prevent memory leaks
+		const file = avatarFile();
+		if (file) {
+			URL.revokeObjectURL(URL.createObjectURL(file));
+		}
+	});
 
 	const handleAvatarUpload = (event: Event) => {
 		const input = event.target as HTMLInputElement;
@@ -89,13 +147,8 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 			return;
 		}
 
-		// Create preview
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			setAvatar(e.target?.result as string);
-		};
-		reader.readAsDataURL(file);
-		setMessage(undefined);
+		// Store the file for upload
+		setAvatarFile(file);
 	};
 
 	const handleSaveChanges = async () => {
@@ -103,54 +156,49 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 		setMessage(undefined);
 
 		try {
-			// Here you would implement the actual save logic
-			// For now, just simulate a save operation
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			// Handle avatar upload if we have a file
+			const file = avatarFile();
+			if (file) {
+				await props.account.uploadAvatar(file);
+				setAvatarFile(undefined); // Clear the file since it's now uploaded
+			}
 
-			// TODO: Implement actual API calls to:
-			// 1. Upload avatar if avatarFile() exists
-			// 2. Delete avatar if avatarDeleted() is true
-			// 3. Update display name if changed
-			// 4. Update the auth user state
+			// Handle regular updates (name and/or URL-based avatar)
+			const update: Api.AccountUpdate = {
+				avatar: avatarChanged() ? avatar() : undefined,
+				name: nameChanged() ? name() : undefined,
+			};
+			const newInfo = await props.account.update(update);
+
+			setInfo(newInfo);
+			setAvatar(newInfo.avatar); // Update to the server's avatar URL
 
 			setMessage({ type: "success", text: "Changes saved" });
-		} catch {
-			setMessage({ type: "error", text: "Something went wrong. Try again?" });
+		} catch (e) {
+			setMessage({ type: "error", text: `Something went wrong. Try again? ${e}` });
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	const handleResetChanges = () => {
-		setName(info()?.name);
-		setAvatar(info()?.avatar);
-		setMessage(undefined);
-	};
-
-	const handleLogout = () => {
-		// TODO: Implement actual logout logic
-		props.api.logout();
+		setName(info().name);
+		setAvatar(info().avatar);
+		setAvatarFile(undefined);
 	};
 
 	const canSave = () => {
 		return changed() && name()?.trim() !== "";
 	};
 
+	createEffect(() => {
+		if (changed()) {
+			setMessage(undefined);
+		}
+	});
+
 	return (
 		<div class="max-w-7xl mx-auto p-4">
-			{/* Message */}
-			<Show when={message()}>
-				<div
-					class={`rounded-2xl p-4 text-center mb-8 ${
-						message()?.type === "success"
-							? "bg-green-500/20 text-green-300 border border-green-400/30"
-							: "bg-red-500/20 text-red-300 border border-red-400/30"
-					}`}
-				>
-					{message()?.text}
-				</div>
-			</Show>
-
 			{/* Profile Section - Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
 				{/* Preview Panel */}
@@ -160,9 +208,9 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 					{/* Avatar Preview with Name Overlay */}
 					<div class="relative text-center">
 						<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-							<Show when={avatar()} fallback={<IconCamera class="w-8 h-8 text-gray-400" />}>
-								{(avatar) => (
-									<img src={avatar()} alt="Avatar Preview" class="w-full h-full object-cover" />
+							<Show when={currentAvatarUrl()} fallback={<IconCamera class="w-8 h-8 text-gray-400" />}>
+								{(avatarUrl) => (
+									<img src={avatarUrl()} alt="Avatar Preview" class="w-full h-full object-cover" />
 								)}
 							</Show>
 						</div>
@@ -183,7 +231,7 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 						</div>
 
 						{/* Change Indicator */}
-						<Show when={avatar()}>
+						<Show when={currentAvatarUrl()}>
 							<div class="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-black flex items-center justify-center">
 								<div class="w-2 h-2 bg-white rounded-full" />
 							</div>
@@ -226,6 +274,20 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 							</div>
 						</div>
 					</div>
+
+					{/* Message */}
+					<Show when={message()}>
+						<div
+							class="rounded-2xl p-4 text-center mb-8 w-full"
+							classList={{
+								"bg-green-500/20 text-green-300 border border-green-400/30":
+									message()?.type === "success",
+								"bg-red-500/20 text-red-300 border border-red-400/30": message()?.type === "error",
+							}}
+						>
+							{message()?.text}
+						</div>
+					</Show>
 				</div>
 
 				{/* Form Controls */}
@@ -254,19 +316,24 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 												class="w-4 h-4"
 												style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
 											/>
-											{avatar() ? "Choose new avatar" : "Choose an avatar"}
+											{currentAvatarUrl() ? "Choose new avatar" : "Choose an avatar"}
 										</span>
 									</label>
-									<Show when={avatar()}>
+									<Show when={currentAvatarUrl()}>
 										<button
 											type="button"
 											onClick={() => {
-												setAvatar(undefined);
-												setMessage(undefined);
+												while (true) {
+													const randomUrl = Api.randomAvatar();
+													if (randomUrl === info().avatar) continue;
+													setAvatar(randomUrl);
+													setAvatarFile(undefined);
+													return;
+												}
 											}}
 											class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
 										>
-											Remove
+											Random
 										</button>
 									</Show>
 								</div>
@@ -277,15 +344,9 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 								Your friends will judge you for any lewd images.
 							</p>
 							<Show when={avatarChanged()}>
-								<div class="text-sm text-green-400 flex items-center gap-2">
-									<div class="w-2 h-2 bg-green-400 rounded-full" />
-									New avatar ready to save
-								</div>
-							</Show>
-							<Show when={avatarChanged() && avatar() === undefined}>
-								<div class="text-sm text-red-400 flex items-center gap-2">
-									<div class="w-2 h-2 bg-red-400 rounded-full" />
-									Avatar will be deleted
+								<div class="text-sm text-yellow-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-yellow-400 rounded-full" />
+									Unsaved changes
 								</div>
 							</Show>
 						</div>
@@ -298,7 +359,9 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 							<input
 								type="text"
 								value={name()}
-								onInput={(e) => setName(e.currentTarget.value)}
+								onInput={(e) => {
+									setName(e.currentTarget.value);
+								}}
 								placeholder="Enter your name"
 								class="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
 							/>
@@ -306,36 +369,13 @@ function Settings(props: { api: Api.Client }): JSX.Element {
 								How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
 							</p>
 							<Show when={nameChanged()}>
-								<div class="text-sm text-green-400 flex items-center gap-2">
-									<div class="w-2 h-2 bg-green-400 rounded-full" />
-									Display name changed
+								<div class="text-sm text-yellow-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-yellow-400 rounded-full" />
+									Unsaved changes
 								</div>
 							</Show>
 						</div>
 					</div>
-				</div>
-			</div>
-
-			{/* Full Width Sections */}
-			<div class="space-y-6">
-				{/* Action Buttons - Only logout now */}
-				<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-					<div class="flex flex-col sm:flex-row gap-4">
-						<button
-							type="button"
-							onClick={handleLogout}
-							class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-						>
-							Sign out
-						</button>
-					</div>
-				</div>
-
-				{/* Back to App */}
-				<div class="text-center py-4">
-					<a href="/" class="text-gray-400 hover:text-white transition-colors">
-						← Back to hang
-					</a>
 				</div>
 			</div>
 		</div>

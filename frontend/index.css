@@ -61,29 +61,8 @@ header {
 	/* Prevent text selection. */
 	user-select: none;
 
-	#status {
-		font-size: 0.5em;
-		vertical-align: -0.2em;
-
-		/* default color */
-		color: hsl(140, 75%, 50%);
-	}
-
 	a {
 		@apply no-underline;
-	}
-
-	> .logo,
-	> nav {
-		@apply rounded backdrop-blur-sm p-[6px_14px];
-	}
-
-	> .logo {
-		@apply text-[1.5em];
-	}
-
-	> nav {
-		@apply flex gap-4;
 	}
 }
 
