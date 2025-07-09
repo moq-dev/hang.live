@@ -1,0 +1,85 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Development database
+.pgdata/
+*.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Test files
+test/
+tests/
+
+# Documentation
+README.md
+docs/
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Terraform
+terraform/
+*.tf
+*.tfvars
+*.tfstate
+*.tfstate.backup
+
+# Node.js (if any)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python (if any)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build scripts (keep them out of the image)
+build-docker.sh
+justfile
+
+# Nix
+result
+result-*
+.direnv/
+
+# Uploads directory (runtime data)
+uploads/
+
+# SQLx offline data (we'll use cargo sqlx prepare)
+.sqlx/

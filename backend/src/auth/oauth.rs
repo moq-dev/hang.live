@@ -7,7 +7,12 @@ use openidconnect::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{auth::Error as AuthError, config::Config, db::User, Error, Result};
+use crate::{
+	auth::Error as AuthError,
+	config::{Config, ConfigOpenID},
+	db::User,
+	Error, Result,
+};
 
 #[derive(Debug, Clone)]
 pub struct Provider {
@@ -46,7 +51,15 @@ impl OAuthService {
 	pub async fn new(config: &Config) -> Result<Self> {
 		let mut clients = HashMap::new();
 
-		for (provider_name, provider_config) in &config.oidc.providers {
+		let providers: HashMap<&'static str, &ConfigOpenID> = vec![
+			(config.openid_discord.as_ref().map(|p| ("discord", p))),
+			(config.openid_google.as_ref().map(|p| ("google", p))),
+		]
+		.into_iter()
+		.flatten()
+		.collect();
+
+		for (provider_name, provider_config) in providers {
 			let issuer_url = IssuerUrl::new(provider_config.issuer_url.clone())
 				.map_err(|e| Error::Config(anyhow::anyhow!("Invalid issuer URL for {}: {}", provider_name, e)))?;
 
@@ -63,14 +76,14 @@ impl OAuthService {
 			let client_id = ClientId::new(provider_config.client_id.clone());
 			let client_secret = ClientSecret::new(provider_config.client_secret.clone());
 
-			let redirect_url = config.api_url.join(&format!("auth/{provider_name}/callback"))?;
+			let redirect_url = config.api_url.join(&format!("auth/{}/callback", provider_name))?;
 			let redirect_url = RedirectUrl::new(redirect_url.to_string())
 				.map_err(|e| Error::Config(anyhow::anyhow!("Invalid redirect URL for {}: {}", provider_name, e)))?;
 
 			let client = CoreClient::from_provider_metadata(provider_metadata, client_id, Some(client_secret))
 				.set_redirect_uri(redirect_url);
 
-			clients.insert(provider_name.clone(), client);
+			clients.insert(provider_name.to_string(), client);
 		}
 
 		Ok(Self {
@@ -123,7 +136,7 @@ impl OAuthService {
 			.exchange_code(AuthorizationCode::new(code.to_string()))
 			.request_async(async_http_client)
 			.await
-			.map_err(|e| Error::ExternalService(format!("Failed to exchange code for token: {e}")))?;
+			.map_err(|e| Error::ExternalService(format!("Failed to exchange code for token: {}", e)))?;
 
 		Ok(token_result.access_token().secret().clone())
 	}
@@ -139,16 +152,16 @@ impl OAuthService {
 
 		let userinfo_request = client
 			.user_info(access_token, None)
-			.map_err(|e| Error::ExternalService(format!("Failed to create userinfo request: {e}")))?;
+			.map_err(|e| Error::ExternalService(format!("Failed to create userinfo request: {}", e)))?;
 
 		let user_info_claims: CoreUserInfoClaims = userinfo_request
 			.request_async(async_http_client)
 			.await
-			.map_err(|e| Error::ExternalService(format!("Failed to get user info: {e}")))?;
+			.map_err(|e| Error::ExternalService(format!("Failed to get user info: {}", e)))?;
 
 		// Serialize the claims to JSON for easier field access
 		let user_info: serde_json::Value = serde_json::to_value(&user_info_claims)
-			.map_err(|e| Error::ExternalService(format!("Failed to serialize user info: {e}")))?;
+			.map_err(|e| Error::ExternalService(format!("Failed to serialize user info: {}", e)))?;
 
 		// Extract user information in a provider-agnostic way
 		let sub = user_info
@@ -202,7 +215,7 @@ impl OAuthService {
 		}
 
 		// User doesn't exist, create new user
-		User::create_with_provider(pool, oauth_user).await
+		User::create_with_provider(pool, &oauth_user).await
 	}
 
 	pub fn get_available_providers(&self) -> Vec<Provider> {

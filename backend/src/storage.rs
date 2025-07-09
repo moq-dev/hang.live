@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use object_store::{
-	aws::AmazonS3Builder, gcp::GoogleCloudStorageBuilder, local::LocalFileSystem, path::Path as ObjectPath, ObjectStore,
-};
+use object_store::{gcp::GoogleCloudStorageBuilder, local::LocalFileSystem, path::Path as ObjectPath, ObjectStore};
 use tokio::fs;
 use uuid::Uuid;
 
 use crate::{
-	config::{Config, StorageConfig},
+	config::{Config, ConfigStorageType},
 	Error, Result,
 };
 
@@ -19,21 +17,22 @@ pub struct StorageProvider {
 
 impl StorageProvider {
 	pub async fn new(config: &Config) -> Result<Self> {
-		match &config.storage {
-			StorageConfig::Local { base_path } => {
+		match &config.storage_type {
+			ConfigStorageType::Disk => {
 				// Ensure the directory exists
-				fs::create_dir_all(base_path)
+				fs::create_dir_all(&config.storage_bucket)
 					.await
 					.map_err(|e| Error::Storage(format!("Failed to create storage directory: {e}")))?;
 
-				let store: Arc<dyn ObjectStore> = Arc::new(LocalFileSystem::new_with_prefix(base_path)?);
+				let store: Arc<dyn ObjectStore> = Arc::new(LocalFileSystem::new_with_prefix(&config.storage_bucket)?);
 
 				Ok(StorageProvider {
 					store,
 					base_url: "/uploads/".to_string(),
 				})
 			}
-			StorageConfig::S3 {
+			/*
+			ConfigStorage::S3 {
 				bucket,
 				region,
 				access_key_id,
@@ -70,11 +69,15 @@ impl StorageProvider {
 
 				Ok(StorageProvider { store, base_url })
 			}
-			StorageConfig::Gcs { bucket } => {
-				let store: Arc<dyn ObjectStore> =
-					Arc::new(GoogleCloudStorageBuilder::new().with_bucket_name(bucket).build()?);
+			*/
+			ConfigStorageType::Gcs => {
+				let store: Arc<dyn ObjectStore> = Arc::new(
+					GoogleCloudStorageBuilder::new()
+						.with_bucket_name(&config.storage_bucket)
+						.build()?,
+				);
 
-				let base_url = format!("https://storage.googleapis.com/{bucket}");
+				let base_url = format!("https://storage.googleapis.com/{}", config.storage_bucket);
 
 				Ok(StorageProvider { store, base_url })
 			}

@@ -62,7 +62,7 @@ thiserror = "2.0"
 chrono = { version = "0.4", features = ["serde"] }
 
 # Cloud storage
-object_store = { version = "0.12", features = ["aws", "gcp", "http"] }
+object_store = { version = "0.12", features = ["gcp", "http"] }
 
 # Validation
 validator = { version = "0.20", features = ["derive"] }
@@ -71,5 +71,6 @@ toml = "0.8.23"
 ts-rs = { version = "11.0", features = ["uuid-impl", "url-impl"] }
 serde_with = "3.14.0"
 rand = "0.9.1"
+envy = "0.4.2"
 
 [dev-dependencies]
