@@ -30,11 +30,14 @@ use tower_http::{
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use auth::{OAuthService, UserService};
-use config::{Config, StorageConfig};
+use config::Config;
 use storage::StorageProvider;
+
+use crate::config::ConfigStorageType;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+	// Load environment variables from .env file
 	dotenvy::dotenv()?;
 
 	// Initialize tracing
@@ -43,9 +46,8 @@ async fn main() -> anyhow::Result<()> {
 		.with(tracing_subscriber::fmt::layer())
 		.init();
 
-	// Load the TOML configuration file from ARGV[1]
-	let path = std::env::args().nth(1).expect("Usage: hang-api <config.toml>");
-	let config = Config::from_file(path)?;
+	// Load the config from environment variables
+	let config = envy::from_env::<Config>()?;
 
 	// Database connection
 	let pool = PgPool::connect(&config.database_url).await?;
@@ -57,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
 	let oauth_service = OAuthService::new(&config).await?;
 
 	// User service for JWT authentication
-	let user_service = UserService::new(&config.jwt_secret);
+	let user_service = UserService::new(&config.api_secret);
 
 	// CORS configuration
 	let frontend_url = config.frontend_url.to_string();
@@ -97,8 +99,8 @@ async fn main() -> anyhow::Result<()> {
 		.with_state(app_state);
 
 	// File serving for local uploads
-	let file_service = if let StorageConfig::Local { base_path } = &config.storage {
-		Router::new().nest_service("/uploads", ServeDir::new(base_path))
+	let file_service = if config.storage_type == ConfigStorageType::Disk {
+		Router::new().nest_service("/uploads", ServeDir::new(config.storage_bucket))
 	} else {
 		Router::new()
 	};
@@ -116,10 +118,9 @@ async fn main() -> anyhow::Result<()> {
 			.layer(DefaultBodyLimit::max(10 * 1024 * 1024)), // 10MB upload limit
 	);
 
-	let port = config.port;
-	let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{port}")).await?;
+	let listener = tokio::net::TcpListener::bind(&config.api_bind).await?;
 
-	tracing::info!("Server starting on http://localhost:{}", port);
+	tracing::info!(addr = ?config.api_bind, "server listening");
 
 	axum::serve(listener, app).await?;
 
