@@ -151,7 +151,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Set a random default avatar while the user details are loading.
 		// TODO Only start a broadcast after receiving the catalog to avoid this.
-		this.avatar.src = Api.getDefaultAvatar();
+		this.avatar.src = Api.randomAvatar();
 
 		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
 		this.signals.effect((effect) => {

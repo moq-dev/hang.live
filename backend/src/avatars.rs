@@ -1,12 +1,19 @@
 use axum::{
 	extract::{Multipart, State},
-	response::Json,
 	routing::get,
-	Router,
+	Json, Router,
 };
 use rand::Rng;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{auth, db, AppState, Error, Result};
+
+#[derive(TS, Serialize, Deserialize, Debug)]
+#[ts(export, export_to = "generated.ts")]
+pub struct AccountAvatar {
+	pub url: String,
+}
 
 pub fn router() -> Router<AppState> {
 	Router::new().route("/account/avatar", get(get_avatar).post(upload_avatar))
@@ -14,14 +21,14 @@ pub fn router() -> Router<AppState> {
 
 pub fn default_avatar() -> String {
 	let index = rand::rng().random_range(0..50);
-	return format!("/avatars/{}.svg", index);
+	return format!("/avatar/{}.svg", index);
 }
 
 async fn upload_avatar(
 	State(state): State<AppState>,
 	user: auth::Token,
 	mut multipart: Multipart,
-) -> Result<Json<serde_json::Value>> {
+) -> Result<Json<AccountAvatar>> {
 	// Get current user to check for existing avatar
 	let user = db::User::find_by_id(&state.db, user.id).await?;
 
@@ -82,19 +89,13 @@ async fn upload_avatar(
 		.execute(&state.db)
 		.await?;
 
-		return Ok(Json(serde_json::json!({
-			"avatar": upload,
-			"message": "Avatar uploaded successfully"
-		})));
+		return Ok(Json(AccountAvatar { url: upload }));
 	}
 
 	Err(Error::NotFound("No avatar file found in request".to_string()))
 }
 
-async fn get_avatar(State(state): State<AppState>, user: auth::Token) -> Result<Json<serde_json::Value>> {
+async fn get_avatar(State(state): State<AppState>, user: auth::Token) -> Result<Json<AccountAvatar>> {
 	let user = db::User::find_by_id(&state.db, user.id).await?;
-
-	Ok(Json(serde_json::json!({
-		"avatar": user.avatar,
-	})))
+	Ok(Json(AccountAvatar { url: user.avatar }))
 }

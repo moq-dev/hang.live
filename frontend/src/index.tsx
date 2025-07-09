@@ -5,7 +5,7 @@ import "@kixelated/hang/support/element";
 import * as Api from "@hang/api";
 import solid from "@kixelated/signals/solid";
 import { Route, Router } from "@solidjs/router";
-import { createEffect, onCleanup, Show } from "solid-js";
+import { onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
@@ -41,16 +41,9 @@ function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
 	const room = new Room(props.canvas);
 
 	const account = new Api.Account(props.api);
-	const info = solid(account.info);
-
-	createEffect(() => {
-		const i = info();
-		if (i instanceof Error) {
-			console.error("Failed to fetch account info", i);
-		} else {
-			room.user.set(i?.name);
-			room.avatar.set(i?.avatar ?? Api.getDefaultAvatar());
-		}
+	account.info().then((i) => {
+		room.user.set(i.name);
+		room.avatar.set(i.avatar ?? Api.randomAvatar());
 	});
 
 	onCleanup(() => room.close());

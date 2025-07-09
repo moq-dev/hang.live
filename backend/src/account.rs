@@ -7,7 +7,7 @@ use validator::Validate;
 use crate::{auth, db, AppState, Result};
 
 pub fn router() -> Router<AppState> {
-	Router::new().route("/account/info", get(get_account).patch(update_account))
+	Router::new().route("/account/info", get(get_account).post(update_account))
 }
 
 #[derive(TS, Debug, Serialize, Deserialize)]
@@ -23,6 +23,7 @@ pub struct AccountInfo {
 pub struct AccountUpdate {
 	#[validate(length(min = 4, max = 100, message = "Name must be between 4 and 100 characters"))]
 	pub name: Option<String>,
+	pub avatar: Option<String>,
 }
 
 async fn get_account(State(state): State<AppState>, user: auth::Token) -> Result<Json<AccountInfo>> {
