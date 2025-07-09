@@ -47,13 +47,19 @@ async fn upload_avatar(
 			.unwrap_or_else(|| "image/jpeg".to_string());
 		let data = field.bytes().await?;
 
-		// Validate file type
-		if !["image/jpeg", "image/png", "image/gif", "image/webp"].contains(&content_type.as_str()) {
-			return Err(Error::Forbidden(
-				"Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.".to_string(),
-			));
-		}
-
+		// Determine file extension
+		let extension = match content_type.as_str() {
+			"image/jpeg" => "jpg",
+			"image/png" => "png",
+			"image/gif" => "gif",
+			"image/webp" => "webp",
+			"image/svg+xml" => "svg",
+			_ => {
+				return Err(Error::Forbidden(
+					"Invalid file type. Only JPEG, PNG, GIF, SVG, and WebP are allowed.".to_string(),
+				))
+			}
+		};
 		// Validate file size (max 5MB)
 		if data.len() > 5 * 1024 * 1024 {
 			return Err(Error::Forbidden(
@@ -65,15 +71,6 @@ async fn upload_avatar(
 		if user.avatar.starts_with("/uploads/") {
 			let _ = state.storage.delete_file(&user.avatar).await; // Ignore errors for old file deletion
 		}
-
-		// Determine file extension
-		let extension = match content_type.as_str() {
-			"image/jpeg" => "jpg",
-			"image/png" => "png",
-			"image/gif" => "gif",
-			"image/webp" => "webp",
-			_ => "jpg",
-		};
 
 		// Upload file using the storage provider's method
 		let upload = state
