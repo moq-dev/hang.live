@@ -25,7 +25,7 @@ use tower_http::{
 	cors::{AllowHeaders, CorsLayer},
 	request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
 	services::ServeDir,
-	trace::{DefaultMakeSpan, TraceLayer},
+	trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
 	);
 
 	let port = config.port;
-	let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", port)).await?;
+	let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{port}")).await?;
 
 	tracing::info!("Server starting on http://localhost:{}", port);
 

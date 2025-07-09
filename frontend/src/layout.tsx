@@ -7,11 +7,15 @@ export function Layout(props: { children: JSX.Element; full?: boolean }) {
 			<header>
 				<a href="/" class="rounded backdrop-blur-sm px-4 py-2 text-2xl">
 					<span>hang</span>
-					<span id="status" class="text-xs ml-1" style="vertical-align: -0.2em; color: hsl(140, 75%, 50%);">
+					<span
+						id="status"
+						class="text-xs ml-1"
+						style={{ "vertical-align": "-0.2em", color: "hsl(140, 75%, 50%)" }}
+					>
 						live
 					</span>
 				</a>
-				<div id="support"></div>
+				<div id="support" />
 				<nav class="rounded backdrop-blur-sm px-4 py-2">
 					<a href="/account">account</a>
 				</nav>

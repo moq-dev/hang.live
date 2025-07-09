@@ -24,7 +24,7 @@ impl StorageProvider {
 				// Ensure the directory exists
 				fs::create_dir_all(base_path)
 					.await
-					.map_err(|e| Error::Storage(format!("Failed to create storage directory: {}", e)))?;
+					.map_err(|e| Error::Storage(format!("Failed to create storage directory: {e}")))?;
 
 				let store: Arc<dyn ObjectStore> = Arc::new(LocalFileSystem::new_with_prefix(base_path)?);
 
@@ -57,7 +57,7 @@ impl StorageProvider {
 				let store: Arc<dyn ObjectStore> = Arc::new(
 					builder
 						.build()
-						.map_err(|e| Error::Storage(format!("Failed to create S3 client: {}", e)))?,
+						.map_err(|e| Error::Storage(format!("Failed to create S3 client: {e}")))?,
 				);
 
 				let base_url = if let Some(endpoint) = endpoint {
@@ -65,7 +65,7 @@ impl StorageProvider {
 					format!("{}/{}", endpoint.trim_end_matches('/'), bucket)
 				} else {
 					// Standard S3 URL format
-					format!("https://{}.s3.{}.amazonaws.com", bucket, region)
+					format!("https://{bucket}.s3.{region}.amazonaws.com")
 				};
 
 				Ok(StorageProvider { store, base_url })
@@ -74,7 +74,7 @@ impl StorageProvider {
 				let store: Arc<dyn ObjectStore> =
 					Arc::new(GoogleCloudStorageBuilder::new().with_bucket_name(bucket).build()?);
 
-				let base_url = format!("https://storage.googleapis.com/{}", bucket);
+				let base_url = format!("https://storage.googleapis.com/{bucket}");
 
 				Ok(StorageProvider { store, base_url })
 			}
@@ -105,7 +105,7 @@ impl StorageProvider {
 		self.store
 			.delete(&path)
 			.await
-			.map_err(|e| Error::Storage(format!("Failed to delete file: {}", e)))?;
+			.map_err(|e| Error::Storage(format!("Failed to delete file: {e}")))?;
 
 		Ok(())
 	}

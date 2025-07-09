@@ -22,7 +22,7 @@ pub fn router() -> Router<AppState> {
 
 pub fn default_avatar() -> String {
 	let index = rand::rng().random_range(0..50);
-	return format!("/avatar/{}.svg", index);
+	format!("/avatar/{index}.svg")
 }
 
 async fn upload_avatar(

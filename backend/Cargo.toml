@@ -15,11 +15,9 @@ tower-http = { version = "0.6", features = [
 	"request-id",
 	"util",
 ] }
-hyper = { version = "1.6", features = ["full"] }
 
 # Async runtime
 tokio = { version = "1.45", features = ["full"] }
-async-trait = "0.1"
 
 # Database
 sqlx = { version = "0.8", features = [
@@ -41,7 +39,6 @@ jsonwebtoken = "9.3"
 openidconnect = "3.5"
 url = "2.5"
 uuid = { version = "1.17", features = ["v4", "serde"] }
-urlencoding = "2.1"
 
 # HTTP client
 reqwest = { version = "0.12", features = [
@@ -64,26 +61,11 @@ thiserror = "2.0"
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
-# Password hashing
-argon2 = "0.5"
-
 # Cloud storage
 object_store = { version = "0.12", features = ["aws", "gcp", "http"] }
 
 # Validation
 validator = { version = "0.20", features = ["derive"] }
-
-# File upload
-tempfile = "3.20"
-mime = "0.3"
-
-# Rate limiting
-governor = "0.10"
-
-# OpenAPI documentation
-utoipa = { version = "5.4", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
-toml-env = "1.2.0"
 toml = "0.8.23"
 
 ts-rs = { version = "11.0", features = ["uuid-impl", "url-impl"] }
@@ -91,5 +73,3 @@ serde_with = "3.14.0"
 rand = "0.9.1"
 
 [dev-dependencies]
-tower-test = "0.4"
-axum-test = "17.3"
