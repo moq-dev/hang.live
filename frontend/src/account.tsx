@@ -1,6 +1,17 @@
 import * as Api from "@hang/api";
 import solid from "@kixelated/signals/solid";
-import { createEffect, createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import {
+	Accessor,
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	onCleanup,
+	onMount,
+	Show,
+	Switch,
+} from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconCamera from "~icons/mdi/camera";
 import IconDiscord from "~icons/mdi/discord";
@@ -88,6 +99,7 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 	const [avatarFile, setAvatarFile] = createSignal<File | undefined>(undefined);
 	const [saving, setSaving] = createSignal(false);
 	const [message, setMessage] = createSignal<{ type: "success" | "error"; text: string } | undefined>(undefined);
+	const [randomClicks, setRandomClicks] = createSignal(0);
 
 	const avatarChanged = createMemo(() => {
 		return avatar() !== info().avatar || avatarFile() !== undefined;
@@ -197,6 +209,18 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 		}
 	});
 
+	const handleRandomAvatar = () => {
+		setRandomClicks((prev) => prev + 1);
+
+		while (true) {
+			const randomUrl = Api.randomAvatar();
+			if (randomUrl === info().avatar) continue;
+			setAvatar(randomUrl);
+			setAvatarFile(undefined);
+			break;
+		}
+	};
+
 	return (
 		<div class="max-w-7xl mx-auto p-4">
 			{/* Profile Section - Two Column Layout */}
@@ -297,7 +321,7 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 						<h3 class="text-xl font-semibold mb-4">Avatar</h3>
 						<div class="space-y-4">
 							<div class="flex flex-col gap-3">
-								<div class="flex gap-2">
+								<div class="flex gap-2 relative">
 									<label class="flex-1">
 										<input
 											type="file"
@@ -320,28 +344,24 @@ function Settings(props: { account: Api.Account; info: Api.AccountInfo }): JSX.E
 										</span>
 									</label>
 									<Show when={currentAvatarUrl()}>
-										<button
-											type="button"
-											onClick={() => {
-												while (true) {
-													const randomUrl = Api.randomAvatar();
-													if (randomUrl === info().avatar) continue;
-													setAvatar(randomUrl);
-													setAvatarFile(undefined);
-													return;
-												}
-											}}
-											class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-										>
-											Random
-										</button>
+										<div class="relative">
+											<button
+												type="button"
+												onClick={handleRandomAvatar}
+												class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+											>
+												Random
+											</button>
+
+											<Meme clicks={randomClicks} />
+										</div>
 									</Show>
 								</div>
 							</div>
 							<p class="text-sm text-gray-400">
-								JPG, PNG, or GIF • Max 5MB
+								JPG, PNG, GIF, SVG, WebP • Max 5MB
 								<br />
-								Your friends will judge you for any lewd images.
+								Your friends may judge you, keep it clean.
 							</p>
 							<Show when={avatarChanged()}>
 								<div class="text-sm text-yellow-400 flex items-center gap-2">
@@ -467,5 +487,108 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 				</div>
 			</div>
 		</main>
+	);
+}
+
+function Meme(props: { clicks: Accessor<number> }) {
+	// Duration breakpoints for the meme video (in seconds)
+	const BREAKPOINTS = [1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0];
+
+	// Meme video state
+	const [show, setShow] = createSignal<boolean>(false);
+	const [visible, setVisible] = createSignal<boolean>(false);
+	const [video, setVideo] = createSignal<HTMLVideoElement | undefined>(undefined);
+
+	let breakpoint = 0;
+	let breakpointClicks = 4;
+	let breakpointTimestamp = BREAKPOINTS[0];
+
+	createEffect(() => {
+		if (props.clicks() < breakpointClicks - 1) return;
+		// Start loading the video, but don't show it yet
+		setShow(true);
+	});
+
+	createEffect(() => {
+		if (props.clicks() < breakpointClicks) return;
+		if (breakpoint + 1 >= BREAKPOINTS.length) return; // don't loop
+		setVisible(true);
+	});
+
+	let checkCancel: number | undefined;
+	const checkTimeline = () => {
+		const v = video();
+		if (!v) return;
+
+		if (v.currentTime >= breakpointTimestamp) {
+			if (breakpointClicks === props.clicks() || breakpoint + 1 >= BREAKPOINTS.length) {
+				setVisible(false);
+				return;
+			}
+
+			breakpoint++;
+			breakpointTimestamp = BREAKPOINTS[breakpoint];
+			breakpointClicks = props.clicks();
+		}
+
+		checkCancel = requestAnimationFrame(checkTimeline);
+	};
+
+	createEffect(() => {
+		const v = video();
+		if (!v) return;
+
+		if (visible()) {
+			v.volume = 0.5;
+			v.play();
+
+			if (!checkCancel) {
+				checkCancel = requestAnimationFrame(checkTimeline);
+			}
+		} else {
+			v.pause();
+
+			if (checkCancel) {
+				cancelAnimationFrame(checkCancel);
+				checkCancel = undefined;
+			}
+		}
+	});
+
+	createEffect(() => {
+		const v = video();
+		if (!v) return;
+
+		onCleanup(() => {
+			v.pause();
+			v.src = "";
+		});
+
+		onCleanup(() => {
+			if (checkCancel) {
+				cancelAnimationFrame(checkCancel);
+				checkCancel = undefined;
+			}
+		});
+	});
+
+	return (
+		<Show when={show()}>
+			<div class="absolute -top-24 left-1/2 transform -translate-x-1/2 pointer-events-none z-50">
+				<video
+					src="/meme/another-one.webm"
+					class="w-20 h-20 object-cover rounded-lg transition-opacity duration-500"
+					classList={{
+						"opacity-0": !visible(),
+						"opacity-90": visible(),
+					}}
+					ref={setVideo}
+					style={{
+						filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5))",
+						"mix-blend-mode": "screen",
+					}}
+				/>
+			</div>
+		</Show>
 	);
 }

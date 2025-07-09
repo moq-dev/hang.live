@@ -60,9 +60,11 @@ async fn main() -> anyhow::Result<()> {
 	let user_service = UserService::new(&config.jwt_secret);
 
 	// CORS configuration
+	let frontend_url = config.frontend_url.to_string();
 	let cors = CorsLayer::new()
 		.allow_origin([
-			config.frontend_url.to_string().parse::<HeaderValue>()?,
+			// We have to remove the trailing slash unfortunately.
+			frontend_url.trim_end_matches('/').parse::<HeaderValue>()?,
 			"https://tauri.localhost".parse::<HeaderValue>()?,
 		])
 		.allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::PATCH])

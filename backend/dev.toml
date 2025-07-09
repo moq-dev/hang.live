@@ -1,5 +1,5 @@
-api_url = "http://localhost:3000"
-frontend_url = "http://localhost:1420"
+api_url = "http://localhost:3000/"
+frontend_url = "http://localhost:1420/"
 database_url = "postgres:///hang?host=/tmp"
 
 jwt_secret = "your-super-secret-jwt-key-here"
