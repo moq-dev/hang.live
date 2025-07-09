@@ -73,21 +73,19 @@ async fn upload_avatar(
 		}
 
 		// Upload file using the storage provider's method
-		let upload = state
-			.storage
-			.upload_file(data.to_vec(), &content_type, extension)
-			.await?;
+		let url = state.storage.upload_file(data.to_vec(), extension).await?;
 
 		// Update user's avatar URL in database
 		sqlx::query!(
 			"UPDATE users SET avatar = $1, updated_at = NOW() WHERE id = $2",
-			upload,
+			url,
 			user.id
 		)
 		.execute(&state.db)
 		.await?;
 
-		let url = state.config.api_url.join(&upload).unwrap();
+		// Convert any relative URLs to an absolute URL
+		let url = state.config.api_url.join(&url).unwrap();
 		return Ok(Json(AccountAvatar { url }));
 	}
 

@@ -68,8 +68,7 @@ chrono = { version = "0.4", features = ["serde"] }
 argon2 = "0.5"
 
 # Cloud storage
-aws-sdk-s3 = "1.94"
-aws-config = "1.8"
+object_store = { version = "0.12", features = ["aws", "gcp", "http"] }
 
 # Validation
 validator = { version = "0.20", features = ["derive"] }
