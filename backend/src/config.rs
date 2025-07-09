@@ -6,6 +6,12 @@ use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+	/// The address to access this API server.
+	pub api_url: Url,
+
+	/// The address to access the frontend server.
+	pub frontend_url: Url,
+
 	pub database_url: String,
 	pub jwt_secret: String,
 	pub storage: StorageConfig,
@@ -15,17 +21,6 @@ pub struct Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OidcConfig {
-	/// The address to access this API server.
-	///
-	/// The path will consist of /auth/{provider}/callback.
-	pub api_url: Url,
-
-	/// The address to redirect to after OAuth login.
-	///
-	/// The ?token will be part of the URL.
-	/// The application is expectected to strip and save it.
-	pub frontend_url: Url,
-
 	/// The OAuth providers to use.
 	pub providers: HashMap<String, OidcProviderConfig>,
 }

@@ -72,7 +72,7 @@ async fn oauth_callback(
 	let jwt_token = state.auth.encode(&token)?;
 
 	// Create redirect URL with token and user data as query parameters
-	let mut redirect_url = state.config.oidc.frontend_url;
+	let mut redirect_url = state.config.frontend_url;
 
 	redirect_url.query_pairs_mut().append_pair("token", &jwt_token);
 

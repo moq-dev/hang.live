@@ -6,13 +6,14 @@ use axum::{
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+use url::Url;
 
-use crate::{auth, db, AppState, Error, Result};
+use crate::{account::AccountInfo, auth, db, AppState, Error, Result};
 
 #[derive(TS, Serialize, Deserialize, Debug)]
 #[ts(export, export_to = "generated.ts")]
 pub struct AccountAvatar {
-	pub url: String,
+	pub url: Url,
 }
 
 pub fn router() -> Router<AppState> {
@@ -89,7 +90,8 @@ async fn upload_avatar(
 		.execute(&state.db)
 		.await?;
 
-		return Ok(Json(AccountAvatar { url: upload }));
+		let url = state.config.api_url.join(&upload).unwrap();
+		return Ok(Json(AccountAvatar { url }));
 	}
 
 	Err(Error::NotFound("No avatar file found in request".to_string()))
@@ -97,5 +99,6 @@ async fn upload_avatar(
 
 async fn get_avatar(State(state): State<AppState>, user: auth::Token) -> Result<Json<AccountAvatar>> {
 	let user = db::User::find_by_id(&state.db, user.id).await?;
-	Ok(Json(AccountAvatar { url: user.avatar }))
+	let url = AccountInfo::from_db(&user, &state)?.avatar;
+	Ok(Json(AccountAvatar { url }))
 }

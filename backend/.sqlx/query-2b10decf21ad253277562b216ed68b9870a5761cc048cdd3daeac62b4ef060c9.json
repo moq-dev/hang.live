@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+  "query": "\n\t\tUPDATE users\n\t\tSET\n\t\t\tname = COALESCE($1, name),\n\t\t\tavatar = COALESCE($2, avatar),\n\t\t\tupdated_at = NOW()\n\t\tWHERE id = $3\n\t\tRETURNING id, email, name, avatar, created_at, updated_at\n\t\t",
   "describe": {
     "columns": [
       {
@@ -37,6 +37,7 @@
     "parameters": {
       "Left": [
         "Varchar",
+        "Text",
         "Uuid"
       ]
     },
@@ -49,5 +50,5 @@
       false
     ]
   },
-  "hash": "37e457fb911f2cab56dc4121dca811de5f5aa60229945cb1dc4f4e3788dabdcc"
+  "hash": "2b10decf21ad253277562b216ed68b9870a5761cc048cdd3daeac62b4ef060c9"
 }

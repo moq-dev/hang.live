@@ -7,7 +7,7 @@ import { schema } from "./schema";
 const AccountInfoSchema = schema<AccountInfo>()({
 	id: z.string(),
 	name: z.string(),
-	avatar: z.string(),
+	avatar: z.url(),
 });
 
 const AccountUpdateSchema = schema<AccountUpdate>()({
@@ -17,7 +17,7 @@ const AccountUpdateSchema = schema<AccountUpdate>()({
 
 // Schema for avatar upload response
 const AccountAvatarSchema = schema<AccountAvatar>()({
-	url: z.string(),
+	url: z.url(),
 });
 
 export class Account {
