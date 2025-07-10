@@ -63,3 +63,24 @@ output "service_account_email" {
   description = "Email of the Cloud Run service account"
   value       = google_service_account.cloudrun.email
 }
+
+# DNS outputs
+output "dns_zone_name" {
+  description = "Name of the DNS zone"
+  value       = google_dns_managed_zone.main.name
+}
+
+output "dns_zone_dns_name" {
+  description = "DNS name of the zone"
+  value       = google_dns_managed_zone.main.dns_name
+}
+
+output "dns_name_servers" {
+  description = "Name servers for the DNS zone"
+  value       = google_dns_managed_zone.main.name_servers
+}
+
+output "api_domain_name" {
+  description = "Domain name for the API"
+  value       = var.domain_name
+}
