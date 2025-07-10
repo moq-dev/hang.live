@@ -1,4 +1,5 @@
 [workspace]
+name = "hang"
 members = ["frontend/tauri", "backend"]
 resolver = "2"
 
