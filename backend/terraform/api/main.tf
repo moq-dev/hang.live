@@ -15,20 +15,21 @@ terraform {
 # Enable required Google Cloud APIs
 resource "google_project_service" "required_apis" {
   for_each = toset([
-    "run.googleapis.com",                    # Cloud Run
-    "sqladmin.googleapis.com",              # Cloud SQL
-    "storage.googleapis.com",               # Cloud Storage
-    "vpcaccess.googleapis.com",             # VPC Access (for connectors)
-    "servicenetworking.googleapis.com",     # Service Networking (for private connections)
-    "compute.googleapis.com",               # Compute Engine (for VPC)
-    "monitoring.googleapis.com",            # Cloud Monitoring
-    "cloudresourcemanager.googleapis.com",  # Resource Manager
+    "run.googleapis.com",                  # Cloud Run
+    "sqladmin.googleapis.com",             # Cloud SQL
+    "storage.googleapis.com",              # Cloud Storage
+    "vpcaccess.googleapis.com",            # VPC Access (for connectors)
+    "servicenetworking.googleapis.com",    # Service Networking (for private connections)
+    "compute.googleapis.com",              # Compute Engine (for VPC)
+    "monitoring.googleapis.com",           # Cloud Monitoring
+    "cloudresourcemanager.googleapis.com", # Resource Manager
+    "dns.googleapis.com",                  # Cloud DNS
   ])
 
   project = var.project
   service = each.value
 
-  disable_on_destroy = false  # Keep APIs enabled even if Terraform is destroyed
+  disable_on_destroy = false # Keep APIs enabled even if Terraform is destroyed
 }
 
 # Computed values
@@ -112,7 +113,7 @@ resource "google_sql_database_instance" "main" {
     }
 
     ip_configuration {
-      ipv4_enabled                                  = false  # Disable public IP
+      ipv4_enabled                                  = false # Disable public IP
       private_network                               = google_compute_network.vpc.id
       enable_private_path_for_google_cloud_services = true
     }
@@ -124,7 +125,7 @@ resource "google_sql_database_instance" "main" {
   }
 
   deletion_protection = var.deletion_protection
-  depends_on         = [
+  depends_on = [
     google_service_networking_connection.private_vpc_connection,
     google_project_service.required_apis
   ]
@@ -275,8 +276,8 @@ resource "google_cloud_run_service" "api" {
 
     metadata {
       annotations = {
-        "autoscaling.knative.dev/maxScale"      = tostring(var.max_scale)
-        "run.googleapis.com/cloudsql-instances" = google_sql_database_instance.main.connection_name
+        "autoscaling.knative.dev/maxScale"        = tostring(var.max_scale)
+        "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.main.connection_name
         "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
       }
     }
@@ -302,6 +303,40 @@ resource "google_cloud_run_service_iam_member" "public" {
   service  = google_cloud_run_service.api.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# Cloud DNS Zone
+resource "google_dns_managed_zone" "main" {
+  name        = var.dns_zone_name
+  dns_name    = var.dns_zone_dns_name
+  description = "DNS zone for ${var.domain_name}"
+
+  depends_on = [google_project_service.required_apis]
+}
+
+# A record pointing to Cloud Run service
+resource "google_dns_record_set" "api" {
+  name         = var.domain_name
+  managed_zone = google_dns_managed_zone.main.name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = [
+    "199.36.158.100" # Cloud Run's IP range
+  ]
+
+  depends_on = [google_cloud_run_service.api]
+}
+
+# CNAME record for www subdomain (optional)
+resource "google_dns_record_set" "api_www" {
+  count        = var.domain_name != "www.${trim(var.dns_zone_dns_name, ".")}" ? 1 : 0
+  name         = "www.${var.domain_name}"
+  managed_zone = google_dns_managed_zone.main.name
+  type         = "CNAME"
+  ttl          = 300
+
+  rrdatas = [var.domain_name]
 }
 
 # Monitoring and Alerting
@@ -384,7 +419,7 @@ resource "google_monitoring_alert_policy" "cloudrun_instance_count_high" {
       filter          = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_service.api.name}\""
       duration        = "300s"
       comparison      = "COMPARISON_GT"
-      threshold_value = var.max_scale * 0.8  # Alert at 80% of max scale
+      threshold_value = var.max_scale * 0.8 # Alert at 80% of max scale
 
       aggregations {
         alignment_period   = "60s"

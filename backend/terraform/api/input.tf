@@ -10,6 +10,24 @@ variable "region" {
   default     = "us-central1"
 }
 
+# DNS configuration
+variable "domain_name" {
+  description = "Domain name for the API (e.g., api.hang.live)"
+  type        = string
+}
+
+variable "dns_zone_name" {
+  description = "Name of the Cloud DNS zone"
+  type        = string
+  default     = "hang-live"
+}
+
+variable "dns_zone_dns_name" {
+  description = "DNS name of the zone (e.g., hang.live.)"
+  type        = string
+  default     = "hang.live."
+}
+
 # Monitoring configuration
 variable "alert_email" {
   description = "Email address for alerts"
