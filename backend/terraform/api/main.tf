@@ -80,6 +80,8 @@ resource "google_vpc_access_connector" "connector" {
   ip_cidr_range = "10.8.0.0/28"
   network       = google_compute_network.vpc.name
   region        = var.region
+  min_instances = 2
+  max_instances = 3
 
   depends_on = [google_project_service.required_apis]
 }
@@ -407,38 +409,10 @@ resource "google_monitoring_alert_policy" "database_cpu_high" {
     display_name = "Database CPU utilization high"
 
     condition_threshold {
-      filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project}:${google_sql_database_instance.main.name}\""
+      filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project}:${google_sql_database_instance.main.name}\" AND metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\""
       duration        = "300s"
       comparison      = "COMPARISON_GT"
       threshold_value = 0.8
-
-      aggregations {
-        alignment_period   = "60s"
-        per_series_aligner = "ALIGN_MEAN"
-      }
-    }
-  }
-
-  notification_channels = [google_monitoring_notification_channel.email.name]
-
-  alert_strategy {
-    auto_close = "1800s"
-  }
-}
-
-# Alert for database memory usage
-resource "google_monitoring_alert_policy" "database_memory_high" {
-  display_name = "Database Memory High"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "Database memory utilization high"
-
-    condition_threshold {
-      filter          = "resource.type=\"cloudsql_database\" AND resource.labels.database_id=\"${var.project}:${google_sql_database_instance.main.name}\""
-      duration        = "300s"
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0.85
 
       aggregations {
         alignment_period   = "60s"
