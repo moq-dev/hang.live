@@ -1,9 +1,12 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.0.5/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
+	"files": {
+		"includes": ["**", "!**/worker-configuration.d.ts"]
+	},
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
-		"useIgnoreFile": true
+		"useIgnoreFile": true,
 	},
 	"formatter": {
 		"lineWidth": 120,

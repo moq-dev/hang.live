@@ -1,0 +1,22 @@
+#!/usr/bin/env just --justfile
+
+# Using Just: https://github.com/casey/just?tab=readme-ov-file#installation
+
+# List all of the available commands.
+default:
+  just --list
+
+dev:
+	pnpm i
+	pnpm wrangler types
+	pnpm wrangler d1 migrations apply api-db-dev --local
+	pnpm wrangler dev
+
+build:
+	pnpm i
+	pnpm wrangler types
+	pnpm run build
+
+deploy env="staging": build
+	pnpm wrangler d1 migrations apply "api-db-{{env}}" --env "{{env}}"
+	pnpm wrangler deploy --env "{{env}}"
