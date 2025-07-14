@@ -6,7 +6,7 @@ import * as rpc from "./rpc";
 
 export { Account, Avatar, Health, OAuth };
 
-const app = rpc.app().route("/auth", OAuth.router).route("/avatar", Avatar.router).route("/account", Account.router);
+const app = rpc.app().route("/auth", OAuth.router).route("/avatar", Avatar.router).route("/account", Account.router).route("/health", Health.router);
 
 export type App = typeof app;
 
