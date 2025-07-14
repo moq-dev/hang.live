@@ -4,7 +4,7 @@ export class Context {
 	#bucket: R2Bucket;
 
 	constructor(env: Env) {
-		this.#bucket = env.STORAGE;
+		this.#bucket = env.PUBLIC;
 	}
 
 	async upload(folder: string, file: Uint8Array, extension: string): Promise<string> {

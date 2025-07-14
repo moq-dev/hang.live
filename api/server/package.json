@@ -11,12 +11,8 @@
 	},
 	"scripts": {
 		"dev": "wrangler dev",
-		"deploy": "wrangler deploy",
-		"deploy:prod": "./deploy.sh",
-		"deploy:dry-run": "./deploy.sh --dry-run",
 		"check": "tsc --noEmit",
-		"build": "tsc",
-		"build:wrangler": "tsc && wrangler deploy --dry-run"
+		"build": "tsc"
 	},
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",
