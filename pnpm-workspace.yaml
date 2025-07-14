@@ -1,11 +1,13 @@
 packages:
-  - '.'
-  - 'frontend'
-  - 'backend/bindings'
+  - .
+  - app
+  - api/client
+  - api/server
 
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@tailwindcss/oxide'
+  - better-sqlite3
   - esbuild
   - sharp
   - workerd

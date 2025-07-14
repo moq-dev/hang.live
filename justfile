@@ -6,33 +6,62 @@
 default:
   just --list
 
-# Setup the database and API.
-setup:
-	just --justfile backend/justfile setup
-
-dev:
-	# Then run the relay with a slight head start.
-	# It doesn't matter if the web beats BBB because we support automatic reloading.
-	pnpm i && pnpm concurrently --kill-others --names back,front --prefix-colors auto \
-		"trap 'exit 1' TERM INT; just --justfile backend/justfile dev" \
-		"sleep 1 && trap 'exit 1' TERM INT; just --justfile frontend/justfile dev"
-
 # Run the CI checks
 check:
-	just --justfile frontend/justfile check
-	just --justfile backend/justfile check
+	pnpm -r i
+
+	# Lint the JS packages
+	pnpm -r exec biome check
+
+	# Make sure Typescript compiles
+	pnpm -r run check
+
+	# Make sure the JS packages are not vulnerable
+	pnpm -r exec pnpm audit
+
+	# TODO: Check for unused imports (fix the false positives)
+	# pnpm -r exec knip --no-exit-code
 
 # Automatically fix some issues.
 fix:
-	just --justfile frontend/justfile fix
-	just --justfile backend/justfile fix
+	# Fix the JS packages
+	pnpm -r i
+
+	# Format and lint
+	pnpm -r exec biome check --fix
+
+	# Some additional linting.
+	pnpm -r exec eslint . --fix
+
+	# Make sure the JS packages are not vulnerable
+	pnpm -r exec pnpm audit --fix
+
+# Run any CI tests
+test:
+	# Run the JS tests via node.
+	pnpm -r test
 
 # Upgrade any tooling
 upgrade:
-	just --justfile frontend/justfile upgrade
-	just --justfile backend/justfile upgrade
+	# Update the NPM dependencies
+	pnpm self-update
+	pnpm -r update
+	pnpm -r outdated
 
 # Build the packages
 build:
-	just --justfile frontend/justfile build
-	just --justfile backend/justfile build
+	pnpm -r i
+	pnpm -r run build
+
+prod: build
+	pnpm -r run prod
+
+# Deploy the site to Cloudflare Pages
+deploy: build
+	pnpm wrangler pages deploy dist
+
+dev:
+	pnpm -r i
+
+	# No watch because it defaults to the entire repo, including the backend.
+	pnpm -r tauri dev --no-watch
