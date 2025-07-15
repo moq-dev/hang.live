@@ -55,7 +55,7 @@ function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
 	const suspended = solid(room.suspended);
 
 	return (
-		<Layout full={true}>
+		<Layout full={true} connection={room.connection}>
 			<Autoplay suspended={suspended()} />
 			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
