@@ -172,6 +172,9 @@ importers:
       vite-plugin-solid:
         specifier: ^2.11.7
         version: 2.11.7(solid-js@1.9.7)(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
+      vite-plugin-wrangler:
+        specifier: ^0.1.1
+        version: 0.1.1
       wrangler:
         specifier: ^4.24.3
         version: 4.24.3(@cloudflare/workers-types@4.20250711.0)
@@ -2415,6 +2418,10 @@ packages:
       '@testing-library/jest-dom':
         optional: true
 
+  vite-plugin-wrangler@0.1.1:
+    resolution: {integrity: sha512-aKN8WCC4rYAvmYo+tpzw1WIRPsqeEIbg9cvbiGBkq3+x5vwrfxbwMAmkdZRj+OvsHEYJRRJVTpUYPztXSwqFNQ==}
+    engines: {node: '>=10'}
+
   vite@6.3.5:
     resolution: {integrity: sha512-cZn6NDFE7wdTpINgs++ZJ4N49W2vRp8LCKrn3Ob1kYNtOo21vfDoaV5GzBfLU4MovSAB8uNRm4jgzVQZ+mBzPQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -4529,6 +4536,8 @@ snapshots:
       vitefu: 1.1.1(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
     transitivePeerDependencies:
       - supports-color
+
+  vite-plugin-wrangler@0.1.1: {}
 
   vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3):
     dependencies:

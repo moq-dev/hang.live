@@ -10,4 +10,4 @@ const app = rpc.app().route("/auth", OAuth.router).route("/avatar", Avatar.route
 
 export type App = typeof app;
 
-export default app;
+export default app satisfies ExportedHandler<Env>;

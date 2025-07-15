@@ -4,6 +4,9 @@ compatibility_date = "2025-07-11"
 
 account_id = "dd618f5dbd5da77b8296f1613c301f5c"
 
+[observability.logs]
+enabled = true
+
 [dev]
 port = 3000
 

@@ -21,8 +21,7 @@ export function Hang(): JSX.Element {
 	const canvas = new Canvas(background);
 	onCleanup(() => canvas.close());
 
-	// TODO env variable
-	const api = new Api.Client(new URL("http://localhost:3000"));
+	const api = new Api.Client(new URL(import.meta.env.VITE_API_URL));
 
 	return (
 		<>

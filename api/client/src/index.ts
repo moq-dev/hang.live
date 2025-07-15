@@ -2,7 +2,6 @@ import type * as Api from "@hang/api-server";
 
 export type * from "@hang/api-server";
 export * from "@hang/api-server/client";
-export * as OAuth from "./oauth";
 
 import { hc } from "hono/client";
 
@@ -30,6 +29,16 @@ export class Client {
 
 	authenticated(): boolean {
 		return this.#token !== null;
+	}
+
+	login(provider: Api.OAuth.ProviderId): void {
+		// Redirect to the login page.
+		// TODO save the redirect URL in the URL params.
+		window.location.href = this.routes.auth[":provider"].login.$url({
+			param: {
+				provider,
+			},
+		}).toString();
 	}
 
 	async logout(): Promise<void> {

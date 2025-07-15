@@ -23,7 +23,7 @@ import { unreachable } from "./util";
 export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
 		<Layout full={false}>
-			<Show when={props.api.authenticated()} fallback={<Login />}>
+			<Show when={props.api.authenticated()} fallback={<Login api={props.api} />}>
 				<SettingsLoad api={props.api} />
 			</Show>
 		</Layout>
@@ -414,7 +414,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	);
 }
 
-export function Login(): JSX.Element {
+export function Login(props: { api: Api.Client }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
@@ -434,7 +434,8 @@ export function Login(): JSX.Element {
 	const handleProviderLogin = (provider: Api.OAuth.ProviderId) => {
 		setLoading(true);
 		setError(null);
-		window.location.href = `${import.meta.env.VITE_API_URL}/auth/${provider}/login`;
+		// Performs a redirect to the login page.
+		props.api.login(provider);
 	};
 
 	return (

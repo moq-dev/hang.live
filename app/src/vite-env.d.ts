@@ -1,17 +1,17 @@
 /// <reference types="vite/client" />
 
+// biome-ignore lint/correctness/noUnusedVariables: Used by Vite
 interface ViteTypeOptions {
-	// By adding this line, you can make the type of ImportMetaEnv strict
-	// to disallow unknown keys.
-	strictImportMetaEnv: unknown;
-}
+	strictImportMetaEnv: unknown
+  }
 
-interface ImportMetaEnv {
-	readonly VITE_RELAY_HOST: string;
-	readonly VITE_ROOM: string;
-	readonly VITE_API_URL: string;
-}
+  interface ImportMetaEnv {
+	readonly VITE_API_URL: string
+	readonly VITE_APP_URL: string
+	readonly VITE_RELAY_URL: string
+  }
 
-interface ImportMeta {
-	readonly env: ImportMetaEnv;
-}
+  // biome-ignore lint/correctness/noUnusedVariables: Used by Vite
+  interface ImportMeta {
+	readonly env: ImportMetaEnv
+  }
