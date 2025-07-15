@@ -51,7 +51,6 @@ upgrade:
 # Build the packages
 build env="dev":
 	pnpm i
-	pnpm wrangler types
 	pnpm vite build --mode "{{env}}"
 
 # Deploy the site to Cloudflare Pages
@@ -62,8 +61,5 @@ deploy env="staging":
 dev:
 	pnpm i
 
-	pnpm wrangler types
-	pnpm wrangler dev --local
-
 	# No watch because it defaults to the entire repo, including the backend.
-	#pnpm tauri dev --no-watch
+	pnpm tauri dev --no-watch

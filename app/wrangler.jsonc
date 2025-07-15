@@ -9,7 +9,7 @@
 
 	// Static asset configuration for Pages
 	"assets": {
-		"directory": "./dist/",
+		"directory": "./public",
 		"not_found_handling": "single-page-application"
 	},
 

@@ -47,7 +47,7 @@
 		// Avoids a bug with the dom-mediacapture-transform types.
 		"skipLibCheck": true,
 
-		"types": ["unplugin-icons/types/solid", "vite/client", "./worker-configuration.d.ts"]
+		"types": ["unplugin-icons/types/solid", "vite/client"]
 	},
-	"include": ["src", "../api/client/src/client.ts"]
+	"include": ["src"]
 }
