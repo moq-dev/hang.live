@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { z } from "zod/mini";
 import * as Account from "./account";
-import { oauthProviders as providers } from "./client";
+import { OauthState, oauthStateSchema, oauthProviders as providers } from "./client";
 import * as Database from "./database";
 import * as rpc from "./rpc";
 import { unreachable } from "./util";
@@ -61,13 +61,13 @@ export class Provider {
 		}
 	}
 
-	authUrl(state: string): string {
+	authUrl(state: OauthState): string {
 		const params = new URLSearchParams({
 			client_id: this.#clientId,
 			redirect_uri: this.#redirectUri,
 			response_type: "code",
 			scope: "openid profile email",
-			state,
+			state: JSON.stringify(state),
 		});
 
 		return `${this.#baseUrl}?${params.toString()}`;
@@ -291,13 +291,14 @@ export const router = rpc
 				provider: providerIdSchema,
 			}),
 		),
+		rpc.withQuery(oauthStateSchema),
 		async (c) => {
 			const ctx = c.var.ctx;
 
 			const params = c.req.valid("param");
 			const provider = ctx.oauth.provider(params.provider);
 
-			const state = Math.random().toString(36).substring(2, 15);
+			const state = c.req.valid("query");
 			const url = provider.authUrl(state);
 
 			return c.redirect(url);
@@ -347,9 +348,10 @@ export const router = rpc
 
 			// Generate JWT token
 			const token = await ctx.jwt.create(user.id);
+			const state = c.req.valid("query").state;
 
 			// Redirect to frontend with token
-			const redirectUrl = `${ctx.env.APP_URL}?token=${encodeURIComponent(token)}`;
+			const redirectUrl = `${ctx.env.APP_URL}?token=${encodeURIComponent(token)}&state=${encodeURIComponent(state)}`;
 
 			return c.redirect(redirectUrl);
 		},

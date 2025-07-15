@@ -63,5 +63,6 @@ deploy: build
 dev:
 	pnpm -r i
 
-	# No watch because it defaults to the entire repo, including the backend.
-	pnpm -r tauri dev --no-watch
+	pnpm concurrently --kill-others --names api,app --prefix-colors auto \
+		"just --justfile api/server/justfile dev" \
+		"just --justfile app/justfile dev"

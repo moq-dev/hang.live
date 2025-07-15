@@ -1,4 +1,5 @@
 import type * as Api from "@hang/api-server";
+import { oauthStateSchema } from "@hang/api-server/client";
 
 export type * from "@hang/api-server";
 export * from "@hang/api-server/client";
@@ -11,14 +12,26 @@ export class Client {
 
 	constructor(baseUrl: URL) {
 		const url = new URL(window.location.href);
-		this.#token = url.searchParams.get("token");
-		if (this.#token) {
-			// Remove token from URL
-			url.searchParams.delete("token");
-			// Update URL without the token
-			window.history.replaceState({}, "", url.toString());
+		const token = url.searchParams.get("token");
+		const state = url.searchParams.get("state");
 
-			localStorage.setItem("auth.token", this.#token);
+		// Remove token and state from URL
+		url.searchParams.delete("token");
+		url.searchParams.delete("state");
+
+		// Update URL without the token
+		window.history.replaceState({}, "", url.toString());
+
+		if (token && state && state === localStorage.getItem("auth.state")) {
+			const parsedState = oauthStateSchema.parse(JSON.parse(state));
+			localStorage.setItem("auth.token", token);
+
+			if (parsedState.redirectUrl) {
+				// Redirect to the original page.
+				window.history.replaceState({}, "", parsedState.redirectUrl);
+			}
+
+			this.#token = token;
 		} else {
 			this.#token = localStorage.getItem("auth.token");
 		}
@@ -32,12 +45,20 @@ export class Client {
 	}
 
 	login(provider: Api.OAuth.ProviderId): void {
+		const state = {
+			random: Math.random().toString(36).substring(2, 15),
+			redirectUrl: window.location.href,
+		};
+
+		localStorage.setItem("auth.state", JSON.stringify(state));
+
 		// Redirect to the login page.
 		// TODO save the redirect URL in the URL params.
 		window.location.href = this.routes.auth[":provider"].login.$url({
 			param: {
 				provider,
 			},
+			query: state,
 		}).toString();
 	}
 

@@ -1,7 +1,4 @@
 [workspace]
 name = "hang"
-members = ["frontend/tauri", "backend"]
+members = ["app/tauri"]
 resolver = "2"
-
-[profile.dev.package.sqlx-macros]
-opt-level = 3
