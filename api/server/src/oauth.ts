@@ -44,8 +44,6 @@ export class Provider {
 		this.db = db;
 		this.id = id;
 
-		console.log("env", env);
-
 		this.#redirectUri = `${env.API_URL}/auth/${id}/callback`;
 
 		if (id === "discord") {

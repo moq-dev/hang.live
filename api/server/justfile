@@ -18,5 +18,5 @@ build:
 	pnpm run build
 
 deploy env="staging": build
-	pnpm wrangler d1 migrations apply "api-db-{{env}}" --env "{{env}}"
+	pnpm wrangler d1 migrations apply DB --env "{{env}}" --remote
 	pnpm wrangler deploy --env "{{env}}"

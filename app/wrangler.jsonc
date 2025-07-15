@@ -1,0 +1,38 @@
+{
+	// Check the configuration file schema, the main reason why we're not using TOML.
+	"$schema": "./node_modules/wrangler/config-schema.json",
+
+	// Cloudflare Pages configuration
+	"name": "app",
+	"compatibility_date": "2025-07-11",
+	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
+
+	// Static asset configuration for Pages
+	"assets": {
+		"directory": "./dist/",
+		"not_found_handling": "single-page-application"
+	},
+
+	// Development server configuration
+	"dev": {
+		"port": 1420
+	},
+
+	// Staging environment configuration
+	"env": {
+		"staging": {
+			"route": {
+				"pattern": "hang.now",
+				"custom_domain": true
+			}
+		},
+
+		// Production environment configuration
+		"live": {
+			"route": {
+				"pattern": "hang.live",
+				"custom_domain": true
+			}
+		}
+	}
+}

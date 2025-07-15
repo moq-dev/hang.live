@@ -60,7 +60,7 @@ export class Room {
 	#signals = new Root();
 
 	constructor(canvas: Canvas, props?: RoomProps) {
-		const url = new URL(`${import.meta.env.VITE_RELAY_HOST}/${import.meta.env.VITE_ROOM}/`);
+		const url = new URL(`${import.meta.env.VITE_RELAY_URL}/demo/`);
 
 		this.connection = new Connection({ url });
 		this.canvas = canvas;
