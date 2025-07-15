@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import * as Uuid from "uuid";
 import { z } from "zod/mini";
@@ -42,8 +42,8 @@ export const table = sqliteTable("accounts", {
 	name: text("name").notNull(),
 	avatar: text("avatar").notNull(),
 	avatarType: text("avatar_type").notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
 export type Row = typeof table.$inferSelect;
@@ -109,12 +109,15 @@ export class Context {
 
 	async create(info: Create): Promise<Info> {
 		const id = Uuid.v4();
+		const now = new Date();
 
 		const user: NewRow = {
 			...info,
 			id,
-			avatarType: info.avatar ? "external" : "static",
+			avatarType: info.avatar ? "url" : "r2",
 			avatar: info.avatar ?? Avatar.random(),
+			createdAt: now,
+			updatedAt: now,
 		};
 
 		const row = await this.db.insert(table).values(user).returning();

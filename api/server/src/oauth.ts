@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { z } from "zod/mini";
 import * as Account from "./account";
@@ -185,17 +185,22 @@ export class Provider {
 	}
 
 	async link(account: Account.Id, providerUser: string): Promise<void> {
+		const now = new Date();
+
 		await this.db
 			.insert(table)
 			.values({
 				accountId: account,
 				providerId: this.id,
 				providerUser,
+				createdAt: now,
+				updatedAt: now,
 			})
 			.onConflictDoUpdate({
 				target: [table.accountId, table.providerId],
 				set: {
 					providerUser,
+					updatedAt: now,
 				},
 			});
 	}
@@ -244,8 +249,8 @@ export const table = sqliteTable(
 			.references(() => Account.table.id, { onDelete: "cascade" }),
 		providerId: text("provider_id").notNull(),
 		providerUser: text("provider_user").notNull(),
-		createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
-		updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+		createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 	},
 	(table) => [primaryKey({ columns: [table.accountId, table.providerId] })],
 );
