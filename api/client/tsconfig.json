@@ -22,7 +22,8 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
-		"isolatedModules": true
+		"isolatedModules": true,
+		"types": ["../server/worker-configuration.d.ts"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["dist", "node_modules"]
