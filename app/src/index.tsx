@@ -3,18 +3,14 @@ import "tauri-plugin-web-transport";
 import "@kixelated/hang/support/element";
 
 import * as Api from "@hang/api-client";
-import solid from "@kixelated/signals/solid";
-import { Route, Router } from "@solidjs/router";
-import { onCleanup, Show } from "solid-js";
+import { Route, Router, useParams } from "@solidjs/router";
+import { onCleanup } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
 import { Canvas } from "./canvas";
-import { Chat } from "./chat";
-import { Controls } from "./controls";
-import { Layout } from "./layout";
-import { Room } from "./room";
+import { Sup } from "./sup";
 
 export function Hang(): JSX.Element {
 	const background = (<canvas class="fixed inset-0 w-full h-full" />) as HTMLCanvasElement;
@@ -29,47 +25,12 @@ export function Hang(): JSX.Element {
 			<Router>
 				<Route path="/" component={About} />
 				<Route path="/account" component={() => <Account api={api} />} />
-				<Route path="/demo" component={() => <Demo canvas={canvas} api={api} />} />
+				<Route
+					path="/with/:name"
+					component={() => <Sup canvas={canvas} api={api} room={useParams()["name"]} />}
+				/>
 			</Router>
 		</>
-	);
-}
-
-function Demo(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
-	const room = new Room(props.canvas);
-	onCleanup(() => room.close());
-
-	if (props.api.authenticated()) {
-		props.api.routes.account.info
-			.$get()
-			.then(async (info) => {
-				if (!info.ok) throw new Error(info.statusText);
-				return await info.json();
-			})
-			.then((info) => {
-				room.user.set(info.name);
-				room.avatar.set(info.avatar);
-			});
-	}
-
-	const suspended = solid(room.suspended);
-
-	return (
-		<Layout full={true} connection={room.connection}>
-			<Autoplay suspended={suspended()} />
-			<Chat canvas={props.canvas} room={room} />
-			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
-		</Layout>
-	);
-}
-
-function Autoplay(props: { suspended: boolean }): JSX.Element {
-	return (
-		<Show when={props.suspended}>
-			<div class="absolute inset-0 bg-black/50 flex items-center justify-center">
-				<div class="text-white text-2xl font-bold">Click anywhere to enable audio.</div>
-			</div>
-		</Show>
 	);
 }
 
