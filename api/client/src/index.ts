@@ -54,12 +54,14 @@ export class Client {
 
 		// Redirect to the login page.
 		// TODO save the redirect URL in the URL params.
-		window.location.href = this.routes.auth[":provider"].login.$url({
-			param: {
-				provider,
-			},
-			query: state,
-		}).toString();
+		window.location.href = this.routes.auth[":provider"].login
+			.$url({
+				param: {
+					provider,
+				},
+				query: state,
+			})
+			.toString();
 	}
 
 	async logout(): Promise<void> {
