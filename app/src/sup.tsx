@@ -1,6 +1,7 @@
 import * as Api from "@hang/api-client";
 import { createEffect, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
 import IconDiscord from "~icons/mdi/discord";
@@ -298,8 +299,6 @@ function AuthenticatedPreview(props: { api: Api.Client; room: string; setInfo: (
 	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
 
-	const gradient = useAnimatedGradient();
-
 	createEffect(() => {
 		const i = info();
 		if (i) props.setInfo({ name: i.name, avatar: i.avatar, guest: false });
@@ -331,7 +330,7 @@ function AuthenticatedPreview(props: { api: Api.Client; room: string; setInfo: (
 						<h3 class="text-xl font-semibold mb-4">Your Profile</h3>
 
 						{/* Avatar Preview */}
-						<div class="flex flex-col items-center mb-8">
+						<div class="flex flex-col items-center mb-4">
 							<div class="relative text-center">
 								<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
 									<Show
@@ -363,8 +362,12 @@ function AuthenticatedPreview(props: { api: Api.Client; room: string; setInfo: (
 
 						{/* Account Link */}
 						<div class="text-center">
-							<a href="/account" class="text-gray-400 hover:text-white transition-colors text-sm">
-								Edit profile →
+							<a
+								href="/account"
+								class="text-gray-400 hover:text-white transition-colors flex items-center gap-2 justify-center"
+							>
+								<IconAccountEdit class="w-5 h-5" />
+								Edit
 							</a>
 						</div>
 					</>
@@ -398,7 +401,7 @@ function ParticipantsList(): JSX.Element {
 
 	return (
 		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-			<h3 class="text-xl font-semibold mb-4">Active ({participants().length})</h3>
+			<h3 class="text-xl font-semibold mb-4">Hanging Now ({participants().length})</h3>
 			<div class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500">
 				<For each={participants()}>
 					{(participant) => (
