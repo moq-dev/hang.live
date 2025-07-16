@@ -1,21 +1,13 @@
 import * as Api from "@hang/api-client";
-import {
-	Accessor,
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	Match,
-	onCleanup,
-	onMount,
-	Show,
-	Switch,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import IconArrowLeft from "~icons/mdi/arrow-left";
 import IconCamera from "~icons/mdi/camera";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
+import IconLogout from "~icons/mdi/logout";
 import IconUpload from "~icons/mdi/upload";
+import { AnotherOne } from "./another-one";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
 import { unreachable } from "./util";
@@ -67,24 +59,24 @@ function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 
 			{/* Full Width Sections */}
 			<div class="space-y-6">
-				{/* Action Buttons - Only logout now */}
-				<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-					<div class="flex flex-col sm:flex-row gap-4">
-						<button
-							type="button"
-							onClick={handleLogout}
-							class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-						>
-							Sign out
-						</button>
-					</div>
-				</div>
-
-				{/* Back to App */}
-				<div class="text-center py-4">
-					<a href="/" class="text-gray-400 hover:text-white transition-colors">
-						← Back to hang
-					</a>
+				{/* Action Buttons */}
+				<div class="flex flex-col sm:flex-row gap-4 justify-between p-6">
+					<button
+						type="button"
+						onClick={() => window.history.back()}
+						class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
+					>
+						<IconArrowLeft class="w-4 h-4 mr-2" />
+						Back
+					</button>
+					<button
+						type="button"
+						onClick={handleLogout}
+						class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
+					>
+						Sign out
+						<IconLogout class="w-4 h-4 ml-2" />
+					</button>
 				</div>
 			</div>
 		</>
@@ -369,7 +361,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 												Random
 											</button>
 
-											<Meme clicks={randomClicks} />
+											<AnotherOne clicks={randomClicks} />
 										</div>
 									</Show>
 								</div>
@@ -470,115 +462,12 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 								<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
 									{getProviderIcon(provider)}
 								</div>
-								<span class="capitalize">Continue with {provider}</span>
+								<span class="capitalize">Login with {provider}</span>
 							</button>
 						)}
 					</For>
 				</div>
 			</div>
 		</main>
-	);
-}
-
-function Meme(props: { clicks: Accessor<number> }) {
-	// Duration breakpoints for the meme video (in seconds)
-	const BREAKPOINTS = [1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0];
-
-	// Meme video state
-	const [show, setShow] = createSignal<boolean>(false);
-	const [visible, setVisible] = createSignal<boolean>(false);
-	const [video, setVideo] = createSignal<HTMLVideoElement | undefined>(undefined);
-
-	let breakpoint = 0;
-	let breakpointClicks = 4;
-	let breakpointTimestamp = BREAKPOINTS[0];
-
-	createEffect(() => {
-		if (props.clicks() < breakpointClicks - 1) return;
-		// Start loading the video, but don't show it yet
-		setShow(true);
-	});
-
-	createEffect(() => {
-		if (props.clicks() < breakpointClicks) return;
-		if (breakpoint + 1 >= BREAKPOINTS.length) return; // don't loop
-		setVisible(true);
-	});
-
-	let checkCancel: number | undefined;
-	const checkTimeline = () => {
-		const v = video();
-		if (!v) return;
-
-		if (v.currentTime >= breakpointTimestamp) {
-			if (breakpointClicks === props.clicks() || breakpoint + 1 >= BREAKPOINTS.length) {
-				setVisible(false);
-				return;
-			}
-
-			breakpoint++;
-			breakpointTimestamp = BREAKPOINTS[breakpoint];
-			breakpointClicks = props.clicks();
-		}
-
-		checkCancel = requestAnimationFrame(checkTimeline);
-	};
-
-	createEffect(() => {
-		const v = video();
-		if (!v) return;
-
-		if (visible()) {
-			v.volume = 0.5;
-			v.play();
-
-			if (!checkCancel) {
-				checkCancel = requestAnimationFrame(checkTimeline);
-			}
-		} else {
-			v.pause();
-
-			if (checkCancel) {
-				cancelAnimationFrame(checkCancel);
-				checkCancel = undefined;
-			}
-		}
-	});
-
-	createEffect(() => {
-		const v = video();
-		if (!v) return;
-
-		onCleanup(() => {
-			v.pause();
-			v.src = "";
-		});
-
-		onCleanup(() => {
-			if (checkCancel) {
-				cancelAnimationFrame(checkCancel);
-				checkCancel = undefined;
-			}
-		});
-	});
-
-	return (
-		<Show when={show()}>
-			<div class="absolute -top-24 left-1/2 transform -translate-x-1/2 pointer-events-none z-50">
-				<video
-					src="/meme/another-one.webm"
-					class="w-20 h-20 object-cover rounded-lg transition-opacity duration-500"
-					classList={{
-						"opacity-0": !visible(),
-						"opacity-90": visible(),
-					}}
-					ref={setVideo}
-					style={{
-						filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5))",
-						"mix-blend-mode": "screen",
-					}}
-				/>
-			</div>
-		</Show>
 	);
 }
