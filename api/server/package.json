@@ -23,7 +23,8 @@
 		"jose": "^6.0.11",
 		"nanoid": "^5.1.5",
 		"uuid": "^11.1.0",
-		"zod": "^4.0.5"
+		"zod": "^4.0.5",
+		"@kixelated/moq-token": "^0.1.0"
 	},
 	"devDependencies": {
 		"@types/uuid": "^10.0.0",
