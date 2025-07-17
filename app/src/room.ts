@@ -458,6 +458,12 @@ export class Room {
 				}
 
 				if (update.active) {
+					// Check if we already have a broadcast for this path to prevent duplicates
+					if (this.#remotes.has(update.path)) {
+						console.error("Duplicate broadcast for path:", update.path);
+						continue;
+					}
+
 					const watch = new Watch.Broadcast(this.connection, {
 						enabled: true,
 						path: update.path,
