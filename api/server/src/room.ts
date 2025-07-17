@@ -26,7 +26,7 @@ export class Context {
 			return new URL(root, this.#env.RELAY_URL);
 		}
 
-		const token = await Token.sign(this.#key, { root, subscribe: "", publish: `${account}/` });
+		const token = await Token.sign(this.#key, { path: root, sub: "", pub: `${account}/` });
 		return new URL(`${root}?jwt=${token}`, this.#env.RELAY_URL);
 	}
 }

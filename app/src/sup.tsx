@@ -65,10 +65,37 @@ export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): J
 }
 
 function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info }): JSX.Element {
-	const url = new URL(`${import.meta.env.VITE_RELAY_URL}/hang/${props.room}/`);
+	const [room, setRoom] = createSignal<Room | undefined>(undefined);
+	const [error, setError] = createSignal<string | undefined>(undefined);
 
-	const room = new Room(url, props.canvas, { user: props.info.name, avatar: props.info.avatar });
-	onCleanup(() => room.close());
+	onMount(async () => {
+		try {
+			// Request join URL/token from the API server
+			const response = await props.api.routes.room[":name"].join.$post({
+				param: { name: props.room },
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to get join URL: ${response.statusText}`);
+			}
+
+			const { url } = await response.json();
+			const roomInstance = new Room(new URL(url), props.canvas, {
+				user: props.info.name,
+				avatar: props.info.avatar,
+			});
+			setRoom(roomInstance);
+		} catch (e) {
+			setError(`Failed to join room: ${e}`);
+		}
+	});
+
+	onCleanup(() => {
+		const roomInstance = room();
+		if (roomInstance) {
+			roomInstance.close();
+		}
+	});
 
 	/*
 	if (props.api.authenticated()) {
@@ -87,10 +114,45 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 	*/
 
 	return (
-		<Layout full={true} connection={room.connection}>
-			<Chat canvas={props.canvas} room={room} />
-			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
-		</Layout>
+		<Show
+			when={error()}
+			fallback={
+				<Show
+					when={room()}
+					fallback={
+						<Layout full={true}>
+							<div class="flex items-center justify-center h-full">
+								<div class="text-center">
+									<div class="text-lg font-semibold mb-2">Joining room...</div>
+									<div class="text-gray-400">Getting access token</div>
+								</div>
+							</div>
+						</Layout>
+					}
+				>
+					{(roomInstance) => (
+						<Layout full={true} connection={roomInstance().connection}>
+							<Chat canvas={props.canvas} room={roomInstance()} />
+							<Controls
+								room={roomInstance()}
+								camera={roomInstance().camera}
+								screen={roomInstance().screen}
+								canvas={props.canvas}
+							/>
+						</Layout>
+					)}
+				</Show>
+			}
+		>
+			<Layout full={true}>
+				<div class="flex items-center justify-center h-full">
+					<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-6 text-red-300 text-center max-w-md">
+						<div class="text-lg font-semibold mb-2">Failed to join room</div>
+						<div class="text-sm">{error()}</div>
+					</div>
+				</div>
+			</Layout>
+		</Show>
 	);
 }
 

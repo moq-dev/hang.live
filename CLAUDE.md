@@ -16,12 +16,13 @@ Hang is a real-time communication platform built with:
 # Development
 just dev
 
-# Build & Deploy
+# Builds the
 just build
-just deploy live
 
-# Code Quality
+# Runs tsc, linters, and formatters on all packages.
 just check
+
+# Automatically applies linter/formatter suggestions on all packages.
 just fix
 ```
 
