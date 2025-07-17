@@ -21,7 +21,7 @@ export class Context {
 
 	// Returns the URL to join the room
 	async sign(room: Name, account: Account.Id): Promise<URL> {
-		const root= `hang/${room}/`;
+		const root = `hang/${room}/`;
 		if (!this.#key) {
 			return new URL(root, this.#env.RELAY_URL);
 		}
@@ -35,13 +35,15 @@ export const joinSchema = z.object({
 	name: nameSchema,
 });
 
-export const router = rpc.router().post("/:name/join", rpc.withParam(z.object({ name: nameSchema })), Auth.optional, async (c) => {
-	const ctx = c.var.ctx;
-	const room = c.req.valid("param").name;
+export const router = rpc
+	.router()
+	.post("/:name/join", rpc.withParam(z.object({ name: nameSchema })), Auth.optional, async (c) => {
+		const ctx = c.var.ctx;
+		const room = c.req.valid("param").name;
 
-	// Generate a random account ID if not authenticated
-	const account = c.var.account_id ?? Account.idSchema.parse(Uuid.v4());
+		// Generate a random account ID if not authenticated
+		const account = c.var.account_id ?? Account.idSchema.parse(Uuid.v4());
 
-	const url = await ctx.room.sign(room, account);
-	return c.json({ url });
-});
+		const url = await ctx.room.sign(room, account);
+		return c.json({ url });
+	});
