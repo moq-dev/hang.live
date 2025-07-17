@@ -1,118 +1,118 @@
 {
-  // Cloudflare Wrangler configuration for the API Worker
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "api",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-07-11",
-  "account_id": "dd618f5dbd5da77b8296f1613c301f5c",
+	// Cloudflare Wrangler configuration for the API Worker
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "api",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-07-11",
+	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 
-  // Observability
-  "observability": {
-    "logs": {
-      "enabled": true
-    }
-  },
+	// Observability
+	"observability": {
+		"logs": {
+			"enabled": true
+		}
+	},
 
-  // Local development settings
-  "dev": {
-    "port": 3000,
-  },
+	// Local development settings
+	"dev": {
+		"port": 3000
+	},
 
-  // D1 database bindings
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "api-db-dev",
-      "database_id": "api-db-dev"
-    }
-  ],
+	// D1 database bindings
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "api-db-dev",
+			"database_id": "api-db-dev"
+		}
+	],
 
-  // R2 bucket bindings
-  "r2_buckets": [
-    {
-      "binding": "PUBLIC",
-      "bucket_name": "api-public-dev"
-    }
-  ],
+	// R2 bucket bindings
+	"r2_buckets": [
+		{
+			"binding": "PUBLIC",
+			"bucket_name": "api-public-dev"
+		}
+	],
 
-  // Environment variables for development
-  "vars": {
-    "API_URL": "http://localhost:3000",
-    "APP_URL": "http://localhost:1420",
-    "AUTH_SECRET": "dev-secret-change-in-production-must-be-32-chars-min",
-    "GOOGLE_CLIENT_ID": "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com",
-    "GOOGLE_CLIENT_SECRET": "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",
-    "DISCORD_CLIENT_ID": "1392633766010294494",
-    "DISCORD_CLIENT_SECRET": "uJRHl-pmOFYHvrViHJdcs2slyTCnoJog",
-    "R2_PUBLIC_URL": "",
-	"RELAY_SECRET": "",
-	"RELAY_URL": "http://localhost:4443"
-  },
-
-  // Staging environment overrides
-  "env": {
-    "staging": {
-      "route": {
-        "pattern": "api.hang.now",
-        "custom_domain": true
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "api-db-staging",
-          "database_id": "b1e6f098-3681-4396-a591-45c7c6a3e25d"
-        }
-      ],
-      "r2_buckets": [
-        {
-          "binding": "PUBLIC",
-          "bucket_name": "api-public-staging"
-        }
-      ],
-      "vars": {
-        "API_URL": "https://api.hang.now",
-        "APP_URL": "https://hang.now",
-        "AUTH_SECRET": "stage_v1_s3mi$3cret_Mr2@Tk#xNw8VzQdYiLgPeC4u",
-        "GOOGLE_CLIENT_ID": "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com",
-        "GOOGLE_CLIENT_SECRET": "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",
-        "DISCORD_CLIENT_ID": "1392629623812259940",
-        "DISCORD_CLIENT_SECRET": "bps97yMNROIhml22zeJIySo0CP6ZBAYF",
-        "R2_PUBLIC_URL": "https://r2.hang.now",
+	// Environment variables for development
+	"vars": {
+		"API_URL": "http://localhost:3000",
+		"APP_URL": "http://localhost:1420",
+		"AUTH_SECRET": "dev-secret-change-in-production-must-be-32-chars-min",
+		"GOOGLE_CLIENT_ID": "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com",
+		"GOOGLE_CLIENT_SECRET": "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",
+		"DISCORD_CLIENT_ID": "1392633766010294494",
+		"DISCORD_CLIENT_SECRET": "uJRHl-pmOFYHvrViHJdcs2slyTCnoJog",
+		"R2_PUBLIC_URL": "",
 		"RELAY_SECRET": "",
-		"RELAY_URL": "https://relay.quic.video"
-      }
-    },
-    // Live/production environment overrides
-    "live": {
-      "route": {
-        "pattern": "api.hang.live",
-        "custom_domain": true
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "api-db-live",
-          "database_id": "065d2e39-134d-464b-a030-27a23bf2bea0"
-        }
-      ],
-      "r2_buckets": [
-        {
-          "binding": "PUBLIC",
-          "bucket_name": "api-public-live"
-        }
-      ],
-      "vars": {
-        "API_URL": "https://api.hang.live",
-        "APP_URL": "https://hang.live",
-        "AUTH_SECRET": "prod_v1_t0p$3cret_7GmX9@qLcWzR!Yk#hUfE2AvbD",
-        "GOOGLE_CLIENT_ID": "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com",
-        "GOOGLE_CLIENT_SECRET": "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",
-        "DISCORD_CLIENT_ID": "1389725440020840548",
-        "DISCORD_CLIENT_SECRET": "5aFK47Syy2nPGzgwrzRa4shQZWYQEwHo",
-        "R2_PUBLIC_URL": "https://r2.hang.live",
-		"RELAY_SECRET": "",
-		"RELAY_URL": "https://relay.quic.video"
-      }
-    }
-  }
+		"RELAY_URL": "http://localhost:4443"
+	},
+
+	// Staging environment overrides
+	"env": {
+		"staging": {
+			"route": {
+				"pattern": "api.hang.now",
+				"custom_domain": true
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "api-db-staging",
+					"database_id": "b1e6f098-3681-4396-a591-45c7c6a3e25d"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "PUBLIC",
+					"bucket_name": "api-public-staging"
+				}
+			],
+			"vars": {
+				"API_URL": "https://api.hang.now",
+				"APP_URL": "https://hang.now",
+				"AUTH_SECRET": "stage_v1_s3mi$3cret_Mr2@Tk#xNw8VzQdYiLgPeC4u",
+				"GOOGLE_CLIENT_ID": "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com",
+				"GOOGLE_CLIENT_SECRET": "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",
+				"DISCORD_CLIENT_ID": "1392629623812259940",
+				"DISCORD_CLIENT_SECRET": "bps97yMNROIhml22zeJIySo0CP6ZBAYF",
+				"R2_PUBLIC_URL": "https://r2.hang.now",
+				"RELAY_SECRET": "",
+				"RELAY_URL": "https://relay.quic.video"
+			}
+		},
+		// Live/production environment overrides
+		"live": {
+			"route": {
+				"pattern": "api.hang.live",
+				"custom_domain": true
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "api-db-live",
+					"database_id": "065d2e39-134d-464b-a030-27a23bf2bea0"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "PUBLIC",
+					"bucket_name": "api-public-live"
+				}
+			],
+			"vars": {
+				"API_URL": "https://api.hang.live",
+				"APP_URL": "https://hang.live",
+				"AUTH_SECRET": "prod_v1_t0p$3cret_7GmX9@qLcWzR!Yk#hUfE2AvbD",
+				"GOOGLE_CLIENT_ID": "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com",
+				"GOOGLE_CLIENT_SECRET": "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",
+				"DISCORD_CLIENT_ID": "1389725440020840548",
+				"DISCORD_CLIENT_SECRET": "5aFK47Syy2nPGzgwrzRa4shQZWYQEwHo",
+				"R2_PUBLIC_URL": "https://r2.hang.live",
+				"RELAY_SECRET": "",
+				"RELAY_URL": "https://relay.quic.video"
+			}
+		}
+	}
 }
