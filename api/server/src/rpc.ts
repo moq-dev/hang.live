@@ -5,7 +5,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod/mini";
-import { Account } from ".";
 import Context from "./context";
 
 export function app() {
@@ -50,23 +49,6 @@ export const withCors = cors({
 	allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 	allowHeaders: ["Content-Type", "Authorization"],
 	credentials: true,
-});
-
-export const withAccount = createMiddleware<{
-	Bindings: Env;
-	Variables: {
-		account_id: Account.Id;
-		ctx: Context;
-	};
-}>(async (c, next) => {
-	const token = c.req.header("Authorization")?.replace(/^Bearer\s+/, "");
-	if (!token) return c.text("Unauthorized", 401);
-
-	const user = await c.var.ctx.jwt.verify(token);
-	if (!user) return c.text("Unauthorized", 401);
-
-	c.set("account_id", user.sub);
-	return await next();
 });
 
 export function withForm<T extends z.ZodMiniType>(schema: T) {

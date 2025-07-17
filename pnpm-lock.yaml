@@ -7,6 +7,7 @@ settings:
 overrides:
   '@kixelated/hang': link:../moq/js/hang
   '@kixelated/moq': link:../moq/js/moq
+  '@kixelated/moq-token': link:../moq/js/moq-token
   '@kixelated/signals': link:../moq/js/signals
 
 importers:
@@ -53,6 +54,9 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.7.1
         version: 0.7.1(hono@4.8.4)(zod@4.0.5)
+      '@kixelated/moq-token':
+        specifier: link:../../../moq/js/moq-token
+        version: link:../../../moq/js/moq-token
       '@trpc/server':
         specifier: ^11.4.3
         version: 11.4.3(typescript@5.8.3)

@@ -2,15 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import * as Uuid from "uuid";
 import { z } from "zod/mini";
+import * as Auth from "./auth";
 import * as Avatar from "./avatar";
 import * as Database from "./database";
-import * as JWT from "./jwt";
 import * as OAuth from "./oauth";
 import * as rpc from "./rpc";
 import * as Storage from "./storage";
 
-export const idSchema = JWT.accountIdSchema;
-export type Id = JWT.AccountId;
+export const idSchema = Auth.accountIdSchema;
+export type Id = Auth.AccountId;
 
 // Account schemas
 export const infoSchema = z.object({
@@ -51,7 +51,7 @@ export type NewRow = typeof table.$inferInsert;
 
 export const router = rpc
 	.router()
-	.get("/info", rpc.withAccount, async (c) => {
+	.get("/info", Auth.required, async (c) => {
 		const info = await c.var.ctx.account.get(c.var.account_id);
 		if (!info) {
 			return c.json({ error: "Account not found" }, 404);
@@ -59,7 +59,7 @@ export const router = rpc
 
 		return c.json(info, 200);
 	})
-	.put("/info", rpc.withJson(updateSchema), rpc.withAccount, async (c) => {
+	.put("/info", rpc.withJson(updateSchema), Auth.required, async (c) => {
 		const update = c.req.valid("json");
 		const info = await c.var.ctx.account.update(c.var.account_id, update);
 		return c.json(info, 200);

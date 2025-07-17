@@ -1,5 +1,8 @@
+import { createMiddleware } from "hono/factory";
 import * as JWT from "jose";
 import { z } from "zod/mini";
+import { Account } from ".";
+import RootContext from "./context";
 
 export const accountIdSchema = z.uuidv4().brand("AccountId");
 export type AccountId = z.infer<typeof accountIdSchema>;
@@ -17,7 +20,7 @@ export class Context {
 	#secretKey: Uint8Array;
 
 	constructor(env: Env) {
-		this.#secretKey = new TextEncoder().encode(env.JWT_SECRET);
+		this.#secretKey = new TextEncoder().encode(env.AUTH_SECRET);
 	}
 
 	async create(userId: string, expiresIn: number = 365 * 24 * 60 * 60): Promise<string> {
@@ -43,3 +46,37 @@ export class Context {
 		return parsed.data;
 	}
 }
+
+export const required = createMiddleware<{
+	Bindings: Env;
+	Variables: {
+		account_id: Account.Id;
+		ctx: RootContext;
+	};
+}>(async (c, next) => {
+	const token = c.req.header("Authorization")?.replace(/^Bearer\s+/, "");
+	if (!token) return c.text("Unauthorized", 401);
+
+	const user = await c.var.ctx.auth.verify(token);
+	if (!user) return c.text("Unauthorized", 401);
+
+	c.set("account_id", user.sub);
+	return await next();
+});
+
+export const optional = createMiddleware<{
+	Bindings: Env;
+	Variables: {
+		account_id?: Account.Id;
+		ctx: RootContext;
+	};
+}>(async (c, next) => {
+	const token = c.req.header("Authorization")?.replace(/^Bearer\s+/, "");
+	if (!token) return await next();
+
+	const user = await c.var.ctx.auth.verify(token);
+	if (!user) return await next();
+
+	c.set("account_id", user.sub);
+	return await next();
+});
