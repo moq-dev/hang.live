@@ -15,19 +15,20 @@ export class Context {
 	#env: Env;
 
 	constructor(env: Env) {
-		this.#key = Token.load(env.RELAY_SECRET);
+		this.#key = env.RELAY_SECRET ? Token.load(env.RELAY_SECRET) : undefined;
 		this.#env = env;
 	}
 
 	// Returns the URL to join the room
 	async sign(room: Name, account: Account.Id): Promise<URL> {
-		const root = `hang/${room}/`;
+		const prefix = this.#env.RELAY_PREFIX;
+		const path = `${prefix}/${room}/`;
 		if (!this.#key) {
-			return new URL(root, this.#env.RELAY_URL);
+			return new URL(path, this.#env.RELAY_URL);
 		}
 
-		const token = await Token.sign(this.#key, { root, subscribe: "", publish: `${account}/` });
-		return new URL(`${root}?jwt=${token}`, this.#env.RELAY_URL);
+		const token = await Token.sign(this.#key, { path, sub: "", pub: `${account}/` });
+		return new URL(`${path}?jwt=${token}`, this.#env.RELAY_URL);
 	}
 }
 

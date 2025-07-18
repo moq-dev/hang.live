@@ -8,6 +8,7 @@ import { Notifications } from "./notifications";
 import Settings from "./settings";
 
 export type RoomProps = {
+	name?: string;
 	user?: string;
 	avatar?: string;
 	visible?: boolean;
@@ -17,6 +18,10 @@ export class Room {
 	// The connection to the server.
 	// This is reactive; it may still be pending.
 	connection: Connection;
+
+	api: Api.Client;
+
+	name: Signal<string | undefined>;
 
 	// The user ID of the local user.
 	user: Signal<string | undefined>;
@@ -59,13 +64,32 @@ export class Room {
 
 	#signals = new Root();
 
-	constructor(url: URL, canvas: Canvas, props?: RoomProps) {
-		this.connection = new Connection({ url });
+	constructor(canvas: Canvas, api: Api.Client, props?: RoomProps) {
+		this.connection = new Connection();
+		this.api = api;
 		this.canvas = canvas;
+		this.name = new Signal(props?.name);
 		this.user = new Signal(props?.user);
 		this.avatar = new Signal(props?.avatar ?? Api.randomAvatar());
 
 		this.notifications = new Notifications();
+
+		this.#signals.effect((effect) => {
+			const name = effect.get(this.name);
+			if (!name) return;
+
+			// Given the room name, fetch a cooresponding token from the API server.
+			effect.spawn(async () => {
+				const response = await this.api.routes.room[":name"].join.$post({ param: { name} });
+				if (!response.ok) {
+					throw new Error(`Failed to join room: ${response.statusText}`);
+				}
+				const data = await response.json();
+
+				this.connection.url.set(new URL(data.url));
+				effect.cleanup(() => this.connection.url.set(undefined));
+			});
+		});
 
 		this.camera = new Publish.Broadcast(this.connection, {
 			device: "camera",
@@ -458,6 +482,12 @@ export class Room {
 				}
 
 				if (update.active) {
+					// Check if we already have a broadcast for this path to prevent duplicates
+					if (this.#remotes.has(update.path)) {
+						console.error("Duplicate broadcast for path:", update.path);
+						continue;
+					}
+
 					const watch = new Watch.Broadcast(this.connection, {
 						enabled: true,
 						path: update.path,
