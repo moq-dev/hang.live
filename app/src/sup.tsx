@@ -71,6 +71,8 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 		avatar: props.info.avatar,
 	});
 
+	onCleanup(() => room.close());
+
 	return (
 		<Layout full={true} connection={room.connection}>
 			<Chat canvas={props.canvas} room={room} />
