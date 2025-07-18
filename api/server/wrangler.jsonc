@@ -46,7 +46,8 @@
 		"DISCORD_CLIENT_SECRET": "uJRHl-pmOFYHvrViHJdcs2slyTCnoJog",
 		"R2_PUBLIC_URL": "",
 		"RELAY_SECRET": "",
-		"RELAY_URL": "http://localhost:4443"
+		"RELAY_URL": "http://localhost:4443",
+		"RELAY_PREFIX": "demo"
 	},
 
 	// Staging environment overrides
@@ -79,7 +80,8 @@
 				"DISCORD_CLIENT_SECRET": "bps97yMNROIhml22zeJIySo0CP6ZBAYF",
 				"R2_PUBLIC_URL": "https://r2.hang.now",
 				"RELAY_SECRET": "eyJhbGciOiJIUzI1NiIsImtleV9vcHMiOlsidmVyaWZ5Iiwic2lnbiJdLCJrIjoiaXFiQ3Nac1JjODgxOGllWEUzV2VzVXcyZFRwcXFBVEpKQ1BISzZUandiZyJ9",
-				"RELAY_URL": "https://relay.quic.video"
+				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_PREFIX": "hang.now"
 			}
 		},
 		// Live/production environment overrides
@@ -111,7 +113,8 @@
 				"DISCORD_CLIENT_SECRET": "5aFK47Syy2nPGzgwrzRa4shQZWYQEwHo",
 				"R2_PUBLIC_URL": "https://r2.hang.live",
 				"RELAY_SECRET": "eyJhbGciOiJIUzI1NiIsImtleV9vcHMiOlsidmVyaWZ5Iiwic2lnbiJdLCJrIjoiaXFiQ3Nac1JjODgxOGllWEUzV2VzVXcyZFRwcXFBVEpKQ1BISzZUandiZyJ9",
-				"RELAY_URL": "https://relay.quic.video"
+				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_PREFIX": "hang.live"
 			}
 		}
 	}

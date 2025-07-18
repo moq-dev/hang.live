@@ -21,7 +21,8 @@ export class Context {
 
 	// Returns the URL to join the room
 	async sign(room: Name, account: Account.Id): Promise<URL> {
-		const path = `hang/${room}/`;
+		const prefix = this.#env.RELAY_PREFIX;
+		const path = `${prefix}/${room}/`;
 		if (!this.#key) {
 			return new URL(path, this.#env.RELAY_URL);
 		}
