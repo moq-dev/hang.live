@@ -79,6 +79,9 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
     devDependencies:
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.0.13
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0

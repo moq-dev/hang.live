@@ -17,16 +17,17 @@
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",
 		"@hono/zod-validator": "^0.7.1",
+		"@kixelated/moq-token": "^0.1.0",
 		"@trpc/server": "^11.4.3",
 		"drizzle-orm": "^0.44.2",
 		"hono": "^4.8.4",
 		"jose": "^6.0.11",
 		"nanoid": "^5.1.5",
 		"uuid": "^11.1.0",
-		"zod": "^4.0.5",
-		"@kixelated/moq-token": "^0.1.0"
+		"zod": "^4.0.5"
 	},
 	"devDependencies": {
+		"@types/node": "^24.0.13",
 		"@types/uuid": "^10.0.0",
 		"typescript": "^5.8.3",
 		"wrangler": "^4.24.3"

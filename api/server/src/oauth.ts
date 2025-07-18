@@ -347,7 +347,7 @@ export const router = rpc
 			await provider.link(user.id, oauthUser.providerId);
 
 			// Generate JWT token
-			const token = await ctx.jwt.create(user.id);
+			const token = await ctx.auth.create(user.id);
 			const state = c.req.valid("query").state;
 
 			// Redirect to frontend with token
