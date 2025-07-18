@@ -65,26 +65,13 @@ export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): J
 }
 
 function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info }): JSX.Element {
-	const url = new URL(`${import.meta.env.VITE_RELAY_URL}/hang/${props.room}/`);
+	const room = new Room(props.canvas, props.api, {
+		name: props.room,
+		user: props.info.name,
+		avatar: props.info.avatar,
+	});
 
-	const room = new Room(url, props.canvas, { user: props.info.name, avatar: props.info.avatar });
 	onCleanup(() => room.close());
-
-	/*
-	if (props.api.authenticated()) {
-		props.api.routes.account.info
-			.$get()
-			.then(async (info) => {
-				if (!info.ok) throw new Error(info.statusText);
-				return await info.json();
-			})
-			.then((info) => {
-				// Only set the user name from account if not already set from URL
-				room.user.set(info.name);
-				room.avatar.set(info.avatar);
-			});
-	}
-	*/
 
 	return (
 		<Layout full={true} connection={room.connection}>
