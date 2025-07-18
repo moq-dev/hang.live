@@ -78,7 +78,7 @@
 				"DISCORD_CLIENT_ID": "1392629623812259940",
 				"DISCORD_CLIENT_SECRET": "bps97yMNROIhml22zeJIySo0CP6ZBAYF",
 				"R2_PUBLIC_URL": "https://r2.hang.now",
-				"RELAY_SECRET": "",
+				"RELAY_SECRET": "eyJhbGciOiJIUzI1NiIsImtleV9vcHMiOlsidmVyaWZ5Iiwic2lnbiJdLCJrIjoiaXFiQ3Nac1JjODgxOGllWEUzV2VzVXcyZFRwcXFBVEpKQ1BISzZUandiZyJ9",
 				"RELAY_URL": "https://relay.quic.video"
 			}
 		},
@@ -110,7 +110,7 @@
 				"DISCORD_CLIENT_ID": "1389725440020840548",
 				"DISCORD_CLIENT_SECRET": "5aFK47Syy2nPGzgwrzRa4shQZWYQEwHo",
 				"R2_PUBLIC_URL": "https://r2.hang.live",
-				"RELAY_SECRET": "",
+				"RELAY_SECRET": "eyJhbGciOiJIUzI1NiIsImtleV9vcHMiOlsidmVyaWZ5Iiwic2lnbiJdLCJrIjoiaXFiQ3Nac1JjODgxOGllWEUzV2VzVXcyZFRwcXFBVEpKQ1BISzZUandiZyJ9",
 				"RELAY_URL": "https://relay.quic.video"
 			}
 		}

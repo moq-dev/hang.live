@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod/mini";
 import * as Account from "./account";
+import * as Auth from "./auth";
 import * as rpc from "./rpc";
 
 export { randomAvatar as random } from "./client";
@@ -31,7 +32,7 @@ export const router = rpc
 				file: z.instanceof(File),
 			}),
 		),
-		rpc.withAccount,
+		Auth.required,
 		async (c) => {
 			const ctx = c.var.ctx;
 			const file = c.req.valid("form").file;
