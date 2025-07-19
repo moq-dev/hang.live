@@ -80,7 +80,7 @@ export class Room {
 
 			// Given the room name, fetch a cooresponding token from the API server.
 			effect.spawn(async () => {
-				const response = await this.api.routes.room[":name"].join.$post({ param: { name} });
+				const response = await this.api.routes.room[":name"].join.$post({ param: { name } });
 				if (!response.ok) {
 					throw new Error(`Failed to join room: ${response.statusText}`);
 				}
