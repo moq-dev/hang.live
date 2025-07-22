@@ -15,6 +15,7 @@ import { Chat } from "./chat";
 import { Controls } from "./controls";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
+import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 import { unreachable } from "./util";
 
@@ -45,13 +46,6 @@ interface Info {
 
 function randomName(): string {
 	return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
-}
-
-interface Participant {
-	id: string;
-	name: string;
-	avatar: string;
-	speaking: boolean;
 }
 
 export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
@@ -136,7 +130,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 
 					{/* Right Column: Participants List */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<ParticipantsList />
+						<PreviewRoom room={props.room} api={props.api} />
 					</div>
 				</div>
 			</div>
@@ -366,62 +360,6 @@ function AuthenticatedPreview(props: { api: Api.Client; room: string; setInfo: (
 				<div class="text-center text-gray-400">Loading...</div>
 			</Match>
 		</Switch>
-	);
-}
-
-function ParticipantsList(): JSX.Element {
-	// TODO: This will be replaced with actual participant data
-	const [participants] = createSignal<Participant[]>([
-		{ id: "1", name: "You", avatar: "/avatar/1.svg", speaking: false },
-		{ id: "2", name: "Alice Johnson", avatar: "/avatar/15.svg", speaking: true },
-		{ id: "3", name: "Bob Smith", avatar: "/avatar/23.svg", speaking: false },
-		{ id: "4", name: "Charlie Brown", avatar: "/avatar/7.svg", speaking: false },
-		{ id: "5", name: "Diana Prince", avatar: "/avatar/12.svg", speaking: true },
-		{ id: "6", name: "Eve Wilson", avatar: "/avatar/18.svg", speaking: false },
-		{ id: "7", name: "Frank Miller", avatar: "/avatar/25.svg", speaking: false },
-		{ id: "8", name: "Grace Lee", avatar: "/avatar/33.svg", speaking: true },
-		{ id: "9", name: "Henry Davis", avatar: "/avatar/8.svg", speaking: false },
-		{ id: "10", name: "Iris Chen", avatar: "/avatar/19.svg", speaking: false },
-		{ id: "11", name: "Jack Thompson", avatar: "/avatar/27.svg", speaking: false },
-		{ id: "12", name: "Kate Rodriguez", avatar: "/avatar/14.svg", speaking: true },
-		{ id: "13", name: "Liam O'Connor", avatar: "/avatar/31.svg", speaking: false },
-		{ id: "14", name: "Maya Patel", avatar: "/avatar/6.svg", speaking: false },
-	]);
-
-	return (
-		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-			<h3 class="text-xl font-semibold mb-4">Hanging Now ({participants().length})</h3>
-			<div class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500">
-				<For each={participants()}>
-					{(participant) => (
-						<div
-							class="flex items-center gap-3 p-3 rounded-xl transition-all"
-							classList={{
-								"bg-green-500/10 border border-green-400/30": participant.speaking,
-								"bg-gray-800/50": !participant.speaking,
-							}}
-						>
-							<div class="relative">
-								<div class="w-10 h-10 rounded-xl overflow-hidden bg-gray-700 flex items-center justify-center">
-									<img
-										src={participant.avatar}
-										alt={participant.name}
-										class="w-full h-full object-cover"
-									/>
-								</div>
-								{/* Speaking indicator */}
-								<Show when={participant.speaking}>
-									<div class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black animate-pulse" />
-								</Show>
-							</div>
-							<div class="flex-1 min-w-0">
-								<div class="text-sm font-medium text-white truncate">{participant.name}</div>
-							</div>
-						</div>
-					)}
-				</For>
-			</div>
-		</div>
 	);
 }
 

@@ -1,5 +1,6 @@
 import * as Api from "@hang/api-client";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
+import { Path } from "@kixelated/moq";
 import { type Effect, Root, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
@@ -129,6 +130,14 @@ export class Room {
 				enabled: true,
 				ttl: 10000, // Save messages for at most 10 seconds.
 			},
+			// A public preview for unauthenticated users.
+			preview: {
+				enabled: true,
+				info: {
+					name: props?.user,
+					avatar: props?.avatar,
+				},
+			},
 		});
 
 		// Apply echo cancellation based on the headphones setting.
@@ -179,6 +188,10 @@ export class Room {
 				enabled: true,
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 			},
+			// A public preview for unauthenticated users.
+			preview: {
+				enabled: false, // TODO
+			},
 		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
@@ -200,11 +213,13 @@ export class Room {
 			// Update the username
 			this.camera.user.set((prev) => ({ ...prev, name: user }));
 			this.screen.user.set((prev) => ({ ...prev, name: user ? `${user} (Screen)` : undefined }));
+			this.camera.preview.info.set((prev) => ({ ...prev, name: user }));
+			this.screen.preview.info.set((prev) => ({ ...prev, name: user ? `${user} (Screen)` : undefined }));
 
 			this.camera.enabled.set(true);
 			effect.cleanup(() => this.camera.enabled.set(false));
 
-			const name = `${user}/camera`;
+			const name = Path.from(user, "camera");
 			this.camera.name.set(name);
 		});
 
@@ -214,6 +229,8 @@ export class Room {
 
 			this.camera.user.set((prev) => ({ ...prev, avatar }));
 			this.screen.user.set((prev) => ({ ...prev, avatar }));
+			this.camera.preview.info.set((prev) => ({ ...prev, avatar }));
+			this.screen.preview.info.set((prev) => ({ ...prev, avatar }));
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
@@ -239,13 +256,35 @@ export class Room {
 		});
 
 		this.screen.signals.effect((effect) => {
+			const video = effect.get(this.camera.video.media);
+			const audio = effect.get(this.camera.audio.media);
+
+			this.camera.preview.info.set((prev) => ({
+				...prev,
+				video: !!video,
+				audio: !!audio,
+			}));
+		});
+
+		this.screen.signals.effect((effect) => {
+			const video = effect.get(this.screen.video.media);
+			const audio = effect.get(this.screen.audio.media);
+
+			this.screen.preview.info.set((prev) => ({
+				...prev,
+				video: !!video,
+				audio: !!audio,
+			}));
+		});
+
+		this.screen.signals.effect((effect) => {
 			const user = effect.get(this.user);
 			if (!user) return;
 
 			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
 			if (!active) return;
 
-			const name = `${user}/screen`;
+			const name = Path.from(user, "screen");
 			this.screen.name.set(name);
 
 			this.screen.enabled.set(true);
