@@ -10,6 +10,9 @@ default:
 check:
 	pnpm -r i
 
+	# Run the checks
+	pnpm -r run check
+
 	# Lint the JS packages
 	pnpm -r exec biome check
 

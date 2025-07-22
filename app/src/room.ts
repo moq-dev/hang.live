@@ -204,8 +204,8 @@ export class Room {
 			this.camera.enabled.set(true);
 			effect.cleanup(() => this.camera.enabled.set(false));
 
-			const path = `${user}/camera`;
-			this.camera.path.set(path);
+			const name = `${user}/camera`;
+			this.camera.name.set(name);
 		});
 
 		this.camera.signals.effect((effect) => {
@@ -245,8 +245,8 @@ export class Room {
 			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
 			if (!active) return;
 
-			const path = `${user}/screen`;
-			this.screen.path.set(path);
+			const name = `${user}/screen`;
+			this.screen.name.set(name);
 
 			this.screen.enabled.set(true);
 			effect.cleanup(() => this.screen.enabled.set(false));
@@ -427,12 +427,13 @@ export class Room {
 
 			// Recreate any previews.
 			for (const broadcast of broadcasts) {
-				const path = broadcast.source.path.peek();
-				if (path === this.camera.path.peek()) {
-					this.#stopBroadcast(path);
+				const name = broadcast.source.name.peek();
+				if (!name) continue;
+				if (name === this.camera.name.peek()) {
+					this.#stopBroadcast(name);
 					this.#startPreview(this.camera);
-				} else if (path === this.screen.path.peek()) {
-					this.#stopBroadcast(path);
+				} else if (name === this.screen.name.peek()) {
+					this.#stopBroadcast(name);
 					this.#startPreview(this.screen);
 				}
 			}
@@ -463,34 +464,34 @@ export class Room {
 				// We're donezo.
 				if (!update) break;
 
-				if (update.path === this.camera.path.peek()) {
+				if (update.name === this.camera.name.peek()) {
 					if (update.active) {
 						this.#startPreview(this.camera);
 					} else {
-						this.#stopBroadcast(update.path);
+						this.#stopBroadcast(update.name);
 					}
 					continue;
 				}
 
-				if (update.path === this.screen.path.peek()) {
+				if (update.name === this.screen.name.peek()) {
 					if (update.active) {
 						this.#startPreview(this.screen);
 					} else {
-						this.#stopBroadcast(update.path);
+						this.#stopBroadcast(update.name);
 					}
 					continue;
 				}
 
 				if (update.active) {
 					// Check if we already have a broadcast for this path to prevent duplicates
-					if (this.#remotes.has(update.path)) {
-						console.error("Duplicate broadcast for path:", update.path);
+					if (this.#remotes.has(update.name)) {
+						console.error("Duplicate broadcast for path:", update.name);
 						continue;
 					}
 
 					const watch = new Watch.Broadcast(this.connection, {
 						enabled: true,
-						path: update.path,
+						name: update.name,
 						reload: false,
 						// Download the location of the broadcaster.
 						location: { enabled: true },
@@ -518,11 +519,11 @@ export class Room {
 						online: true,
 					});
 
-					this.#remotes.set(update.path, broadcast);
+					this.#remotes.set(update.name, broadcast);
 					this.notifications.play("sup");
 					this.#startBroadcast(broadcast);
 				} else {
-					this.#stopBroadcast(update.path);
+					this.#stopBroadcast(update.name);
 				}
 			}
 		} finally {
@@ -553,7 +554,7 @@ export class Room {
 		if (Settings.echo.peek()) {
 			const watch = new Watch.Broadcast(this.connection, {
 				enabled: true,
-				path: source.path.peek(),
+				name: source.name.peek(),
 				reload: false,
 				// Download the location of the broadcaster.
 				location: { enabled: true },
@@ -629,15 +630,15 @@ export class Room {
 		});
 	}
 
-	#stopBroadcast(path: string) {
-		const broadcast = this.broadcasts.peek().find((b) => b.source.path.peek() === path);
+	#stopBroadcast(name: string) {
+		const broadcast = this.broadcasts.peek().find((b) => b.source.name.peek() === name);
 		if (!broadcast) {
-			console.warn("stopping unknown broadcast:", path);
+			console.warn("stopping unknown broadcast:", name);
 			return;
 		}
 
 		this.notifications.play("bye");
-		this.#remotes.delete(path);
+		this.#remotes.delete(name);
 
 		// Move it from the main list to the rip list.
 		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));

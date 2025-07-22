@@ -89,10 +89,8 @@ function generateSvg(variant?: "full" | "discord") {
 	</svg>`;
 }
 
-// @ts-expect-error no node types yet
 import fs from "node:fs";
 
-// @ts-expect-error no node types yet
 if (import.meta.url === `file://${process.argv[1]}`) {
 	const small = generateSvg();
 	fs.writeFileSync("public/image/icon.svg", small);

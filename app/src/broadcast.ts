@@ -160,9 +160,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			this.avatar.src = user.avatar;
 		});
 
-		// The display name is the user's name or the path if they don't have a name.
+		// The display name is the user's name or the name if they don't have a name.
 		this.display = this.signals.computed((effect) => {
-			return effect.get(this.source.user)?.name ?? effect.get(this.source.path);
+			return effect.get(this.source.user)?.name ?? effect.get(this.source.name) ?? "Unknown";
 		});
 
 		this.signals.effect((effect) => {
@@ -195,7 +195,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.cleanup(() => screenUpdates.close());
 
 		// Update the handle when our path changes.
-		this.signals.subscribe(camera.path, (path) => cameraUpdates.handle.set(path));
+		this.signals.subscribe(camera.name, (name) => cameraUpdates.handle.set(name));
 
 		// Request the position we should use from this remote broadcast.
 		this.signals.effect((effect) => {
@@ -210,8 +210,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 
 		if (screen) {
-			// Update the handle when our path changes.
-			this.signals.subscribe(screen.path, (path) => screenUpdates.handle.set(path));
+			// Update the handle when our name changes.
+			this.signals.subscribe(screen.name, (name) => screenUpdates.handle.set(name));
 
 			this.signals.effect((effect) => {
 				// Only update the screen position if the local broadcast allows it.
@@ -236,7 +236,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			// Only set the handle if the broadcast allows peering.
 			if (!effect.get(this.source.location.peering)) return;
 
-			peer.handle.set(effect.get(this.source.path));
+			peer.handle.set(effect.get(this.source.name));
 			effect.cleanup(() => peer.handle.set(undefined));
 		});
 
