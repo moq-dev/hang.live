@@ -66,8 +66,12 @@ header {
 	}
 }
 
+nav > * {
+	@apply backdrop-blur-sm rounded bg-transparent;
+}
+
 .controls {
-	@apply fixed bottom-0 left-0 right-0 flex items-end gap-2 p-[8px_12px] text-shadow-lg text-xl;
+	@apply fixed bottom-0 left-0 right-0 flex items-end gap-3 p-3 text-shadow-lg text-xl;
 	z-index: 10; /* Ensure controls are above other content */
 
 	input:not([type="range"]) {
@@ -75,7 +79,7 @@ header {
 	}
 
 	button {
-		@apply p-2;
+		@apply p-2 hover:bg-gray-700 transition-all;
 	}
 
 	input,

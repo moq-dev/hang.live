@@ -14,7 +14,7 @@ import { unreachable } from "./util";
 
 export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
-		<Layout full={false}>
+		<Layout app={false}>
 			<Show when={props.api.authenticated()} fallback={<Login api={props.api} />}>
 				<SettingsLoad api={props.api} />
 			</Show>
@@ -230,9 +230,89 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	};
 
 	return (
-		<div class="max-w-7xl mx-auto p-4">
+		<div class="max-w-7xl p-4">
 			{/* Profile Section - Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
+				{/* Form Controls */}
+				<div class="flex-1 min-w-[300px] grow space-y-6">
+					{/* Avatar Section */}
+					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800 w-full">
+						<h3 class="text-xl font-semibold mb-4">Avatar</h3>
+						<div class="space-y-4">
+							<div class="flex flex-col gap-3">
+								<div class="flex gap-2 relative">
+									<label class="flex-1">
+										<input
+											type="file"
+											accept="image/*"
+											onChange={handleAvatarUpload}
+											class="hidden"
+										/>
+										<span
+											class="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl cursor-pointer transition-all transform hover:scale-105 font-medium w-full justify-center"
+											style={{
+												background: gradient.linear(),
+												"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
+											}}
+										>
+											<IconUpload
+												class="w-4 h-4"
+												style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
+											/>
+											{currentAvatarUrl() ? "Choose new avatar" : "Choose an avatar"}
+										</span>
+									</label>
+									<Show when={currentAvatarUrl()}>
+										<div class="relative">
+											<button
+												type="button"
+												onClick={handleRandomAvatar}
+												class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+											>
+												Random
+											</button>
+
+											<AnotherOne clicks={randomClicks} />
+										</div>
+									</Show>
+								</div>
+							</div>
+							<p class="text-sm text-gray-400">Your friends will judge you, keep it clean.</p>
+							<Show when={avatarChanged()}>
+								<div class="text-sm text-yellow-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-yellow-400 rounded-full" />
+									Unsaved changes
+								</div>
+							</Show>
+						</div>
+					</div>
+
+					{/* Display Name Section */}
+					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
+						<h3 class="text-xl font-semibold mb-4">Display name</h3>
+						<div class="space-y-3">
+							<input
+								type="text"
+								value={name()}
+								onInput={(e) => {
+									setName(e.currentTarget.value);
+								}}
+								placeholder="Enter your name"
+								class="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
+							/>
+							<p class="text-sm text-gray-400">
+								How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
+							</p>
+							<Show when={nameChanged()}>
+								<div class="text-sm text-yellow-400 flex items-center gap-2">
+									<div class="w-2 h-2 bg-yellow-400 rounded-full" />
+									Unsaved changes
+								</div>
+							</Show>
+						</div>
+					</div>
+				</div>
+
 				{/* Preview Panel */}
 				<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6 flex flex-col items-center justify-center">
 					<h2 class="text-xl font-semibold mb-4 self-start">Preview</h2>
@@ -321,86 +401,6 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 						</div>
 					</Show>
 				</div>
-
-				{/* Form Controls */}
-				<div class="flex-1 min-w-[300px] grow space-y-6">
-					{/* Avatar Section */}
-					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800 w-full">
-						<h3 class="text-xl font-semibold mb-4">Avatar</h3>
-						<div class="space-y-4">
-							<div class="flex flex-col gap-3">
-								<div class="flex gap-2 relative">
-									<label class="flex-1">
-										<input
-											type="file"
-											accept="image/*"
-											onChange={handleAvatarUpload}
-											class="hidden"
-										/>
-										<span
-											class="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl cursor-pointer transition-all transform hover:scale-105 font-medium w-full justify-center"
-											style={{
-												background: gradient.linear(),
-												"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-											}}
-										>
-											<IconUpload
-												class="w-4 h-4"
-												style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
-											/>
-											{currentAvatarUrl() ? "Choose new avatar" : "Choose an avatar"}
-										</span>
-									</label>
-									<Show when={currentAvatarUrl()}>
-										<div class="relative">
-											<button
-												type="button"
-												onClick={handleRandomAvatar}
-												class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-											>
-												Random
-											</button>
-
-											<AnotherOne clicks={randomClicks} />
-										</div>
-									</Show>
-								</div>
-							</div>
-							<p class="text-sm text-gray-400">Your friends will judge you, keep it clean.</p>
-							<Show when={avatarChanged()}>
-								<div class="text-sm text-yellow-400 flex items-center gap-2">
-									<div class="w-2 h-2 bg-yellow-400 rounded-full" />
-									Unsaved changes
-								</div>
-							</Show>
-						</div>
-					</div>
-
-					{/* Display Name Section */}
-					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-						<h3 class="text-xl font-semibold mb-4">Display name</h3>
-						<div class="space-y-3">
-							<input
-								type="text"
-								value={name()}
-								onInput={(e) => {
-									setName(e.currentTarget.value);
-								}}
-								placeholder="Enter your name"
-								class="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
-							/>
-							<p class="text-sm text-gray-400">
-								How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
-							</p>
-							<Show when={nameChanged()}>
-								<div class="text-sm text-yellow-400 flex items-center gap-2">
-									<div class="w-2 h-2 bg-yellow-400 rounded-full" />
-									Unsaved changes
-								</div>
-							</Show>
-						</div>
-					</div>
-				</div>
 			</div>
 		</div>
 	);
@@ -435,7 +435,7 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 			<div class="w-full max-w-md">
 				{/* Title */}
 				<div class="text-center mb-8">
-					<p class="text-xl text-gray-400">ready to join?</p>
+					<p class=" text-gray-400 font-semibold text-center">ready to join?</p>
 				</div>
 
 				{/* Error message */}

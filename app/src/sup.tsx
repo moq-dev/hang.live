@@ -68,7 +68,7 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 	onCleanup(() => room.close());
 
 	return (
-		<Layout full={true} connection={room.connection}>
+		<Layout app={true} connection={room.connection}>
 			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
 		</Layout>
@@ -86,8 +86,8 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 	};
 
 	return (
-		<Layout full={false}>
-			<div class="max-w-7xl mx-auto p-4">
+		<Layout app={false}>
+			<div class="max-w-7xl p-4">
 				<div class="font-semibold mb-4 text-center text-gray-400">ready to hang?</div>
 
 				{/* Join Button */}
@@ -115,22 +115,32 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 
 				{/* Two Column Layout */}
 				<div class="flex flex-wrap gap-6 mb-8 items-start">
-					{/* Left Column: Avatar/Name Preview */}
-					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<div class="rounded-2xl border border-gray-800 p-6">
-							<Show
-								when={props.api.authenticated()}
-								fallback={<AnonymousPreview api={props.api} room={props.room} setInfo={setInfo} />}
-							>
-								<AuthenticatedPreview api={props.api} room={props.room} setInfo={setInfo} />
-							</Show>
-						</div>
-						<MicrophoneControl />
-					</div>
-
-					{/* Right Column: Participants List */}
+					{/* Left Column: Participants List */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
 						<PreviewRoom room={props.room} api={props.api} />
+					</div>
+
+					{/* Right Column: Avatar/Name Preview */}
+					<div class="flex-1 min-w-[300px] grow space-y-6">
+						<Show
+							when={props.api.authenticated()}
+							fallback={
+								<div class="rounded-2xl border border-gray-800 p-6">
+									<AnonymousPreview api={props.api} room={props.room} setInfo={setInfo} />
+								</div>
+							}
+						>
+							<div class="rounded-2xl p-6">
+								<AuthenticatedPreview api={props.api} room={props.room} setInfo={setInfo} />
+							</div>
+						</Show>
+
+						{/* Login Options - only show for guests */}
+						<Show when={!props.api.authenticated()}>
+							<LoginButtons api={props.api} />
+						</Show>
+
+						{/* <MicrophoneControl /> */}
 					</div>
 				</div>
 			</div>
@@ -170,32 +180,6 @@ function AnonymousPreview(props: { api: Api.Client; room: string; setInfo: (info
 				break;
 			}
 		}
-	};
-
-	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
-		switch (provider) {
-			case "google":
-				return <IconGoogle class="w-5 h-5" />;
-			case "discord":
-				return <IconDiscord class="w-5 h-5" />;
-			default:
-				unreachable(provider);
-		}
-	};
-
-	const getProviderColor = (provider: Api.OAuth.ProviderId) => {
-		switch (provider) {
-			case "google":
-				return "bg-red-600 hover:bg-red-700";
-			case "discord":
-				return "bg-blue-600 hover:bg-blue-700";
-			default:
-				unreachable(provider);
-		}
-	};
-
-	const handleProviderLogin = (provider: Api.OAuth.ProviderId) => {
-		props.api.login(provider);
 	};
 
 	return (
@@ -250,31 +234,60 @@ function AnonymousPreview(props: { api: Api.Client; room: string; setInfo: (info
 					</div>
 				</div>
 			</div>
-
-			{/* Login Options */}
-			<div class="text-center">
-				<p class="text-gray-400 m-4">or login to customize your profile</p>
-				<div class="space-y-3">
-					<For each={Api.oauthProviders}>
-						{(provider) => (
-							<button
-								type="button"
-								onClick={() => handleProviderLogin(provider)}
-								class="w-full flex items-center justify-center gap-3 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-								classList={{
-									[getProviderColor(provider)]: true,
-								}}
-							>
-								<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
-									{getProviderIcon(provider)}
-								</div>
-								<span class="capitalize">Login with {provider}</span>
-							</button>
-						)}
-					</For>
-				</div>
-			</div>
 		</>
+	);
+}
+
+function LoginButtons(props: { api: Api.Client }): JSX.Element {
+	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
+		switch (provider) {
+			case "google":
+				return <IconGoogle class="w-5 h-5" />;
+			case "discord":
+				return <IconDiscord class="w-5 h-5" />;
+			default:
+				unreachable(provider);
+		}
+	};
+
+	const getProviderColor = (provider: Api.OAuth.ProviderId) => {
+		switch (provider) {
+			case "google":
+				return "bg-red-600 hover:bg-red-700";
+			case "discord":
+				return "bg-blue-600 hover:bg-blue-700";
+			default:
+				unreachable(provider);
+		}
+	};
+
+	const handleProviderLogin = (provider: Api.OAuth.ProviderId) => {
+		props.api.login(provider);
+	};
+
+	return (
+		<div class="text-center rounded-2xl p-4">
+			<p class="text-gray-400 mb-4">...or login to customize your profile</p>
+			<div class="space-y-3">
+				<For each={Api.oauthProviders}>
+					{(provider) => (
+						<button
+							type="button"
+							onClick={() => handleProviderLogin(provider)}
+							class="w-full flex items-center justify-center gap-3 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+							classList={{
+								[getProviderColor(provider)]: true,
+							}}
+						>
+							<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
+								{getProviderIcon(provider)}
+							</div>
+							<span class="capitalize">Login with {provider}</span>
+						</button>
+					)}
+				</For>
+			</div>
+		</div>
 	);
 }
 
@@ -363,6 +376,7 @@ function AuthenticatedPreview(props: { api: Api.Client; room: string; setInfo: (
 	);
 }
 
+/*
 function MicrophoneControl(): JSX.Element {
 	const [micEnabled, setMicEnabled] = createSignal(false);
 	const [hasPermission, setHasPermission] = createSignal<boolean | undefined>(undefined);
@@ -433,3 +447,4 @@ function MicrophoneControl(): JSX.Element {
 		</div>
 	);
 }
+*/
