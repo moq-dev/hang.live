@@ -133,10 +133,6 @@ export class Room {
 			// A public preview for unauthenticated users.
 			preview: {
 				enabled: true,
-				info: {
-					name: props?.user,
-					avatar: props?.avatar,
-				},
 			},
 		});
 
@@ -190,7 +186,7 @@ export class Room {
 			},
 			// A public preview for unauthenticated users.
 			preview: {
-				enabled: false, // TODO
+				enabled: true,
 			},
 		});
 
@@ -231,6 +227,14 @@ export class Room {
 			this.screen.user.set((prev) => ({ ...prev, avatar }));
 			this.camera.preview.info.set((prev) => ({ ...prev, avatar }));
 			this.screen.preview.info.set((prev) => ({ ...prev, avatar }));
+		});
+
+		this.camera.signals.effect((effect) => {
+			const message = effect.get(this.camera.chat.message);
+			this.camera.preview.info.set((prev) => ({
+				...prev,
+				chat: !!message,
+			}));
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
@@ -276,6 +280,16 @@ export class Room {
 				audio: !!audio,
 			}));
 		});
+
+		// Initialize chat status as false
+		this.camera.preview.info.set((prev) => ({
+			...prev,
+			chat: false,
+		}));
+		this.screen.preview.info.set((prev) => ({
+			...prev,
+			chat: false,
+		}));
 
 		this.screen.signals.effect((effect) => {
 			const user = effect.get(this.user);

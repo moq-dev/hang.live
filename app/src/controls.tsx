@@ -12,6 +12,7 @@ import IconVolumeMute from "~icons/mdi/volume-mute";
 import type { Canvas } from "./canvas";
 import type { Room } from "./room";
 import Settings, { Modal } from "./settings";
+import { Tooltip } from "./tooltip";
 
 export function Controls(props: {
 	room: Room;
@@ -48,48 +49,50 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	});
 
 	return (
-		<fieldset
-			class="flex flex-col-reverse"
-			aria-label="Microphone controls"
-			onMouseEnter={() => setHover(true)}
-			onMouseLeave={() => setHover(false)}
-			onFocusIn={() => setHover(true)}
-			onFocusOut={() => setHover(false)}
-		>
-			<button
-				type="button"
-				onClick={toggle}
-				class="relative border"
-				role="switch"
-				aria-checked={!!root()}
-				aria-label="Toggle microphone"
-				classList={{
-					"border-white": !!root(),
-					"border-transparent": !root(),
-					"text-red-500": root() && volume() === 0,
-				}}
+		<Tooltip content="Toggle microphone" position="top">
+			<fieldset
+				class="flex flex-col-reverse"
+				aria-label="Microphone controls"
+				onMouseEnter={() => setHover(true)}
+				onMouseLeave={() => setHover(false)}
+				onFocusIn={() => setHover(true)}
+				onFocusOut={() => setHover(false)}
 			>
-				<Visualize audio={props.audio} />
-				<IconMicrophone />
-			</button>
-			<Show when={opacity() > 0}>
-				<input
-					type="range"
-					min="0"
-					step="0.01"
-					max="2"
-					value={volume()}
-					onInput={(e) => Settings.microphoneGain.set(Number(e.currentTarget.value))}
-					class="cursor-pointer"
-					aria-label="Microphone volume"
-					style={{
-						"writing-mode": "vertical-rl",
-						direction: "rtl",
-						opacity: opacity(),
+				<button
+					type="button"
+					onClick={toggle}
+					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+					role="switch"
+					aria-checked={!!root()}
+					aria-label="Toggle microphone"
+					classList={{
+						"border-white": !!root(),
+						"border-transparent": !root(),
+						"text-red-500": root() && volume() === 0,
 					}}
-				/>
-			</Show>
-		</fieldset>
+				>
+					<Visualize audio={props.audio} />
+					<IconMicrophone />
+				</button>
+				<Show when={opacity() > 0}>
+					<input
+						type="range"
+						min="0"
+						step="0.01"
+						max="2"
+						value={volume()}
+						onInput={(e) => Settings.microphoneGain.set(Number(e.currentTarget.value))}
+						class="cursor-pointer"
+						aria-label="Microphone volume"
+						style={{
+							"writing-mode": "vertical-rl",
+							direction: "rtl",
+							opacity: opacity(),
+						}}
+					/>
+				</Show>
+			</fieldset>
+		</Tooltip>
 	);
 }
 
@@ -100,20 +103,22 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const media = solid(props.video.media);
 
 	return (
-		<button
-			type="button"
-			onClick={toggle}
-			class="relative border"
-			role="switch"
-			aria-checked={!!media()}
-			aria-label="Toggle camera"
-			classList={{
-				"border-white": !!media(),
-				"border-transparent": !media(),
-			}}
-		>
-			<IconCamera />
-		</button>
+		<Tooltip content="Toggle camera" position="top">
+			<button
+				type="button"
+				onClick={toggle}
+				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+				role="switch"
+				aria-checked={!!media()}
+				aria-label="Toggle camera"
+				classList={{
+					"border-white": !!media(),
+					"border-transparent": !media(),
+				}}
+			>
+				<IconCamera />
+			</button>
+		</Tooltip>
 	);
 }
 
@@ -128,20 +133,22 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 	const media = solid(props.video.media);
 
 	return (
-		<button
-			type="button"
-			onClick={toggle}
-			class="relative border"
-			role="switch"
-			aria-checked={!!media()}
-			aria-label="Toggle screen sharing"
-			classList={{
-				"border-white": !!media(),
-				"border-transparent": !media(),
-			}}
-		>
-			<IconScreen />
-		</button>
+		<Tooltip content="Toggle screen sharing" position="top">
+			<button
+				type="button"
+				onClick={toggle}
+				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+				role="switch"
+				aria-checked={!!media()}
+				aria-label="Toggle screen sharing"
+				classList={{
+					"border-white": !!media(),
+					"border-transparent": !media(),
+				}}
+			>
+				<IconScreen />
+			</button>
+		</Tooltip>
 	);
 }
 
@@ -246,7 +253,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 		if (!m) return;
 
 		if (!props.broadcast.chat.enabled.peek()) return;
-		props.broadcast.chat.publish(m);
+		props.broadcast.chat.message.set(m);
 
 		setMessage("");
 	};
@@ -302,43 +309,46 @@ function Volume(props: { room: Room }): JSX.Element {
 	};
 
 	return (
-		<fieldset
-			class="flex flex-col-reverse"
-			aria-label="Volume controls"
-			onMouseEnter={() => setShowSlider(true)}
-			onMouseLeave={() => setShowSlider(false)}
-			onFocusIn={() => setShowSlider(true)}
-			onFocusOut={() => setShowSlider(false)}
-		>
-			<button
-				type="button"
-				onClick={toggle}
-				role="switch"
-				aria-checked={!muted()}
-				aria-label="Toggle mute"
-				classList={{ "text-red-500": muted() || suspended() }}
+		<Tooltip content="Toggle mute" position="top">
+			<fieldset
+				class="flex flex-col-reverse"
+				aria-label="Volume controls"
+				onMouseEnter={() => setShowSlider(true)}
+				onMouseLeave={() => setShowSlider(false)}
+				onFocusIn={() => setShowSlider(true)}
+				onFocusOut={() => setShowSlider(false)}
 			>
-				{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
-			</button>
-			<Show when={opacity() > 0}>
-				<input
-					type="range"
-					min="0"
-					step="0.01"
-					max="2"
-					value={muted() ? 0 : volume()}
-					onInput={(e) => setVolume(Number(e.currentTarget.value))}
-					class="cursor-pointer"
-					aria-label="Output Volume"
-					style={{
-						"writing-mode": "vertical-rl",
-						direction: "rtl",
-						"vertical-align": "middle",
-						opacity: opacity(),
-					}}
-				/>
-			</Show>
-		</fieldset>
+				<button
+					type="button"
+					onClick={toggle}
+					role="switch"
+					aria-checked={!muted()}
+					aria-label="Toggle mute"
+					class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+					classList={{ "text-red-500": muted() || suspended() }}
+				>
+					{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
+				</button>
+				<Show when={opacity() > 0}>
+					<input
+						type="range"
+						min="0"
+						step="0.01"
+						max="2"
+						value={muted() ? 0 : volume()}
+						onInput={(e) => setVolume(Number(e.currentTarget.value))}
+						class="cursor-pointer"
+						aria-label="Output Volume"
+						style={{
+							"writing-mode": "vertical-rl",
+							direction: "rtl",
+							"vertical-align": "middle",
+							opacity: opacity(),
+						}}
+					/>
+				</Show>
+			</fieldset>
+		</Tooltip>
 	);
 }
 
@@ -369,16 +379,19 @@ function Advanced(): JSX.Element {
 
 	return (
 		<>
-			<button
-				type="button"
-				onClick={toggle}
-				ref={setButton}
-				aria-label="Settings"
-				aria-expanded={showSettings()}
-				aria-haspopup="dialog"
-			>
-				<IconSettings />
-			</button>
+			<Tooltip content="Settings" position="top">
+				<button
+					type="button"
+					onClick={toggle}
+					ref={setButton}
+					aria-label="Settings"
+					aria-expanded={showSettings()}
+					aria-haspopup="dialog"
+					class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+				>
+					<IconSettings />
+				</button>
+			</Tooltip>
 
 			<Show when={showSettings()}>
 				<div ref={setModal} class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm">
@@ -393,9 +406,16 @@ function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 	const toggle = () => props.canvas.toggleFullscreen();
 
 	return (
-		<button type="button" onClick={toggle} aria-label="Toggle fullscreen">
-			<IconFullscreen />
-		</button>
+		<Tooltip content="Toggle fullscreen" position="top">
+			<button
+				type="button"
+				onClick={toggle}
+				aria-label="Toggle fullscreen"
+				class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+			>
+				<IconFullscreen />
+			</button>
+		</Tooltip>
 	);
 }
 

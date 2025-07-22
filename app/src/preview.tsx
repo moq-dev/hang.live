@@ -5,7 +5,9 @@ import solid from "@kixelated/signals/solid";
 import { For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
-import IconShare from "~icons/mdi/share-variant";
+import IconMicrophone from "~icons/mdi/microphone";
+import IconVideo from "~icons/mdi/video";
+import IconChat from "~icons/mdi/message-text";
 
 export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Element {
 	const connection = new Connection();
@@ -32,44 +34,11 @@ export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Eleme
 		setMembers(name, member ?? undefined);
 	});
 
-	const shareRoom = async () => {
-		const url = window.location.href;
-
-		if (navigator.share) {
-			try {
-				await navigator.share({
-					title: "Join my Hang room",
-					text: "Come hang out with us!",
-					url: url,
-				});
-			} catch (err) {
-				// User cancelled or error
-				console.log("Share cancelled or failed:", err);
-			}
-		} else {
-			// Fallback to clipboard
-			try {
-				await navigator.clipboard.writeText(url);
-				// Could add a toast notification here
-				console.log("Room URL copied to clipboard");
-			} catch (err) {
-				console.error("Failed to copy URL:", err);
-			}
-		}
-	};
 
 	return (
 		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
-			<div class="flex items-center justify-between mb-4">
+			<div class="mb-4">
 				<h3 class="text-xl font-semibold">Hanging Now ({Object.values(members).length})</h3>
-				<button
-					type="button"
-					onClick={shareRoom}
-					class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all"
-					title="Share room link"
-				>
-					<IconShare class="w-5 h-5" />
-				</button>
 			</div>
 
 			<Show
@@ -97,36 +66,84 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 		<Show
 			when={info()}
 			fallback={
-				<div class="flex items-center gap-3 p-3 rounded-xl bg-gray-800/30">
+				<div class="flex items-center gap-4 p-4 rounded-xl bg-gray-800/30 backdrop-blur-sm">
 					<div class="relative">
-						<div class="w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center animate-pulse">
-							<div class="w-6 h-6 bg-gray-600 rounded"></div>
+						<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center animate-pulse shadow-lg">
+							<div class="w-7 h-7 bg-gray-500 rounded-lg"></div>
 						</div>
 					</div>
 					<div class="flex-1 min-w-0">
-						<div class="text-sm text-gray-400">Loading...</div>
+						<div class="h-4 bg-gray-600 rounded animate-pulse mb-1"></div>
+						<div class="h-3 bg-gray-700 rounded animate-pulse w-2/3"></div>
 					</div>
 				</div>
 			}
 		>
 			{(info) => (
 				<div
-					class="flex items-center gap-3 p-3 rounded-xl transition-all"
+					class="group relative flex items-center gap-4 p-4 m-1 rounded-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
 					classList={{
-						"bg-green-500/10 border border-green-400/30": info().audio,
-						"bg-gray-800/50": !info().audio,
+						"bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent border border-green-400/20 shadow-lg shadow-green-500/5":
+							info().audio || info().video || info().chat,
+						"bg-gradient-to-r from-gray-800/50 to-gray-800/30 hover:from-gray-700/50 hover:to-gray-700/30":
+							!info().audio && !info().video && !info().chat,
 					}}
 				>
-					<div class="relative">
-						<div class="w-10 h-10 rounded-xl overflow-hidden bg-gray-700 flex items-center justify-center">
-							<img src={info().avatar} alt={info().name} class="w-full h-full object-cover" />
+					<div class="relative z-10">
+						<div
+							class="w-12 h-12 rounded-xl overflow-hidden bg-gray-700 transition-all duration-300 shadow-lg"
+							classList={{
+								"ring-2 ring-blue-400/50": info().video,
+								"ring-2 ring-gray-600 group-hover:ring-gray-500": !info().video,
+							}}
+						>
+							<img
+								src={info().avatar}
+								alt={info().name}
+								class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+							/>
 						</div>
-						{/* Speaking indicator */}
 						<Show when={info().audio}>
-							<div class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black animate-pulse" />
+							<div class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg">
+								<div class="w-full h-full bg-green-400 rounded-full animate-ping opacity-75"></div>
+							</div>
 						</Show>
-						<div class="flex-1 min-w-0">
-							<div class="text-sm font-medium text-white truncate">{info().name}</div>
+					</div>
+					<div class="flex-1 min-w-0 relative z-10">
+						<div class="text-base font-semibold text-white truncate group-hover:text-green-100 transition-colors mb-1">
+							{info().name}
+						</div>
+						<div class="flex items-center flex-1">
+							<div 
+								class="flex items-center gap-1 bg-green-500/20 text-green-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
+								classList={{
+									"opacity-100 scale-100 max-w-20 mr-1 px-2 py-0.5": info().audio,
+									"opacity-0 scale-75 max-w-0 mr-0 px-0 py-0 pointer-events-none": !info().audio,
+								}}
+							>
+								<IconMicrophone class="w-3 h-3" />
+								voice
+							</div>
+							<div 
+								class="flex items-center gap-1 bg-blue-500/20 text-blue-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
+								classList={{
+									"opacity-100 scale-100 max-w-20 mr-1 px-2 py-0.5": info().video,
+									"opacity-0 scale-75 max-w-0 mr-0 px-0 py-0 pointer-events-none": !info().video,
+								}}
+							>
+								<IconVideo class="w-3 h-3" />
+								video
+							</div>
+							<div 
+								class="flex items-center gap-1 bg-purple-500/20 text-purple-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
+								classList={{
+									"opacity-100 scale-100 max-w-20 px-2 py-0.5": info().chat,
+									"opacity-0 scale-75 max-w-0 px-0 py-0 pointer-events-none": !info().chat,
+								}}
+							>
+								<IconChat class="w-3 h-3" />
+								chat
+							</div>
 						</div>
 					</div>
 				</div>
