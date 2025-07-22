@@ -4,7 +4,7 @@
 
 	// Cloudflare Pages configuration
 	"name": "app",
-	"compatibility_date": "2025-07-11",
+	"compatibility_date": "2025-07-09",
 	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 
 	// Static asset configuration for Pages
