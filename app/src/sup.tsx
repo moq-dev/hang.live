@@ -122,19 +122,21 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 				{/* Two Column Layout */}
 				<div class="flex flex-wrap gap-6 mb-8 items-start">
 					{/* Left Column: Avatar/Name Preview */}
-					<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6">
-						<Show
-							when={props.api.authenticated()}
-							fallback={<AnonymousPreview api={props.api} room={props.room} setInfo={setInfo} />}
-						>
-							<AuthenticatedPreview api={props.api} room={props.room} setInfo={setInfo} />
-						</Show>
+					<div class="flex-1 min-w-[300px] grow space-y-6">
+						<div class="rounded-2xl border border-gray-800 p-6">
+							<Show
+								when={props.api.authenticated()}
+								fallback={<AnonymousPreview api={props.api} room={props.room} setInfo={setInfo} />}
+							>
+								<AuthenticatedPreview api={props.api} room={props.room} setInfo={setInfo} />
+							</Show>
+						</div>
+						<MicrophoneControl />
 					</div>
 
 					{/* Right Column: Participants List */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
 						<ParticipantsList />
-						<MicrophoneControl />
 					</div>
 				</div>
 			</div>
