@@ -46,7 +46,7 @@
 		// "DISCORD_CLIENT_SECRET": <stored in .dev.vars>
 		"R2_PUBLIC_URL": "",
 		// "RELAY_SECRET": <stored in .dev.vars>
-		"RELAY_URL": "http://localhost:4443/"
+		"RELAY_URL": "http://localhost:4443/anon/"
 	},
 
 	// Staging environment overrides
@@ -79,8 +79,7 @@
 				// "DISCORD_CLIENT_SECRET": <stored in Cloudflare>
 				"R2_PUBLIC_URL": "https://r2.hang.now",
 				// "RELAY_SECRET": <stored in Cloudflare>
-				"RELAY_URL": "https://relay.quic.video/",
-				"RELAY_PREFIX": "hang.now"
+				"RELAY_URL": "https://relay.quic.video/hang-now/",
 			}
 		},
 		// Live/production environment overrides
@@ -112,8 +111,7 @@
 				// "DISCORD_CLIENT_SECRET": <stored in Cloudflare>
 				"R2_PUBLIC_URL": "https://r2.hang.live",
 				// "RELAY_SECRET": <stored in Cloudflare>
-				"RELAY_URL": "https://relay.quic.video/",
-				"RELAY_PREFIX": "hang.live"
+				"RELAY_URL": "https://relay.quic.video/hang/",
 			}
 		}
 	}
