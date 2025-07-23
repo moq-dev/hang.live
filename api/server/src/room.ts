@@ -25,7 +25,7 @@ export class Context {
 			return new URL(room, this.#env.RELAY_URL);
 		}
 
-		const token = await Token.sign(this.#key, { path: room, sub: "", pub: account });
+		const token = await Token.sign(this.#key, { root: room, sub: "", pub: account });
 		return new URL(`${room}/?jwt=${token}`, this.#env.RELAY_URL);
 	}
 }
