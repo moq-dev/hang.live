@@ -21,12 +21,13 @@ export class Context {
 
 	// Returns the URL to join the room
 	async sign(room: Name, account: Account.Id): Promise<URL> {
+		const root = `${this.#env.RELAY_PREFIX}/${room}`;
 		if (!this.#key) {
-			return new URL(room, this.#env.RELAY_URL);
+			return new URL(root, this.#env.RELAY_URL);
 		}
 
-		const token = await Token.sign(this.#key, { root: room, sub: "", pub: account });
-		return new URL(`${room}/?jwt=${token}`, this.#env.RELAY_URL);
+		const token = await Token.sign(this.#key, { root, sub: "", pub: account });
+		return new URL(`${root}/?jwt=${token}`, this.#env.RELAY_URL);
 	}
 }
 
