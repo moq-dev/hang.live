@@ -68,12 +68,12 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 				<div class="flex items-center gap-4 p-4 rounded-xl bg-gray-800/30 backdrop-blur-sm">
 					<div class="relative">
 						<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center animate-pulse shadow-lg">
-							<div class="w-7 h-7 bg-gray-500 rounded-lg"></div>
+							<div class="w-7 h-7 bg-gray-500 rounded-lg" />
 						</div>
 					</div>
 					<div class="flex-1 min-w-0">
-						<div class="h-4 bg-gray-600 rounded animate-pulse mb-1"></div>
-						<div class="h-3 bg-gray-700 rounded animate-pulse w-2/3"></div>
+						<div class="h-4 bg-gray-600 rounded animate-pulse mb-1" />
+						<div class="h-3 bg-gray-700 rounded animate-pulse w-2/3" />
 					</div>
 				</div>
 			}
@@ -104,7 +104,7 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 						</div>
 						<Show when={info().audio}>
 							<div class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg">
-								<div class="w-full h-full bg-green-400 rounded-full animate-ping opacity-75"></div>
+								<div class="w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
 							</div>
 						</Show>
 					</div>
