@@ -3,7 +3,7 @@ import { Layout } from "./layout";
 
 export function About(): JSX.Element {
 	return (
-		<Layout full={false}>
+		<Layout>
 			<p>
 				I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
 			</p>

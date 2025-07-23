@@ -5,9 +5,9 @@ import solid from "@kixelated/signals/solid";
 import { For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
+import IconChat from "~icons/mdi/message-text";
 import IconMicrophone from "~icons/mdi/microphone";
 import IconVideo from "~icons/mdi/video";
-import IconChat from "~icons/mdi/message-text";
 
 export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Element {
 	const connection = new Connection();
@@ -33,7 +33,6 @@ export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Eleme
 	room.onMember((name, member) => {
 		setMembers(name, member ?? undefined);
 	});
-
 
 	return (
 		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
@@ -114,7 +113,7 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 							{info().name}
 						</div>
 						<div class="flex items-center flex-1">
-							<div 
+							<div
 								class="flex items-center gap-1 bg-green-500/20 text-green-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
 								classList={{
 									"opacity-100 scale-100 max-w-20 mr-1 px-2 py-0.5": info().audio,
@@ -124,7 +123,7 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 								<IconMicrophone class="w-3 h-3" />
 								voice
 							</div>
-							<div 
+							<div
 								class="flex items-center gap-1 bg-blue-500/20 text-blue-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
 								classList={{
 									"opacity-100 scale-100 max-w-20 mr-1 px-2 py-0.5": info().video,
@@ -134,7 +133,7 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 								<IconVideo class="w-3 h-3" />
 								video
 							</div>
-							<div 
+							<div
 								class="flex items-center gap-1 bg-purple-500/20 text-purple-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
 								classList={{
 									"opacity-100 scale-100 max-w-20 px-2 py-0.5": info().chat,

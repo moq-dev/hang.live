@@ -6,8 +6,6 @@ import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
-import IconMicrophone from "~icons/mdi/microphone";
-import IconMicrophoneOff from "~icons/mdi/microphone-off";
 import IconVideo from "~icons/mdi/video";
 import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";

@@ -43,10 +43,6 @@ export function Tooltip(props: {
 				break;
 		}
 
-		// Store original positions for arrow calculation
-		const originalLeft = left;
-		const originalTop = top;
-
 		// Keep tooltip within viewport bounds
 		left = Math.max(8, Math.min(left, viewport.width - tooltipRect.width - 8));
 		top = Math.max(8, Math.min(top, viewport.height - tooltipRect.height - 8));
@@ -66,7 +62,7 @@ export function Tooltip(props: {
 			const clampedOffset = Math.max(8, Math.min(arrowOffset, tooltipRect.width - 8));
 			arrowLeft = `${clampedOffset}px`;
 		} else {
-			// For vertical arrows, calculate top offset  
+			// For vertical arrows, calculate top offset
 			const triggerCenter = triggerRect.top + triggerRect.height / 2;
 			const tooltipTop = top;
 			const arrowOffset = triggerCenter - tooltipTop;
@@ -78,8 +74,11 @@ export function Tooltip(props: {
 	};
 
 	return (
+		// biome-ignore lint/a11y/useSemanticElements: Tooltip wrapper needs to work with arbitrary children
 		<div
 			class="relative inline-flex"
+			role="button"
+			tabIndex={0}
 			ref={setTriggerEl}
 			onMouseEnter={() => {
 				setShow(true);
@@ -106,15 +105,22 @@ export function Tooltip(props: {
 						<div
 							class="absolute w-2 h-2 bg-gray-900 border-gray-700 transform rotate-45"
 							style={{
-								left: props.position === "top" || props.position === "bottom" 
-									? arrowPosition().left 
-									: props.position === "left" ? "100%" : "-4px",
-								top: props.position === "left" || props.position === "right" 
-									? arrowPosition().top 
-									: props.position === "top" ? "100%" : "-4px",
-								transform: props.position === "top" || props.position === "bottom"
-									? "translateX(-50%)"
-									: "translateY(-50%)"
+								left:
+									props.position === "top" || props.position === "bottom"
+										? arrowPosition().left
+										: props.position === "left"
+											? "100%"
+											: "-4px",
+								top:
+									props.position === "left" || props.position === "right"
+										? arrowPosition().top
+										: props.position === "top"
+											? "100%"
+											: "-4px",
+								transform:
+									props.position === "top" || props.position === "bottom"
+										? "translateX(-50%)"
+										: "translateY(-50%)",
 							}}
 							classList={{
 								// Tooltip above trigger: arrow points down from tooltip bottom
@@ -124,7 +130,7 @@ export function Tooltip(props: {
 								// Tooltip left of trigger: arrow points right from tooltip right side
 								"border-b border-r": props.position === "left",
 								// Tooltip right of trigger: arrow points left from tooltip left side
-								"border-l border-t": props.position === "right",
+								"border-t border-l": props.position === "right",
 							}}
 						/>
 					</div>

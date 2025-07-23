@@ -79,7 +79,7 @@
 				// "DISCORD_CLIENT_SECRET": <stored in Cloudflare>
 				"R2_PUBLIC_URL": "https://r2.hang.now",
 				// "RELAY_SECRET": <stored in Cloudflare>
-				"RELAY_URL": "https://relay.quic.video/hang-now/",
+				"RELAY_URL": "https://relay.quic.video/hang-now/"
 			}
 		},
 		// Live/production environment overrides
@@ -111,7 +111,7 @@
 				// "DISCORD_CLIENT_SECRET": <stored in Cloudflare>
 				"R2_PUBLIC_URL": "https://r2.hang.live",
 				// "RELAY_SECRET": <stored in Cloudflare>
-				"RELAY_URL": "https://relay.quic.video/hang/",
+				"RELAY_URL": "https://relay.quic.video/hang/"
 			}
 		}
 	}
