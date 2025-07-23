@@ -46,7 +46,8 @@
 		// "DISCORD_CLIENT_SECRET": <stored in .dev.vars>
 		"R2_PUBLIC_URL": "",
 		// "RELAY_SECRET": <stored in .dev.vars>
-		"RELAY_URL": "http://localhost:4443/hang-dev/"
+		"RELAY_URL": "http://localhost:4443",
+		"RELAY_PREFIX": "dev"
 	},
 
 	// Staging environment overrides
@@ -80,7 +81,8 @@
 				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env staging
 				"R2_PUBLIC_URL": "https://public.hang.now",
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
-				"RELAY_URL": "https://relay.quic.video/hang-now/"
+				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_PREFIX": "staging"
 			}
 		},
 		// Live/production environment overrides
@@ -113,7 +115,8 @@
 				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env live
 				"R2_PUBLIC_URL": "https://public.hang.live",
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
-				"RELAY_URL": "https://relay.quic.video/hang/"
+				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_PREFIX": "live"
 			}
 		}
 	}
