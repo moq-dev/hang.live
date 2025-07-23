@@ -1,7 +1,7 @@
 {
 	// Cloudflare Wrangler configuration for the API Worker
 	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "api",
+	"name": "api-hang-dev",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-07-09",
 	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
@@ -22,8 +22,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "api-db-dev",
-			"database_id": "api-db-dev"
+			"database_name": "db-api-hang-dev",
+			"database_id": "db-api-hang-dev"
 		}
 	],
 
@@ -52,6 +52,7 @@
 	// Staging environment overrides
 	"env": {
 		"staging": {
+			"name": "api-hang-now",
 			"route": {
 				"pattern": "api.hang.now",
 				"custom_domain": true
@@ -59,31 +60,32 @@
 			"d1_databases": [
 				{
 					"binding": "DB",
-					"database_name": "api-db-staging",
-					"database_id": "b1e6f098-3681-4396-a591-45c7c6a3e25d"
+					"database_name": "db-hang-now",
+					"database_id": "6b0a56ab-3475-463d-8025-2e0e42779895"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "PUBLIC",
-					"bucket_name": "api-public-staging"
+					"bucket_name": "public-hang-now"
 				}
 			],
 			"vars": {
 				"API_URL": "https://api.hang.now",
 				"APP_URL": "https://hang.now",
-				// "AUTH_SECRET": <stored in Cloudflare>
+				// "AUTH_SECRET": npx wrangler secret put AUTH_SECRET --env staging
 				"GOOGLE_CLIENT_ID": "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com",
-				// "GOOGLE_CLIENT_SECRET": <stored in Cloudflare>
+				// "GOOGLE_CLIENT_SECRET": npx wrangler secret put GOOGLE_CLIENT_SECRET --env staging
 				"DISCORD_CLIENT_ID": "1392629623812259940",
-				// "DISCORD_CLIENT_SECRET": <stored in Cloudflare>
-				"R2_PUBLIC_URL": "https://r2.hang.now",
-				// "RELAY_SECRET": <stored in Cloudflare>
+				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env staging
+				"R2_PUBLIC_URL": "https://public.hang.now",
+				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
 				"RELAY_URL": "https://relay.quic.video/hang-now/"
 			}
 		},
 		// Live/production environment overrides
 		"live": {
+			"name": "api-hang-live",
 			"route": {
 				"pattern": "api.hang.live",
 				"custom_domain": true
@@ -91,26 +93,26 @@
 			"d1_databases": [
 				{
 					"binding": "DB",
-					"database_name": "api-db-live",
-					"database_id": "065d2e39-134d-464b-a030-27a23bf2bea0"
+					"database_name": "db-hang-live",
+					"database_id": "2ce27c69-eae1-4633-9b8b-7eb55dc6ebb8"
 				}
 			],
 			"r2_buckets": [
 				{
 					"binding": "PUBLIC",
-					"bucket_name": "api-public-live"
+					"bucket_name": "public-hang-live"
 				}
 			],
 			"vars": {
 				"API_URL": "https://api.hang.live",
 				"APP_URL": "https://hang.live",
-				// "AUTH_SECRET": <stored in Cloudflare>
+				// "AUTH_SECRET": npx wrangler secret put AUTH_SECRET --env live
 				"GOOGLE_CLIENT_ID": "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com",
-				// "GOOGLE_CLIENT_SECRET": <stored in Cloudflare>
+				// "GOOGLE_CLIENT_SECRET": npx wrangler secret put GOOGLE_CLIENT_SECRET --env live
 				"DISCORD_CLIENT_ID": "1389725440020840548",
-				// "DISCORD_CLIENT_SECRET": <stored in Cloudflare>
-				"R2_PUBLIC_URL": "https://r2.hang.live",
-				// "RELAY_SECRET": <stored in Cloudflare>
+				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env live
+				"R2_PUBLIC_URL": "https://public.hang.live",
+				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
 				"RELAY_URL": "https://relay.quic.video/hang/"
 			}
 		}

@@ -3,13 +3,13 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 
 	// Cloudflare Pages configuration
-	"name": "app",
+	"name": "hang-dev",
 	"compatibility_date": "2025-07-09",
 	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 
 	// Static asset configuration for Pages
 	"assets": {
-		"directory": "./public",
+		"directory": "./dist",
 		"not_found_handling": "single-page-application"
 	},
 
@@ -21,6 +21,7 @@
 	// Staging environment configuration
 	"env": {
 		"staging": {
+			"name": "hang-now",
 			"route": {
 				"pattern": "hang.now",
 				"custom_domain": true
@@ -29,6 +30,7 @@
 
 		// Production environment configuration
 		"live": {
+			"name": "hang-live",
 			"route": {
 				"pattern": "hang.live",
 				"custom_domain": true
