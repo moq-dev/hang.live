@@ -157,7 +157,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.effect((effect) => {
 			const user = effect.get(this.source.user);
 			if (!user?.avatar) return; // don't unset
-			this.avatar.src = user.avatar;
+
+			// TODO only set the avatar if it successfully loads
+			const newAvatar = new Image();
+			newAvatar.src = user.avatar;
+
+			const load = () => {
+				this.avatar = newAvatar;
+			};
+			newAvatar.addEventListener("load", load);
+			effect.cleanup(() => newAvatar.removeEventListener("load", load));
 		});
 
 		// The display name is the user's name or the name if they don't have a name.
