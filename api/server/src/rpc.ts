@@ -9,7 +9,7 @@ import Context from "./context";
 
 export function app() {
 	return new Hono<{
-		Bindings: Context;
+		Bindings: Env;
 	}>()
 		.use(withContext)
 		.use(withCors);
@@ -36,19 +36,27 @@ export const withContext = createMiddleware<{
 	return await next();
 });
 
-export const withCors = cors({
-	origin: (origin) => {
-		// Allow localhost and tauri.localhost for development
-		// TODO Use env.FRONTEND_URL
-		if (origin?.includes("localhost") || origin?.includes("tauri.localhost")) {
-			return origin;
-		}
-		// In production, you'd want to check against your actual frontend URL
-		return origin || "";
-	},
-	allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-	allowHeaders: ["Content-Type", "Authorization"],
-	credentials: true,
+export const withCors = createMiddleware<{
+	Bindings: Env;
+}>(async (c, next) => {
+	const corsMiddleware = cors({
+		origin: (origin) => {
+			// Allow localhost and tauri.localhost for development
+			if (origin?.includes("localhost") || origin?.includes("tauri.localhost")) {
+				return origin;
+			}
+			// Allow the configured frontend URL
+			if (origin === c.env.APP_URL) {
+				return origin;
+			}
+			return null;
+		},
+		allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+		allowHeaders: ["Content-Type", "Authorization"],
+		credentials: true,
+	});
+	
+	return corsMiddleware(c, next);
 });
 
 export function withForm<T extends z.ZodMiniType>(schema: T) {

@@ -8,7 +8,7 @@ declare namespace Cloudflare {
 		GOOGLE_CLIENT_ID: "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com" | "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com" | "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com";
 		DISCORD_CLIENT_ID: "1392633766010294494" | "1392629623812259940" | "1389725440020840548";
 		R2_PUBLIC_URL: "" | "https://public.hang.now" | "https://public.hang.live";
-		RELAY_URL: "http://localhost:4443/anon/" | "https://relay.quic.video/hang-now/" | "https://relay.quic.video/hang/";
+		RELAY_URL: "http://localhost:4443/hang-dev/" | "https://relay.quic.video/hang-now/" | "https://relay.quic.video/hang/";
 		AUTH_SECRET: string;
 		GOOGLE_CLIENT_SECRET: string;
 		DISCORD_CLIENT_SECRET: string;
