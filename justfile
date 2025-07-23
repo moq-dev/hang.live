@@ -59,9 +59,9 @@ build:
 prod: build
 	pnpm -r run prod
 
-# Deploy the site to Cloudflare Pages
-deploy: build
-	pnpm wrangler pages deploy dist
+deploy env="staging":
+	just --justfile api/server/justfile deploy "{{env}}"
+	just --justfile app/justfile deploy "{{env}}"
 
 dev:
 	pnpm -r i
