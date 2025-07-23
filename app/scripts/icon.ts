@@ -1,3 +1,5 @@
+import fs from "node:fs";
+
 const LINE_SPACING = 56;
 const LINE_WIDTH = 12;
 const SEGMENTS = 16;
@@ -89,18 +91,14 @@ function generateSvg(variant?: "full" | "discord") {
 	</svg>`;
 }
 
-import fs from "node:fs";
+const small = generateSvg();
+fs.writeFileSync("public/image/icon.svg", small);
+console.log("SVG written to public/image/icon.svg");
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-	const small = generateSvg();
-	fs.writeFileSync("public/image/icon.svg", small);
-	console.log("SVG written to public/image/icon.svg");
+const large = generateSvg("full");
+fs.writeFileSync("public/image/icon-full.svg", large);
+console.log("SVG written to public/image/icon-full.svg");
 
-	const large = generateSvg("full");
-	fs.writeFileSync("public/image/icon-full.svg", large);
-	console.log("SVG written to public/image/icon-full.svg");
-
-	const discord = generateSvg("discord");
-	fs.writeFileSync("public/image/icon-discord.svg", discord);
-	console.log("SVG written to public/image/icon-discord.svg");
-}
+const discord = generateSvg("discord");
+fs.writeFileSync("public/image/icon-discord.svg", discord);
+console.log("SVG written to public/image/icon-discord.svg");

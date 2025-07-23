@@ -22,8 +22,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "db-api-hang-dev",
-			"database_id": "db-api-hang-dev"
+			"database_name": "db-hang-dev",
+			"database_id": "db-hang-dev"
 		}
 	],
 
@@ -31,7 +31,7 @@
 	"r2_buckets": [
 		{
 			"binding": "PUBLIC",
-			"bucket_name": "api-public-dev"
+			"bucket_name": "public-hang-dev"
 		}
 	],
 
@@ -46,7 +46,7 @@
 		// "DISCORD_CLIENT_SECRET": <stored in .dev.vars>
 		"R2_PUBLIC_URL": "",
 		// "RELAY_SECRET": <stored in .dev.vars>
-		"RELAY_URL": "http://localhost:4443/anon/"
+		"RELAY_URL": "http://localhost:4443/hang-dev/"
 	},
 
 	// Staging environment overrides

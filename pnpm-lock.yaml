@@ -20,9 +20,6 @@ importers:
       '@eslint/js':
         specifier: ^9.30.1
         version: 9.30.1
-      '@types/node':
-        specifier: ^24.0.15
-        version: 24.0.15
       concurrently:
         specifier: ^9.2.0
         version: 9.2.0
@@ -45,9 +42,6 @@ importers:
         specifier: ^4.7.1
         version: 4.8.4
     devDependencies:
-      '@types/node':
-        specifier: ^22.0.0
-        version: 22.16.5
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -85,9 +79,6 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
     devDependencies:
-      '@types/node':
-        specifier: ^24.0.13
-        version: 24.0.13
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -120,7 +111,7 @@ importers:
         version: 0.15.3(solid-js@1.9.7)
       '@tailwindcss/vite':
         specifier: ^4.1.11
-        version: 4.1.11(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
+        version: 4.1.11(vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
       '@tauri-apps/api':
         specifier: ^2.6.0
         version: 2.6.0
@@ -158,9 +149,6 @@ importers:
       '@tauri-apps/cli':
         specifier: ^2.6.2
         version: 2.6.2
-      '@types/node':
-        specifier: ^24.0.13
-        version: 24.0.13
       '@typescript/lib-dom':
         specifier: npm:@types/web@^0.0.234
         version: '@types/web@0.0.234'
@@ -181,10 +169,10 @@ importers:
         version: 22.1.0
       vite:
         specifier: ^6.3.5
-        version: 6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
+        version: 6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
       vite-plugin-solid:
         specifier: ^2.11.7
-        version: 2.11.7(solid-js@1.9.7)(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
+        version: 2.11.7(solid-js@1.9.7)(vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
       vite-plugin-wrangler:
         specifier: ^0.1.1
         version: 0.1.1
@@ -1238,12 +1226,6 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
-
-  '@types/node@22.16.5':
-    resolution: {integrity: sha512-bJFoMATwIGaxxx8VJPeM8TonI8t579oRvgAuT8zFugJsJZgzqv0Fu8Mhp68iecjzG7cnN3mO2dJQ5uUM2EFrgQ==}
-
-  '@types/node@24.0.13':
-    resolution: {integrity: sha512-Qm9OYVOFHFYg3wJoTSrz80hoec5Lia/dPp84do3X7dZvLikQvM1YpmvTBEdIr/e+U8HTkFjLHLnl78K/qjf+jQ==}
 
   '@types/node@24.0.15':
     resolution: {integrity: sha512-oaeTSbCef7U/z7rDeJA138xpG3NuKc64/rZ2qmUFkFJmnMsAPaluIifqyWd8hSSMxyP9oie3dLAqYPblag9KgA==}
@@ -2371,9 +2353,6 @@ packages:
   ufo@1.6.1:
     resolution: {integrity: sha512-9a4/uxlTWJ4+a5i0ooc1rU7C7YOw3wT+UGqdeNNHWnOF9qcMBgLRS+4IYUqbczewFx4mLEig6gawh7X6mFlEkA==}
 
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
-
   undici-types@7.8.0:
     resolution: {integrity: sha512-9UJ2xGDvQ43tYyVMpuHlsgApydB8ZKfVYTsLDhXkFL/6gfkp+U8xTGdh8pMJv1SpZna0zxG1DwsKZsreLbXBxw==}
 
@@ -3274,12 +3253,12 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.11
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.11
 
-  '@tailwindcss/vite@4.1.11(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))':
+  '@tailwindcss/vite@4.1.11(vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))':
     dependencies:
       '@tailwindcss/node': 4.1.11
       '@tailwindcss/oxide': 4.1.11
       tailwindcss: 4.1.11
-      vite: 6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
+      vite: 6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
 
   '@tauri-apps/api@2.6.0': {}
 
@@ -3368,17 +3347,10 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@22.16.5':
-    dependencies:
-      undici-types: 6.21.0
-
-  '@types/node@24.0.13':
-    dependencies:
-      undici-types: 7.8.0
-
   '@types/node@24.0.15':
     dependencies:
       undici-types: 7.8.0
+    optional: true
 
   '@types/trusted-types@2.0.7':
     optional: true
@@ -4507,9 +4479,8 @@ snapshots:
 
   ufo@1.6.1: {}
 
-  undici-types@6.21.0: {}
-
-  undici-types@7.8.0: {}
+  undici-types@7.8.0:
+    optional: true
 
   undici@5.29.0:
     dependencies:
@@ -4556,7 +4527,7 @@ snapshots:
 
   validate-html-nesting@1.2.3: {}
 
-  vite-plugin-solid@2.11.7(solid-js@1.9.7)(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)):
+  vite-plugin-solid@2.11.7(solid-js@1.9.7)(vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)):
     dependencies:
       '@babel/core': 7.28.0
       '@types/babel__core': 7.20.5
@@ -4564,14 +4535,14 @@ snapshots:
       merge-anything: 5.1.7
       solid-js: 1.9.7
       solid-refresh: 0.6.3(solid-js@1.9.7)
-      vite: 6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
-      vitefu: 1.1.1(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
+      vite: 6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
+      vitefu: 1.1.1(vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3))
     transitivePeerDependencies:
       - supports-color
 
   vite-plugin-wrangler@0.1.1: {}
 
-  vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3):
+  vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3):
     dependencies:
       esbuild: 0.25.6
       fdir: 6.4.6(picomatch@4.0.2)
@@ -4580,15 +4551,15 @@ snapshots:
       rollup: 4.44.2
       tinyglobby: 0.2.14
     optionalDependencies:
-      '@types/node': 24.0.13
+      '@types/node': 24.0.15
       fsevents: 2.3.3
       jiti: 2.4.2
       lightningcss: 1.30.1
       tsx: 4.20.3
 
-  vitefu@1.1.1(vite@6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)):
+  vitefu@1.1.1(vite@6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)):
     optionalDependencies:
-      vite: 6.3.5(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
+      vite: 6.3.5(@types/node@24.0.15)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
 
   webpack-virtual-modules@0.6.2: {}
 

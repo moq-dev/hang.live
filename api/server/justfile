@@ -9,7 +9,7 @@ default:
 dev:
 	pnpm i
 	pnpm wrangler types
-	pnpm wrangler d1 migrations apply api-db-dev --local
+	pnpm wrangler d1 migrations apply DB --local
 	pnpm wrangler dev
 
 build:
