@@ -26,7 +26,7 @@ export function Hang(): JSX.Element {
 			<Router>
 				<Route path="/" component={About} />
 				<Route path="/account" component={() => <Account api={api} />} />
-				<Route path="/at/:name" component={() => <Sup canvas={canvas} api={api} room={useParams().name} />} />
+				<Route path="/demo/:name" component={() => <Sup canvas={canvas} api={api} room={useParams().name} />} />
 				<Route path="*" component={NotFound} />
 			</Router>
 		</>
