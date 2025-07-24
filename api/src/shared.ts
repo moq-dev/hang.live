@@ -1,6 +1,4 @@
-// Some functions and constants also exported to the client.
-
-import { z } from "zod/mini";
+import { z } from "zod";
 
 // This could be an RPC endpoint in the future.
 export const oauthProviders = ["google", "discord"] as const;

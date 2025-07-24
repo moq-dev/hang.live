@@ -1,53 +1,18 @@
 {
+	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"lib": ["esnext", "dom"],
-		"target": "esnext",
-		"module": "esnext",
-
-		"useDefineForClassFields": true,
-		"sourceMap": true,
-
 		"outDir": "./dist",
-
-		/* Bundler mode */
-		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
-		"resolveJsonModule": true,
-		"isolatedModules": true,
 		"noEmit": true,
-
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
-
-		// https://www.typescriptlang.org/tsconfig/#Type_Checking_6248
-		"allowUnreachableCode": false,
-		"allowUnusedLabels": false,
-		"alwaysStrict": true,
-		"exactOptionalPropertyTypes": false, // makes ? less usable
-		"noFallthroughCasesInSwitch": true,
-		"noImplicitAny": true,
-		"noImplicitOverride": true,
-		"noImplicitReturns": true,
-		"noImplicitThis": true,
-		"noPropertyAccessFromIndexSignature": false, // Allows . notation
-		"noUncheckedIndexedAccess": false, // Allows [0] access to arrays
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"strict": true,
-		"strictBindCallApply": true,
-		"strictBuiltinIteratorReturn": true,
-		"strictFunctionTypes": true,
-		"strictNullChecks": true,
-		"strictPropertyInitialization": true,
-		"useUnknownInCatchVariables": true,
-
-		// Disable enums and weird Typescript features.
+		"useDefineForClassFields": true,
+		"exactOptionalPropertyTypes": false,
+		"noPropertyAccessFromIndexSignature": false,
+		"noUncheckedIndexedAccess": false,
 		"erasableSyntaxOnly": true,
-
-		// Avoids a bug with the dom-mediacapture-transform types.
-		"skipLibCheck": true,
-
-		"types": ["unplugin-icons/types/solid", "vite/client", "../api/server/worker-configuration.d.ts"]
+		"types": ["unplugin-icons/types/solid", "vite/client", "../api/worker-configuration.d.ts"]
 	},
 	"include": ["src"]
 }

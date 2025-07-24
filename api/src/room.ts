@@ -1,6 +1,6 @@
 import * as Token from "@kixelated/moq-token";
 import * as Uuid from "uuid";
-import { z } from "zod/mini";
+import { z } from "zod";
 import * as Account from "./account";
 import * as Auth from "./auth";
 import * as rpc from "./rpc";

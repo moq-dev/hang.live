@@ -33,20 +33,7 @@ importers:
         specifier: ^8.36.0
         version: 8.36.0(eslint@9.30.1(jiti@2.4.2))(typescript@5.8.3)
 
-  api/client:
-    dependencies:
-      '@hang/api-server':
-        specifier: workspace:*
-        version: link:../server
-      hono:
-        specifier: ^4.7.1
-        version: 4.8.4
-    devDependencies:
-      typescript:
-        specifier: ^5.8.3
-        version: 5.8.3
-
-  api/server:
+  api:
     dependencies:
       '@hono/trpc-server':
         specifier: ^0.4.0
@@ -55,8 +42,8 @@ importers:
         specifier: ^0.7.1
         version: 0.7.1(hono@4.8.4)(zod@4.0.5)
       '@kixelated/moq-token':
-        specifier: link:../../moq/js/moq-token
-        version: link:../../moq/js/moq-token
+        specifier: link:../moq/js/moq-token
+        version: link:../moq/js/moq-token
       '@trpc/server':
         specifier: ^11.4.3
         version: 11.4.3(typescript@5.8.3)
@@ -94,9 +81,9 @@ importers:
       '@fontsource-variable/montserrat':
         specifier: ^5.2.6
         version: 5.2.6
-      '@hang/api-client':
+      '@hang/api':
         specifier: workspace:*
-        version: link:../api/client
+        version: link:../api
       '@kixelated/hang':
         specifier: link:../moq/js/hang
         version: link:../moq/js/hang
@@ -140,8 +127,8 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.0.5
+        version: 4.0.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.1.1
@@ -2556,9 +2543,6 @@ packages:
   zod@3.22.3:
     resolution: {integrity: sha512-EjIevzuJRiRPbVH4mGc8nApb/lVLKVpmUhAaR5R5doKGfAnGJ6Gr3CViAVjP+4FWSxCsybeWQdcgCtbX+7oZug==}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.0.5:
     resolution: {integrity: sha512-/5UuuRPStvHXu7RS+gmvRf4NXrNxpSllGwDnCBcJZtQsKrviYXm54yDGV2KYNLT5kq0lHGcl7lqWJLgSaG+tgA==}
 
@@ -4648,7 +4632,5 @@ snapshots:
       youch-core: 0.3.3
 
   zod@3.22.3: {}
-
-  zod@3.25.76: {}
 
   zod@4.0.5: {}

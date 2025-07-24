@@ -1,17 +1,15 @@
 {
-	"name": "@hang/api-server",
+	"name": "@hang/api",
 	"version": "1.0.0",
 	"description": "TypeScript backend server for Hang using tRPC, Drizzle, and Cloudflare Workers",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./client": "./src/client.ts",
-		"./oauth": "./src/oauth.ts",
-		"./avatar": "./src/avatar.ts"
+		"./client": "./src/client/index.ts"
 	},
 	"scripts": {
 		"dev": "wrangler dev",
-		"check": "tsc --noEmit",
+		"check": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project src/client/tsconfig.json",
 		"build": "tsc"
 	},
 	"dependencies": {
@@ -30,9 +28,6 @@
 		"@types/uuid": "^10.0.0",
 		"typescript": "^5.8.3",
 		"wrangler": "^4.24.3"
-	},
-	"engines": {
-		"node": ">=18"
 	},
 	"packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }

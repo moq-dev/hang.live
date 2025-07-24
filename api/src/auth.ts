@@ -1,6 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import * as JWT from "jose";
-import { z } from "zod/mini";
+import { z } from "zod";
 import { Account } from ".";
 import RootContext from "./context";
 

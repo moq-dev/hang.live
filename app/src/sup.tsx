@@ -1,4 +1,4 @@
-import * as Api from "@hang/api-client";
+import * as Api from "@hang/api/client";
 import { createEffect, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";

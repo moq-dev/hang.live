@@ -1,8 +1,7 @@
 packages:
   - .
   - app
-  - api/client
-  - api/server
+  - api
 
 onlyBuiltDependencies:
   - '@biomejs/biome'

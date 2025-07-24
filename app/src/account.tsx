@@ -1,4 +1,4 @@
-import * as Api from "@hang/api-client";
+import * as Api from "@hang/api/client";
 import { createEffect, createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconArrowLeft from "~icons/mdi/arrow-left";
@@ -159,52 +159,22 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 		setMessage(undefined);
 
 		try {
-			// Handle avatar upload if we have a file
-			const file = avatarFile();
-			if (file) {
-				const result = await props.api.routes.avatar.$put({
-					form: {
-						file,
-					},
-				});
-				if (!result.ok) {
-					setMessage({ type: "error", text: result.statusText });
-					return;
-				}
-				const data = await result.json();
+			// Make single request to the unified endpoint
+			const response = await props.api.routes.account.info.$put({
+				form: {
+					name: name(),
+					avatarFile: avatarChanged() ? avatarFile() : undefined,
+					avatarUrl: avatarChanged() ? avatar() : undefined,
+				},
+			});
 
-				setAvatar(data.url);
-				setAvatarFile(undefined);
+			if (!response.ok) {
+				throw new Error(response.statusText);
 			}
 
-			// Handle regular updates (name and/or URL-based avatar)
-			// Don't send avatar if we just uploaded a file (it's already handled by the upload endpoint)
-			const update: Api.Account.Update = {
-				avatar: avatarChanged() && !file ? avatar() : undefined,
-				name: nameChanged() ? name() : undefined,
-			};
-			
-			// Skip account update if there's nothing to update
-			if (!update.avatar && !update.name) {
-				const info = await props.api.routes.account.info.$get();
-				if (info.ok) {
-					const accountInfo = await info.json();
-					setInfo(accountInfo);
-					setAvatar(accountInfo.avatar);
-				}
-			} else {
-				const response = await props.api.routes.account.info.$put({ json: update });
-				if (response.ok) {
-					const info = await response.json();
-					setInfo(info);
-					setAvatar(info.avatar); // Update to the server's avatar URL
-				} else {
-					setMessage({ type: "error", text: response.statusText });
-					return;
-				}
-			}
-			
-			// Clear file and show success message for both paths
+			const info = await response.json();
+			setInfo(info);
+			setAvatar(info.avatar);
 			setAvatarFile(undefined);
 			setMessage({ type: "success", text: "Changes saved" });
 		} catch (e) {

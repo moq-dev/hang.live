@@ -63,14 +63,14 @@ prod: build
 	pnpm -r run prod
 
 deploy env="staging":
-	just --justfile api/server/justfile deploy "{{env}}"
+	just --justfile api/justfile deploy "{{env}}"
 	just --justfile app/justfile deploy "{{env}}"
 
 dev:
 	pnpm -r i
 
 	pnpm concurrently --kill-others --names api,app,native,relay --prefix-colors auto \
-		"just --justfile api/server/justfile dev" \
+		"just --justfile api/justfile dev" \
 		"just --justfile app/justfile dev" \
 		"just --justfile native/justfile dev" \
 		"just --justfile moq/justfile relay"
