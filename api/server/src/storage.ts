@@ -5,24 +5,60 @@ export class Context {
 
 	constructor(env: Env) {
 		this.#bucket = env.PUBLIC;
+		console.log("[Storage] Initialized R2 storage with PUBLIC bucket binding");
+		console.log("[Storage] R2_PUBLIC_URL:", env.R2_PUBLIC_URL);
+		console.log("[Storage] R2 bucket object type:", typeof this.#bucket);
+		console.log("[Storage] R2 bucket available:", !!this.#bucket);
 	}
 
 	async upload(folder: string, file: Uint8Array, extension: string): Promise<string> {
 		const key = `${uuidv4()}.${extension}`;
-		await this.#bucket.put(`${folder}/${key}`, file);
-		return key;
+		const fullPath = `${folder}/${key}`;
+		console.log("[Storage] Uploading to R2:", {
+			fullPath,
+			bucketBinding: "PUBLIC",
+			fileSize: file.length,
+		});
+		
+		try {
+			await this.#bucket.put(fullPath, file);
+			console.log("[Storage] R2 upload successful:", fullPath);
+			return key;
+		} catch (error) {
+			console.error("[Storage] R2 upload error:", error);
+			throw error;
+		}
 	}
 
 	async get(folder: string, key: string): Promise<ArrayBuffer | null> {
-		const object = await this.#bucket.get(`${folder}/${key}`);
-		if (!object) {
-			return null;
+		const fullPath = `${folder}/${key}`;
+		console.log("[Storage] Getting from R2:", fullPath);
+		
+		try {
+			const object = await this.#bucket.get(fullPath);
+			if (!object) {
+				console.log("[Storage] Object not found in R2:", fullPath);
+				return null;
+			}
+			console.log("[Storage] R2 get successful:", fullPath);
+			return await object.arrayBuffer();
+		} catch (error) {
+			console.error("[Storage] R2 get error:", error);
+			throw error;
 		}
-		return await object.arrayBuffer();
 	}
 
 	async delete(folder: string, key: string): Promise<void> {
-		await this.#bucket.delete(`${folder}/${key}`);
+		const fullPath = `${folder}/${key}`;
+		console.log("[Storage] Deleting from R2:", fullPath);
+		
+		try {
+			await this.#bucket.delete(fullPath);
+			console.log("[Storage] R2 delete successful:", fullPath);
+		} catch (error) {
+			console.error("[Storage] R2 delete error:", error);
+			throw error;
+		}
 	}
 
 	extension(contentType: string): string {

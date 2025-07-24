@@ -131,6 +131,9 @@ export class Context {
 	async update(id: Id, update: Update): Promise<Info> {
 		// TODO Move this to the avatar file
 		if (update.avatar) {
+			console.log("[Account Update] Updating avatar for user:", id);
+			console.log("[Account Update] New avatar value:", update.avatar);
+			
 			const old = (
 				await this.db
 					.select({ avatar: table.avatar, avatarType: table.avatarType })
@@ -138,7 +141,11 @@ export class Context {
 					.where(eq(table.id, id))
 					.limit(1)
 			).at(0);
+			
+			console.log("[Account Update] Old avatar info:", old);
+			
 			if (old?.avatarType === "r2") {
+				console.log("[Account Update] Deleting old R2 avatar:", old.avatar);
 				await this.storage.delete("avatar", old.avatar);
 			}
 		}
@@ -152,6 +159,12 @@ export class Context {
 			})
 			.where(eq(table.id, id))
 			.returning();
+			
+		console.log("[Account Update] Database update completed with values:", {
+			name: update.name,
+			avatar: update.avatar,
+			avatarType: update.avatar ? "url" : undefined,
+		});
 
 		const res = this.#rowToInfo(updated.at(0));
 		if (!res) {

@@ -44,7 +44,7 @@
 		// "GOOGLE_CLIENT_SECRET": <stored in .dev.vars>
 		"DISCORD_CLIENT_ID": "1392633766010294494",
 		// "DISCORD_CLIENT_SECRET": <stored in .dev.vars>
-		"R2_PUBLIC_URL": "",
+		"R2_PUBLIC_URL": "http://localhost:3000/public",
 		// "RELAY_SECRET": <stored in .dev.vars>
 		"RELAY_URL": "http://localhost:4443",
 		"RELAY_PREFIX": "anon"

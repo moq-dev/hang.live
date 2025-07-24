@@ -178,21 +178,35 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 			}
 
 			// Handle regular updates (name and/or URL-based avatar)
-			// TODO don't issue if we only updated the avatar? or combine the requests.
+			// Don't send avatar if we just uploaded a file (it's already handled by the upload endpoint)
 			const update: Api.Account.Update = {
-				avatar: avatarChanged() ? avatar() : undefined,
+				avatar: avatarChanged() && !file ? avatar() : undefined,
 				name: nameChanged() ? name() : undefined,
 			};
-			const response = await props.api.routes.account.info.$put({ json: update });
-			if (response.ok) {
-				const info = await response.json();
-				setInfo(info);
-				setAvatar(info.avatar); // Update to the server's avatar URL
-				setAvatarFile(undefined); // Clear the file since it's now uploaded
-				setMessage({ type: "success", text: "Changes saved" });
+			
+			// Skip account update if there's nothing to update
+			if (!update.avatar && !update.name) {
+				const info = await props.api.routes.account.info.$get();
+				if (info.ok) {
+					const accountInfo = await info.json();
+					setInfo(accountInfo);
+					setAvatar(accountInfo.avatar);
+				}
 			} else {
-				setMessage({ type: "error", text: response.statusText });
+				const response = await props.api.routes.account.info.$put({ json: update });
+				if (response.ok) {
+					const info = await response.json();
+					setInfo(info);
+					setAvatar(info.avatar); // Update to the server's avatar URL
+				} else {
+					setMessage({ type: "error", text: response.statusText });
+					return;
+				}
 			}
+			
+			// Clear file and show success message for both paths
+			setAvatarFile(undefined);
+			setMessage({ type: "success", text: "Changes saved" });
 		} catch (e) {
 			setMessage({ type: "error", text: `Something went wrong. Try again? ${e}` });
 		} finally {
