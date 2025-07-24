@@ -10,17 +10,17 @@ default:
 check:
 	pnpm -r i
 
-	# Run the checks
+	# Make sure Typescript compiles
 	pnpm -r run check
 
 	# Lint the JS packages
 	pnpm -r exec biome check
 
-	# Make sure Typescript compiles
-	pnpm -r run check
+	# Check the Rust code
+	just --justfile native/justfile check
 
-	# Make sure the JS packages are not vulnerable
-	pnpm -r exec pnpm audit
+	# Check the moq submodule
+	cd moq && just check
 
 	# TODO: Check for unused imports (fix the false positives)
 	# pnpm -r exec knip --no-exit-code
@@ -36,8 +36,11 @@ fix:
 	# Some additional linting.
 	pnpm -r exec eslint . --fix
 
-	# Make sure the JS packages are not vulnerable
-	pnpm -r exec pnpm audit --fix
+	# Fix the Rust code
+	just --justfile native/justfile fix
+
+	# Fix the moq submodule
+	cd moq && just fix
 
 # Run any CI tests
 test:
@@ -66,6 +69,8 @@ deploy env="staging":
 dev:
 	pnpm -r i
 
-	pnpm concurrently --kill-others --names api,app --prefix-colors auto \
+	pnpm concurrently --kill-others --names api,app,native,relay --prefix-colors auto \
 		"just --justfile api/server/justfile dev" \
-		"just --justfile app/justfile dev"
+		"just --justfile app/justfile dev" \
+		"just --justfile native/justfile dev" \
+		"just --justfile moq/justfile relay"

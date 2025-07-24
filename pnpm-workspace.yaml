@@ -13,7 +13,7 @@ onlyBuiltDependencies:
   - workerd
 
 overrides:
-  '@kixelated/hang': link:../moq/js/hang
-  '@kixelated/moq': link:../moq/js/moq
-  '@kixelated/moq-token': link:../moq/js/moq-token
-  '@kixelated/signals': link:../moq/js/signals
+  '@kixelated/hang': link:./moq/js/hang
+  '@kixelated/moq': link:./moq/js/moq
+  '@kixelated/moq-token': link:./moq/js/moq-token
+  '@kixelated/signals': link:./moq/js/signals

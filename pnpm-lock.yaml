@@ -5,10 +5,10 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@kixelated/hang': link:../moq/js/hang
-  '@kixelated/moq': link:../moq/js/moq
-  '@kixelated/moq-token': link:../moq/js/moq-token
-  '@kixelated/signals': link:../moq/js/signals
+  '@kixelated/hang': link:./moq/js/hang
+  '@kixelated/moq': link:./moq/js/moq
+  '@kixelated/moq-token': link:./moq/js/moq-token
+  '@kixelated/signals': link:./moq/js/signals
 
 importers:
 
@@ -55,8 +55,8 @@ importers:
         specifier: ^0.7.1
         version: 0.7.1(hono@4.8.4)(zod@4.0.5)
       '@kixelated/moq-token':
-        specifier: link:../../../moq/js/moq-token
-        version: link:../../../moq/js/moq-token
+        specifier: link:../../moq/js/moq-token
+        version: link:../../moq/js/moq-token
       '@trpc/server':
         specifier: ^11.4.3
         version: 11.4.3(typescript@5.8.3)
@@ -98,14 +98,14 @@ importers:
         specifier: workspace:*
         version: link:../api/client
       '@kixelated/hang':
-        specifier: link:../../moq/js/hang
-        version: link:../../moq/js/hang
+        specifier: link:../moq/js/hang
+        version: link:../moq/js/hang
       '@kixelated/moq':
-        specifier: link:../../moq/js/moq
-        version: link:../../moq/js/moq
+        specifier: link:../moq/js/moq
+        version: link:../moq/js/moq
       '@kixelated/signals':
-        specifier: link:../../moq/js/signals
-        version: link:../../moq/js/signals
+        specifier: link:../moq/js/signals
+        version: link:../moq/js/signals
       '@solidjs/router':
         specifier: ^0.15.3
         version: 0.15.3(solid-js@1.9.7)

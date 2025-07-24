@@ -14,9 +14,9 @@
 	"dependencies": {
 		"@fontsource-variable/montserrat": "^5.2.6",
 		"@hang/api-client": "workspace:*",
-		"@kixelated/hang": "link:../../moq/js/hang",
-		"@kixelated/moq": "link:../../moq/js/moq",
-		"@kixelated/signals": "link:../../moq/js/signals",
+		"@kixelated/hang": "link:../moq/js/hang",
+		"@kixelated/moq": "link:../moq/js/moq",
+		"@kixelated/signals": "link:../moq/js/signals",
 		"@solidjs/router": "^0.15.3",
 		"@tailwindcss/vite": "^4.1.11",
 		"@tauri-apps/api": "^2.6.0",

@@ -1,4 +1,0 @@
-[workspace]
-name = "hang"
-members = ["app/tauri"]
-resolver = "2"

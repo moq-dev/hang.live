@@ -1,4 +1,4 @@
-import Settings from "./settings";
+import Settings from "../room/settings";
 
 const SOUNDS = {
 	amongus: "among-us.mp3",
