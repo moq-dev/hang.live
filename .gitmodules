@@ -1,0 +1,4 @@
+[submodule "moq"]
+	path = moq
+	url = https://github.com/kixelated/moq.git
+	branch = moq-preview

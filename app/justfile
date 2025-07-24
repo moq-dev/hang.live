@@ -61,5 +61,5 @@ deploy env="staging":
 dev:
 	pnpm i
 
-	# No watch because it defaults to the entire repo, including the backend.
-	pnpm tauri dev --no-watch
+	# Run the web development server
+	pnpm vite dev --open

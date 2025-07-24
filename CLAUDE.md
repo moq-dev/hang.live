@@ -4,11 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Hang is a real-time communication platform built with:
+Hang is a real-time communication platform that combines **closed-source application logic** with **open-source media streaming libraries**:
+
 - **Frontend**: SolidJS + Vite + Tailwind CSS v4 + Tauri (desktop)
 - **Backend**: Cloudflare Workers + Hono + tRPC + Drizzle ORM
 - **Real-time**: WebTransport + MOQ (Media over QUIC)
 - **Package Manager**: pnpm with workspaces
+
+### Open Source vs Closed Source
+
+This repository contains:
+- **Closed Source**: The `hang` application (opinionated conferencing UI and business logic)
+- **Open Source**: The `moq/` submodule (generic media streaming libraries)
+
+The `moq` submodule contains generic, reusable libraries for media streaming that should remain framework-agnostic and broadly applicable.
 
 ## Essential Commands
 
@@ -27,38 +36,57 @@ just fix
 
 ## Architecture
 
-### Frontend (`/app`)
-Closed source conferencing UI. The open source components are published as `@kixelated/*` under a separate repo.
+### MOQ Submodule (`/moq/`) - **Open Source**
+Generic media streaming libraries linked as a git submodule:
+- **Location**: Git submodule from https://github.com/kixelated/moq (moq-preview branch)
+- **Purpose**: Generic, framework-agnostic media streaming over WebTransport/QUIC
+- **Languages**: TypeScript and Rust implementations
+- **Packages**: `@kixelated/moq`, `@kixelated/hang`, `@kixelated/signals`, `@kixelated/moq-token`
 
+### Frontend (`/app`) - **Closed Source**
+Hang-specific conferencing UI and application logic:
 - **Entry**: `src/index.tsx`
 - **Routing**: SPA with `@solidjs/router`
-- **State**: SolidJS signals, sometimes backed by @kixelated/signals
+- **State**: SolidJS signals, backed by `@kixelated/signals`
 - **API Client**: RPC client using Hono RPC in `@hang/api-client`
-- **Desktop**: Tauri configuration in `tauri/`
+- **Room Logic**: Core application logic in `room/` folder
 
-### Backend (`/api/server`)
-- **Entry**: `src/index.ts` - Hono app.
-- **Routes**: RPC endpoints using Hono RPC.
+### Native App (`/native`) - **Closed Source**
+Desktop application using Tauri:
+- **Framework**: Tauri v2 with Rust backend
+- **Frontend**: Uses the same web app from `/app`
+
+### Backend (`/api/server`) - **Closed Source**
+Hang-specific server and business logic:
+- **Entry**: `src/index.ts` - Hono app
+- **Routes**: RPC endpoints using Hono RPC
 - **Auth**: JWT with OAuth providers in `src/auth.ts`
 - **Environment**: Cloudflare Workers with D1 database and R2 storage
 
 ### Key Patterns
-1. **Type-safe RPC**: Backend and frontend share types.
+1. **Type-safe RPC**: Backend and frontend share types
 2. **WebTransport Rooms**: Real-time media streaming via MOQ protocol
 3. **OAuth Flow**: Authentication with Google/Discord through popup windows
 4. **Edge-first**: All backend services run on Cloudflare's edge network
+5. **Submodule Linking**: MOQ libraries linked via git submodule and pnpm workspaces
 
 ## Development Tips
 
 ### Running Locally
-- `just dev` runs the API server, app web server, and tauri app.
-- `just check` runs linting and CI checks.
-- `just fix` fixes common linting things (like formatting), only if current changes are staged/commited.
+- `just dev` runs the API server, app web server, and native Tauri app in parallel
+- `just check` runs linting, TypeScript, and Rust checks
+- `just fix` fixes formatting and linting issues across all languages
 
+### Working with the MOQ Submodule
+- **Location**: `./moq/` (git submodule)
+- **Branch**: `moq-preview`
+- **Dependencies**: Automatically linked via pnpm workspace overrides
+- **Updates**: Use `git submodule update --remote` to sync with upstream
 
 ### Working with Media over QUIC
-- Rust and Typescript implementation in https://github.com/kixelated/moq
-- Uses WebTransport and QUIC under the hood.
+- Generic MOQ implementation in the `moq/` submodule
+- Hang-specific integration in `app/room/` folder
+- Uses WebTransport and QUIC under the hood
 
 ## Code Style
 - **Formatting**: Biome with tabs, 120 line width, double quotes
