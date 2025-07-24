@@ -48,7 +48,7 @@ Hang-specific conferencing UI and application logic:
 - **Entry**: `src/index.tsx`
 - **Routing**: SPA with `@solidjs/router`
 - **State**: SolidJS signals, backed by `@kixelated/signals`
-- **API Client**: RPC client using Hono RPC in `@hang/api-client`
+- **API Client**: RPC client using Hono RPC in `@hang/api/client`
 - **Room Logic**: Core application logic in `room/` folder
 
 ### Native App (`/native`) - **Closed Source**
@@ -56,7 +56,7 @@ Desktop application using Tauri:
 - **Framework**: Tauri v2 with Rust backend
 - **Frontend**: Uses the same web app from `/app`
 
-### Backend (`/api/server`) - **Closed Source**
+### Backend (`/api`) - **Closed Source**
 Hang-specific server and business logic:
 - **Entry**: `src/index.ts` - Hono app
 - **Routes**: RPC endpoints using Hono RPC

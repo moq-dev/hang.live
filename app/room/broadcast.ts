@@ -1,4 +1,4 @@
-import * as Api from "@hang/api-client";
+import * as Api from "@hang/api/client";
 import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
 import { Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";

@@ -2,7 +2,7 @@ import "tauri-plugin-web-transport";
 
 import "@kixelated/hang/support/element";
 
-import * as Api from "@hang/api-client";
+import * as Api from "@hang/api/client";
 import { Route, Router, useParams } from "@solidjs/router";
 import { onCleanup } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";

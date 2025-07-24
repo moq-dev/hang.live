@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
-import { z } from "zod/mini";
+import { z } from "zod";
 import Context from "./context";
 
 export function app() {
@@ -59,18 +59,18 @@ export const withCors = createMiddleware<{
 	return corsMiddleware(c, next);
 });
 
-export function withForm<T extends z.ZodMiniType>(schema: T) {
+export function withForm<T extends z.ZodType>(schema: T) {
 	return zValidator("form", schema);
 }
 
-export function withJson<T extends z.ZodMiniType>(schema: T) {
+export function withJson<T extends z.ZodType>(schema: T) {
 	return zValidator("json", schema);
 }
 
-export function withQuery<T extends z.ZodMiniType>(schema: T) {
+export function withQuery<T extends z.ZodType>(schema: T) {
 	return zValidator("query", schema);
 }
 
-export function withParam<T extends z.ZodMiniType>(schema: T) {
+export function withParam<T extends z.ZodType>(schema: T) {
 	return zValidator("param", schema);
 }

@@ -1,4 +1,4 @@
-import * as Api from "@hang/api-client";
+import * as Api from "@hang/api/client";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import { type Effect, Root, Signal } from "@kixelated/signals";

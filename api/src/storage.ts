@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+import * as rpc from "./rpc";
 
 export class Context {
 	#bucket: R2Bucket;
@@ -19,7 +21,7 @@ export class Context {
 			bucketBinding: "PUBLIC",
 			fileSize: file.length,
 		});
-		
+
 		try {
 			await this.#bucket.put(fullPath, file);
 			console.log("[Storage] R2 upload successful:", fullPath);
@@ -33,7 +35,7 @@ export class Context {
 	async get(folder: string, key: string): Promise<ArrayBuffer | null> {
 		const fullPath = `${folder}/${key}`;
 		console.log("[Storage] Getting from R2:", fullPath);
-		
+
 		try {
 			const object = await this.#bucket.get(fullPath);
 			if (!object) {
@@ -51,7 +53,7 @@ export class Context {
 	async delete(folder: string, key: string): Promise<void> {
 		const fullPath = `${folder}/${key}`;
 		console.log("[Storage] Deleting from R2:", fullPath);
-		
+
 		try {
 			await this.#bucket.delete(fullPath);
 			console.log("[Storage] R2 delete successful:", fullPath);
@@ -86,3 +88,50 @@ export function validateAvatar(file: File) {
 		throw new Error("Invalid file type. Only JPEG, PNG, GIF, SVG, and WebP are allowed.");
 	}
 }
+
+export const router = rpc.router().get(
+	"/:folder/:path{.+}",
+	rpc.withParam(
+		z.object({
+			folder: z.string(),
+			path: z.string(),
+		}),
+	),
+	async (c) => {
+		const { folder, path } = c.req.valid("param");
+		console.log("[Public Proxy] Request - folder:", folder, "path:", path);
+
+		try {
+			const file = await c.var.ctx.storage.get(folder, path);
+			if (!file) {
+				console.log("[Public Proxy] File not found:", `${folder}/${path}`);
+				return c.json({ error: "File not found" }, 404);
+			}
+
+			// Determine content type based on file extension
+			const extension = path.split(".").pop()?.toLowerCase();
+			const contentType = extension
+				? {
+						jpg: "image/jpeg",
+						jpeg: "image/jpeg",
+						png: "image/png",
+						gif: "image/gif",
+						webp: "image/webp",
+						svg: "image/svg+xml",
+					}[extension] || "application/octet-stream"
+				: "application/octet-stream";
+
+			console.log("[Public Proxy] Serving file:", `${folder}/${path}`, "type:", contentType);
+
+			return new Response(file, {
+				headers: {
+					"Content-Type": contentType,
+					"Cache-Control": "public, max-age=2592000",
+				},
+			});
+		} catch (error) {
+			console.error("[Public Proxy] Error serving file:", error);
+			return c.json({ error: "Internal server error" }, 500);
+		}
+	},
+);

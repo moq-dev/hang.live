@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import * as Uuid from "uuid";
-import { z } from "zod/mini";
+import { z } from "zod";
 import * as Auth from "./auth";
 import * as Avatar from "./avatar";
 import * as Database from "./database";
@@ -27,14 +27,8 @@ export const createSchema = z.object({
 	avatar: z.optional(z.string()),
 });
 
-export const updateSchema = z.object({
-	name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
-	avatar: z.optional(z.string()),
-});
-
 export type Info = z.infer<typeof infoSchema>;
 export type Create = z.infer<typeof createSchema>;
-export type Update = z.infer<typeof updateSchema>;
 
 export const table = sqliteTable("accounts", {
 	id: text("id").primaryKey(),
@@ -59,11 +53,38 @@ export const router = rpc
 
 		return c.json(info, 200);
 	})
-	.put("/info", rpc.withJson(updateSchema), Auth.required, async (c) => {
-		const update = c.req.valid("json");
-		const info = await c.var.ctx.account.update(c.var.account_id, update);
-		return c.json(info, 200);
-	});
+	.put(
+		"/info",
+		rpc.withForm(
+			z
+				.object({
+					name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
+					avatarUrl: z.optional(z.string()),
+					avatarFile: z.optional(z.instanceof(File)),
+				})
+				.refine((data) => !(data.avatarUrl && data.avatarFile), {
+					message: "Cannot provide both avatarUrl and avatarFile",
+				}),
+		),
+		Auth.required,
+		async (c) => {
+			const form = c.req.valid("form");
+			const ctx = c.var.ctx;
+
+			console.log("[Account Update] Form data received:", {
+				name: form.name,
+				avatarUrl: form.avatarUrl,
+				hasAvatarFile: !!form.avatarFile,
+				avatarFileSize: form.avatarFile?.size,
+			});
+
+			const info = await ctx.account.update(c.var.account_id, {
+				name: form.name,
+				avatar: form.avatarFile || form.avatarUrl,
+			});
+			return c.json(info, 200);
+		},
+	);
 
 export class Context {
 	env: Env;
@@ -128,12 +149,13 @@ export class Context {
 		return res;
 	}
 
-	async update(id: Id, update: Update): Promise<Info> {
-		// TODO Move this to the avatar file
+	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {
+		console.log("[Account Context] Updating account:", id, update);
+
+		let avatar: string | undefined;
+		let avatarType: "url" | "r2" | undefined;
+
 		if (update.avatar) {
-			console.log("[Account Update] Updating avatar for user:", id);
-			console.log("[Account Update] New avatar value:", update.avatar);
-			
 			const old = (
 				await this.db
 					.select({ avatar: table.avatar, avatarType: table.avatarType })
@@ -141,12 +163,55 @@ export class Context {
 					.where(eq(table.id, id))
 					.limit(1)
 			).at(0);
-			
-			console.log("[Account Update] Old avatar info:", old);
-			
-			if (old?.avatarType === "r2") {
-				console.log("[Account Update] Deleting old R2 avatar:", old.avatar);
+
+			console.log("[Account Context] Old avatar info:", old);
+
+			// Only delete old R2 files if we're changing to a different avatar
+			if (old?.avatarType === "r2" && old.avatar) {
+				console.log("[Account Context] Deleting old R2 avatar:", old.avatar);
 				await this.storage.delete("avatar", old.avatar);
+			}
+
+			// TODO move to avatar.ts
+			if (update.avatar instanceof File) {
+				// Validate file (reuse avatar validation logic)
+				if (update.avatar.size > 5 * 1024 * 1024) {
+					throw new Error("File size too large. Maximum 5MB allowed.");
+				}
+
+				// Get file extension
+				let extension: string | undefined;
+				if (update.avatar.name) {
+					const lastDot = update.avatar.name.lastIndexOf(".");
+					if (lastDot !== -1) {
+						extension = update.avatar.name.substring(lastDot + 1).toLowerCase();
+					}
+				} else if (update.avatar.type) {
+					const mimeToExt: Record<string, string> = {
+						"image/jpeg": "jpg",
+						"image/jpg": "jpg",
+						"image/png": "png",
+						"image/gif": "gif",
+						"image/webp": "webp",
+						"image/svg+xml": "svg",
+					};
+					extension = mimeToExt[update.avatar.type];
+				}
+
+				if (!extension) {
+					throw new Error("Unknown file extension");
+				}
+
+				// Upload to R2
+				const fileBuffer = new Uint8Array(await update.avatar.arrayBuffer());
+
+				avatar = await this.storage.upload("avatar", fileBuffer, extension);
+				avatarType = "r2";
+
+				console.log("[Account Update] File uploaded successfully:", avatar);
+			} else {
+				avatar = update.avatar;
+				avatarType = "url";
 			}
 		}
 
@@ -154,20 +219,17 @@ export class Context {
 			.update(table)
 			.set({
 				name: update.name,
-				avatar: update.avatar,
-				avatarType: update.avatar ? "url" : undefined,
+				avatar,
+				avatarType,
 			})
 			.where(eq(table.id, id))
 			.returning();
-			
-		console.log("[Account Update] Database update completed with values:", {
-			name: update.name,
-			avatar: update.avatar,
-			avatarType: update.avatar ? "url" : undefined,
-		});
+
+		console.log("[Account Context] Database update completed");
 
 		const res = this.#rowToInfo(updated.at(0));
 		if (!res) {
+			// TODO Delete from storage if we failed to upload
 			throw new Error("failed to update");
 		}
 		return res;

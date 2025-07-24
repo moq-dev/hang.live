@@ -13,7 +13,7 @@
 	"license": "MIT",
 	"dependencies": {
 		"@fontsource-variable/montserrat": "^5.2.6",
-		"@hang/api-client": "workspace:*",
+		"@hang/api": "workspace:*",
 		"@kixelated/hang": "link:../moq/js/hang",
 		"@kixelated/moq": "link:../moq/js/moq",
 		"@kixelated/signals": "link:../moq/js/signals",
@@ -28,7 +28,7 @@
 		"tailwindcss": "^4.1.11",
 		"tauri-plugin-web-transport": "^0.1.0",
 		"unique-names-generator": "^4.7.1",
-		"zod": "^3.25.76"
+		"zod": "^4.0.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.1.1",

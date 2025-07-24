@@ -1,10 +1,11 @@
-import type * as Api from "@hang/api-server";
-import { oauthStateSchema } from "@hang/api-server/client";
-
-export type * from "@hang/api-server";
-export * from "@hang/api-server/client";
-
 import { hc } from "hono/client";
+import type * as Api from "..";
+
+export type * from "..";
+
+import { oauthStateSchema } from "../shared";
+
+export * from "../shared";
 
 export class Client {
 	routes: ReturnType<typeof hc<Api.App>>;

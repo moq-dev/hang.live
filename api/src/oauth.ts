@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { z } from "zod/mini";
+import { z } from "zod";
 import * as Account from "./account";
-import { OauthState, oauthStateSchema, oauthProviders as providers } from "./client";
 import * as Database from "./database";
 import * as rpc from "./rpc";
+import { OauthState, oauthStateSchema, oauthProviders as providers } from "./shared";
 import { unreachable } from "./util";
 
 export type ProviderId = (typeof providers)[number];
