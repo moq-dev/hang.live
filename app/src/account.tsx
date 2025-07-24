@@ -86,14 +86,13 @@ function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Element {
 	const [info, setInfo] = createSignal(props.info);
 	const [name, setName] = createSignal<string | undefined>(props.info.name);
-	const [avatar, setAvatar] = createSignal<string | undefined>(props.info.avatar);
-	const [avatarFile, setAvatarFile] = createSignal<File | undefined>(undefined);
+	const [avatar, setAvatar] = createSignal<File | string | undefined>(props.info.avatar);
 	const [saving, setSaving] = createSignal(false);
 	const [message, setMessage] = createSignal<{ type: "success" | "error"; text: string } | undefined>(undefined);
 	const [randomClicks, setRandomClicks] = createSignal(0);
 
 	const avatarChanged = createMemo(() => {
-		return avatar() !== info().avatar || avatarFile() !== undefined;
+		return avatar() !== info().avatar;
 	});
 
 	const nameChanged = createMemo(() => {
@@ -106,11 +105,11 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 
 	// Get the current avatar URL for display (either uploaded file preview or string URL)
 	const currentAvatarUrl = createMemo(() => {
-		const file = avatarFile();
-		if (file) {
-			return URL.createObjectURL(file);
+		const a = avatar();
+		if (a instanceof File) {
+			return URL.createObjectURL(a);
 		}
-		return avatar();
+		return a;
 	});
 
 	const gradient = useAnimatedGradient();
@@ -126,9 +125,9 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	onCleanup(() => {
 		window.removeEventListener("beforeunload", handleBeforeUnload);
 		// Clean up object URLs to prevent memory leaks
-		const file = avatarFile();
-		if (file) {
-			URL.revokeObjectURL(URL.createObjectURL(file));
+		const a = avatar();
+		if (a instanceof File) {
+			URL.revokeObjectURL(URL.createObjectURL(a));
 		}
 	});
 
@@ -151,7 +150,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 		}
 
 		// Store the file for upload
-		setAvatarFile(file);
+		setAvatar(file);
 	};
 
 	const handleSaveChanges = async () => {
@@ -163,8 +162,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 			const response = await props.api.routes.account.info.$put({
 				form: {
 					name: name(),
-					avatarFile: avatarChanged() ? avatarFile() : undefined,
-					avatarUrl: avatarChanged() ? avatar() : undefined,
+					avatar: avatarChanged() ? avatar() : undefined,
 				},
 			});
 
@@ -175,7 +173,6 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 			const info = await response.json();
 			setInfo(info);
 			setAvatar(info.avatar);
-			setAvatarFile(undefined);
 			setMessage({ type: "success", text: "Changes saved" });
 		} catch (e) {
 			setMessage({ type: "error", text: `Something went wrong. Try again? ${e}` });
@@ -187,7 +184,6 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	const handleResetChanges = () => {
 		setName(info().name);
 		setAvatar(info().avatar);
-		setAvatarFile(undefined);
 	};
 
 	const canSave = () => {

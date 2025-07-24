@@ -56,15 +56,10 @@ export const router = rpc
 	.put(
 		"/info",
 		rpc.withForm(
-			z
-				.object({
-					name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
-					avatarUrl: z.optional(z.string()),
-					avatarFile: z.optional(z.instanceof(File)),
-				})
-				.refine((data) => !(data.avatarUrl && data.avatarFile), {
-					message: "Cannot provide both avatarUrl and avatarFile",
-				}),
+			z.object({
+				name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
+				avatar: z.optional(z.union([z.string(), z.instanceof(File)])),
+			}),
 		),
 		Auth.required,
 		async (c) => {
@@ -73,14 +68,14 @@ export const router = rpc
 
 			console.log("[Account Update] Form data received:", {
 				name: form.name,
-				avatarUrl: form.avatarUrl,
-				hasAvatarFile: !!form.avatarFile,
-				avatarFileSize: form.avatarFile?.size,
+				hasAvatar: !!form.avatar,
+				avatarType: typeof form.avatar,
+				avatarFileSize: form.avatar instanceof File ? form.avatar.size : undefined,
 			});
 
 			const info = await ctx.account.update(c.var.account_id, {
 				name: form.name,
-				avatar: form.avatarFile || form.avatarUrl,
+				avatar: form.avatar,
 			});
 			return c.json(info, 200);
 		},
