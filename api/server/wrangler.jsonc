@@ -47,7 +47,7 @@
 		"R2_PUBLIC_URL": "",
 		// "RELAY_SECRET": <stored in .dev.vars>
 		"RELAY_URL": "http://localhost:4443",
-		"RELAY_PREFIX": "dev"
+		"RELAY_PREFIX": "anon"
 	},
 
 	// Staging environment overrides
