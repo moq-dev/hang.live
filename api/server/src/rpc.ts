@@ -55,7 +55,7 @@ export const withCors = createMiddleware<{
 		allowHeaders: ["Content-Type", "Authorization"],
 		credentials: true,
 	});
-	
+
 	return corsMiddleware(c, next);
 });
 

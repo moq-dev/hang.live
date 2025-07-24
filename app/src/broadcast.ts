@@ -1,6 +1,6 @@
 import * as Api from "@hang/api-client";
 import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
-import { type Computed, Root, Signal } from "@kixelated/signals";
+import { Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { Audio, type AudioProps } from "./audio";
@@ -71,7 +71,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	transition = 0;
 
 	// The display name of the broadcaster.
-	display: Computed<string>;
+	display = new Signal<string | undefined>(undefined);
 	avatar = new Image();
 
 	// Returns the most recent chat messages.
@@ -170,8 +170,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 
 		// The display name is the user's name or the name if they don't have a name.
-		this.display = this.signals.computed((effect) => {
-			return effect.get(this.source.user)?.name ?? effect.get(this.source.name) ?? "Unknown";
+		this.signals.effect((effect) => {
+			this.display.set(effect.get(this.source.user)?.name ?? effect.get(this.source.name));
 		});
 
 		this.signals.effect((effect) => {

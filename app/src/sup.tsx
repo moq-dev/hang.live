@@ -1,7 +1,7 @@
 import * as Api from "@hang/api-client";
 import { createEffect, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import { uniqueNamesGenerator, adjectives, animals } from "unique-names-generator";
+import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
 import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";

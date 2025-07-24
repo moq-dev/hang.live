@@ -256,7 +256,9 @@ export class Video {
 		const targetOpacity = modifiers?.hovering ? 1 : 0;
 		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
 
-		if (this.#nameOpacity > 0) {
+		const name = this.broadcast.display.peek();
+
+		if (this.#nameOpacity > 0 && name) {
 			const fontSize = 10 + 12 * Math.sqrt(scale);
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
@@ -265,8 +267,8 @@ export class Video {
 			ctx.strokeStyle = "black";
 			ctx.lineWidth = 1 + 2 * Math.sqrt(scale);
 			const offset = 16 * Math.sqrt(scale);
-			ctx.strokeText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
-			ctx.fillText(this.broadcast.display.peek(), offset, 2 * offset, bounds.size.x - 2 * offset);
+			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
+			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();
 		}
 
