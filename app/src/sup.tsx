@@ -1,6 +1,7 @@
 import * as Api from "@hang/api-client";
 import { createEffect, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import { uniqueNamesGenerator, adjectives, animals } from "unique-names-generator";
 import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
@@ -17,25 +18,6 @@ import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 import { unreachable } from "./util";
 
-// Random name generator for anonymous users
-const RANDOM_NAMES = [
-	"Anonymous",
-	"Mystery Person",
-	"Unknown User",
-	"Secret Agent",
-	"Phantom",
-	"Shadow",
-	"Ninja",
-	"Ghost",
-	"Stranger",
-	"Wanderer",
-	"Explorer",
-	"Visitor",
-	"Guest",
-	"Traveler",
-	"Nomad",
-];
-
 interface Info {
 	name: string;
 	avatar: string;
@@ -43,7 +25,11 @@ interface Info {
 }
 
 function randomName(): string {
-	return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+	return uniqueNamesGenerator({
+		dictionaries: [adjectives, animals],
+		separator: " ",
+		style: "capital",
+	});
 }
 
 export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
@@ -128,7 +114,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 								</div>
 							}
 						>
-							<div class="rounded-2xl p-6">
+							<div class="rounded-2xl border border-gray-800 p-6">
 								<AuthenticatedPreview api={props.api} room={props.room} setInfo={setInfo} />
 							</div>
 						</Show>
