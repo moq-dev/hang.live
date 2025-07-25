@@ -66,13 +66,6 @@ export const router = rpc
 			const form = c.req.valid("form");
 			const ctx = c.var.ctx;
 
-			console.log("[Account Update] Form data received:", {
-				name: form.name,
-				hasAvatar: !!form.avatar,
-				avatarType: typeof form.avatar,
-				avatarFileSize: form.avatar instanceof File ? form.avatar.size : undefined,
-			});
-
 			const info = await ctx.account.update(c.var.account_id, {
 				name: form.name,
 				avatar: form.avatar,
@@ -145,8 +138,6 @@ export class Context {
 	}
 
 	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {
-		console.log("[Account Context] Updating account:", id, update);
-
 		let avatar: string | undefined;
 		let avatarType: "url" | "r2" | undefined;
 
@@ -159,11 +150,8 @@ export class Context {
 					.limit(1)
 			).at(0);
 
-			console.log("[Account Context] Old avatar info:", old);
-
 			// Only delete old R2 files if we're changing to a different avatar
 			if (old?.avatarType === "r2" && old.avatar) {
-				console.log("[Account Context] Deleting old R2 avatar:", old.avatar);
 				await this.storage.delete("avatar", old.avatar);
 			}
 
@@ -202,8 +190,6 @@ export class Context {
 
 				avatar = await this.storage.upload("avatar", fileBuffer, extension);
 				avatarType = "r2";
-
-				console.log("[Account Update] File uploaded successfully:", avatar);
 			} else {
 				avatar = update.avatar;
 				avatarType = "url";
@@ -219,8 +205,6 @@ export class Context {
 			})
 			.where(eq(table.id, id))
 			.returning();
-
-		console.log("[Account Context] Database update completed");
 
 		const res = this.#rowToInfo(updated.at(0));
 		if (!res) {

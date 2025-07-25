@@ -27,16 +27,11 @@ export const router = rpc.router().get(
 		const ctx = c.var.ctx;
 		const key = c.req.valid("param").key;
 
-		console.log("[Avatar Get] Retrieving avatar:", key);
-
 		// Get the avatar file from storage
 		const file = await ctx.storage.get("avatar", key);
 		if (!file) {
-			console.log("[Avatar Get] Avatar not found:", key);
 			return c.json({ error: "Avatar not found" }, 404);
 		}
-
-		console.log("[Avatar Get] Avatar retrieved successfully:", key, "size:", file.byteLength);
 
 		// Determine content type based on file extension
 		const extension = key.split(".").pop()?.toLowerCase();
