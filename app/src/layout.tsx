@@ -24,22 +24,13 @@ export function Layout(props: { children: JSX.Element; app?: boolean; connection
 		const url = window.location.href;
 
 		if (navigator.share) {
-			try {
-				await navigator.share({
-					title: "Join my Hang room",
-					text: "Come hang out with us!",
-					url: url,
-				});
-			} catch (err) {
-				console.log("Share cancelled or failed:", err);
-			}
+			await navigator.share({
+				title: "hang.live",
+				text: "Come hang with us!",
+				url,
+			});
 		} else {
-			try {
-				await navigator.clipboard.writeText(url);
-				console.log("Room URL copied to clipboard");
-			} catch (err) {
-				console.error("Failed to copy URL:", err);
-			}
+			await navigator.clipboard.writeText(url);
 		}
 	};
 
