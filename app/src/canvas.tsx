@@ -1,6 +1,6 @@
 import { type Effect, Root, Signal } from "@kixelated/signals";
-import { Vector } from "../room/geometry";
-import Settings from "../room/settings";
+import { Vector } from "./room/geometry";
+import Settings from "./settings";
 
 const LINE_SPACING = 64;
 const LINE_WIDTH = 10;

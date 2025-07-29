@@ -8,7 +8,7 @@ import IconDice from "~icons/mdi/dice-multiple";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
 import IconVideo from "~icons/mdi/video";
-import { Room } from "../room/room";
+import { Room } from "./room";
 import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";

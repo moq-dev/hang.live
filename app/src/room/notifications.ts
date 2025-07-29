@@ -1,5 +1,5 @@
 import { type Effect, Root, type Signal } from "@kixelated/signals";
-import Settings from "./settings";
+import Settings from "../settings";
 
 const SOUNDS = {
 	bup: "/notification/bup.opus",

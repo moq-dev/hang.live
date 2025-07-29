@@ -2,11 +2,11 @@ import * as Api from "@hang/api/client";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import { type Effect, Root, Signal } from "@kixelated/signals";
-import type { Canvas } from "../src/canvas";
+import Settings from "../settings";
+import type { Canvas } from "../canvas";
 import { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import { Notifications } from "./notifications";
-import Settings from "./settings";
 
 export type RoomProps = {
 	name?: string;
