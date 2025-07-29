@@ -14,5 +14,6 @@
 		"erasableSyntaxOnly": true,
 		"types": ["unplugin-icons/types/solid", "vite/client", "../api/worker-configuration.d.ts"]
 	},
-	"include": ["src"]
+	"include": ["src"],
+	"exclude": ["src/room/worklet"]
 }

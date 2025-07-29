@@ -8,7 +8,6 @@ import IconDice from "~icons/mdi/dice-multiple";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
 import IconVideo from "~icons/mdi/video";
-import { Room } from "../room/room";
 import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
@@ -16,6 +15,7 @@ import { Controls } from "./controls";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
 import { PreviewRoom } from "./preview";
+import { Room } from "./room";
 import { unreachable } from "./util";
 
 interface Info {
