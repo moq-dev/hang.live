@@ -3,7 +3,7 @@ import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
 import { Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
-import { loadMeme } from "../src/meme";
+import { loadMeme } from "../meme";
 import { Audio, type AudioProps } from "./audio";
 import { Bounds, Vector } from "./geometry";
 import { Video } from "./video";
