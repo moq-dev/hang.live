@@ -3,7 +3,7 @@ import "tauri-plugin-web-transport";
 import "@kixelated/hang/support/element";
 
 import * as Api from "@hang/api/client";
-import { Route, Router, useParams } from "@solidjs/router";
+import { Route, Router } from "@solidjs/router";
 import { onCleanup } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
@@ -26,7 +26,7 @@ export function Hang(): JSX.Element {
 			<Router>
 				<Route path="/" component={About} />
 				<Route path="/account" component={() => <Account api={api} />} />
-				<Route path="/demo/:name" component={() => <Sup canvas={canvas} api={api} room={useParams().name} />} />
+				<Route path="/demo/:room" component={() => <Sup canvas={canvas} api={api} />} />
 				<Route path="*" component={NotFound} />
 			</Router>
 		</>
