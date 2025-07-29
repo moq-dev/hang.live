@@ -1,4 +1,5 @@
 import * as Api from "@hang/api/client";
+import { useParams } from "@solidjs/router";
 import { createEffect, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
@@ -8,7 +9,6 @@ import IconDice from "~icons/mdi/dice-multiple";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
 import IconVideo from "~icons/mdi/video";
-import { Room } from "./room";
 import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
@@ -16,6 +16,7 @@ import { Controls } from "./controls";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
 import { PreviewRoom } from "./preview";
+import { Room } from "./room";
 import { unreachable } from "./util";
 
 interface Info {
@@ -32,12 +33,13 @@ function randomName(): string {
 	});
 }
 
-export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
+export function Sup(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
 	const [info, setInfo] = createSignal<Info | undefined>(undefined);
+	const room = useParams().room;
 
 	return (
-		<Show when={info()} fallback={<Preview api={props.api} room={props.room} join={setInfo} />}>
-			{(info) => <App canvas={props.canvas} api={props.api} room={props.room} info={info()} />}
+		<Show when={info()} fallback={<Preview api={props.api} room={room} join={setInfo} />}>
+			{(info) => <App canvas={props.canvas} api={props.api} room={room} info={info()} />}
 		</Show>
 	);
 }
