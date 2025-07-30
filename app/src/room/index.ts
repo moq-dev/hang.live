@@ -1,13 +1,4 @@
 import * as Api from "@hang/api/client";
-import {
-	AutoModel,
-	AutoModelForAudioFrameClassification,
-	AutoProcessor,
-	pipeline,
-	Tensor,
-	WhisperTextStreamer,
-	WhisperTokenizer,
-} from "@huggingface/transformers";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import { type Effect, Root, Signal } from "@kixelated/signals";
@@ -16,9 +7,6 @@ import { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import { Notifications } from "./notifications";
 import Settings from "./settings";
-
-import type * as Worklet from "./worklet";
-import WORKLET_URL from "./worklet/capture?worker&url";
 
 export type RoomProps = {
 	name?: string;
@@ -126,6 +114,7 @@ export class Room {
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
+				vad: true,
 			},
 			// Publish our camera's location, starting at a random position.
 			location: {
@@ -146,224 +135,6 @@ export class Room {
 			preview: {
 				enabled: true,
 			},
-		});
-
-		this.#signals.effect((effect) => {
-			// @ts-expect-error
-			if (!navigator.gpu) return;
-
-			const media = effect.get(this.camera.audio.media);
-			if (!media) return;
-
-			const context = new AudioContext({
-				sampleRate: 16000, // required by the model.
-			});
-			effect.cleanup(() => context.close());
-
-			effect.spawn(async (cancel) => {
-				// Async because we need to wait for the worklet to be registered.
-				await context.audioWorklet.addModule(WORKLET_URL);
-
-				const worklet = new AudioWorkletNode(context, "capture", {
-					numberOfInputs: 1,
-					numberOfOutputs: 0,
-					channelCount: 1,
-					channelCountMode: "explicit",
-					channelInterpretation: "discrete",
-				});
-
-				const root = new MediaStreamAudioSourceNode(context, {
-					mediaStream: new MediaStream([media]),
-				});
-				effect.cleanup(() => root.disconnect());
-
-				root.connect(worklet);
-				effect.cleanup(() => worklet.disconnect());
-
-				let backpressure = false;
-
-				// A queue of audio chunks.
-				const queue = new ReadableStream(
-					{
-						type: "bytes",
-						start: (controller: ReadableByteStreamController) => {
-							worklet.port.onmessage = async ({ data: { samples } }: { data: Worklet.AudioFrame }) => {
-								const view = controller.byobRequest?.view;
-
-								let mono = new Uint8Array(samples.buffer as ArrayBuffer, samples.byteOffset, samples.byteLength);
-
-								if (view) {
-									const written = Math.min(view.byteLength, mono.byteLength);
-									new Uint8Array(view.buffer, view.byteOffset, view.byteLength).set(
-										new Uint8Array(mono.buffer, mono.byteOffset, written),
-									);
-									controller.byobRequest.respond(written);
-
-									if (written === mono.byteLength) {
-										if (backpressure) {
-											console.warn("backpressure resolved");
-											backpressure = false;
-										}
-										return;
-									}
-
-									mono = new Uint8Array(mono.buffer, mono.byteOffset + written, mono.byteLength - written);
-									if (mono.byteLength === 0) {
-										return;
-									}
-								}
-
-								if (controller.desiredSize && controller.desiredSize > mono.byteLength) {
-									controller.enqueue(mono);
-								} else if (!backpressure) {
-									console.warn("backpressure");
-									backpressure = true;
-								}
-							};
-						},
-					},
-					{
-						highWaterMark: 512,
-					},
-				);
-				effect.cleanup(() => queue.cancel());
-
-				// Load models
-				const silero_vad = await AutoModel.from_pretrained("onnx-community/silero-vad", {
-					config: { model_type: "custom" },
-					dtype: "fp32", // Full-precision
-				});
-
-				// Initial state for VAD
-				const sr = new Tensor("int64", [context.sampleRate], []);
-				let state = new Tensor("float32", new Float32Array(2 * 1 * 128), [2, 1, 128]);
-
-				let buffer = new Float32Array(new ArrayBuffer(512), 0, 0);
-
-				worklet.port.onmessage = async ({ data: { samples } }: { data: Worklet.AudioFrame }) => {
-					const newBuffer = new Float32Array(buffer.buffer, 0, buffer.length + samples.length);
-					newBuffer.set(samples, buffer.length);
-					buffer = newBuffer;
-
-					if (buffer.byteLength < buffer.buffer.byteLength) return;
-
-					const input = new Tensor("float32", samples, [1, samples.length]);
-					const { stateN, output } = await silero_vad({ input, sr, state });
-					state = stateN;
-					console.log(output);
-
-					buffer = new Float32Array(buffer.buffer, 0, 0);
-				};
-
-				/*
-  const transcriber = await pipeline(
-	"automatic-speech-recognition",
-	"onnx-community/whisper-base", // or "onnx-community/moonshine-base-ONNX",
-	{
-	  device: "webgpu",
-	  dtype: {
-		encoder_model: "fp32",
-		decoder_model_merged: "fp32",
-	  }, // q8 for WASM
-	},
-  );
-  */
-
-				/*
-
-				// A 10 second window of audio.
-				const window = 5;
-				let backpressure = false;
-
-
-				const modelId = "onnx-community/pyannote-segmentation-3.0";
-				const model = await AutoModelForAudioFrameClassification.from_pretrained(modelId, {
-					device: "webgpu",
-					dtype: 'fp32',
-					progress_callback: (progress) => {
-						console.log("progress", progress);
-					},
-				});
-				const processor = await AutoProcessor.from_pretrained(modelId, {
-					progress_callback: (progress: number) => {
-						console.log("progress", progress);
-					},
-				});
-				*/
-
-				/*
-
-				//const model = "distil-whisper/distil-large-v3";
-				//const model = "distil-whisper/distil-medium.en"
-				const model = "Xenova/whisper-tiny.en";
-				const tokenizer = WhisperTokenizer.from_pretrained(model);
-
-				const transcriber = await Promise.race([
-					pipeline("automatic-speech-recognition", model, {
-						device: "webgpu",
-						dtype: {
-							encoder_model: "fp32",
-							decoder_model_merged: "q4",
-						},
-						tokenizer,
-					}),
-					cancel,
-				]);
-				if (!transcriber) return;
-
-				const time_precision =
-				transcriber.processor?.feature_extractor?.config.chunk_length /
-				transcriber.model.config.max_source_positions;
-
-				const streamer = new WhisperTextStreamer(new WhisperTokenizer(transcriber.tokenizer), {
-					time_precision,
-					on_chunk_start: (x) => {
-						console.log("chunk_start", x);
-					},
-					token_callback_function: (x) => {
-						console.log("token", x);
-					},
-					callback_function: (x) => {
-						console.log("callback", x);
-					},
-					on_chunk_end: (x) => {
-						console.log("chunk_end", x);
-					},
-					on_finalize: () => {
-						console.log("finalize");
-					},
-				});
-
-				let buffer = new Uint8Array(new ArrayBuffer(Float32Array.BYTES_PER_ELEMENT * context.sampleRate * window), 0, 0);
-
-				const reader = queue.getReader({ mode: "byob" });
-				for (;;) {
-					const offset = buffer.byteLength;
-
-					const res = await Promise.race([reader.read(new Uint8Array(buffer.buffer, offset)), cancel]);
-					if (!res || res.done) break;
-
-					buffer = new Uint8Array(res.value.buffer, 0, res.value.byteLength + offset);
-					if (buffer.byteLength < buffer.buffer.byteLength) {
-						// Not enough data to process.
-						continue;
-					}
-
-					const input = new Float32Array(buffer.buffer, 0, Math.floor(buffer.byteLength / Float32Array.BYTES_PER_ELEMENT));
-					const inputs = await processor(input);
-					console.log(inputs);
-
-					const { logits } = await model(inputs);
-					console.log(logits);
-
-					const result = processor.post_process_speaker_diarization(logits, input.length);
-					console.table(result[0], ['start', 'end', 'id', 'confidence']);
-
-					// Reset the current buffer.
-					buffer = new Uint8Array(buffer.buffer, 0, 0);
-				}
-			*/
-			});
 		});
 
 		// Apply echo cancellation based on the headphones setting.
