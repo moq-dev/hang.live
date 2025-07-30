@@ -3,10 +3,10 @@ import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import { type Effect, Root, Signal } from "@kixelated/signals";
 import type { Canvas } from "../canvas";
+import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import { Notifications } from "./notifications";
-import Settings from "./settings";
 
 export type RoomProps = {
 	name?: string;
@@ -22,6 +22,7 @@ export class Room {
 
 	api: Api.Client;
 
+	// The name of the room.
 	name: Signal<string | undefined>;
 
 	// The user ID of the local user.
@@ -86,6 +87,11 @@ export class Room {
 					throw new Error(`Failed to join room: ${response.statusText}`);
 				}
 				const data = await response.json();
+
+				// Set the name of the broadcasts to our account ID.
+				// If anonymous, then this is randomly generated.
+				this.camera.name.set(Path.from(data.account, "camera"));
+				this.screen.name.set(Path.from(data.account, "screen"));
 
 				this.connection.url.set(new URL(data.url));
 				effect.cleanup(() => this.connection.url.set(undefined));
@@ -215,9 +221,6 @@ export class Room {
 
 			this.camera.enabled.set(true);
 			effect.cleanup(() => this.camera.enabled.set(false));
-
-			const name = Path.from(user, "camera");
-			this.camera.name.set(name);
 		});
 
 		this.camera.signals.effect((effect) => {
@@ -298,9 +301,6 @@ export class Room {
 
 			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
 			if (!active) return;
-
-			const name = Path.from(user, "screen");
-			this.screen.name.set(name);
 
 			this.screen.enabled.set(true);
 			effect.cleanup(() => this.screen.enabled.set(false));
@@ -606,6 +606,7 @@ export class Room {
 		let broadcast: Broadcast;
 
 		if (Settings.echo.peek()) {
+			// If echo is enabled, then we'll download our broadcast from the network.
 			const watch = new Watch.Broadcast(this.connection, {
 				enabled: true,
 				name: source.name.peek(),

@@ -1,8 +1,8 @@
 import { Publish, Watch } from "@kixelated/hang";
 import { type Effect, Root, Signal } from "@kixelated/signals";
+import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { type Notifications, PannedNotifications } from "./notifications";
-import Settings from "./settings";
 
 const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
