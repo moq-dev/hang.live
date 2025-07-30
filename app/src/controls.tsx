@@ -11,7 +11,7 @@ import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
 import type { Canvas } from "./canvas";
 import type { Room } from "./room";
-import Settings, { Modal } from "./room/settings";
+import Settings, { Modal } from "./settings";
 import { Tooltip } from "./tooltip";
 
 export function Controls(props: {

@@ -1,5 +1,5 @@
 import { createMemo, createSignal } from "solid-js";
-import Settings from "./room/settings";
+import Settings from "./settings";
 
 const offset = Math.round(Math.random() * 360);
 const SPEED = 1;

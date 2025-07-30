@@ -45,5 +45,5 @@ export const router = rpc
 		const account = c.var.account_id ?? Account.idSchema.parse(Uuid.v4());
 
 		const url = await ctx.room.sign(room, account);
-		return c.json({ url });
+		return c.json({ url, account });
 	});
