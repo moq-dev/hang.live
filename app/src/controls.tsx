@@ -155,6 +155,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 // Renders a volume meter in the background of an element.
 function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
+	const [speaking, setSpeaking] = createSignal(false);
 
 	const top = createMemo(() => {
 		return `${Math.max(0, 100 - (power() ?? 0) * 100)}%`;
@@ -166,6 +167,13 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		const hue = 180 + p * 120;
 		const alpha = 0.3 + p * 0.4;
 		return `hsla(${hue}, 80%, 40%, ${alpha})`;
+	});
+
+	const speakingColor = createMemo(() => {
+		const p = power();
+		if (!p) return "transparent";
+		const hue = 180 + p * 120;
+		return `hsla(${hue}, 80%, 40%, 1)`;
 	});
 
 	const root = solid(props.audio.root);
@@ -185,7 +193,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 		let animation: number | undefined;
 		let smoothed = 0;
 
-		const updatePower = () => {
+		const tick = () => {
 			analyzer.getByteTimeDomainData(data);
 
 			// Convert from [0, 255] to [-1, 1]
@@ -198,10 +206,12 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 			smoothed = smoothed * 0.7 + power * 0.3;
 
 			setPower(smoothed);
-			animation = requestAnimationFrame(updatePower);
+			animation = requestAnimationFrame(tick);
+
+			setSpeaking(props.audio.speaking.peek() ?? false);
 		};
 
-		animation = requestAnimationFrame(updatePower);
+		animation = requestAnimationFrame(tick);
 		onCleanup(() => cancelAnimationFrame(animation ?? 0));
 		onCleanup(() => setPower(undefined));
 	});
@@ -211,6 +221,8 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 			class="absolute bottom-0 left-0 w-full rounded"
 			style={{
 				top: top(),
+				"border-top-width": speaking() ? "2px" : "0px",
+				"border-top-color": speakingColor(),
 				"background-color": color(),
 			}}
 		/>
