@@ -17,6 +17,10 @@ export default defineConfig(async () => ({
 		},
 	},
 
+	worker: {
+		format: "es",
+	},
+
 	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
 
 	resolve: {
