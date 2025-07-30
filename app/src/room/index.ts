@@ -475,24 +475,6 @@ export class Room {
 
 		this.#signals.effect(this.#init.bind(this));
 
-		// When the echo setting changes, recreate any local broadcasts.
-		this.#signals.subscribe(Settings.echo, () => {
-			const broadcasts = this.broadcasts.peek();
-
-			// Recreate any previews.
-			for (const broadcast of broadcasts) {
-				const name = broadcast.source.name.peek();
-				if (!name) continue;
-				if (name === this.camera.name.peek()) {
-					this.#stopBroadcast(name);
-					this.#startPreview(this.camera);
-				} else if (name === this.screen.name.peek()) {
-					this.#stopBroadcast(name);
-					this.#startPreview(this.screen);
-				}
-			}
-		});
-
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
 		this.#signals.cleanup(() => {
@@ -603,51 +585,14 @@ export class Room {
 	}
 
 	#startPreview(source: Publish.Broadcast): Broadcast {
-		let broadcast: Broadcast;
-
-		if (Settings.echo.peek()) {
-			// If echo is enabled, then we'll download our broadcast from the network.
-			const watch = new Watch.Broadcast(this.connection, {
-				enabled: true,
-				name: source.name.peek(),
-				reload: false,
-				// Download the location of the broadcaster.
-				location: { enabled: true },
-				// Download the chat of the broadcaster.
-				chat: { enabled: true },
-			});
-
-			// Download video when the canvas is visible.
-			watch.signals.subscribe(this.canvas.visible, (visible) => {
-				watch.video.enabled.set(visible);
-			});
-
-			// Download audio when the AudioContext is not suspended.
-			watch.signals.subscribe(this.suspended, (suspended) => {
-				watch.audio.enabled.set(!suspended);
-			});
-
-			// Replace the entry with a remote broadcast.
-			broadcast = new Broadcast(watch, {
-				viewport: this.canvas.viewport,
-				// TODO Figure out location stuff
-				camera: this.camera,
-				screen: this.screen,
-				audio: {
-					notifications: this.notifications,
-				},
-				online: true,
-			});
-		} else {
-			broadcast = new Broadcast(source, {
-				viewport: this.canvas.viewport,
-				audio: {
-					notifications: this.notifications,
-				},
-				// Wait until we get an announcement before rendering ourselves as online.
-				online: false,
-			});
-		}
+		const broadcast = new Broadcast(source, {
+			viewport: this.canvas.viewport,
+			audio: {
+				notifications: this.notifications,
+			},
+			// Wait until we get an announcement before rendering ourselves as online.
+			online: false,
+		});
 
 		this.#startBroadcast(broadcast);
 
