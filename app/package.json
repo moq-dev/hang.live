@@ -14,7 +14,6 @@
 	"dependencies": {
 		"@fontsource-variable/montserrat": "^5.2.6",
 		"@hang/api": "workspace:*",
-		"@huggingface/transformers": "^3.7.0",
 		"@kixelated/hang": "link:../moq/js/hang",
 		"@kixelated/moq": "link:../moq/js/moq",
 		"@kixelated/signals": "link:../moq/js/signals",
@@ -32,7 +31,6 @@
 		"zod": "^4.0.5"
 	},
 	"devDependencies": {
-		"@types/audioworklet": "^0.0.77",
 		"@biomejs/biome": "^2.1.1",
 		"@iconify-json/mdi": "^1.2.3",
 		"@tauri-apps/cli": "^2.6.2",
