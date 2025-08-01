@@ -1,12 +1,17 @@
+import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { createMemo, JSX, Show } from "solid-js";
+import { useLocation, useParams } from "@solidjs/router";
+import { createMemo, createResource, createSignal, JSX, Show } from "solid-js";
 import IconAccount from "~icons/mdi/account";
 import IconShare from "~icons/mdi/share-variant";
+import IconStar from "~icons/mdi/star";
+import IconStarOutline from "~icons/mdi/star-outline";
 import { Divider } from "./divider";
+import { LoginButtons } from "./login-buttons";
 import { Tooltip } from "./tooltip";
 
-export function Layout(props: { children: JSX.Element; app?: boolean; connection?: Connection }) {
+export function Layout(props: { children: JSX.Element; app?: boolean; connection?: Connection; api?: Api.Client }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";
 
 	const color = createMemo(() => {
@@ -49,6 +54,7 @@ export function Layout(props: { children: JSX.Element; app?: boolean; connection
 				</a>
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
+					<Show when={props.api}>{(api) => <FavoriteButton api={api()} app={props.app} />}</Show>
 					<Tooltip content="Share room link" position="bottom">
 						<button
 							type="button"
@@ -76,5 +82,158 @@ export function Layout(props: { children: JSX.Element; app?: boolean; connection
 				<main class="flex flex-col relative">{props.children}</main>
 			</Show>
 		</div>
+	);
+}
+
+function FavoriteButton(props: { api: Api.Client; app?: boolean }) {
+	const location = useLocation();
+	const params = useParams();
+	const [isToggling, setIsToggling] = createSignal(false);
+	const [showLoginPrompt, setShowLoginPrompt] = createSignal(false);
+
+	// Determine if we're in a demo room (using props.app or location)
+	const inDemoRoom = createMemo(() => {
+		return props.app || (location.pathname.startsWith("/demo/") && params.room);
+	});
+
+	// Only fetch when authenticated and in a demo room
+	const showFavorite = createMemo(() => {
+		return inDemoRoom() && props.api.authenticated();
+	});
+
+	// Fetch favorite status when room changes
+	const [isFavorite, { refetch }] = createResource(
+		() => (showFavorite() ? params.room : null),
+		async (room) => {
+			if (!room) return false;
+			try {
+				const response = await props.api.routes.fave[":room"].$get({
+					param: { room },
+				});
+				if (response.ok) {
+					const data = await response.json();
+					return data.is_favorite;
+				}
+			} catch (error) {
+				console.error("Failed to fetch favorite status:", error);
+			}
+			return false;
+		},
+	);
+
+	const toggleFavorite = async () => {
+		const room = params.room;
+		if (!room || isToggling() || !inDemoRoom()) return;
+
+		// Show login prompt if not authenticated
+		if (!props.api.authenticated()) {
+			setShowLoginPrompt(true);
+			return;
+		}
+
+		setIsToggling(true);
+		try {
+			let response: Response;
+			if (isFavorite()) {
+				response = await props.api.routes.fave[":room"].remove.$post({
+					param: { room },
+				});
+			} else {
+				response = await props.api.routes.fave[":room"].add.$post({
+					param: { room },
+				});
+			}
+			if (response.ok) {
+				// Refetch to update the status
+				refetch();
+			}
+		} catch (error) {
+			console.error("Failed to toggle favorite:", error);
+		} finally {
+			setIsToggling(false);
+		}
+	};
+
+	return (
+		<>
+			{/* Show different star behavior based on whether we're in a demo room */}
+			<Show
+				when={inDemoRoom()}
+				fallback={
+					// Not in demo room - star is a link to favorites page
+					<Tooltip content="View favorites" position="bottom">
+						<a
+							href="/fave"
+							rel={props.app ? "noopener" : undefined}
+							target={props.app ? "_blank" : undefined}
+							class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+						>
+							<IconStarOutline class="w-5 h-5" />
+						</a>
+					</Tooltip>
+				}
+			>
+				{/* In demo room - star toggles favorite status */}
+				<Tooltip
+					content={
+						!props.api.authenticated()
+							? "Login to favorite rooms"
+							: isFavorite.loading
+								? "Loading..."
+								: isFavorite()
+									? "Remove from favorites"
+									: "Add to favorites"
+					}
+					position="bottom"
+				>
+					<button
+						type="button"
+						onClick={toggleFavorite}
+						disabled={isFavorite.loading || isToggling()}
+						class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						classList={{
+							"text-yellow-400": props.api.authenticated() && isFavorite() && !isFavorite.loading,
+							"text-gray-400": !props.api.authenticated(),
+						}}
+					>
+						<Show
+							when={props.api.authenticated() && !isFavorite.loading}
+							fallback={<IconStarOutline class="w-5 h-5 animate-pulse" />}
+						>
+							<Show when={isFavorite()} fallback={<IconStarOutline class="w-5 h-5" />}>
+								<IconStar class="w-5 h-5" />
+							</Show>
+						</Show>
+					</button>
+				</Tooltip>
+			</Show>
+
+			{/* Login prompt modal-like overlay */}
+			<Show when={showLoginPrompt()}>
+				<div
+					class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+					onClick={() => setShowLoginPrompt(false)}
+					onKeyDown={(e) => e.key === "Escape" && setShowLoginPrompt(false)}
+					role="dialog"
+					tabIndex={-1}
+				>
+					<div
+						class="max-w-sm w-full mx-4"
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.stopPropagation()}
+						role="document"
+					>
+						<LoginButtons api={props.api} message="Login to favorite rooms" />
+						<button
+							type="button"
+							onClick={() => setShowLoginPrompt(false)}
+							class="mt-4 w-full text-gray-400 hover:text-white transition-colors"
+						>
+							Cancel
+						</button>
+					</div>
+				</div>
+			</Show>
+		</>
 	);
 }
