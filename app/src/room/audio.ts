@@ -225,7 +225,7 @@ export class Audio {
 		// Add an additional border if we're speaking, ramping up/down the alpha
 		if (this.#speakingAlpha > 0) {
 			ctx.strokeStyle = `hsla(${hue}, 80%, 45%, ${this.#speakingAlpha})`;
-			ctx.lineWidth = 4 * this.broadcast.scale;
+			ctx.lineWidth = 6 * this.broadcast.scale;
 			ctx.stroke();
 		}
 

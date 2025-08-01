@@ -1,6 +1,6 @@
 import * as Api from "@hang/api/client";
 import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
-import { Root, Signal, Unique } from "@kixelated/signals";
+import { Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { loadMeme } from "../meme";
@@ -57,7 +57,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	audio: Audio;
 	video: Video;
 
-	bounds: Unique<Bounds>; // 0 to canvas
+	bounds: Signal<Bounds>; // 0 to canvas
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
@@ -120,7 +120,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			.normalize()
 			.mult(canvas.length())
 			.add(canvas.div(2));
-		this.bounds = new Unique(new Bounds(startPosition, this.video.targetSize));
+		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
 		this.signals.effect((effect) => {

@@ -241,6 +241,43 @@ export class Room {
 			}));
 		});
 
+		// Monitor VAD signal with 1-second debouncing
+		let vadTimeout: number | undefined;
+		this.camera.signals.effect((effect) => {
+			const speaking = effect.get(this.camera.audio.speaking);
+
+			// Clear any existing timeout when speaking changes
+			if (vadTimeout !== undefined) {
+				clearTimeout(vadTimeout);
+				vadTimeout = undefined;
+			}
+
+			if (speaking === true) {
+				// Set speaking immediately when VAD detects speech
+				this.camera.preview.info.set((prev) => ({
+					...prev,
+					speaking: true,
+				}));
+			} else if (speaking === false) {
+				// Debounce the speaking=false state by 1 second
+				vadTimeout = window.setTimeout(() => {
+					this.camera.preview.info.set((prev) => ({
+						...prev,
+						speaking: false,
+					}));
+					vadTimeout = undefined;
+				}, 1000);
+			}
+
+			// Cleanup timeout on effect cleanup
+			effect.cleanup(() => {
+				if (vadTimeout !== undefined) {
+					clearTimeout(vadTimeout);
+					vadTimeout = undefined;
+				}
+			});
+		});
+
 		// When the media source changes, bump the z-index to the highest known value.
 		this.camera.signals.effect((effect) => {
 			if (!effect.get(this.camera.enabled)) return;
@@ -289,10 +326,12 @@ export class Room {
 		this.camera.preview.info.set((prev) => ({
 			...prev,
 			chat: false,
+			speaking: false,
 		}));
 		this.screen.preview.info.set((prev) => ({
 			...prev,
 			chat: false,
+			speaking: false,
 		}));
 
 		this.screen.signals.effect((effect) => {
