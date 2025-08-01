@@ -10,6 +10,7 @@ import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
 import { Canvas } from "./canvas";
+import { Fave } from "./fave";
 import { NotFound } from "./not-found";
 import { Sup } from "./sup";
 
@@ -26,6 +27,7 @@ export function Hang(): JSX.Element {
 			<Router>
 				<Route path="/" component={About} />
 				<Route path="/account" component={() => <Account api={api} />} />
+				<Route path="/fave" component={() => <Fave api={api} />} />
 				<Route path="/demo/:room" component={() => <Sup canvas={canvas} api={api} />} />
 				<Route path="*" component={NotFound} />
 			</Router>
