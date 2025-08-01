@@ -1,6 +1,6 @@
 import * as Api from "@hang/api/client";
 import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
-import { Root, Signal, Unique } from "@kixelated/signals";
+import { Effect, Root, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { loadMeme } from "../meme";
@@ -57,7 +57,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	audio: Audio;
 	video: Video;
 
-	bounds: Unique<Bounds>; // 0 to canvas
+	bounds: Signal<Bounds>; // 0 to canvas
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
@@ -120,7 +120,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			.normalize()
 			.mult(canvas.length())
 			.add(canvas.div(2));
-		this.bounds = new Unique(new Bounds(startPosition, this.video.targetSize));
+		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
 		this.signals.effect((effect) => {
@@ -174,20 +174,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			this.display.set(effect.get(this.source.user)?.name ?? effect.get(this.source.name));
 		});
 
-		this.signals.effect((effect) => {
-			if (!effect.get(this.source.chat.enabled)) return;
-
-			let consumer: Container.ChatConsumer | undefined;
-			if (this.source instanceof Watch.Broadcast) {
-				consumer = effect.get(this.source.chat.track);
-				if (!consumer) return;
-			} else {
-				consumer = this.source.chat.consume();
-			}
-
-			effect.cleanup(() => consumer.close());
-			effect.spawn(this.#runChat.bind(this, consumer));
-		});
+		this.signals.effect(this.#runChat.bind(this));
 
 		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
 		if (props?.camera && this.source instanceof Watch.Broadcast) {
@@ -252,10 +239,22 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.#locationPeer = peer;
 	}
 
-	async #runChat(decoder: Container.ChatConsumer, cancel: Promise<void>) {
-		try {
+	async #runChat(effect: Effect) {
+		if (!effect.get(this.source.chat.enabled)) return;
+
+		let consumer: Container.ChatConsumer | undefined;
+		if (this.source instanceof Watch.Broadcast) {
+			consumer = effect.get(this.source.chat.track);
+			if (!consumer) return;
+		} else {
+			consumer = this.source.chat.consume();
+		}
+
+		effect.cleanup(() => consumer.close());
+
+		effect.spawn(async (cancel) => {
 			for (;;) {
-				const next = await Promise.race([decoder.next(), cancel]);
+				const next = await Promise.race([consumer.next(), cancel]);
 				if (!next) break;
 
 				// First, try to match the message to a known video/sound file.
@@ -293,16 +292,13 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				this.audio.notifications.play("chat");
 
 				// Remove from the DOM after the max fade time.
-				setTimeout(() => {
+				effect.timer(() => {
 					this.messages.set((messages) => messages.slice(0, -1));
 				}, 10000);
 			}
-		} catch (err) {
-			console.warn("error running chat", err);
-		} finally {
-			//this.messages.set([]);
-			decoder.close();
-		}
+		});
+
+		effect.cleanup(() => this.messages.set([]));
 	}
 
 	// TODO Also make scale a signal

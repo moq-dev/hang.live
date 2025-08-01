@@ -8,6 +8,7 @@ import { createStore } from "solid-js/store";
 import IconChat from "~icons/mdi/message-text";
 import IconMicrophone from "~icons/mdi/microphone";
 import IconVideo from "~icons/mdi/video";
+import IconVolumeHigh from "~icons/mdi/volume-high";
 
 export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Element {
 	const connection = new Connection();
@@ -102,9 +103,10 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 								class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
 							/>
 						</div>
-						<Show when={info().audio}>
-							<div class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg">
-								<div class="w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
+						<Show when={info().speaking}>
+							<div class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center">
+								<IconVolumeHigh class="w-3 h-3 text-gray-900" />
+								<div class="absolute w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
 							</div>
 						</Show>
 					</div>
@@ -112,37 +114,45 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 						<div class="text-base font-semibold text-white truncate group-hover:text-green-100 transition-colors mb-1">
 							{info().name}
 						</div>
-						<div class="flex items-center flex-1">
+						<div class="flex items-center gap-2">
 							<div
-								class="flex items-center gap-1 bg-green-500/20 text-green-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
+								class="relative transition-all duration-300 ease-in-out"
 								classList={{
-									"opacity-100 scale-100 max-w-20 mr-1 px-2 py-0.5": info().audio,
-									"opacity-0 scale-75 max-w-0 mr-0 px-0 py-0 pointer-events-none": !info().audio,
+									"opacity-100 scale-100": info().audio,
+									"opacity-0 scale-75 w-0 -ml-2": !info().audio,
 								}}
+								title="Voice enabled"
 							>
-								<IconMicrophone class="w-3 h-3" />
-								voice
+								<IconMicrophone class="w-4 h-4 text-green-400" />
 							</div>
 							<div
-								class="flex items-center gap-1 bg-blue-500/20 text-blue-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
+								class="relative transition-all duration-300 ease-in-out"
 								classList={{
-									"opacity-100 scale-100 max-w-20 mr-1 px-2 py-0.5": info().video,
-									"opacity-0 scale-75 max-w-0 mr-0 px-0 py-0 pointer-events-none": !info().video,
+									"opacity-100 scale-100": info().video,
+									"opacity-0 scale-75 w-0 -ml-2": !info().video,
 								}}
+								title="Video enabled"
 							>
-								<IconVideo class="w-3 h-3" />
-								video
+								<IconVideo class="w-4 h-4 text-blue-400" />
 							</div>
 							<div
-								class="flex items-center gap-1 bg-purple-500/20 text-purple-300 text-xs font-medium rounded-full transition-all duration-300 ease-in-out overflow-hidden"
+								class="relative transition-all duration-300 ease-in-out"
 								classList={{
-									"opacity-100 scale-100 max-w-20 px-2 py-0.5": info().chat,
-									"opacity-0 scale-75 max-w-0 px-0 py-0 pointer-events-none": !info().chat,
+									"opacity-100 scale-100": info().chat,
+									"opacity-0 scale-75 w-0 -ml-2": !info().chat,
 								}}
+								title="Chat active"
 							>
-								<IconChat class="w-3 h-3" />
-								chat
+								<IconChat class="w-4 h-4 text-purple-400" />
 							</div>
+							<Show when={info().speaking}>
+								<div
+									class="relative transition-all duration-300 ease-in-out animate-pulse"
+									title="Speaking"
+								>
+									<IconVolumeHigh class="w-4 h-4 text-green-300" />
+								</div>
+							</Show>
 						</div>
 					</div>
 				</div>
