@@ -93,3 +93,4 @@ Hang-specific server and business logic:
 - **Components**: PascalCase for components, camelCase for functions
 - **Imports**: Always use ESM, prefer `import * as ` for namespacing.
 - **Async**: Use async/await over promises
+- **TypeScript**: Explicitly type variables to avoid `any` inference

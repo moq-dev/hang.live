@@ -241,24 +241,21 @@ export class Room {
 			}));
 		});
 
-		// Monitor VAD signal with 1-second debouncing
+		// Monitor VAD signal with some debouncing
 		this.camera.signals.effect((effect) => {
 			const speaking = effect.get(this.camera.audio.speaking);
-			if (speaking) {
-				this.camera.preview.info.set((prev) => ({
-					...prev,
-					speaking: true,
-				}));
-			} else {
-				// Debounce the speaking=false state by 1 second.
-				// NOTE: The timeout will get cleared when the effect is run again.
-				effect.timeout(() => {
+
+			// NOTE: The timer will get cleared when the effect is run again.
+			// So it has to stay set for at least 100ms or unset for 1000ms.
+			effect.timer(
+				() => {
 					this.camera.preview.info.set((prev) => ({
 						...prev,
-						speaking: false,
+						speaking,
 					}));
-				}, 1000);
-			}
+				},
+				speaking ? 100 : 1000,
+			);
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
