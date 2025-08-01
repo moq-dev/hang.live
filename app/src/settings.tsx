@@ -6,7 +6,6 @@ import IconBug from "~icons/mdi/bug";
 import IconCursorMove from "~icons/mdi/cursor-move";
 import IconPotato from "~icons/mdi/fried-potatoes";
 import IconHeadphones from "~icons/mdi/headphones";
-import IconMicrophone from "~icons/mdi/microphone";
 
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
@@ -15,7 +14,6 @@ const Settings = {
 	potato: new Signal(localStorage.getItem("settings.potato") === "true"),
 	headphones: new Signal(localStorage.getItem("settings.headphones") === "true"),
 	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
-	echo: new Signal(false), // never saved, it's just for testing
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 };
@@ -69,7 +67,6 @@ export function Modal(): JSX.Element {
 	const headphones = solid(Settings.headphones);
 	const draggable = solid(Settings.draggable);
 	const potato = solid(Settings.potato);
-	const echo = solid(Settings.echo);
 	const debug = solid(Settings.debug);
 
 	return (
@@ -84,12 +81,6 @@ export function Modal(): JSX.Element {
 			<span>remote dragging</span>
 			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
 				<IconCursorMove />
-			</span>
-
-			<input type="checkbox" checked={echo()} onChange={() => Settings.echo.set((p) => !p)} />
-			<span>echo mode</span>
-			<span title="Play back your own audio. This is useful for debugging what you *actually* sound like, but please wear headphones.">
-				<IconMicrophone />
 			</span>
 
 			<input type="checkbox" checked={potato()} onChange={() => Settings.potato.set((p) => !p)} />

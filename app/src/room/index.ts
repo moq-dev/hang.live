@@ -120,6 +120,7 @@ export class Room {
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
+				vad: true,
 			},
 			// Publish our camera's location, starting at a random position.
 			location: {
@@ -240,6 +241,26 @@ export class Room {
 			}));
 		});
 
+		// Monitor VAD signal with 1-second debouncing
+		this.camera.signals.effect((effect) => {
+			const speaking = effect.get(this.camera.audio.speaking);
+			if (speaking) {
+				this.camera.preview.info.set((prev) => ({
+					...prev,
+					speaking: true,
+				}));
+			} else {
+				// Debounce the speaking=false state by 1 second.
+				// NOTE: The timeout will get cleared when the effect is run again.
+				effect.timeout(() => {
+					this.camera.preview.info.set((prev) => ({
+						...prev,
+						speaking: false,
+					}));
+				}, 1000);
+			}
+		});
+
 		// When the media source changes, bump the z-index to the highest known value.
 		this.camera.signals.effect((effect) => {
 			if (!effect.get(this.camera.enabled)) return;
@@ -288,10 +309,12 @@ export class Room {
 		this.camera.preview.info.set((prev) => ({
 			...prev,
 			chat: false,
+			speaking: false,
 		}));
 		this.screen.preview.info.set((prev) => ({
 			...prev,
 			chat: false,
+			speaking: false,
 		}));
 
 		this.screen.signals.effect((effect) => {
@@ -474,24 +497,6 @@ export class Room {
 
 		this.#signals.effect(this.#init.bind(this));
 
-		// When the echo setting changes, recreate any local broadcasts.
-		this.#signals.subscribe(Settings.echo, () => {
-			const broadcasts = this.broadcasts.peek();
-
-			// Recreate any previews.
-			for (const broadcast of broadcasts) {
-				const name = broadcast.source.name.peek();
-				if (!name) continue;
-				if (name === this.camera.name.peek()) {
-					this.#stopBroadcast(name);
-					this.#startPreview(this.camera);
-				} else if (name === this.screen.name.peek()) {
-					this.#stopBroadcast(name);
-					this.#startPreview(this.screen);
-				}
-			}
-		});
-
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
 		this.#signals.cleanup(() => {
@@ -602,51 +607,14 @@ export class Room {
 	}
 
 	#startPreview(source: Publish.Broadcast): Broadcast {
-		let broadcast: Broadcast;
-
-		if (Settings.echo.peek()) {
-			// If echo is enabled, then we'll download our broadcast from the network.
-			const watch = new Watch.Broadcast(this.connection, {
-				enabled: true,
-				name: source.name.peek(),
-				reload: false,
-				// Download the location of the broadcaster.
-				location: { enabled: true },
-				// Download the chat of the broadcaster.
-				chat: { enabled: true },
-			});
-
-			// Download video when the canvas is visible.
-			watch.signals.subscribe(this.canvas.visible, (visible) => {
-				watch.video.enabled.set(visible);
-			});
-
-			// Download audio when the AudioContext is not suspended.
-			watch.signals.subscribe(this.suspended, (suspended) => {
-				watch.audio.enabled.set(!suspended);
-			});
-
-			// Replace the entry with a remote broadcast.
-			broadcast = new Broadcast(watch, {
-				viewport: this.canvas.viewport,
-				// TODO Figure out location stuff
-				camera: this.camera,
-				screen: this.screen,
-				audio: {
-					notifications: this.notifications,
-				},
-				online: true,
-			});
-		} else {
-			broadcast = new Broadcast(source, {
-				viewport: this.canvas.viewport,
-				audio: {
-					notifications: this.notifications,
-				},
-				// Wait until we get an announcement before rendering ourselves as online.
-				online: false,
-			});
-		}
+		const broadcast = new Broadcast(source, {
+			viewport: this.canvas.viewport,
+			audio: {
+				notifications: this.notifications,
+			},
+			// Wait until we get an announcement before rendering ourselves as online.
+			online: false,
+		});
 
 		this.#startBroadcast(broadcast);
 

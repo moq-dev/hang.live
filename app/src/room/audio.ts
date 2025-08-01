@@ -1,4 +1,4 @@
-import { type Publish, Watch } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import { type Effect, Root, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
@@ -29,6 +29,9 @@ export class Audio {
 	notifications: PannedNotifications;
 
 	#volumeSmoothed = 0;
+
+	#speaking = false;
+	#speakingAlpha = 0;
 
 	#signals = new Root();
 
@@ -99,6 +102,14 @@ export class Audio {
 		if (this.broadcast.source instanceof Watch.Broadcast) {
 			this.#signals.effect(this.#runOutput.bind(this));
 		}
+
+		// Track speaking state from publish broadcast
+		this.#signals.effect((effect) => {
+			if (this.broadcast.source instanceof Publish.Broadcast) {
+				const speaking = effect.get(this.broadcast.source.audio.speaking);
+				this.#speaking = speaking ?? false;
+			}
+		});
 	}
 
 	#runOutput(effect: Effect) {
@@ -138,7 +149,7 @@ export class Audio {
 
 		ctx.translate(bounds.position.x, bounds.position.y);
 
-		const RADIUS = 32 * this.broadcast.scale;
+		const RADIUS = 8 + 16 * Math.sqrt(this.broadcast.scale);
 		const PADDING = 8 + 16 * Math.sqrt(this.broadcast.scale);
 
 		// Background outline
@@ -153,6 +164,7 @@ export class Audio {
 		);
 		ctx.fillStyle = "#000";
 		ctx.fill();
+
 		ctx.restore();
 	}
 
@@ -168,7 +180,7 @@ export class Audio {
 		ctx.translate(bounds.position.x, bounds.position.y);
 
 		const PADDING = 8 + 16 * Math.sqrt(scale);
-		const RADIUS = 32 * scale;
+		const RADIUS = 8 + 16 * Math.sqrt(scale);
 
 		// Take the absolute value of the distance from 128, which is silence.
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {
@@ -195,7 +207,7 @@ export class Audio {
 		const volume = Math.sqrt(sum) / this.#analyserBuffer.length;
 		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
 
-		// Colored fill based on volume (inside → outside)
+		// Colored fill based on volume and speaking state
 		const expand = PADDING * Math.min(1, this.#volumeSmoothed - 0.01);
 
 		ctx.beginPath();
@@ -203,8 +215,20 @@ export class Audio {
 
 		const hue = 180 + this.#volumeSmoothed * 120;
 		const alpha = 0.3 + this.#volumeSmoothed * 0.4;
+
 		ctx.fillStyle = `hsla(${hue}, 80%, 45%, ${alpha})`;
 		ctx.fill();
+
+		// Ramp up/down the speaking alpha based on the speaking state.
+		this.#speakingAlpha = Math.max(Math.min(1, this.#speakingAlpha + (this.#speaking ? 0.1 : -0.1)), 0);
+
+		// Add an additional border if we're speaking, ramping up/down the alpha
+		if (this.#speakingAlpha > 0) {
+			ctx.strokeStyle = `hsla(${hue}, 80%, 45%, ${this.#speakingAlpha})`;
+			ctx.lineWidth = 6 * this.broadcast.scale;
+			ctx.stroke();
+		}
+
 		ctx.restore();
 	}
 
