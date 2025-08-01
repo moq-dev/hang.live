@@ -1,4 +1,4 @@
-import { type Effect, Root, type Signal } from "@kixelated/signals";
+import { Effect, type Signal } from "@kixelated/signals";
 import Settings from "../settings";
 
 const SOUNDS = {
@@ -24,7 +24,7 @@ export class Notifications {
 	gain: GainNode;
 
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
-	#signals = new Root();
+	#signals = new Effect();
 
 	constructor() {
 		this.context = new AudioContext();
@@ -107,7 +107,7 @@ export class PannedNotifications {
 
 	pan: Signal<number>;
 
-	#signals = new Root();
+	#signals = new Effect();
 
 	constructor(parent: Notifications, pan: Signal<number>) {
 		this.#parent = parent;

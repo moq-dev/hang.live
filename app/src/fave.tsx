@@ -40,8 +40,8 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 							<For each={[1, 2, 3]}>
 								{() => (
 									<div class="bg-gray-800 rounded-xl p-4 animate-pulse">
-										<div class="h-6 bg-gray-700 rounded mb-2"></div>
-										<div class="h-4 bg-gray-700 rounded w-2/3"></div>
+										<div class="h-6 bg-gray-700 rounded mb-2" />
+										<div class="h-4 bg-gray-700 rounded w-2/3" />
 									</div>
 								)}
 							</For>

@@ -1,4 +1,4 @@
-import { type Effect, Root, Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import { Vector } from "./room/geometry";
 import Settings from "./settings";
 
@@ -25,7 +25,7 @@ export class Canvas {
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
 
-	#signals = new Root();
+	#signals = new Effect();
 
 	constructor(element: HTMLCanvasElement) {
 		this.#canvas = element;
