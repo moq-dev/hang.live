@@ -1,13 +1,11 @@
 import * as Api from "@hang/api/client";
 import { useParams } from "@solidjs/router";
-import { createEffect, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { createEffect, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
 import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
-import IconDiscord from "~icons/mdi/discord";
-import IconGoogle from "~icons/mdi/google";
 import IconVideo from "~icons/mdi/video";
 import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";
@@ -15,9 +13,9 @@ import { Chat } from "./chat";
 import { Controls } from "./controls";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
+import { LoginButtons } from "./login-buttons";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
-import { unreachable } from "./util";
 
 interface Info {
 	name: string;
@@ -54,7 +52,7 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 	onCleanup(() => room.close());
 
 	return (
-		<Layout app={true} connection={room.connection}>
+		<Layout app={true} connection={room.connection} api={props.api}>
 			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
 		</Layout>
@@ -72,7 +70,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 	};
 
 	return (
-		<Layout app={false}>
+		<Layout app={false} api={props.api}>
 			<div class="max-w-7xl p-4">
 				<div class="font-semibold mb-4 text-center text-gray-400">ready to hang?</div>
 
@@ -123,7 +121,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 
 						{/* Login Options - only show for guests */}
 						<Show when={!props.api.authenticated()}>
-							<LoginButtons api={props.api} />
+							<LoginButtons api={props.api} message="...or login to customize your profile" />
 						</Show>
 
 						{/* <MicrophoneControl /> */}
@@ -221,59 +219,6 @@ function AnonymousPreview(props: { api: Api.Client; room: string; setInfo: (info
 				</div>
 			</div>
 		</>
-	);
-}
-
-function LoginButtons(props: { api: Api.Client }): JSX.Element {
-	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
-		switch (provider) {
-			case "google":
-				return <IconGoogle class="w-5 h-5" />;
-			case "discord":
-				return <IconDiscord class="w-5 h-5" />;
-			default:
-				unreachable(provider);
-		}
-	};
-
-	const getProviderColor = (provider: Api.OAuth.ProviderId) => {
-		switch (provider) {
-			case "google":
-				return "bg-red-600 hover:bg-red-700";
-			case "discord":
-				return "bg-blue-600 hover:bg-blue-700";
-			default:
-				unreachable(provider);
-		}
-	};
-
-	const handleProviderLogin = (provider: Api.OAuth.ProviderId) => {
-		props.api.login(provider);
-	};
-
-	return (
-		<div class="text-center rounded-2xl p-4">
-			<p class="text-gray-400 mb-4">...or login to customize your profile</p>
-			<div class="space-y-3">
-				<For each={Api.oauthProviders}>
-					{(provider) => (
-						<button
-							type="button"
-							onClick={() => handleProviderLogin(provider)}
-							class="w-full flex items-center justify-center gap-3 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
-							classList={{
-								[getProviderColor(provider)]: true,
-							}}
-						>
-							<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
-								{getProviderIcon(provider)}
-							</div>
-							<span class="capitalize">Login with {provider}</span>
-						</button>
-					)}
-				</For>
-			</div>
-		</div>
 	);
 }
 
