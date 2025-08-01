@@ -1,0 +1,25 @@
+name: Check
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: DeterminateSystems/flake-checker-action@main
+      - run: nix develop --command just check

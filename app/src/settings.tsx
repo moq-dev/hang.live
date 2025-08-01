@@ -1,4 +1,4 @@
-import { Root, Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
 
@@ -18,37 +18,37 @@ const Settings = {
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 };
 
-const signals = new Root();
+const effect = new Effect();
 
-signals.subscribe(Settings.draggable, (draggable) => {
+effect.subscribe(Settings.draggable, (draggable) => {
 	localStorage.setItem("settings.draggable", draggable.toString());
 });
 
-signals.subscribe(Settings.volume, (volume) => {
+effect.subscribe(Settings.volume, (volume) => {
 	localStorage.setItem("settings.volume", volume.toString());
 });
 
-signals.subscribe(Settings.muted, (muted) => {
+effect.subscribe(Settings.muted, (muted) => {
 	localStorage.setItem("settings.muted", muted.toString());
 });
 
-signals.subscribe(Settings.potato, (potato) => {
+effect.subscribe(Settings.potato, (potato) => {
 	localStorage.setItem("settings.potato", potato.toString());
 });
 
-signals.subscribe(Settings.headphones, (headphones) => {
+effect.subscribe(Settings.headphones, (headphones) => {
 	localStorage.setItem("settings.headphones", headphones.toString());
 });
 
-signals.subscribe(Settings.microphoneGain, (gain) => {
+effect.subscribe(Settings.microphoneGain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
-signals.subscribe(Settings.debug, (debug) => {
+effect.subscribe(Settings.debug, (debug) => {
 	localStorage.setItem("settings.debug", debug.toString());
 });
 
-signals.subscribe(Settings.potato, (potato) => {
+effect.subscribe(Settings.potato, (potato) => {
 	if (potato) {
 		document.documentElement.classList.add("potato");
 	} else {
@@ -58,7 +58,7 @@ signals.subscribe(Settings.potato, (potato) => {
 
 // Mostly just to avoid console warnings about signals not being closed
 document.addEventListener("unload", () => {
-	signals.close();
+	effect.close();
 });
 
 export default Settings;

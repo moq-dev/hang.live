@@ -1,5 +1,5 @@
 import { Publish, Watch } from "@kixelated/hang";
-import { type Effect, Root, Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { type Notifications, PannedNotifications } from "./notifications";
@@ -33,7 +33,7 @@ export class Audio {
 	#speaking = false;
 	#speakingAlpha = 0;
 
-	#signals = new Root();
+	#signals = new Effect();
 
 	constructor(broadcast: Broadcast, props: AudioProps) {
 		this.broadcast = broadcast;

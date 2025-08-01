@@ -1,7 +1,7 @@
 import * as Api from "@hang/api/client";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
-import { type Effect, Root, Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import type { Canvas } from "../canvas";
 import Settings from "../settings";
 import { Broadcast } from "./broadcast";
@@ -64,7 +64,7 @@ export class Room {
 	// Notifications use a shared AudioContext.
 	notifications: Notifications;
 
-	#signals = new Root();
+	#signals = new Effect();
 
 	constructor(canvas: Canvas, api: Api.Client, props?: RoomProps) {
 		this.connection = new Connection();
@@ -121,6 +121,7 @@ export class Room {
 					noiseSuppression: { ideal: true },
 				},
 				vad: true,
+				transcribe: true, // will publish a "captions" track
 			},
 			// Publish our camera's location, starting at a random position.
 			location: {
@@ -135,7 +136,6 @@ export class Room {
 			},
 			chat: {
 				enabled: true,
-				ttl: 10000, // Save messages for at most 10 seconds.
 			},
 			// A public preview for unauthenticated users.
 			preview: {
@@ -552,6 +552,10 @@ export class Room {
 						location: { enabled: true },
 						// Download the chat of the broadcaster.
 						chat: { enabled: true },
+						audio: {
+							// Fetch any captions track.
+							transcribe: true,
+						},
 					});
 
 					// Download video when the canvas is visible.
