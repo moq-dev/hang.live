@@ -241,6 +241,16 @@ export class Room {
 			}));
 		});
 
+		this.camera.signals.effect((effect) => {
+			const message = effect.get(this.camera.chat.message);
+			if (!message) return;
+
+			// Clear the message after 5 seconds.
+			effect.timer(() => {
+				this.camera.chat.message.set(undefined);
+			}, 5000);
+		});
+
 		// Monitor VAD signal with some debouncing
 		this.camera.signals.effect((effect) => {
 			const speaking = effect.get(this.camera.audio.speaking);
