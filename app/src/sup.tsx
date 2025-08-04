@@ -6,14 +6,14 @@ import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generato
 import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
-import IconVideo from "~icons/mdi/video";
+import IconPlay from "~icons/mdi/play";
 import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
 import { Controls } from "./controls";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
-import { LoginButtons } from "./login-buttons";
+import { LoginButtons } from "./login";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 
@@ -72,7 +72,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 	return (
 		<Layout app={false} api={props.api}>
 			<div class="max-w-7xl p-4">
-				<div class="font-semibold mb-4 text-center text-gray-400">ready to hang?</div>
+				<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
 				{/* Join Button */}
 				<div class="mb-12 flex justify-center">
@@ -88,7 +88,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 							"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 						}}
 					>
-						<IconVideo class="w-5 h-5 inline mr-2" />
+						<IconPlay class="w-5 h-5 inline mr-2" />
 						<Switch>
 							<Match when={!info()}>Loading...</Match>
 							<Match when={info()?.guest}>Join as Guest</Match>
@@ -121,7 +121,9 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 
 						{/* Login Options - only show for guests */}
 						<Show when={!props.api.authenticated()}>
-							<LoginButtons api={props.api} message="...or login to customize your profile" />
+							<div class="rounded-2xl border border-gray-800 p-6">
+								<LoginButtons api={props.api} message="...or login to customize your profile" />
+							</div>
 						</Show>
 
 						{/* <MicrophoneControl /> */}
