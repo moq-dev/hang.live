@@ -9,6 +9,7 @@ import type { Room } from "./room";
 import type { Broadcast } from "./room/broadcast";
 
 import "github-markdown-css/github-markdown-dark.css";
+import Settings from "./settings";
 
 export function Chat(props: { canvas: Canvas; room: Room }) {
 	const broadcasts = solid(props.room.broadcasts);
@@ -49,6 +50,8 @@ class ChatBubble {
 		});
 
 		this.signals.effect((effect) => {
+			if (!effect.get(Settings.renderCaptions)) return;
+
 			const caption = effect.get(this.broadcast.source.audio.caption);
 			if (!caption) return;
 
@@ -86,7 +89,7 @@ class ChatBubble {
 		wrapper.appendChild(iconContainer);
 
 		const icon = type === "text" ? IconText : IconCaption;
-		render(() => icon({ class: "w-5 h-5", style: "color: hsl(var(--link-hue), 70%, 50%)" }), iconContainer);
+		render(() => icon({ class: "w-5 h-5", style: "color: hsl(var(--link-hue), 75%, 50%)" }), iconContainer);
 
 		wrapper.appendChild(node);
 
