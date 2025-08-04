@@ -1,8 +1,8 @@
-import { Root, Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
-
 import IconBug from "~icons/mdi/bug";
+import IconCaptions from "~icons/mdi/closed-caption";
 import IconCursorMove from "~icons/mdi/cursor-move";
 import IconPotato from "~icons/mdi/fried-potatoes";
 import IconHeadphones from "~icons/mdi/headphones";
@@ -15,40 +15,51 @@ const Settings = {
 	headphones: new Signal(localStorage.getItem("settings.headphones") === "true"),
 	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 
+	renderCaptions: new Signal(localStorage.getItem("settings.renderCaptions") !== "false"),
+	captureCaptions: new Signal(localStorage.getItem("settings.captureCaptions") !== "false"),
+
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 };
 
-const signals = new Root();
+const effect = new Effect();
 
-signals.subscribe(Settings.draggable, (draggable) => {
+effect.subscribe(Settings.draggable, (draggable) => {
 	localStorage.setItem("settings.draggable", draggable.toString());
 });
 
-signals.subscribe(Settings.volume, (volume) => {
+effect.subscribe(Settings.volume, (volume) => {
 	localStorage.setItem("settings.volume", volume.toString());
 });
 
-signals.subscribe(Settings.muted, (muted) => {
+effect.subscribe(Settings.muted, (muted) => {
 	localStorage.setItem("settings.muted", muted.toString());
 });
 
-signals.subscribe(Settings.potato, (potato) => {
+effect.subscribe(Settings.potato, (potato) => {
 	localStorage.setItem("settings.potato", potato.toString());
 });
 
-signals.subscribe(Settings.headphones, (headphones) => {
+effect.subscribe(Settings.headphones, (headphones) => {
 	localStorage.setItem("settings.headphones", headphones.toString());
 });
 
-signals.subscribe(Settings.microphoneGain, (gain) => {
+effect.subscribe(Settings.microphoneGain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
-signals.subscribe(Settings.debug, (debug) => {
+effect.subscribe(Settings.debug, (debug) => {
 	localStorage.setItem("settings.debug", debug.toString());
 });
 
-signals.subscribe(Settings.potato, (potato) => {
+effect.subscribe(Settings.renderCaptions, (closedCaptions) => {
+	localStorage.setItem("settings.renderCaptions", closedCaptions.toString());
+});
+
+effect.subscribe(Settings.captureCaptions, (transcription) => {
+	localStorage.setItem("settings.captureCaptions", transcription.toString());
+});
+
+effect.subscribe(Settings.potato, (potato) => {
 	if (potato) {
 		document.documentElement.classList.add("potato");
 	} else {
@@ -58,7 +69,7 @@ signals.subscribe(Settings.potato, (potato) => {
 
 // Mostly just to avoid console warnings about signals not being closed
 document.addEventListener("unload", () => {
-	signals.close();
+	effect.close();
 });
 
 export default Settings;
@@ -68,6 +79,7 @@ export function Modal(): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const potato = solid(Settings.potato);
 	const debug = solid(Settings.debug);
+	const captions = solid(Settings.captureCaptions);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -78,7 +90,7 @@ export function Modal(): JSX.Element {
 			</span>
 
 			<input type="checkbox" checked={draggable()} onChange={() => Settings.draggable.set((p) => !p)} />
-			<span>remote dragging</span>
+			<span>allow dragging</span>
 			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
 				<IconCursorMove />
 			</span>
@@ -93,6 +105,12 @@ export function Modal(): JSX.Element {
 			<span>debug</span>
 			<span title="Show debug visualizations.">
 				<IconBug />
+			</span>
+
+			<input type="checkbox" checked={captions()} onChange={() => Settings.captureCaptions.set((p) => !p)} />
+			<span>generate captions</span>
+			<span title="Generate closed captions for your own speech.">
+				<IconCaptions />
 			</span>
 		</div>
 	);

@@ -1,6 +1,6 @@
 import * as Api from "@hang/api/client";
-import { type Catalog, type Container, Publish, Watch } from "@kixelated/hang";
-import { Effect, Root, Signal } from "@kixelated/signals";
+import { type Catalog, Publish, Watch } from "@kixelated/hang";
+import { Effect, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { loadMeme } from "../meme";
@@ -57,6 +57,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	audio: Audio;
 	video: Video;
 
+	// The current chat message, if any.
+	message = new Signal<DocumentFragment | undefined>(undefined);
+
 	bounds: Signal<Bounds>; // 0 to canvas
 	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
@@ -74,9 +77,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	display = new Signal<string | undefined>(undefined);
 	avatar = new Image();
 
-	// Returns the most recent chat messages.
-	messages: Signal<ChatMessage[]>;
-
 	// The target position of the broadcast, while bounds contains the actual position.
 	// This is separate from the source.location.current so we can temporarily use our own value.
 	// After we learn the real position over the network, we'll replace it.
@@ -87,7 +87,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	#locationPeer?: Publish.LocationPeer;
 
-	signals = new Root();
+	signals = new Effect();
 
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
@@ -95,7 +95,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	constructor(source: T, props: BroadcastProps) {
 		this.source = source;
 		this.viewport = props.viewport;
-		this.messages = new Signal<ChatMessage[]>([]);
 		this.online = new Signal(props?.online ?? true);
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
@@ -242,63 +241,36 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	async #runChat(effect: Effect) {
 		if (!effect.get(this.source.chat.enabled)) return;
 
-		let consumer: Container.ChatConsumer | undefined;
-		if (this.source instanceof Watch.Broadcast) {
-			consumer = effect.get(this.source.chat.track);
-			if (!consumer) return;
-		} else {
-			consumer = this.source.chat.consume();
-		}
+		const msg = effect.get(this.source.chat.message);
+		if (!msg) return;
 
-		effect.cleanup(() => consumer.close());
-
-		effect.spawn(async (cancel) => {
-			for (;;) {
-				const next = await Promise.race([consumer.next(), cancel]);
-				if (!next) break;
-
-				// First, try to match the message to a known video/sound file.
-				if (next.startsWith("/")) {
-					const meme = loadMeme(next.slice(1));
-					if (meme) {
-						this.meme.set((prev) => {
-							prev?.pause();
-							return meme;
-						});
-
-						continue;
-					}
-				}
-
-				// Convert markdown to HTML.
-				// TODO: Run in a web worker to prevent DoS attacks apparently?
-				const markdown = marked.parse(next, { async: false });
-
-				// Sanitize the resulting HTML.
-				// ChatGPT says that allowing target is ONLY safe with noopener noreferrer,
-				const sanitized = DOMPurify.sanitize(markdown, {
-					ADD_ATTR: ["target", "rel"],
-					RETURN_DOM_FRAGMENT: true,
+		// First, try to match the message to a known video/sound file.
+		if (msg.startsWith("/")) {
+			const meme = loadMeme(msg.slice(1));
+			if (meme) {
+				this.meme.set((prev) => {
+					prev?.pause();
+					return meme;
 				});
 
-				const message = {
-					element: sanitized,
-					received: performance.now(),
-					expires: performance.now() + 10000, // 10 seconds
-				};
-
-				this.messages.set((messages) => [message, ...messages]);
-
-				this.audio.notifications.play("chat");
-
-				// Remove from the DOM after the max fade time.
-				effect.timer(() => {
-					this.messages.set((messages) => messages.slice(0, -1));
-				}, 10000);
+				return;
 			}
+		}
+
+		// Convert markdown to HTML.
+		// TODO: Run in a web worker to prevent DoS attacks, apparently?
+		const markdown = marked.parse(msg, { async: false });
+
+		// Sanitize the resulting HTML.
+		// ChatGPT says that allowing target is ONLY safe with noopener noreferrer,
+		const sanitized = DOMPurify.sanitize(markdown, {
+			ADD_ATTR: ["target", "rel"],
+			RETURN_DOM_FRAGMENT: true,
 		});
 
-		effect.cleanup(() => this.messages.set([]));
+		this.audio.notifications.play("chat");
+
+		effect.set(this.message, sanitized);
 	}
 
 	// TODO Also make scale a signal
