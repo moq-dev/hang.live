@@ -33,6 +33,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.1.1",
 		"@iconify-json/mdi": "^1.2.3",
+		"@iconify-json/material-symbols": "^1.2.30",
 		"@tauri-apps/cli": "^2.6.2",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.234",
 		"globals": "^16.3.0",

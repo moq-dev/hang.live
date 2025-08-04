@@ -1,7 +1,7 @@
 import * as Api from "@hang/api/client";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
-import { type Effect, Root, Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import type { Canvas } from "../canvas";
 import Settings from "../settings";
 import { Broadcast } from "./broadcast";
@@ -64,7 +64,7 @@ export class Room {
 	// Notifications use a shared AudioContext.
 	notifications: Notifications;
 
-	#signals = new Root();
+	#signals = new Effect();
 
 	constructor(canvas: Canvas, api: Api.Client, props?: RoomProps) {
 		this.connection = new Connection();
@@ -120,7 +120,7 @@ export class Room {
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
-				vad: true,
+				vad: true, // Always enable VAD because it's cheap.
 			},
 			// Publish our camera's location, starting at a random position.
 			location: {
@@ -135,12 +135,17 @@ export class Room {
 			},
 			chat: {
 				enabled: true,
-				ttl: 10000, // Save messages for at most 10 seconds.
 			},
 			// A public preview for unauthenticated users.
 			preview: {
 				enabled: true,
 			},
+		});
+
+		// Enable transcription when the setting is enabled.
+		// The publisher is responsible for transcribing, regardless of if they want to display captions.
+		this.#signals.subscribe(Settings.captureCaptions, (transcription) => {
+			this.camera.audio.transcribe.set(transcription);
 		});
 
 		// Apply echo cancellation based on the headphones setting.
@@ -239,6 +244,16 @@ export class Room {
 				...prev,
 				chat: !!message,
 			}));
+		});
+
+		this.camera.signals.effect((effect) => {
+			const message = effect.get(this.camera.chat.message);
+			if (!message) return;
+
+			// Clear the message after 5 seconds.
+			effect.timer(() => {
+				this.camera.chat.message.set(undefined);
+			}, 5000);
 		});
 
 		// Monitor VAD signal with some debouncing
@@ -552,6 +567,11 @@ export class Room {
 						location: { enabled: true },
 						// Download the chat of the broadcaster.
 						chat: { enabled: true },
+					});
+
+					// Download captions when the setting is enabled.
+					watch.signals.subscribe(Settings.renderCaptions, (closedCaptions) => {
+						watch.audio.transcribe.set(closedCaptions);
 					});
 
 					// Download video when the canvas is visible.
