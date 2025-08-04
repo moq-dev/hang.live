@@ -34,6 +34,10 @@ a {
 	@apply font-bold;
 }
 
+.text-link-hue {
+	color: hsl(var(--link-hue), 75%, 50%);
+}
+
 /*
 a:hover {
 	text-decoration-color: gold;

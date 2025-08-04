@@ -1,16 +1,14 @@
 import * as Api from "@hang/api/client";
-import { createEffect, createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconArrowLeft from "~icons/mdi/arrow-left";
 import IconCamera from "~icons/mdi/camera";
-import IconDiscord from "~icons/mdi/discord";
-import IconGoogle from "~icons/mdi/google";
 import IconLogout from "~icons/mdi/logout";
 import IconUpload from "~icons/mdi/upload";
 import { AnotherOne } from "./another-one";
 import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
-import { unreachable } from "./util";
+import { LoginButtons } from "./login";
 
 export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
@@ -387,66 +385,16 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 }
 
 export function Login(props: { api: Api.Client }): JSX.Element {
-	const [loading, setLoading] = createSignal(false);
-	const [error, setError] = createSignal<string | null>(null);
-
-	const gradient = useAnimatedGradient();
-
-	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
-		switch (provider) {
-			case "google":
-				return <IconGoogle class="w-5 h-5" />;
-			case "discord":
-				return <IconDiscord class="w-5 h-5" />;
-			default:
-				unreachable(provider);
-		}
-	};
-
-	const handleProviderLogin = (provider: Api.OAuth.ProviderId) => {
-		setLoading(true);
-		setError(null);
-		// Performs a redirect to the login page.
-		props.api.login(provider);
-	};
-
 	return (
 		<main class="flex items-center justify-center">
 			<div class="w-full max-w-md">
 				{/* Title */}
 				<div class="text-center mb-8">
-					<p class=" text-gray-400 font-semibold text-center">ready to join?</p>
+					<div class="font-semibold mb-6 text-center text-gray-400">ready to join?</div>
 				</div>
-
-				{/* Error message */}
-				<Show when={error()}>
-					<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-4 mb-6 text-red-300 text-center">
-						{error()}
-					</div>
-				</Show>
 
 				{/* Login buttons */}
-				<div class="space-y-4">
-					<For each={Api.oauthProviders}>
-						{(provider) => (
-							<button
-								type="button"
-								onClick={() => handleProviderLogin(provider)}
-								disabled={loading()}
-								class="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 disabled:hover:scale-100 cursor-pointer"
-								style={{
-									background: gradient.linear(),
-									"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-								}}
-							>
-								<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
-									{getProviderIcon(provider)}
-								</div>
-								<span class="capitalize">Login with {provider}</span>
-							</button>
-						)}
-					</For>
-				</div>
+				<LoginButtons api={props.api} />
 			</div>
 		</main>
 	);

@@ -89,7 +89,7 @@ class ChatBubble {
 		wrapper.appendChild(iconContainer);
 
 		const icon = type === "text" ? IconText : IconCaption;
-		render(() => icon({ class: "w-5 h-5", style: "color: hsl(var(--link-hue), 75%, 50%)" }), iconContainer);
+		render(() => icon({ class: "w-5 h-5 text-link-hue" }), iconContainer);
 
 		wrapper.appendChild(node);
 
