@@ -45,8 +45,8 @@ export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Eleme
 				when={Object.values(members).length > 0}
 				fallback={
 					<div class="text-center py-12">
-						<p class="text-gray-400 mb-2">No one's here yet!</p>
-						<p class="text-gray-500 text-sm">Be the first to join this room</p>
+						<h3 class="text-lg font-semibold mb-4">No one's here yet!</h3>
+						<p class="text-gray-500 text-sm">Be the first to join</p>
 					</div>
 				}
 			>
