@@ -120,8 +120,7 @@ export class Room {
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
-				vad: true,
-				transcribe: true, // will publish a "captions" track
+				vad: true, // Always enable VAD because it's cheap.
 			},
 			// Publish our camera's location, starting at a random position.
 			location: {
@@ -141,6 +140,12 @@ export class Room {
 			preview: {
 				enabled: true,
 			},
+		});
+
+		// Enable transcription when the setting is enabled.
+		// The publisher is responsible for transcribing, regardless of if they want to display captions.
+		this.#signals.subscribe(Settings.captureCaptions, (transcription) => {
+			this.camera.audio.transcribe.set(transcription);
 		});
 
 		// Apply echo cancellation based on the headphones setting.
@@ -562,10 +567,11 @@ export class Room {
 						location: { enabled: true },
 						// Download the chat of the broadcaster.
 						chat: { enabled: true },
-						audio: {
-							// Fetch any captions track.
-							transcribe: true,
-						},
+					});
+
+					// Download captions when the setting is enabled.
+					watch.signals.subscribe(Settings.renderCaptions, (closedCaptions) => {
+						watch.audio.transcribe.set(closedCaptions);
 					});
 
 					// Download video when the canvas is visible.

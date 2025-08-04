@@ -2,6 +2,8 @@ import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
 import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import IconClosedCaption from "~icons/material-symbols/closed-caption";
+import IconClosedCaptionDisabled from "~icons/material-symbols/closed-caption-disabled";
 import IconCamera from "~icons/mdi/camera";
 import IconSettings from "~icons/mdi/cog";
 import IconFullscreen from "~icons/mdi/fullscreen";
@@ -28,6 +30,7 @@ export function Controls(props: {
 			<Chat broadcast={props.camera} />
 			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
 			<Volume room={props.room} />
+			<ClosedCaptions />
 			<Advanced />
 			<Fullscreen canvas={props.canvas} />
 		</div>
@@ -265,7 +268,9 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 		if (!m) return;
 
 		if (!props.broadcast.chat.enabled.peek()) return;
-		props.broadcast.chat.message.set(m);
+
+		// Use a function to avoid the dequal check.
+		props.broadcast.chat.message.set(() => m);
 
 		setMessage("");
 	};
@@ -360,6 +365,29 @@ function Volume(props: { room: Room }): JSX.Element {
 					/>
 				</Show>
 			</fieldset>
+		</Tooltip>
+	);
+}
+
+function ClosedCaptions(): JSX.Element {
+	const toggle = () => {
+		Settings.renderCaptions.set((prev) => !prev);
+	};
+
+	const enabled = solid(Settings.renderCaptions);
+
+	return (
+		<Tooltip content={enabled() ? "Disable closed captions" : "Enable closed captions"} position="top">
+			<button
+				type="button"
+				onClick={toggle}
+				role="switch"
+				aria-checked={enabled()}
+				aria-label="Toggle closed captions"
+				class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+			>
+				{enabled() ? <IconClosedCaption /> : <IconClosedCaptionDisabled />}
+			</button>
 		</Tooltip>
 	);
 }
