@@ -3,9 +3,9 @@ import { type Catalog, Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
-import { loadMeme } from "../meme";
 import { Audio, type AudioProps } from "./audio";
 import { Bounds, Vector } from "./geometry";
+import { loadMeme } from "./meme";
 import { Video } from "./video";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;

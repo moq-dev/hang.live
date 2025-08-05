@@ -3,9 +3,9 @@ import { createSignal, For, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
-import { unreachable } from "./util";
+import { unreachable } from "../util/unreachable";
 
-export function LoginButtons(props: { api: Api.Client; error?: string }): JSX.Element {
+export default function Login(props: { api: Api.Client; error?: string }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
 	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
 		switch (provider) {
@@ -42,7 +42,7 @@ export function LoginButtons(props: { api: Api.Client; error?: string }): JSX.El
 					{props.error}
 				</div>
 			</Show>
-			
+
 			<For each={Api.oauthProviders}>
 				{(provider) => (
 					<button

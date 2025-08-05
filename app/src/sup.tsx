@@ -7,13 +7,13 @@ import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
 import IconPlay from "~icons/mdi/play";
-import { AnotherOne } from "./another-one";
 import { Canvas } from "./canvas";
 import { Chat } from "./chat";
+import AnotherOne from "./components/another-one";
+import Gradient from "./components/gradient";
+import Login from "./components/login";
 import { Controls } from "./controls";
-import { useAnimatedGradient } from "./gradient";
 import { Layout } from "./layout";
-import { LoginButtons } from "./login";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 
@@ -60,8 +60,6 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 }
 
 function Preview(props: { api: Api.Client; room: string; join: (info: Info) => void }): JSX.Element {
-	const gradient = useAnimatedGradient();
-
 	const [info, setInfo] = createSignal<Info | undefined>(undefined);
 
 	const join = () => {
@@ -84,7 +82,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 						}}
 						onClick={join}
 						style={{
-							background: gradient.linear(),
+							background: Gradient(),
 							"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 						}}
 					>
@@ -122,7 +120,8 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 						{/* Login Options - only show for guests */}
 						<Show when={!props.api.authenticated()}>
 							<div class="rounded-2xl border border-gray-800 p-6">
-								<LoginButtons api={props.api} message="...or login to customize your profile" />
+								<div class="text-center text-gray-400">...or login to customize your profile</div>
+								<Login api={props.api} />
 							</div>
 						</Show>
 

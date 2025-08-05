@@ -5,15 +5,15 @@ import IconArrowLeft from "~icons/mdi/arrow-left";
 import IconCamera from "~icons/mdi/camera";
 import IconLogout from "~icons/mdi/logout";
 import IconUpload from "~icons/mdi/upload";
-import { AnotherOne } from "./another-one";
-import { useAnimatedGradient } from "./gradient";
+import AnotherOne from "./components/another-one";
+import Gradient from "./components/gradient";
+import Login from "./components/login";
 import { Layout } from "./layout";
-import { LoginButtons } from "./login";
 
 export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
 		<Layout app={false}>
-			<Show when={props.api.authenticated()} fallback={<Login api={props.api} />}>
+			<Show when={props.api.authenticated()} fallback={<LoginPage api={props.api} />}>
 				<SettingsLoad api={props.api} />
 			</Show>
 		</Layout>
@@ -109,8 +109,6 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 		}
 		return a;
 	});
-
-	const gradient = useAnimatedGradient();
 
 	const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 		// Show the unsaved changes warning
@@ -229,7 +227,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 										<span
 											class="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl cursor-pointer transition-all transform hover:scale-105 font-medium w-full justify-center"
 											style={{
-												background: gradient.linear(),
+												background: Gradient(),
 												"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 											}}
 										>
@@ -342,7 +340,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 									disabled={saving() || !canSave()}
 									class="flex-1 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 									style={{
-										background: !saving() && canSave() ? gradient.linear() : "rgb(75, 85, 99)",
+										background: !saving() && canSave() ? Gradient() : "rgb(75, 85, 99)",
 										"text-shadow": !saving() && canSave() ? "0 0 2px rgba(0, 0, 0, 0.8)" : "none",
 									}}
 								>
@@ -384,7 +382,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	);
 }
 
-export function Login(props: { api: Api.Client }): JSX.Element {
+export function LoginPage(props: { api: Api.Client }): JSX.Element {
 	return (
 		<main class="flex items-center justify-center">
 			<div class="w-full max-w-md">
@@ -394,7 +392,7 @@ export function Login(props: { api: Api.Client }): JSX.Element {
 				</div>
 
 				{/* Login buttons */}
-				<LoginButtons api={props.api} />
+				<Login api={props.api} />
 			</div>
 		</main>
 	);
