@@ -1,6 +1,5 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
-import { useParams } from "@solidjs/router";
 import { createMemo, createResource, createSignal, JSX, Show } from "solid-js";
 import IconAccount from "~icons/mdi/account";
 import IconLeave from "~icons/mdi/exit-run";
@@ -11,14 +10,14 @@ import Login from "../components/login";
 import Tooltip from "../components/tooltip";
 import { Logo } from "./logo";
 
-export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client }) {
+export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-0">
 			<header class="flex items-center justify-between mb-4">
 				<Logo connection={props.connection} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
-					<RoomNav api={props.api} />
+					<RoomNav api={props.api} room={props.room} />
 					<Tooltip content="Account settings" position="bottom">
 						<a
 							href="/account"
@@ -37,7 +36,7 @@ export default function App(props: { children: JSX.Element; connection: Connecti
 	);
 }
 
-function RoomNav(props: { api: Api.Client }) {
+function RoomNav(props: { api: Api.Client; room: string }) {
 	const share = async () => {
 		const url = window.location.href;
 
@@ -62,7 +61,7 @@ function RoomNav(props: { api: Api.Client }) {
 					<IconLeave class="w-5 h-5" />
 				</a>
 			</Tooltip>
-			<FavoriteButton api={props.api} />
+			<FavoriteButton api={props.api} room={props.room} />
 			<Tooltip content="Share link" position="bottom">
 				<button
 					type="button"
@@ -76,8 +75,7 @@ function RoomNav(props: { api: Api.Client }) {
 	);
 }
 
-function FavoriteButton(props: { api: Api.Client }) {
-	const params = useParams();
+function FavoriteButton(props: { api: Api.Client; room: string }) {
 	const [isToggling, setIsToggling] = createSignal(false);
 	const [showLoginPrompt, setShowLoginPrompt] = createSignal(false);
 
@@ -86,7 +84,7 @@ function FavoriteButton(props: { api: Api.Client }) {
 	});
 
 	const [isFavorite, { refetch }] = createResource(
-		() => (showFavorite() ? params.room : null),
+		() => (showFavorite() ? props.room : null),
 		async (room) => {
 			if (!room) return false;
 			try {
@@ -105,8 +103,7 @@ function FavoriteButton(props: { api: Api.Client }) {
 	);
 
 	const toggleFavorite = async () => {
-		const room = params.room;
-		if (!room || isToggling()) return;
+		if (!props.room || isToggling()) return;
 
 		if (!props.api.authenticated()) {
 			setShowLoginPrompt(true);
@@ -118,11 +115,11 @@ function FavoriteButton(props: { api: Api.Client }) {
 			let response: Response;
 			if (isFavorite()) {
 				response = await props.api.routes.fave[":room"].remove.$post({
-					param: { room },
+					param: { room: props.room },
 				});
 			} else {
 				response = await props.api.routes.fave[":room"].add.$post({
-					param: { room },
+					param: { room: props.room },
 				});
 			}
 			if (response.ok) {

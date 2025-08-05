@@ -51,7 +51,7 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 	onCleanup(() => room.close());
 
 	return (
-		<AppLayout connection={room.connection} api={props.api}>
+		<AppLayout connection={room.connection} api={props.api} room={props.room}>
 			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
 		</AppLayout>

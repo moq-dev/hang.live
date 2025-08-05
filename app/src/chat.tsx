@@ -79,7 +79,7 @@ class ChatBubble {
 
 			wrapper.style.left = `${left}px`;
 			wrapper.style.top = `${top}px`;
-			wrapper.style.fontSize = `${12 + Math.sqrt(wrapper.clientWidth / 10)}px`;
+			wrapper.style.fontSize = "18px";
 			wrapper.style.marginTop = `${offset}px`;
 		});
 

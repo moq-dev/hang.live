@@ -8,6 +8,7 @@ import IconHeartOutline from "~icons/mdi/heart-outline";
 import IconInformation from "~icons/mdi/information-outline";
 import IconPlay from "~icons/mdi/play";
 import IconPlus from "~icons/mdi/plus-box";
+import Dialog from "./components/dialog";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
 import Layout from "./layout/web";
@@ -123,8 +124,8 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 											<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
 											<h3 class="text-lg font-semibold mb-2">No favorites yet</h3>
 											<p class="text-gray-400 text-sm leading-relaxed">
-												Enjoying a hang? Click the heart icon to save it here and get
-												notifications.
+												Enjoyed yourself? Click the heart icon to save a hang and (eventually)
+												get notifications when others join.
 											</p>
 										</div>
 									</Match>
@@ -197,24 +198,16 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 
 								{/* Live URL Preview */}
 								<div class="text-sm text-gray-500">
-									<span>Room URL: </span>
+									<span>URL: </span>
 									<span class="text-gray-300 font-mono">hang.live/@{roomName()}</span>
 								</div>
 							</form>
 
-							{/* Warning - Only shows when user types */}
-							<Show when={roomInput().trim().length > 0}>
-								<div class="mt-8 bg-amber-400/10 border border-amber-400 rounded-xl p-4">
-									<div class="grid gap-3 grid-cols-[auto_1fr] justify-center items-center">
-										<IconInformation class="w-4 h-4 inline-block text-amber-400" />
-										<span class="text-amber-300 font-medium">Hangs are public</span>
-										<span class="text-gray-400 col-start-2">
-											Anybody that knows this name can join. Choose something unique if you want
-											to keep strangers out.
-										</span>
-									</div>
-								</div>
-							</Show>
+							<Dialog
+								Icon={IconInformation}
+								title="Hangs are public"
+								description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
+							/>
 						</div>
 					</div>
 					;
