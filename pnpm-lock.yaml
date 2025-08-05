@@ -108,9 +108,6 @@ importers:
       dompurify:
         specifier: ^3.2.6
         version: 3.2.6
-      github-markdown-css:
-        specifier: ^5.8.1
-        version: 5.8.1
       marked:
         specifier: ^15.0.12
         version: 15.0.12
@@ -1728,10 +1725,6 @@ packages:
 
   github-from-package@0.0.0:
     resolution: {integrity: sha512-SyHy3T1v2NUXn29OsWdxmK6RwHD+vkj3v8en8AOBZ1wBQ/hCAQ5bAQTD02kW4W9tUp/3Qh6J8r9EvntiyCmOOw==}
-
-  github-markdown-css@5.8.1:
-    resolution: {integrity: sha512-8G+PFvqigBQSWLQjyzgpa2ThD9bo7+kDsriUIidGcRhXgmcaAWUIpCZf8DavJgc+xifjbCG+GvMyWr0XMXmc7g==}
-    engines: {node: '>=10'}
 
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
@@ -3868,8 +3861,6 @@ snapshots:
 
   github-from-package@0.0.0:
     optional: true
-
-  github-markdown-css@5.8.1: {}
 
   glob-parent@5.1.2:
     dependencies:

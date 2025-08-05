@@ -1,55 +1,29 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
-import solid from "@kixelated/signals/solid";
 import { useParams } from "@solidjs/router";
 import { createMemo, createResource, createSignal, JSX, Show } from "solid-js";
 import IconAccount from "~icons/mdi/account";
 import IconLeave from "~icons/mdi/exit-run";
 import IconHeart from "~icons/mdi/heart";
 import IconHeartOutline from "~icons/mdi/heart-outline";
-import IconPlay from "~icons/mdi/play";
 import IconShare from "~icons/mdi/share-variant";
-import Divider from "./components/divider";
-import Login from "./components/login";
-import Tooltip from "./components/tooltip";
+import Login from "../components/login";
+import Tooltip from "../components/tooltip";
+import { Logo } from "./logo";
 
-export function Layout(props: { children: JSX.Element; app?: boolean; connection?: Connection; api?: Api.Client }) {
-	const status = props.connection ? solid(props.connection.status) : () => "connected";
-
-	const color = createMemo(() => {
-		if (status() === "connected") return "hsl(140, 75%, 50%)";
-		if (status() === "connecting") return "hsl(40, 75%, 50%)";
-		return "hsl(0, 75%, 50%)";
-	});
-
-	const text = createMemo(() => {
-		if (status() === "disconnected") return "offline";
-		return "live";
-	});
-
+export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client }) {
 	return (
-		<div class="p-4 mx-auto w-full flex flex-col min-h-0" classList={{ "max-w-[900px]": !props.app }}>
+		<div class="p-4 mx-auto w-full flex flex-col min-h-0">
 			<header class="flex items-center justify-between mb-4">
-				<a href="/" class="rounded backdrop-blur-sm px-4 py-2 text-2xl">
-					<span>hang</span>
-					<span
-						id="status"
-						class="text-xs ml-1 transition-colors duration-1000 ease-in-out"
-						style={{ "vertical-align": "-0.2em", color: color() }}
-					>
-						{text()}
-					</span>
-				</a>
+				<Logo connection={props.connection} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
-					<Show when={props.app} fallback={<OtherNav />}>
-						<Show when={props.api}>{(api) => <RoomNav api={api()} />}</Show>
-					</Show>
+					<RoomNav api={props.api} />
 					<Tooltip content="Account settings" position="bottom">
 						<a
 							href="/account"
-							rel={props.app ? "noopener" : undefined}
-							target={props.app ? "_blank" : undefined}
+							rel="noopener"
+							target="_blank"
 							class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 						>
 							<IconAccount class="w-5 h-5" />
@@ -58,15 +32,12 @@ export function Layout(props: { children: JSX.Element; app?: boolean; connection
 				</nav>
 			</header>
 
-			<Show when={!props.app} fallback={props.children}>
-				<Divider />
-				<main class="flex flex-col relative">{props.children}</main>
-			</Show>
+			{props.children}
 		</div>
 	);
 }
 
-function RoomNav(props: { api: Api.Client; app?: boolean }) {
+function RoomNav(props: { api: Api.Client }) {
 	const share = async () => {
 		const url = window.location.href;
 
@@ -91,7 +62,7 @@ function RoomNav(props: { api: Api.Client; app?: boolean }) {
 					<IconLeave class="w-5 h-5" />
 				</a>
 			</Tooltip>
-			<Show when={props.api}>{(api) => <FavoriteButton api={api()} />}</Show>
+			<FavoriteButton api={props.api} />
 			<Tooltip content="Share link" position="bottom">
 				<button
 					type="button"
@@ -105,30 +76,15 @@ function RoomNav(props: { api: Api.Client; app?: boolean }) {
 	);
 }
 
-function OtherNav() {
-	return (
-		<Tooltip content="Join a hang" position="bottom">
-			<a
-				href="/fave"
-				class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
-			>
-				<IconPlay class="w-5 h-5" />
-			</a>
-		</Tooltip>
-	);
-}
-
 function FavoriteButton(props: { api: Api.Client }) {
 	const params = useParams();
 	const [isToggling, setIsToggling] = createSignal(false);
-	const [showLoginPrompt, setShowLoginPrompt] = createSignal(!props.api.authenticated());
+	const [showLoginPrompt, setShowLoginPrompt] = createSignal(false);
 
-	// Only fetch when authenticated and in a demo room
 	const showFavorite = createMemo(() => {
 		return props.api.authenticated();
 	});
 
-	// Fetch favorite status when room changes
 	const [isFavorite, { refetch }] = createResource(
 		() => (showFavorite() ? params.room : null),
 		async (room) => {
@@ -152,6 +108,11 @@ function FavoriteButton(props: { api: Api.Client }) {
 		const room = params.room;
 		if (!room || isToggling()) return;
 
+		if (!props.api.authenticated()) {
+			setShowLoginPrompt(true);
+			return;
+		}
+
 		setIsToggling(true);
 		try {
 			let response: Response;
@@ -165,7 +126,6 @@ function FavoriteButton(props: { api: Api.Client }) {
 				});
 			}
 			if (response.ok) {
-				// Refetch to update the status
 				refetch();
 			}
 		} catch (error) {
@@ -199,18 +159,16 @@ function FavoriteButton(props: { api: Api.Client }) {
 						"text-gray-400": !props.api.authenticated(),
 					}}
 				>
-					<Show
-						when={props.api.authenticated() && !isFavorite.loading}
-						fallback={<IconHeartOutline class="w-5 h-5 animate-pulse" />}
-					>
-						<Show when={isFavorite()} fallback={<IconHeartOutline class="w-5 h-5" />}>
-							<IconHeart class="w-5 h-5 text-red-400" />
+					<Show when={props.api.authenticated()} fallback={<IconHeartOutline class="w-5 h-5" />}>
+						<Show when={!isFavorite.loading} fallback={<IconHeartOutline class="w-5 h-5 animate-pulse" />}>
+							<Show when={isFavorite()} fallback={<IconHeartOutline class="w-5 h-5" />}>
+								<IconHeart class="w-5 h-5 text-red-400" />
+							</Show>
 						</Show>
 					</Show>
 				</button>
 			</Tooltip>
 
-			{/* Login prompt modal-like overlay */}
 			<Show when={showLoginPrompt()}>
 				<div
 					class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -225,7 +183,7 @@ function FavoriteButton(props: { api: Api.Client }) {
 						onKeyDown={(e) => e.stopPropagation()}
 						role="document"
 					>
-						<div class="text-center text-lg font-semibold mb-4">Login to favorite rooms</div>
+						<div class="text-center text-lg font-semibold mb-4">Login to favorite hangs</div>
 						<Login api={props.api} />
 						<button
 							type="button"

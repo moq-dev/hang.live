@@ -8,11 +8,11 @@ import IconUpload from "~icons/mdi/upload";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
-import { Layout } from "./layout";
+import Layout from "./layout/web";
 
 export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
-		<Layout app={false}>
+		<Layout api={props.api}>
 			<Show when={props.api.authenticated()} fallback={<LoginPage api={props.api} />}>
 				<SettingsLoad api={props.api} />
 			</Show>
