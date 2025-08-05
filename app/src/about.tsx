@@ -7,11 +7,15 @@ export function About(): JSX.Element {
 			<p>
 				I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
 			</p>
-			<p>Unfortunately, you're going to have to wait a bit longer. It's not ready yet. Oops.</p>
+			<div class="flex flex-wrap justify-center gap-4 my-8">
+				<img src="/avatar/1.svg" alt="Avatar" class="w-16 h-16 rounded-lg bg-gray-900 p-1 " />
+				<img src="/avatar/5.svg" alt="Avatar" class="w-16 h-16 rounded-lg bg-gray-900 p-1 " />
+				<img src="/avatar/3.svg" alt="Avatar" class="w-16 h-16 rounded-lg bg-gray-900 p-1 " />
+				<img src="/avatar/7.svg" alt="Avatar" class="w-16 h-16 rounded-lg bg-gray-900 p-1 " />
+				<img src="/avatar/9.svg" alt="Avatar" class="w-16 h-16 rounded-lg bg-gray-900 p-1 " />
+			</div>
 			<p>
-				In the meantime, <a href="https://discord.gg/SRG9gu6BdE">join the Discord</a> or{" "}
-				<a href="/account">create an account</a>. You'll get a notification when the site is fit for human
-				consumption.
+				It's free. It's fun. <a href="/fave">Create a hang.</a> Invite your friends.
 			</p>
 		</Layout>
 	);
