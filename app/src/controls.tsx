@@ -11,9 +11,9 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
-import type { Canvas } from "./canvas";
 import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
+import type { Canvas } from "./room/canvas";
 import Settings, { Modal } from "./settings";
 
 export function Controls(props: {

@@ -1,7 +1,7 @@
 import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
-import type { Canvas } from "../canvas";
 import { Broadcast } from "./broadcast";
+import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
 
 export class Space {
@@ -28,7 +28,8 @@ export class Space {
 		this.canvas = canvas;
 
 		window.addEventListener("mousedown", (e) => {
-			const mouse = this.canvas.mousePosition(e);
+			const mouse = this.canvas.relative(e.clientX, e.clientY);
+			console.log("mousedown", mouse);
 
 			this.#dragging = undefined;
 
@@ -55,7 +56,7 @@ export class Space {
 		});
 
 		window.addEventListener("mousemove", (e) => {
-			const mouse = this.canvas.mousePosition(e);
+			const mouse = this.canvas.relative(e.clientX, e.clientY);
 			const viewport = this.canvas.viewport.peek();
 
 			if (this.#dragging) {
@@ -108,7 +109,7 @@ export class Space {
 
 				let broadcast = this.#dragging;
 				if (!broadcast) {
-					const mouse = this.canvas.mousePosition(e);
+					const mouse = this.canvas.relative(e.clientX, e.clientY);
 
 					broadcast = this.#at(mouse);
 					if (!broadcast) return;

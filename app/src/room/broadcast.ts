@@ -4,11 +4,15 @@ import { Effect, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { Audio, type AudioProps } from "./audio";
+import { Canvas } from "./canvas";
+import { Chat } from "./chat";
+import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
 import { loadMeme } from "./meme";
 import { Video } from "./video";
 
-export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
+export type BroadcastSource = Watch.Broadcast | Publish.Broadcast | FakeBroadcast;
+
 export type ChatMessage = {
 	audio?: HTMLAudioElement;
 	video?: HTMLVideoElement;
@@ -30,8 +34,7 @@ renderer.link = ({ href, title, text }) => {
 marked.use({ renderer });
 
 export type BroadcastProps = {
-	viewport: Signal<Vector>;
-	audio: AudioProps;
+	audio?: AudioProps;
 
 	position?: Catalog.Position;
 	camera?: Publish.Broadcast;
@@ -50,12 +53,11 @@ type Position = {
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	source: T;
-
-	// The canvas size, 0 to width/height.
-	viewport: Signal<Vector>;
+	canvas: Canvas;
 
 	audio: Audio;
 	video: Video;
+	chat: Chat;
 
 	// The current chat message, if any.
 	message = new Signal<DocumentFragment | undefined>(undefined);
@@ -73,8 +75,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
 
-	// The display name of the broadcaster.
-	display = new Signal<string | undefined>(undefined);
 	avatar = new Image();
 
 	// The target position of the broadcast, while bounds contains the actual position.
@@ -92,9 +92,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
 
-	constructor(source: T, props: BroadcastProps) {
+	constructor(source: T, canvas: Canvas, props?: BroadcastProps) {
 		this.source = source;
-		this.viewport = props.viewport;
+		this.canvas = canvas;
 		this.online = new Signal(props?.online ?? true);
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
@@ -109,16 +109,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.targetPosition = new Signal(position);
 
 		this.video = new Video(this);
-		this.audio = new Audio(this, props.audio);
-
-		const canvas = this.viewport.peek();
+		this.audio = new Audio(this, props?.audio);
+		this.chat = new Chat(this, canvas);
 
 		// Actually start the
 		// TODO This seems kinda buggy?
+		const viewport = this.canvas.viewport.peek();
 		const startPosition = Vector.create(position.x, position.y)
 			.normalize()
-			.mult(canvas.length())
-			.add(canvas.div(2));
+			.mult(viewport.length())
+			.add(viewport.div(2));
 		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
@@ -168,10 +168,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			effect.cleanup(() => newAvatar.removeEventListener("load", load));
 		});
 
-		// The display name is the user's name or the name if they don't have a name.
-		this.signals.effect((effect) => {
-			this.display.set(effect.get(this.source.user)?.name ?? effect.get(this.source.name));
-		});
 
 		this.signals.effect(this.#runChat.bind(this));
 
@@ -195,7 +191,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		// Request the position we should use from this remote broadcast.
 		this.signals.effect((effect) => {
 			// Only update the camera position if the local broadcast allows it.
-			if (!effect.get(camera.location.peering)) return;
+			if (!effect.get(camera.location.handle)) return;
 
 			const position = effect.get(cameraUpdates.location);
 			if (!position) return;
@@ -210,7 +206,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 			this.signals.effect((effect) => {
 				// Only update the screen position if the local broadcast allows it.
-				if (!effect.get(screen.location.peering)) return;
+				if (!effect.get(screen.location.handle)) return;
 
 				const position = effect.get(screenUpdates.location);
 				if (!position) return;
@@ -229,10 +225,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			if (!effect.get(camera.published)) return;
 
 			// Only set the handle if the broadcast allows peering.
-			if (!effect.get(this.source.location.peering)) return;
+			const handle = effect.get(this.source.location.handle);
+			if (!handle) return;
 
-			peer.handle.set(effect.get(this.source.name));
-			effect.cleanup(() => peer.handle.set(undefined));
+			effect.set(peer.handle, handle);
 		});
 
 		this.#locationPeer = peer;
@@ -268,7 +264,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			RETURN_DOM_FRAGMENT: true,
 		});
 
-		this.audio.notifications.play("chat");
+		this.audio.notifications?.play("chat");
 
 		effect.set(this.message, sanitized);
 	}
@@ -278,7 +274,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.video.tick(now);
 
 		const bounds = this.bounds.peek().clone(); //  clone is needed so SolidJS can track changes
-		const viewport = this.viewport.peek();
+		const viewport = this.canvas.viewport.peek();
 
 		const targetPosition = this.targetPosition.peek();
 
@@ -345,7 +341,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns true if the broadcaster is locked to a position.
 	locked(): boolean {
 		if (this.source instanceof Watch.Broadcast) {
-			return !this.source.location.peering.peek();
+			return !this.source.location.handle.peek();
 		}
 
 		return false;

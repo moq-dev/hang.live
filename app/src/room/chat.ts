@@ -1,31 +1,12 @@
 import { Effect, Signal } from "@kixelated/signals";
-import solid from "@kixelated/signals/solid";
-import { For, onCleanup } from "solid-js";
 import { render } from "solid-js/web";
 import IconText from "~icons/mdi/comment-text";
 import IconCaption from "~icons/mdi/microphone";
+import Settings from "../settings";
+import type { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
-import type { Room } from "./room";
-import type { Broadcast } from "./room/broadcast";
 
-import Settings from "./settings";
-
-export function Chat(props: { canvas: Canvas; room: Room }) {
-	const broadcasts = solid(props.room.space.ordered);
-
-	return (
-		<For each={broadcasts()}>
-			{(broadcast) => {
-				const bubble = new ChatBubble(props.canvas, broadcast);
-				onCleanup(() => bubble.close());
-				return bubble.render();
-			}}
-		</For>
-	);
-}
-
-// Custom Web Component for chat bubbles
-class ChatBubble {
+export class Chat {
 	canvas: Canvas;
 	broadcast: Broadcast;
 
@@ -33,12 +14,14 @@ class ChatBubble {
 
 	#offset = new Signal<number | undefined>(undefined);
 
-	constructor(canvas: Canvas, broadcast: Broadcast) {
-		this.canvas = canvas;
+	constructor(broadcast: Broadcast, canvas: Canvas) {
 		this.broadcast = broadcast;
+		this.canvas = canvas;
+
+		this.signals.effect(this.#render.bind(this));
 	}
 
-	render(): HTMLElement {
+	#render(effect: Effect) {
 		const root = document.createElement("div");
 
 		this.signals.effect((effect) => {
@@ -57,7 +40,8 @@ class ChatBubble {
 			this.#message(effect, root, document.createTextNode(caption), "caption");
 		});
 
-		return root;
+		document.body.appendChild(root);
+		effect.cleanup(() => document.body.removeChild(root));
 	}
 
 	#message(effect: Effect, root: HTMLElement, node: Node, type: "text" | "caption") {
@@ -68,7 +52,7 @@ class ChatBubble {
 
 		effect.effect((effect) => {
 			const bounds = effect.get(this.broadcast.bounds).div(window.devicePixelRatio);
-			const viewport = effect.get(this.broadcast.viewport).div(window.devicePixelRatio);
+			const viewport = effect.get(this.broadcast.canvas.viewport).div(window.devicePixelRatio);
 
 			const top = Math.min(viewport.y - wrapper.clientHeight - 40, bounds.position.y + bounds.size.y);
 			const left = Math.min(
