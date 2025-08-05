@@ -2,6 +2,7 @@ import { Catalog } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
+import { Sound } from "./sound";
 import { Space } from "./space";
 
 export type FakeBroadcastProps = {
@@ -33,10 +34,15 @@ export class FakeBroadcast {
 	video = {
 		media: new Signal<MediaStream | undefined>(undefined),
 		active: new Signal(false),
-		frame: () => undefined,
+		frame: (): { frame: HTMLVideoElement } | undefined => {
+			if (!this.#video) return undefined;
+			return { frame: this.#video };
+		},
 	};
 
 	signals = new Effect();
+
+	#video: HTMLVideoElement | undefined;
 
 	constructor(props?: FakeBroadcastProps) {
 		this.user.set(props?.user);
@@ -58,6 +64,23 @@ export class FakeBroadcast {
 		});
 	}
 
+	play(src: URL) {
+		this.#video = document.createElement("video");
+		this.#video.src = src.toString();
+		this.#video.muted = true;
+		this.#video.playsInline = true;
+		this.#video.autoplay = true;
+		this.#video.load();
+		this.#video.play();
+		this.video.active.set(true);
+	}
+
+	stop() {
+		this.#video?.pause();
+		this.#video = undefined;
+		this.video.active.set(false);
+	}
+
 	close() {
 		this.signals.close();
 	}
@@ -65,13 +88,15 @@ export class FakeBroadcast {
 
 export class FakeRoom {
 	space: Space;
+	sound: Sound;
 
 	constructor(canvas: Canvas) {
-		this.space = new Space(canvas);
+		this.sound = new Sound();
+		this.space = new Space(canvas, this.sound);
 	}
 
 	add(name: string, broadcast: FakeBroadcast) {
-		this.space.add(name, new Broadcast(broadcast, this.space.canvas));
+		this.space.add(name, new Broadcast(broadcast, this.space.canvas, this.sound));
 	}
 
 	remove(name: string) {

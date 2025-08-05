@@ -3,6 +3,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
+import type { Sound } from "./sound";
 
 export class Space {
 	// All of the broadcasts stored in z-index order.
@@ -15,6 +16,7 @@ export class Space {
 	#rip: Broadcast[] = [];
 
 	canvas: Canvas;
+	sound?: Sound;
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
@@ -24,12 +26,12 @@ export class Space {
 
 	#signals = new Effect();
 
-	constructor(canvas: Canvas) {
+	constructor(canvas: Canvas, sound?: Sound) {
 		this.canvas = canvas;
+		this.sound = sound;
 
 		window.addEventListener("mousedown", (e) => {
 			const mouse = this.canvas.relative(e.clientX, e.clientY);
-			console.log("mousedown", mouse);
 
 			this.#dragging = undefined;
 
@@ -304,6 +306,11 @@ export class Space {
 	}
 
 	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
+		// Render the audio click prompt if audio is suspended
+		if (this.sound?.suspended.peek()) {
+			this.#renderAudioPrompt(ctx);
+		}
+
 		const broadcasts = this.ordered.peek();
 		for (const broadcast of broadcasts) {
 			broadcast.audio.renderBackground(ctx);
@@ -342,6 +349,39 @@ export class Space {
 				broadcast.renderLocator(now, ctx);
 			}
 		}
+	}
+
+	#renderAudioPrompt(ctx: CanvasRenderingContext2D) {
+		ctx.save();
+
+		const width = ctx.canvas.width;
+		const scale = window.devicePixelRatio;
+		const padding = 30 * scale;
+		const boxWidth = 400 * scale;
+		const height = 80 * scale;
+		const y = (ctx.canvas.height - height - padding);
+		const x = (width - boxWidth) / 2;
+		const borderRadius = 16 * scale;
+
+		// Rounded rectangle with thick black border
+		ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
+		ctx.beginPath();
+		ctx.roundRect(x, y, boxWidth, height, borderRadius);
+		ctx.fill();
+
+		// Thick border
+		ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+		ctx.lineWidth = 6 * scale;
+		ctx.stroke();
+
+		// Text
+		ctx.font = `${24 * scale}px sans-serif`;
+		ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText("🔊 Click to enable audio", width * 0.5, y + height / 2);
+
+		ctx.restore();
 	}
 
 	#tickScale() {
