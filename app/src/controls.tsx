@@ -298,8 +298,8 @@ function Volume(props: { room: Room }): JSX.Element {
 	const toggle = () => {
 		// If we were just suspended due to autoplay policies, then don't toggle mute.
 		// This seems racey but maybe it works.
-		if (props.room.suspended.peek()) {
-			props.room.suspended.set(false);
+		if (props.room.sound.suspended.peek()) {
+			props.room.sound.suspended.set(false);
 
 			// If we unmuted but appeared to be muted, then don't toggle mute.
 			if (!Settings.muted.peek()) {
@@ -313,7 +313,7 @@ function Volume(props: { room: Room }): JSX.Element {
 	const muted = solid(Settings.muted);
 	const volume = solid(Settings.volume);
 	const opacity = Opacity(() => showSlider());
-	const suspended = solid(props.room.suspended);
+	const suspended = solid(props.room.sound.suspended);
 
 	const setVolume = (v: number) => {
 		if (v === 0) {

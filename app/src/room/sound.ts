@@ -1,7 +1,7 @@
-import { Effect, type Signal } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 
-const SOUNDS = {
+const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
 	bye: "/notification/bye.opus",
 	chat: [
@@ -15,16 +15,18 @@ const SOUNDS = {
 	sup: "/notification/sup.opus",
 } as const;
 
-export type NotificationSound = keyof typeof SOUNDS;
+export type NotificationSound = keyof typeof NOTIFICATIONS;
 const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
-export class Notifications {
+export class Sound {
 	context: AudioContext;
 	gain: GainNode;
 
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Effect();
+
+	suspended: Signal<boolean>;
 
 	constructor() {
 		this.context = new AudioContext();
@@ -33,7 +35,7 @@ export class Notifications {
 
 		const sounds = new Map();
 
-		for (const [sound, url] of Object.entries(SOUNDS)) {
+		for (const [sound, url] of Object.entries(NOTIFICATIONS)) {
 			const urls = Array.isArray(url) ? url : [url];
 			const load = Promise.all(
 				urls.map(async (url) => {
@@ -43,6 +45,19 @@ export class Notifications {
 				}),
 			);
 			sounds.set(sound, load);
+		}
+
+		// TODO do this in a UI element.
+		this.suspended = new Signal(this.context.state === "suspended");
+
+		if (this.suspended.peek()) {
+			// Determine when the user has interacted with the page so we can potentially unmute audio.
+			const unsuspend = () => {
+				this.suspended.set(false);
+			};
+
+			window.addEventListener("click", unsuspend, { once: true });
+			window.addEventListener("keydown", unsuspend, { once: true });
 		}
 
 		this.#sounds = sounds;
@@ -63,10 +78,6 @@ export class Notifications {
 		} else {
 			this.gain.gain.exponentialRampToValueAtTime(volume, this.gain.context.currentTime + FADE_TIME);
 		}
-	}
-
-	get suspended() {
-		return this.context.state === "suspended";
 	}
 
 	// Return a buffer for the sound, randomly selecting one if there are multiple.
@@ -98,7 +109,7 @@ export class Notifications {
 }
 
 export class PannedNotifications {
-	#parent: Notifications;
+	#parent: Sound;
 	#panner: StereoPannerNode;
 
 	// Optional, disabled in potato mode.
@@ -109,7 +120,7 @@ export class PannedNotifications {
 
 	#signals = new Effect();
 
-	constructor(parent: Notifications, pan: Signal<number>) {
+	constructor(parent: Sound, pan: Signal<number>) {
 		this.#parent = parent;
 
 		this.#panner = new StereoPannerNode(parent.context);
@@ -140,7 +151,7 @@ export class PannedNotifications {
 		});
 	}
 
-	async play(sound: NotificationSound) {
+	async notification(sound: NotificationSound) {
 		// Can't play sounds when the context is suspended, and we don't want to queue them either.
 		if (this.#parent.context.state === "suspended") return;
 
@@ -153,6 +164,43 @@ export class PannedNotifications {
 		// Add a 200ms delay for startup only, abusing that currentTime starts at 0.
 		const when = Math.max(this.#parent.context.currentTime, 0.2);
 		source.start(when);
+	}
+
+	// NOTE: We don't cache elements because the browser will.
+	// Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
+	meme(name: string): HTMLAudioElement | HTMLVideoElement | undefined {
+		// Make the name lowercase.
+		const lower = name.toLowerCase();
+
+		const videoPath = MEME_VIDEO[lower as MemeVideo];
+		const audioPath = MEME_AUDIO[lower as MemeAudio];
+
+		// Use the video if it's available, unless the user has potato mode enabled and would prefer audio.
+		if (videoPath && (!audioPath || !Settings.potato.peek())) {
+			const video = document.createElement("video") as HTMLVideoElement;
+			video.src = `/meme/${videoPath}`;
+
+			if (this.#parent.suspended.peek()) {
+				video.muted = true; // so we can start loading
+				this.#signals.effect((effect) => {
+					video.muted = effect.get(this.#parent.suspended); // unmute when the context is unsuspended
+				});
+			}
+
+			video.autoplay = true;
+			video.load();
+			video.play();
+			return video;
+		}
+
+		if (audioPath) {
+			const audio = new Audio(`/meme/${audioPath}`);
+			audio.autoplay = true;
+			audio.load();
+			return audio;
+		}
+
+		return undefined;
 	}
 
 	get context() {
@@ -176,3 +224,86 @@ export class PannedNotifications {
 		this.analyser?.disconnect();
 	}
 }
+
+const MEME_AUDIO = {
+	amongus: "among-us.mp3",
+	aww: "aww.mp3",
+	brb: "be-right-back.mp3",
+	bluetooth: "bluetooth.mp3",
+	bonk: "bonk.mp3",
+	bruh: "bruh.mp3",
+	checkmark: "check-mark.mp3",
+	checkout: "checkout.mp3",
+	danger: "danger.mp3",
+	disappear: "disappear.mp3",
+	discord: "discord.mp3",
+	error: "error.mp3",
+	fbi: "fbi.mp3",
+	fart: "fart-reverb.mp3",
+	hellothere: "hello-there.mp3",
+	hub: "hub-intro.mp3",
+	huh: "huh.mp3",
+	incorrect: "incorrect.mp3",
+	knock: "knock.mp3",
+	meow: "meow.mp3",
+	metalpipe: "metal-pipe.mp3",
+	mlg: "mlg.mp3",
+	nut: "nut.mp3",
+	oof: "oof.mp3",
+	piuw: "piuw.mp3",
+	ps2: "ps2.mp3",
+	quack: "quack.mp3",
+	rizz: "rizz.mp3",
+	spooky: "spooky.mp3",
+	suspense: "suspense.mp3",
+	uwu: "uwu.mp3",
+	violin: "violin.mp3",
+	boom: "boom.mp3",
+	wow: "wow.mp3",
+	yay: "yay.mp3",
+} as const;
+
+const MEME_VIDEO = {
+	anotherone: "another-one.webm",
+	momentslater: "a-few-moments-later.mp4",
+	// TODO contain, not fill
+	brb: "be-right-back.webm",
+	// TODO: align to bottom left, make sure top is filled
+	bingchilling: "bing-chilling.webm",
+	cry: "crying.webm",
+	gettingawaywithit: "getting-away-with-it.webm",
+	disappointment: "disappointment.webm",
+	hellothere: "hello-there.webm",
+	// TODO: stretch to contain, not fit
+	hackerman: "hackerman.webm",
+	awwshit: "aww-shit.webm",
+	error: "error.webm",
+	huh: "huh.webm",
+	kek: "kekw.webm",
+	instagram: "instagram.webm",
+	maxwell: "maxwell.webm",
+	nice: "nice.webm",
+	oiia: "oiia.webm",
+	nogodno: "no-god-no.webm",
+	// TODO stretch to contain, not fit (or align to bottom left)
+	continued: "continued.webm",
+	reformed: "reformed.webm",
+	doit: "do-it.webm",
+	thick: "thick.webm",
+	yeahbaby: "yeah-baby.webm",
+	thuglife: "thug-life.webm",
+	gigachad: "giga-chad.webm",
+	okay: "okay.webm",
+
+	// TODO: It should go over the screenshare, not the webcam, and should be in the top right corner.
+	// speedrun: "speedrun.webm",
+	pizzatime: "pizza-time.webm",
+	stopit: "stopit.webm",
+	youdied: "you-died.webm",
+	realestate: "real-estate.webm",
+	waw: "waw.webm",
+	zzz: "zzz.webm",
+} as const;
+
+export type MemeAudio = keyof typeof MEME_AUDIO;
+export type MemeVideo = keyof typeof MEME_VIDEO;

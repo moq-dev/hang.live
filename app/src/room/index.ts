@@ -5,7 +5,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
-import { Notifications } from "./notifications";
+import { Sound } from "./sound";
 import { Space } from "./space";
 
 export type RoomProps = {
@@ -31,17 +31,13 @@ export class Room {
 	// The avatar of the local user.
 	avatar: Signal<string>;
 
-	// When true, the AudioContext is suspended so we can't even visualize audio.
-	// I really don't understand why browsers do this.
-	suspended: Signal<boolean>;
-
 	// The local broadcasts.
 	// The camera/avatar is always published while the screen share is conditionally published.
 	camera: Publish.Broadcast;
 	screen: Publish.Broadcast;
 
 	// Notifications use a shared AudioContext.
-	notifications: Notifications;
+	sound: Sound;
 
 	// The physics space for the room.
 	space: Space;
@@ -51,12 +47,12 @@ export class Room {
 	constructor(canvas: Canvas, api: Api.Client, props?: RoomProps) {
 		this.connection = new Connection();
 		this.api = api;
-		this.space = new Space(canvas);
 		this.name = new Signal(props?.name);
 		this.user = new Signal(props?.user);
 		this.avatar = new Signal(props?.avatar ?? Api.randomAvatar());
 
-		this.notifications = new Notifications();
+		this.sound = new Sound();
+		this.space = new Space(canvas, this.sound);
 
 		this.#signals.effect((effect) => {
 			const name = effect.get(this.name);
@@ -145,7 +141,7 @@ export class Room {
 
 		this.#signals.effect((effect) => {
 			if (effect.get(this.camera.video.media) || effect.get(this.camera.audio.media)) {
-				this.notifications.play("select");
+				this.sound.play("select");
 			}
 		});
 
@@ -191,7 +187,7 @@ export class Room {
 
 		this.#signals.effect((effect) => {
 			if (effect.get(this.screen.video.media) || effect.get(this.screen.audio.media)) {
-				this.notifications.play("select");
+				this.sound.play("select");
 			}
 		});
 
@@ -300,22 +296,9 @@ export class Room {
 			effect.cleanup(() => this.screen.enabled.set(false));
 		});
 
-		// Check if the user needs to click the page to unmute the audio.
-		// TODO do this in a UI element.
-		this.suspended = new Signal(this.notifications.suspended);
-
-		// Determine when the user has interacted with the page so we can potentially unmute audio.
-		const unsuspend = () => {
-			this.suspended.set(false);
-			this.notifications.resume();
-		};
-
-		window.addEventListener("click", unsuspend, { once: true });
-		window.addEventListener("keydown", unsuspend, { once: true });
-
 		// Don't download audio if the AudioContext is suspended.
 		// TODO Move this to a separate class.
-		this.#signals.subscribe(this.suspended, (suspended) => {
+		this.#signals.subscribe(this.sound.suspended, (suspended) => {
 			for (const broadcast of this.space.ordered.peek()) {
 				if (broadcast.source instanceof Watch.Broadcast) {
 					broadcast.source.audio.enabled.set(!suspended);
@@ -351,10 +334,7 @@ export class Room {
 
 				if (local) {
 					if (update.active) {
-						const broadcast = new Broadcast(local, this.space.canvas, {
-							audio: {
-								notifications: this.notifications,
-							},
+						const broadcast = new Broadcast(local, this.space.canvas, this.sound, {
 							// Wait until we get an announcement before rendering ourselves as online.
 							online: false,
 						});
@@ -388,20 +368,20 @@ export class Room {
 					});
 
 					// Download audio when the AudioContext is not suspended.
-					watch.signals.subscribe(this.suspended, (suspended) => {
+					watch.signals.subscribe(this.sound.suspended, (suspended) => {
 						watch.audio.enabled.set(!suspended);
 					});
 
-					const broadcast = new Broadcast(watch, this.space.canvas, {
+					const broadcast = new Broadcast(watch, this.space.canvas, this.sound, {
 						camera: this.camera,
 						screen: this.screen,
 						audio: {
-							notifications: this.notifications,
+							sound: this.sound,
 						},
 						online: true,
 					});
 
-					this.notifications.play("sup");
+					this.sound.play("sup");
 					this.space.add(update.name, broadcast);
 				} else {
 					this.space.remove(update.name);
@@ -418,6 +398,6 @@ export class Room {
 		this.space.close();
 		this.camera.close();
 		this.screen.close();
-		this.notifications.close();
+		this.sound.close();
 	}
 }

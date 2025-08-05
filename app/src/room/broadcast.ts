@@ -8,7 +8,7 @@ import { Canvas } from "./canvas";
 import { Chat } from "./chat";
 import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
-import { loadMeme } from "./meme";
+import { Sound } from "./sound";
 import { Video } from "./video";
 
 export type BroadcastSource = Watch.Broadcast | Publish.Broadcast | FakeBroadcast;
@@ -92,7 +92,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
 
-	constructor(source: T, canvas: Canvas, props?: BroadcastProps) {
+	constructor(source: T, canvas: Canvas, sound: Sound, props?: BroadcastProps) {
 		this.source = source;
 		this.canvas = canvas;
 		this.online = new Signal(props?.online ?? true);
@@ -109,7 +109,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.targetPosition = new Signal(position);
 
 		this.video = new Video(this);
-		this.audio = new Audio(this, props?.audio);
+		this.audio = new Audio(this, sound, props?.audio);
 		this.chat = new Chat(this, canvas);
 
 		// Actually start the
@@ -241,7 +241,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// First, try to match the message to a known video/sound file.
 		if (msg.startsWith("/")) {
-			const meme = loadMeme(msg.slice(1));
+			const meme = this.audio.sound.meme(msg.slice(1));
 			if (meme) {
 				this.meme.set((prev) => {
 					prev?.pause();
@@ -263,7 +263,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			RETURN_DOM_FRAGMENT: true,
 		});
 
-		this.audio.notifications?.play("chat");
+		this.audio.sound.notification("chat");
 
 		effect.set(this.message, sanitized);
 	}

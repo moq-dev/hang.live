@@ -12,7 +12,7 @@ const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
 
 export type CanvasProps = {
-	background?: boolean;
+	demo?: boolean;
 };
 
 export class Canvas {
@@ -28,7 +28,7 @@ export class Canvas {
 
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
-	background: Signal<boolean>;
+	demo: Signal<boolean>;
 
 	#signals = new Effect();
 
@@ -39,7 +39,7 @@ export class Canvas {
 	constructor(element: HTMLCanvasElement, props?: CanvasProps) {
 		this.#canvas = element;
 
-		this.background = new Signal(props?.background ?? true);
+		this.demo = new Signal(props?.demo ?? false);
 
 		// Load the pre-rendered SVG instead of rendering it live.
 		this.#potato = new Image();
@@ -96,14 +96,46 @@ export class Canvas {
 		ctx.imageSmoothingEnabled = !Settings.potato.peek();
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-		if (this.background.peek()) {
-			this.#renderBackground(this.#context, now);
+		this.#renderBackground(this.#context, now);
+
+		if (this.demo.peek()) {
+			this.#renderDemo(this.#context);
 		}
 
 		if (this.onRender) {
 			this.onRender(this.#context, now);
 		}
 		this.#animate = requestAnimationFrame(this.#render.bind(this));
+	}
+
+	#renderDemo(ctx: CanvasRenderingContext2D) {
+		ctx.save();
+
+		const width = ctx.canvas.width;
+		const height = ctx.canvas.height;
+
+		ctx.font = "bold 120px sans-serif";
+		ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+
+		const positions = [
+			{ x: width * 0.3, y: height * 0.3, angle: -25 },
+			{ x: width * 0.7, y: height * 0.5, angle: 30 },
+			{ x: width * 0.5, y: height * 0.7, angle: -15 },
+			{ x: width * 0.2, y: height * 0.6, angle: 20 },
+			{ x: width * 0.8, y: height * 0.25, angle: -35 },
+		];
+
+		for (const pos of positions) {
+			ctx.save();
+			ctx.translate(pos.x, pos.y);
+			ctx.rotate((pos.angle * Math.PI) / 180);
+			ctx.fillText("DEMO", 0, 0);
+			ctx.restore();
+		}
+
+		ctx.restore();
 	}
 
 	#renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
@@ -165,16 +197,16 @@ export class Canvas {
 	relative(x: number, y: number): Vector {
 		const rect = this.#canvas.getBoundingClientRect();
 		const viewport = this.viewport.peek();
-		
+
 		// Convert from page coordinates to canvas coordinates
 		// Account for both position offset and scaling
 		const pageX = x - rect.left;
 		const pageY = y - rect.top;
-		
+
 		// Scale from displayed size to internal canvas size
 		const canvasX = (pageX / rect.width) * viewport.x;
 		const canvasY = (pageY / rect.height) * viewport.y;
-		
+
 		return Vector.create(canvasX, canvasY);
 	}
 
@@ -184,7 +216,7 @@ export class Canvas {
 }
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
-	const hue = (i * 25 + now * 0.03) % 360;
+	const hue = (i * 25 + now * 0.1) % 360;
 	return `hsl(${hue}, 75%, 50%)`;
 }
 

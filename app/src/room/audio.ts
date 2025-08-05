@@ -2,13 +2,13 @@ import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import { type Notifications, PannedNotifications } from "./notifications";
+import { PannedNotifications as PannedSound, Sound } from "./sound";
 
 const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
 export type AudioProps = {
-	notifications?: Notifications;
+	sound?: Sound;
 	pan?: number;
 };
 
@@ -26,7 +26,7 @@ export class Audio {
 
 	// We use a different AudioContext for notifications, so we need a separate analyser.
 	// TODO reuse if the sample rate is the same?
-	notifications?: PannedNotifications;
+	sound: PannedSound;
 
 	#volumeSmoothed = 0;
 
@@ -35,22 +35,20 @@ export class Audio {
 
 	#signals = new Effect();
 
-	constructor(broadcast: Broadcast, props?: AudioProps) {
+	constructor(broadcast: Broadcast, sound: Sound, props?: AudioProps) {
 		this.broadcast = broadcast;
 		this.pan = new Signal(props?.pan ?? 0);
 
-		this.notifications = props?.notifications ? new PannedNotifications(props.notifications, this.pan) : undefined;
+		this.sound = new PannedSound(sound, this.pan);
 
 		this.#signals.effect((effect) => {
-			if (!this.notifications) return;
-
 			const meme = effect.get(this.broadcast.meme);
 			if (!meme) return;
 
-			const source = new MediaElementAudioSourceNode(this.notifications.context, { mediaElement: meme });
+			const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: meme });
 
 			// Use the existing notifications context so we don't need to create our own panner/volume.
-			this.notifications.connect(source);
+			this.sound.connect(source);
 			effect.cleanup(() => source.disconnect());
 		});
 
@@ -171,10 +169,8 @@ export class Audio {
 	}
 
 	render(ctx: CanvasRenderingContext2D) {
-		if (!this.notifications) return;
-
 		// Compute average volume
-		const analyserBuffer = this.notifications.analyze();
+		const analyserBuffer = this.sound.analyze();
 		if (!analyserBuffer) return; // undefined in potato mode
 
 		const bounds = this.broadcast.bounds.peek();

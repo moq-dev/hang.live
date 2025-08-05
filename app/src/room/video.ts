@@ -48,7 +48,19 @@ export class Video {
 
 		if (active && next) {
 			this.transition = Math.min(this.transition + 0.05, 1);
-			this.targetSize = Vector.create(next.frame.displayWidth, next.frame.displayHeight);
+
+			let width: number;
+			let height: number;
+
+			if (next.frame instanceof HTMLVideoElement) {
+				width = next.frame.videoWidth;
+				height = next.frame.videoHeight;
+			} else {
+				width = next.frame.displayWidth;
+				height = next.frame.displayHeight;
+			}
+
+			this.targetSize = Vector.create(width, height);
 		} else {
 			this.transition = Math.max(this.transition - 0.05, 0);
 			// TODO do this once, not on every frame.
