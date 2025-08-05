@@ -8,7 +8,7 @@ const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
 export type AudioProps = {
-	notifications: Notifications;
+	notifications?: Notifications;
 	pan?: number;
 };
 
@@ -26,7 +26,7 @@ export class Audio {
 
 	// We use a different AudioContext for notifications, so we need a separate analyser.
 	// TODO reuse if the sample rate is the same?
-	notifications: PannedNotifications;
+	notifications?: PannedNotifications;
 
 	#volumeSmoothed = 0;
 
@@ -35,13 +35,15 @@ export class Audio {
 
 	#signals = new Effect();
 
-	constructor(broadcast: Broadcast, props: AudioProps) {
+	constructor(broadcast: Broadcast, props?: AudioProps) {
 		this.broadcast = broadcast;
 		this.pan = new Signal(props?.pan ?? 0);
 
-		this.notifications = new PannedNotifications(props.notifications, this.pan);
+		this.notifications = props?.notifications ? new PannedNotifications(props.notifications, this.pan) : undefined;
 
 		this.#signals.effect((effect) => {
+			if (!this.notifications) return;
+
 			const meme = effect.get(this.broadcast.meme);
 			if (!meme) return;
 
@@ -169,6 +171,8 @@ export class Audio {
 	}
 
 	render(ctx: CanvasRenderingContext2D) {
+		if (!this.notifications) return;
+
 		// Compute average volume
 		const analyserBuffer = this.notifications.analyze();
 		if (!analyserBuffer) return; // undefined in potato mode

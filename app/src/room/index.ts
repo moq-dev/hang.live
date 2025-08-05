@@ -2,9 +2,9 @@ import * as Api from "@hang/api/client";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import { Effect, Signal } from "@kixelated/signals";
-import type { Canvas } from "../canvas";
 import Settings from "../settings";
 import { Broadcast } from "./broadcast";
+import type { Canvas } from "./canvas";
 import { Notifications } from "./notifications";
 import { Space } from "./space";
 
@@ -108,8 +108,6 @@ export class Room {
 			location: {
 				enabled: true,
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-				// Allow other users to move our camera.
-				peering: Settings.draggable.peek(),
 			},
 			user: {
 				name: props?.user,
@@ -140,8 +138,9 @@ export class Room {
 		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
-			// Allow other users to move our camera.
-			this.camera.location.peering.set(draggable);
+			// Generate a random handle
+			const handle = draggable ? Math.random().toString(36).substring(2, 15) : undefined;
+			this.camera.location.handle.set(handle);
 		});
 
 		this.#signals.effect((effect) => {
@@ -185,8 +184,9 @@ export class Room {
 		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
-			// Allow other users to move our screen.
-			this.screen.location.peering.set(draggable);
+			// Generate a random handle
+			const handle = draggable ? Math.random().toString(36).substring(2, 15) : undefined;
+			this.screen.location.handle.set(handle);
 		});
 
 		this.#signals.effect((effect) => {
@@ -351,8 +351,7 @@ export class Room {
 
 				if (local) {
 					if (update.active) {
-						const broadcast = new Broadcast(local, {
-							viewport: this.space.canvas.viewport,
+						const broadcast = new Broadcast(local, this.space.canvas, {
 							audio: {
 								notifications: this.notifications,
 							},
@@ -393,8 +392,7 @@ export class Room {
 						watch.audio.enabled.set(!suspended);
 					});
 
-					const broadcast = new Broadcast(watch, {
-						viewport: this.space.canvas.viewport,
+					const broadcast = new Broadcast(watch, this.space.canvas, {
 						camera: this.camera,
 						screen: this.screen,
 						audio: {

@@ -9,9 +9,9 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
-import { Canvas } from "./canvas";
 import { Fave } from "./fave";
 import { NotFound } from "./not-found";
+import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
 
 export function Hang(): JSX.Element {

@@ -6,8 +6,6 @@ import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
 import IconPlay from "~icons/mdi/play";
-import { Canvas } from "./canvas";
-import { Chat } from "./chat";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
@@ -16,6 +14,7 @@ import AppLayout from "./layout/app";
 import WebLayout from "./layout/web";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
+import { Canvas } from "./room/canvas";
 
 interface Info {
 	name: string;
@@ -52,7 +51,6 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 
 	return (
 		<AppLayout connection={room.connection} api={props.api} room={props.room}>
-			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
 		</AppLayout>
 	);

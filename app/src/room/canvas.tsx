@@ -1,6 +1,6 @@
 import { Effect, Signal } from "@kixelated/signals";
-import { Vector } from "./room/geometry";
-import Settings from "./settings";
+import Settings from "../settings";
+import { Vector } from "./geometry";
 
 const LINE_SPACING = 64;
 const LINE_WIDTH = 10;
@@ -10,6 +10,10 @@ const BEND_AMPLITUDE = 16;
 const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
+
+export type CanvasProps = {
+	background?: boolean;
+};
 
 export class Canvas {
 	#canvas: HTMLCanvasElement;
@@ -24,11 +28,14 @@ export class Canvas {
 
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
+	background: Signal<boolean>;
 
 	#signals = new Effect();
 
-	constructor(element: HTMLCanvasElement) {
+	constructor(element: HTMLCanvasElement, props?: CanvasProps) {
 		this.#canvas = element;
+
+		this.background = new Signal(props?.background ?? true);
 
 		// Load the pre-rendered SVG instead of rendering it live.
 		this.#potato = new Image();
@@ -85,7 +92,9 @@ export class Canvas {
 		ctx.imageSmoothingEnabled = !Settings.potato.peek();
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-		this.#renderBackground(this.#context, now);
+		if (this.background.peek()) {
+			this.#renderBackground(this.#context, now);
+		}
 
 		if (this.onRender) {
 			this.onRender(this.#context, now);
@@ -149,9 +158,9 @@ export class Canvas {
 		}
 	}
 
-	mousePosition(e: MouseEvent): Vector {
+	relative(x: number, y: number): Vector {
 		const rect = this.#canvas.getBoundingClientRect();
-		return Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio);
+		return Vector.create(x - rect.left, y - rect.top).mult(window.devicePixelRatio);
 	}
 
 	close() {
