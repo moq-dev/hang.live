@@ -11,7 +11,7 @@ import type { Broadcast } from "./room/broadcast";
 import Settings from "./settings";
 
 export function Chat(props: { canvas: Canvas; room: Room }) {
-	const broadcasts = solid(props.room.broadcasts);
+	const broadcasts = solid(props.room.space.ordered);
 
 	return (
 		<For each={broadcasts()}>
