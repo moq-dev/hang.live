@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import { Layout } from "./layout";
+import Layout from "./layout/web";
 
 export function NotFound(): JSX.Element {
 	return (

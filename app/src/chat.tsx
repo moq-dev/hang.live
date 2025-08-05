@@ -8,7 +8,6 @@ import { Canvas } from "./canvas";
 import type { Room } from "./room";
 import type { Broadcast } from "./room/broadcast";
 
-import "github-markdown-css/github-markdown-dark.css";
 import Settings from "./settings";
 
 export function Chat(props: { canvas: Canvas; room: Room }) {

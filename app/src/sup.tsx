@@ -13,7 +13,8 @@ import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
 import { Controls } from "./controls";
-import { Layout } from "./layout";
+import AppLayout from "./layout/app";
+import WebLayout from "./layout/web";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 
@@ -52,10 +53,10 @@ function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info 
 	onCleanup(() => room.close());
 
 	return (
-		<Layout app={true} connection={room.connection} api={props.api}>
+		<AppLayout connection={room.connection} api={props.api}>
 			<Chat canvas={props.canvas} room={room} />
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
-		</Layout>
+		</AppLayout>
 	);
 }
 
@@ -68,7 +69,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 	};
 
 	return (
-		<Layout app={false} api={props.api}>
+		<WebLayout api={props.api}>
 			<div class="max-w-7xl p-4">
 				<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
@@ -129,7 +130,7 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 					</div>
 				</div>
 			</div>
-		</Layout>
+		</WebLayout>
 	);
 }
 

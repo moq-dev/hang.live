@@ -10,7 +10,7 @@ import IconPlay from "~icons/mdi/play";
 import IconPlus from "~icons/mdi/plus-box";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
-import { Layout } from "./layout";
+import Layout from "./layout/web";
 import * as Random from "./util/random";
 
 export function Fave(props: { api: Api.Client }): JSX.Element {
@@ -100,7 +100,7 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 								fallback={
 									<div class="text-center">
 										<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
-										<h3 class="text-lg font-semibold mb-8">Sign in to favorite rooms</h3>
+										<h3 class="text-lg font-semibold mb-8">Sign in to favorite hangs</h3>
 										<Login api={props.api} />
 									</div>
 								}
