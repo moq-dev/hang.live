@@ -9,9 +9,12 @@ export function About(): JSX.Element {
 	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement, { background: false }));
 	onCleanup(() => room.close());
 
-	const random = () => Math.random() * 2 - 1;
+	const random = () => (Math.random() * 2 - 1) * 0.9;
 
-	const one = new FakeBroadcast({ location: { x: random(), y: random() } });
+	const one = new FakeBroadcast({
+		location: { x: random(), y: random() },
+		user: { name: "kixelated", avatar: "/avatar/kixel.svg" },
+	});
 	const two = new FakeBroadcast({ location: { x: random(), y: random() } });
 	const three = new FakeBroadcast({ location: { x: random(), y: random() } });
 

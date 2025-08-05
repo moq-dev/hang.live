@@ -164,7 +164,18 @@ export class Canvas {
 
 	relative(x: number, y: number): Vector {
 		const rect = this.#canvas.getBoundingClientRect();
-		return Vector.create(x - rect.left, y - rect.top).mult(window.devicePixelRatio);
+		const viewport = this.viewport.peek();
+		
+		// Convert from page coordinates to canvas coordinates
+		// Account for both position offset and scaling
+		const pageX = x - rect.left;
+		const pageY = y - rect.top;
+		
+		// Scale from displayed size to internal canvas size
+		const canvasX = (pageX / rect.width) * viewport.x;
+		const canvasY = (pageY / rect.height) * viewport.y;
+		
+		return Vector.create(canvasX, canvasY);
 	}
 
 	close() {
