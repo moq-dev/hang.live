@@ -8,10 +8,10 @@ import IconHeartOutline from "~icons/mdi/heart-outline";
 import IconInformation from "~icons/mdi/information-outline";
 import IconPlay from "~icons/mdi/play";
 import IconPlus from "~icons/mdi/plus-box";
-import { useAnimatedGradient } from "./gradient";
+import Gradient from "./components/gradient";
+import Login from "./components/login";
 import { Layout } from "./layout";
-import { LoginButtons } from "./login";
-import * as Random from "./random";
+import * as Random from "./util/random";
 
 export function Fave(props: { api: Api.Client }): JSX.Element {
 	const navigate = useNavigate();
@@ -80,8 +80,6 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 		return favs.slice(0, 6);
 	});
 
-	const gradient = useAnimatedGradient();
-
 	return (
 		<Layout api={props.api}>
 			<div class="max-w-7xl p-4">
@@ -102,8 +100,8 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 								fallback={
 									<div class="text-center">
 										<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
-										<h3 class="text-lg font-semibold mb-4">Sign in to favorite rooms</h3>
-										<LoginButtons api={props.api} />
+										<h3 class="text-lg font-semibold mb-8">Sign in to favorite rooms</h3>
+										<Login api={props.api} />
 									</div>
 								}
 							>
@@ -190,7 +188,7 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 										type="submit"
 										class="px-3 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 cursor-pointer"
 										style={{
-											background: gradient.linear(),
+											background: Gradient(),
 										}}
 									>
 										<IconPlay class="w-5 h-5" />

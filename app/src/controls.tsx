@@ -12,9 +12,9 @@ import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
 import type { Canvas } from "./canvas";
+import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
 import Settings, { Modal } from "./settings";
-import { Tooltip } from "./tooltip";
 
 export function Controls(props: {
 	room: Room;

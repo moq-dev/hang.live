@@ -9,9 +9,9 @@ import IconHeart from "~icons/mdi/heart";
 import IconHeartOutline from "~icons/mdi/heart-outline";
 import IconPlay from "~icons/mdi/play";
 import IconShare from "~icons/mdi/share-variant";
-import { Divider } from "./divider";
-import { LoginButtons } from "./login";
-import { Tooltip } from "./tooltip";
+import Divider from "./components/divider";
+import Login from "./components/login";
+import Tooltip from "./components/tooltip";
 
 export function Layout(props: { children: JSX.Element; app?: boolean; connection?: Connection; api?: Api.Client }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";
@@ -226,7 +226,7 @@ function FavoriteButton(props: { api: Api.Client }) {
 						role="document"
 					>
 						<div class="text-center text-lg font-semibold mb-4">Login to favorite rooms</div>
-						<LoginButtons api={props.api} />
+						<Login api={props.api} />
 						<button
 							type="button"
 							onClick={() => setShowLoginPrompt(false)}
