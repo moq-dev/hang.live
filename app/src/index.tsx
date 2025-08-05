@@ -3,8 +3,8 @@ import "tauri-plugin-web-transport";
 import "@kixelated/hang/support/element";
 
 import * as Api from "@hang/api/client";
-import { Route, Router } from "@solidjs/router";
-import { onCleanup } from "solid-js";
+import { Route, Router, useLocation } from "@solidjs/router";
+import { onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
@@ -28,10 +28,18 @@ export function Hang(): JSX.Element {
 				<Route path="/" component={About} />
 				<Route path="/account" component={() => <Account api={api} />} />
 				<Route path="/fave" component={() => <Fave api={api} />} />
-				<Route path="/demo/:room" component={() => <Sup canvas={canvas} api={api} />} />
-				<Route path="*" component={NotFound} />
+				<Route path="*" component={() => <Fallback canvas={canvas} api={api} />} />
 			</Router>
 		</>
+	);
+}
+
+function Fallback(props: { canvas: Canvas; api: Api.Client }) {
+	const path = useLocation();
+	return (
+		<Show when={path.pathname.startsWith("/@")} fallback={<NotFound />}>
+			<Sup canvas={props.canvas} api={props.api} room={path.pathname.slice(2)} />
+		</Show>
 	);
 }
 

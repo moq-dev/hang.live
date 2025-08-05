@@ -67,7 +67,7 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 		const name = roomName();
 		if (name) {
 			// Now actually navigate and add to history
-			navigate(`/demo/${name}`);
+			navigate(`/@${name}`);
 		}
 	};
 
@@ -198,7 +198,7 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 								{/* Live URL Preview */}
 								<div class="text-sm text-gray-500">
 									<span>Room URL: </span>
-									<span class="text-gray-300 font-mono">hang.live/demo/{roomName()}</span>
+									<span class="text-gray-300 font-mono">hang.live/@{roomName()}</span>
 								</div>
 							</form>
 
@@ -241,7 +241,7 @@ function FavoriteRoom(props: { room: string; createdAt: number; onRemove: (room:
 				"opacity-50 pointer-events-none": removing(),
 			}}
 		>
-			<a href={`/demo/${props.room}`} class="flex-1 min-w-0 cursor-pointer">
+			<a href={`/@${props.room}`} class="flex-1 min-w-0 cursor-pointer">
 				<h3 class="font-semibold text-lg truncate">{props.room}</h3>
 			</a>
 			<button
