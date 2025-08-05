@@ -32,6 +32,10 @@ export class Canvas {
 
 	#signals = new Effect();
 
+	get element() {
+		return this.#canvas;
+	}
+
 	constructor(element: HTMLCanvasElement, props?: CanvasProps) {
 		this.#canvas = element;
 
