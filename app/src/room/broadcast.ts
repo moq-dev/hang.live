@@ -168,7 +168,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			effect.cleanup(() => newAvatar.removeEventListener("load", load));
 		});
 
-
 		this.signals.effect(this.#runChat.bind(this));
 
 		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.

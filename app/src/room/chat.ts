@@ -54,11 +54,32 @@ export class Chat {
 			const bounds = effect.get(this.broadcast.bounds).div(window.devicePixelRatio);
 			const viewport = effect.get(this.broadcast.canvas.viewport).div(window.devicePixelRatio);
 
-			const top = Math.min(viewport.y - wrapper.clientHeight - 40, bounds.position.y + bounds.size.y);
+			// Get the canvas element's position on the page
+			const canvasRect = this.canvas.element.getBoundingClientRect();
+
+			// Scale bounds from canvas coordinates to page coordinates
+			const scaleX = canvasRect.width / viewport.x;
+			const scaleY = canvasRect.height / viewport.y;
+
+			// Transform bounds to page coordinates
+			const pageBounds = {
+				x: bounds.position.x * scaleX + canvasRect.left,
+				y: bounds.position.y * scaleY + canvasRect.top,
+				width: bounds.size.x * scaleX,
+				height: bounds.size.y * scaleY,
+			};
+
+			// Position message below the broadcast
+			const messageTop = pageBounds.y + pageBounds.height;
+			const top = Math.min(canvasRect.top + canvasRect.height - wrapper.clientHeight - 40, messageTop);
+
+			// Center message horizontally on broadcast
+			const messageCenterX = pageBounds.x + pageBounds.width / 2;
 			const left = Math.min(
-				Math.max(0, bounds.position.x + bounds.size.x / 2 - wrapper.clientWidth / 2),
-				viewport.x - wrapper.clientWidth,
+				Math.max(canvasRect.left, messageCenterX - wrapper.clientWidth / 2),
+				canvasRect.left + canvasRect.width - wrapper.clientWidth,
 			);
+
 			const offset = type === "caption" ? (effect.get(this.#offset) ?? 0) : 0;
 
 			wrapper.style.left = `${left}px`;
