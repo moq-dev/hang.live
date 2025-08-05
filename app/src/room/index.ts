@@ -34,6 +34,9 @@ export class Room {
 	// All of the broadcasts stored in z-index order.
 	broadcasts = new Signal<Broadcast[]>([]);
 
+	// Local broadcasts.
+	#locals = new Map<string, Broadcast<Publish.Broadcast>>();
+
 	// Remote broadcasts are stored separately so we treat them differently.
 	#remotes = new Map<string, Broadcast<Watch.Broadcast>>();
 
@@ -536,7 +539,7 @@ export class Room {
 
 				if (update.name === this.camera.name.peek()) {
 					if (update.active) {
-						this.#startPreview(this.camera);
+						this.#startPreview(update.name, this.camera);
 					} else {
 						this.#stopBroadcast(update.name);
 					}
@@ -545,7 +548,7 @@ export class Room {
 
 				if (update.name === this.screen.name.peek()) {
 					if (update.active) {
-						this.#startPreview(this.screen);
+						this.#startPreview(update.name, this.screen);
 					} else {
 						this.#stopBroadcast(update.name);
 					}
@@ -623,7 +626,7 @@ export class Room {
 		return undefined;
 	}
 
-	#startPreview(source: Publish.Broadcast): Broadcast {
+	#startPreview(name: string, source: Publish.Broadcast): Broadcast {
 		const broadcast = new Broadcast(source, {
 			viewport: this.canvas.viewport,
 			audio: {
@@ -632,6 +635,8 @@ export class Room {
 			// Wait until we get an announcement before rendering ourselves as online.
 			online: false,
 		});
+
+		this.#locals.set(name, broadcast);
 
 		this.#startBroadcast(broadcast);
 
@@ -678,6 +683,7 @@ export class Room {
 
 		this.notifications.play("bye");
 		this.#remotes.delete(name);
+		this.#locals.delete(name);
 
 		// Move it from the main list to the rip list.
 		this.broadcasts.set((prev) => prev.filter((b) => b !== broadcast));
@@ -806,8 +812,9 @@ export class Room {
 		}
 
 		// Render the locator arrows for our broadcasts on join.
-		//this.camera.renderLocator(now, ctx);
-		// this.screen.renderLocator(now, ctx);
+		for (const broadcast of this.#locals.values()) {
+			broadcast.renderLocator(now, ctx);
+		}
 	}
 
 	#tickScale() {
