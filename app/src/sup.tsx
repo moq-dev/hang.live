@@ -1,5 +1,4 @@
 import * as Api from "@hang/api/client";
-import { useParams } from "@solidjs/router";
 import { createEffect, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
@@ -32,13 +31,12 @@ function randomName(): string {
 	});
 }
 
-export function Sup(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
+export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
 	const [info, setInfo] = createSignal<Info | undefined>(undefined);
-	const room = useParams().room;
 
 	return (
-		<Show when={info()} fallback={<Preview api={props.api} room={room} join={setInfo} />}>
-			{(info) => <App canvas={props.canvas} api={props.api} room={room} info={info()} />}
+		<Show when={info()} fallback={<Preview api={props.api} room={props.room} join={setInfo} />}>
+			{(info) => <App canvas={props.canvas} api={props.api} room={props.room} info={info()} />}
 		</Show>
 	);
 }
