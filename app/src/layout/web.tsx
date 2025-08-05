@@ -1,6 +1,8 @@
 import * as Api from "@hang/api/client";
 import { JSX } from "solid-js";
 import IconAccount from "~icons/mdi/account";
+import IconDiscord from "~icons/mdi/discord";
+import IconGithub from "~icons/mdi/github";
 import IconPlay from "~icons/mdi/play";
 import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
@@ -27,6 +29,28 @@ export default function Web(props: { children: JSX.Element; api?: Api.Client }) 
 
 			<Divider />
 			<main class="flex flex-col relative">{props.children}</main>
+			<footer class="flex justify-center items-center gap-4 mt-8 pt-4">
+				<Tooltip content="Join Discord" position="top">
+					<a
+						href="https://discord.gg/SRG9gu6BdE"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					>
+						<IconDiscord class="w-5 h-5" />
+					</a>
+				</Tooltip>
+				<Tooltip content="Open source" position="top">
+					<a
+						href="https://github.com/kixelated/moq"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					>
+						<IconGithub class="w-5 h-5" />
+					</a>
+				</Tooltip>
+			</footer>
 		</div>
 	);
 }
