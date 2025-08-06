@@ -26,8 +26,7 @@ export class FakeBroadcast {
 	user = new Signal<Catalog.User | undefined>(undefined);
 
 	audio = {
-		media: new Signal<MediaStream | undefined>(undefined),
-		root: new Signal(undefined),
+		root: new Signal<AudioNode | undefined>(undefined),
 		caption: new Signal<string | undefined>(undefined),
 	};
 
@@ -73,6 +72,9 @@ export class FakeBroadcast {
 		this.#video.load();
 		this.#video.play();
 		this.video.active.set(true);
+
+		const media = new MediaStream([this.#video])
+		this.audio.root.set(this.#video);
 	}
 
 	stop() {
