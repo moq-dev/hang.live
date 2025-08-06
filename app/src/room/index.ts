@@ -13,6 +13,7 @@ export type RoomProps = {
 	user?: string;
 	avatar?: string;
 	visible?: boolean;
+	account?: Api.Account.Id;
 };
 
 export class Room {
@@ -20,10 +21,7 @@ export class Room {
 	// This is reactive; it may still be pending.
 	connection: Connection;
 
-	api: Api.Client;
-
-	// The name of the room.
-	name: Signal<string | undefined>;
+	account: Signal<Api.Account.Id | undefined>;
 
 	// The user ID of the local user.
 	user: Signal<string | undefined>;
@@ -44,37 +42,14 @@ export class Room {
 
 	#signals = new Effect();
 
-	constructor(canvas: Canvas, api: Api.Client, props?: RoomProps) {
-		this.connection = new Connection();
-		this.api = api;
+	constructor(connection: Connection, canvas: Canvas, props?: RoomProps) {
+		this.connection = connection;
 		this.space = new Space(canvas);
-		this.name = new Signal(props?.name);
+		this.account = new Signal(props?.account);
 		this.user = new Signal(props?.user);
 		this.avatar = new Signal(props?.avatar ?? Api.randomAvatar());
 
 		this.sound = new Sound();
-
-		this.#signals.effect((effect) => {
-			const name = effect.get(this.name);
-			if (!name) return;
-
-			// Given the room name, fetch a cooresponding token from the API server.
-			effect.spawn(async () => {
-				const response = await this.api.routes.room[":name"].join.$post({ param: { name } });
-				if (!response.ok) {
-					throw new Error(`Failed to join room: ${response.statusText}`);
-				}
-				const data = await response.json();
-
-				// Set the name of the broadcasts to our account ID.
-				// If anonymous, then this is randomly generated.
-				this.camera.name.set(Path.from(data.account, "camera"));
-				this.screen.name.set(Path.from(data.account, "screen"));
-
-				this.connection.url.set(new URL(data.url));
-				effect.cleanup(() => this.connection.url.set(undefined));
-			});
-		});
 
 		this.camera = new Publish.Broadcast(this.connection, {
 			device: "camera",
@@ -177,6 +152,14 @@ export class Room {
 			preview: {
 				enabled: true,
 			},
+		});
+
+		this.#signals.effect((effect) => {
+			const account = effect.get(this.account);
+			if (!account) return;
+
+			this.camera.name.set(Path.from(account, "camera"));
+			this.screen.name.set(Path.from(account, "screen"));
 		});
 
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
