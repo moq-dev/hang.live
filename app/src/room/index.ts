@@ -381,7 +381,6 @@ export class Room {
 						online: true,
 					});
 
-					this.sound.play("sup");
 					this.space.add(update.name, broadcast);
 				} else {
 					this.space.remove(update.name);
