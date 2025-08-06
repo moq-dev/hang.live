@@ -1,4 +1,4 @@
-import { Publish, Watch } from "@kixelated/hang";
+import { Publish } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
