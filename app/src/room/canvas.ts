@@ -68,7 +68,7 @@ export class Canvas {
 				// Use parent container dimensions
 				const parent = this.#canvas.parentElement;
 				if (!parent) return;
-				
+
 				const rect = parent.getBoundingClientRect();
 				this.#canvas.width = window.devicePixelRatio * rect.width;
 				this.#canvas.height = window.devicePixelRatio * rect.height;
@@ -86,11 +86,11 @@ export class Canvas {
 		visible();
 
 		// Listen for window resize events (for fullscreen/fixed position)
-		window.addEventListener("resize", resize);
-		
+		this.#signals.eventListener(window, "resize", resize);
+
 		// Set up ResizeObserver for parent when canvas is added to DOM
 		let resizeObserver: ResizeObserver | null = null;
-		
+
 		const setupParentObserver = () => {
 			const parent = this.#canvas.parentElement;
 			if (parent && !resizeObserver) {
@@ -101,7 +101,7 @@ export class Canvas {
 
 		// Try to set up observer immediately if already in DOM
 		setupParentObserver();
-		
+
 		// Watch for canvas being added to DOM
 		const mutationObserver = new MutationObserver(() => {
 			if (this.#canvas.parentElement) {
@@ -109,20 +109,18 @@ export class Canvas {
 				mutationObserver.disconnect();
 			}
 		});
-		
+
 		if (!this.#canvas.parentElement) {
 			mutationObserver.observe(document.body, { childList: true, subtree: true });
 		}
 
-		document.addEventListener("visibilitychange", visible);
+		this.#signals.eventListener(document, "visibilitychange", visible);
 
 		this.#signals.cleanup(() => {
-			window.removeEventListener("resize", resize);
 			if (resizeObserver) {
 				resizeObserver.disconnect();
 			}
 			mutationObserver.disconnect();
-			document.removeEventListener("visibilitychange", visible);
 		});
 
 		this.#signals.effect((effect: Effect) => {

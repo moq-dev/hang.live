@@ -1,5 +1,6 @@
 @import "@fontsource-variable/montserrat";
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
 	--font-montserrat: "Montserrat Variable", system-ui, sans-serif;
@@ -54,9 +55,8 @@ body {
 	min-height: 100vh;
 }
 
-/* Make the hang div take up at least full viewport height */
+/* Container for the app */
 #hang {
-	/*min-height: 90vh; */
 	display: flex;
 	flex-direction: column;
 	position: relative;

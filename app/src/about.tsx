@@ -164,15 +164,20 @@ export function About(): JSX.Element {
 
 	return (
 		<Layout>
-			<p>
-				I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out. It's fun
-				and free. <a href="/fave">Start a hang</a>. Invite your friends.
-			</p>
-			<div class="p-4 h-128">{canvas}</div>
-			<p>
-				For the nerds in the audience, this site uses bleeding edge web technologies. It's not WebRTC, it's{" "}
-				<a href="https://quic.video">MoQ</a>.
-			</p>
+			<div class="prose-invert lg:prose-lg">
+				<p class="px-4">
+					I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
+				</p>
+				<p class="px-4">
+					It's fun, free, and a little bit cringe. <a href="/fave">Start a hang</a> and invite your friends.
+				</p>
+				<div class="p-4 h-128">{canvas}</div>
+				<p class="px-4">
+					For the nerds in the audience, this site uses bleeding edge web technologies. The core media stack
+					uses <a href="https://quic.video">Media over QUIC</a> and is{" "}
+					<a href="https://github.com/kixelated/moq">open source</a>. This ain't your usual Zoom clone.
+				</p>
+			</div>
 		</Layout>
 	);
 }

@@ -87,7 +87,6 @@ function App(props: {
 		avatar: props.info.avatar,
 		account: props.info.account,
 	});
-
 	onCleanup(() => room.close());
 
 	return (

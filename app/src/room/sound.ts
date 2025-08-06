@@ -61,8 +61,8 @@ export class Sound {
 				this.context.resume();
 			};
 
-			window.addEventListener("click", unsuspend, { once: true });
-			window.addEventListener("keydown", unsuspend, { once: true });
+			this.#signals.eventListener(window, "click", unsuspend, { once: true });
+			this.#signals.eventListener(window, "keydown", unsuspend, { once: true });
 		}
 
 		this.#signals.effect((effect) => {
@@ -75,8 +75,10 @@ export class Sound {
 
 			const workerApi = Comlink.wrap<SoundWorker>(worker);
 
-				this.#worker = workerApi;
-				effect.cleanup(() => { this.#worker = undefined });
+			this.#worker = workerApi;
+			effect.cleanup(() => {
+				this.#worker = undefined;
+			});
 		});
 
 		this.#sounds = sounds;
@@ -128,20 +130,20 @@ export class Sound {
 			return;
 		}
 
-			const audioUrl = await this.#worker.tts(text, voice);
+		const audioUrl = await this.#worker.tts(text, voice);
 
-			// Fetch the audio from the object URL
-			const response = await fetch(audioUrl);
-			const arrayBuffer = await response.arrayBuffer();
-			const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+		// Fetch the audio from the object URL
+		const response = await fetch(audioUrl);
+		const arrayBuffer = await response.arrayBuffer();
+		const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
 
-			// Play the audio through the panner
-			const source = new AudioBufferSourceNode(this.context, { buffer: audioBuffer });
-			source.connect(this.context.destination);
-			source.start();
+		// Play the audio through the panner
+		const source = new AudioBufferSourceNode(this.context, { buffer: audioBuffer });
+		source.connect(this.context.destination);
+		source.start();
 
-			// Clean up the object URL
-			URL.revokeObjectURL(audioUrl);
+		// Clean up the object URL
+		URL.revokeObjectURL(audioUrl);
 	}
 
 	resume() {
@@ -212,7 +214,6 @@ export class PannedNotifications {
 		const when = Math.max(this.#parent.context.currentTime, 0.2);
 		source.start(when);
 	}
-
 
 	// NOTE: We don't cache elements because the browser will.
 	// Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
