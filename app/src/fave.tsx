@@ -82,7 +82,7 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 	});
 
 	return (
-		<Layout api={props.api}>
+		<Layout>
 			<div class="max-w-7xl p-4">
 				<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
