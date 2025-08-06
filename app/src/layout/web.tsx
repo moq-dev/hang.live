@@ -1,6 +1,7 @@
 import { JSX } from "solid-js";
 import IconAccount from "~icons/mdi/account";
 import IconDiscord from "~icons/mdi/discord";
+import IconEmail from "~icons/mdi/email";
 import IconGithub from "~icons/mdi/github";
 import IconPlay from "~icons/mdi/play";
 import Divider from "../components/divider";
@@ -39,7 +40,7 @@ export default function Web(props: { children: JSX.Element }) {
 						<IconDiscord class="w-5 h-5" />
 					</a>
 				</Tooltip>
-				<Tooltip content="Source Code (Partial)" position="top">
+				<Tooltip content="Source Code" position="top">
 					<a
 						href="https://github.com/kixelated/moq"
 						target="_blank"
@@ -47,6 +48,14 @@ export default function Web(props: { children: JSX.Element }) {
 						class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 					>
 						<IconGithub class="w-5 h-5" />
+					</a>
+				</Tooltip>
+				<Tooltip content="Contact us" position="top">
+					<a
+						href="mailto:admin@hang.live"
+						class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					>
+						<IconEmail class="w-5 h-5" />
 					</a>
 				</Tooltip>
 			</footer>
