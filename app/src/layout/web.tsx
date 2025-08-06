@@ -1,4 +1,3 @@
-import * as Api from "@hang/api/client";
 import { JSX } from "solid-js";
 import IconAccount from "~icons/mdi/account";
 import IconDiscord from "~icons/mdi/discord";
@@ -8,7 +7,7 @@ import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
 import { Logo } from "./logo";
 
-export default function Web(props: { children: JSX.Element; api?: Api.Client }) {
+export default function Web(props: { children: JSX.Element }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-0 max-w-[900px]">
 			<header class="flex items-center justify-between mb-4">

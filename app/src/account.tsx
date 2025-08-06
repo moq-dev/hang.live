@@ -12,7 +12,7 @@ import Layout from "./layout/web";
 
 export function Account(props: { api: Api.Client }): JSX.Element {
 	return (
-		<Layout api={props.api}>
+		<Layout>
 			<Show when={props.api.authenticated()} fallback={<LoginPage api={props.api} />}>
 				<SettingsLoad api={props.api} />
 			</Show>
