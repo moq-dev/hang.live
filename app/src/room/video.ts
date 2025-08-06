@@ -268,7 +268,7 @@ export class Video {
 		const targetOpacity = modifiers?.hovering ? 1 : 0;
 		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
 
-		const name = this.broadcast.source.user.peek()?.name;
+		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
 			const fontSize = 10 + 12 * Math.sqrt(scale);

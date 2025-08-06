@@ -40,7 +40,7 @@ export default function Web(props: { children: JSX.Element; api?: Api.Client }) 
 						<IconDiscord class="w-5 h-5" />
 					</a>
 				</Tooltip>
-				<Tooltip content="Open source" position="top">
+				<Tooltip content="Source Code (Partial)" position="top">
 					<a
 						href="https://github.com/kixelated/moq"
 						target="_blank"
