@@ -34,6 +34,7 @@
 		"@biomejs/biome": "^2.1.1",
 		"@iconify-json/material-symbols": "^1.2.30",
 		"@iconify-json/mdi": "^1.2.3",
+		"@tailwindcss/typography": "^0.5.16",
 		"@tauri-apps/cli": "^2.6.2",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.234",
 		"comlink": "^4.4.2",

@@ -9,14 +9,16 @@ export class SoundWorker {
 	#model: Promise<KokoroTTS>;
 
 	constructor() {
-		const device = detectWebGPU().then((webgpu) => webgpu ? "webgpu" : "wasm");
+		const device = detectWebGPU().then((webgpu) => (webgpu ? "webgpu" : "wasm"));
 
 		// Load the model
 		const model_id = "onnx-community/Kokoro-82M-v1.0-ONNX";
-		this.#model = device.then((device) => KokoroTTS.from_pretrained(model_id, {
-			dtype: device === "wasm" ? "q8" : "fp32",
-			device,
-		}));
+		this.#model = device.then((device) =>
+			KokoroTTS.from_pretrained(model_id, {
+				dtype: device === "wasm" ? "q8" : "fp32",
+				device,
+			}),
+		);
 	}
 
 	async ready() {

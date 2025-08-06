@@ -30,129 +30,146 @@ export class Space {
 		this.canvas = canvas;
 		this.sound = sound;
 
-		window.addEventListener("mousedown", (e) => {
-			const mouse = this.canvas.relative(e.clientX, e.clientY);
+		// Use the new eventListener helper that automatically handles cleanup
+		this.#signals.eventListener(window, "mousedown", this.#onMouseDown.bind(this));
+		this.#signals.eventListener(window, "mousemove", this.#onMouseMove.bind(this));
+		this.#signals.eventListener(window, "mouseup", this.#onMouseUp.bind(this));
+		this.#signals.eventListener(window, "mouseleave", this.#onMouseLeave.bind(this));
 
-			this.#dragging = undefined;
+		this.#signals.eventListener(window, "wheel", this.#onMouseWheel.bind(this), { passive: false });
+		console.log("added wheel");
 
-			const broadcast = this.#at(mouse);
-			if (!broadcast) return;
-
-			if (broadcast.locked()) {
-				document.body.style.cursor = "not-allowed";
-				return;
-			}
-
-			const viewport = this.canvas.viewport.peek();
-
-			// Bump the z-index unless we're already at the top.
-			broadcast.targetPosition.set((prev) => ({
-				...prev,
-				x: mouse.x / viewport.x - 0.5,
-				y: mouse.y / viewport.y - 0.5,
-				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
-			}));
-
-			document.body.style.cursor = "grabbing";
-			this.#dragging = broadcast;
+		this.#signals.cleanup(() => {
+			console.log("removed wheel");
 		});
-
-		window.addEventListener("mousemove", (e) => {
-			const mouse = this.canvas.relative(e.clientX, e.clientY);
-			const viewport = this.canvas.viewport.peek();
-
-			if (this.#dragging) {
-				// Update the position but don't publish it yet.
-				this.#dragging.targetPosition.set((prev) => ({
-					...prev,
-					x: mouse.x / viewport.x - 0.5,
-					y: mouse.y / viewport.y - 0.5,
-				}));
-				return;
-			}
-
-			const broadcast = this.#at(mouse);
-			if (broadcast) {
-				this.#hovering = broadcast;
-
-				if (!broadcast.locked()) {
-					document.body.style.cursor = "grab";
-				}
-			} else {
-				this.#hovering = undefined;
-				document.body.style.cursor = "default";
-			}
-		});
-
-		window.addEventListener("mouseup", () => {
-			if (this.#dragging) {
-				this.#dragging.publishPosition();
-
-				this.#dragging = undefined;
-				this.#hovering = undefined;
-				document.body.style.cursor = "default";
-			}
-		});
-
-		window.addEventListener("mouseleave", () => {
-			if (this.#dragging) {
-				this.#dragging.publishPosition();
-
-				this.#dragging = undefined;
-				this.#hovering = undefined;
-				document.body.style.cursor = "default";
-			}
-		});
-
-		window.addEventListener(
-			"wheel",
-			(e) => {
-				e.preventDefault(); // Prevent scroll
-
-				let broadcast = this.#dragging;
-				if (!broadcast) {
-					const mouse = this.canvas.relative(e.clientX, e.clientY);
-
-					broadcast = this.#at(mouse);
-					if (!broadcast) return;
-
-					this.#hovering = broadcast;
-
-					// Bump the z-index unless we're already at the top.
-					broadcast.targetPosition.set((prev) => ({
-						...prev,
-						z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
-					}));
-				}
-
-				if (broadcast.locked()) {
-					document.body.style.cursor = "not-allowed";
-					return;
-				}
-
-				const scale = e.deltaY * 0.001;
-				if (scale < 0) {
-					document.body.style.cursor = "zoom-out";
-				} else if (scale > 0) {
-					document.body.style.cursor = "zoom-in";
-				}
-
-				// Update the scale, publishing it.
-				broadcast.targetPosition.set((prev) => ({
-					...prev,
-					scale: Math.max(Math.min((prev.scale ?? 1) + scale, 4), 0.25),
-				}));
-
-				broadcast.publishPosition();
-			},
-			{ passive: false },
-		);
 
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
 		this.#signals.cleanup(() => {
 			this.canvas.onRender = undefined;
 		});
+	}
+
+	#onMouseDown(e: MouseEvent) {
+		const mouse = this.canvas.relative(e.clientX, e.clientY);
+
+		this.#dragging = undefined;
+
+		const broadcast = this.#at(mouse);
+		if (!broadcast) return;
+
+		if (broadcast.locked()) {
+			document.body.style.cursor = "not-allowed";
+			return;
+		}
+
+		const viewport = this.canvas.viewport.peek();
+
+		// Bump the z-index unless we're already at the top.
+		broadcast.targetPosition.set((prev) => ({
+			...prev,
+			x: mouse.x / viewport.x - 0.5,
+			y: mouse.y / viewport.y - 0.5,
+			z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
+		}));
+
+		document.body.style.cursor = "grabbing";
+		this.#dragging = broadcast;
+	}
+
+	#onMouseUp(_: MouseEvent) {
+		if (this.#dragging) {
+			this.#dragging.publishPosition();
+
+			this.#dragging = undefined;
+			this.#hovering = undefined;
+			document.body.style.cursor = "default";
+		}
+	}
+
+	#onMouseMove(e: MouseEvent) {
+		const mouse = this.canvas.relative(e.clientX, e.clientY);
+		const viewport = this.canvas.viewport.peek();
+
+		if (this.#dragging) {
+			// Update the position but don't publish it yet.
+			this.#dragging.targetPosition.set((prev) => ({
+				...prev,
+				x: mouse.x / viewport.x - 0.5,
+				y: mouse.y / viewport.y - 0.5,
+			}));
+			return;
+		}
+
+		const broadcast = this.#at(mouse);
+		if (broadcast) {
+			this.#hovering = broadcast;
+
+			if (!broadcast.locked()) {
+				document.body.style.cursor = "grab";
+			}
+		} else {
+			this.#hovering = undefined;
+			document.body.style.cursor = "default";
+		}
+	}
+
+	#onMouseLeave() {
+		if (this.#dragging) {
+			this.#dragging.publishPosition();
+
+			this.#dragging = undefined;
+			this.#hovering = undefined;
+			document.body.style.cursor = "default";
+		}
+	}
+
+	#onMouseWheel(e: WheelEvent) {
+		// Check if the mouse is actually over the canvas element before preventing default.
+		const rect = this.canvas.element.getBoundingClientRect();
+		const isOverCanvas =
+			e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+		if (!isOverCanvas) return;
+
+		console.log("preventing default");
+		e.preventDefault();
+
+		let broadcast = this.#dragging;
+		if (!broadcast) {
+			const mouse = this.canvas.relative(e.clientX, e.clientY);
+
+			broadcast = this.#at(mouse);
+			if (!broadcast) return;
+
+			this.#hovering = broadcast;
+
+			// Bump the z-index unless we're already at the top.
+			broadcast.targetPosition.set((prev) => ({
+				...prev,
+				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
+			}));
+		}
+
+		if (broadcast.locked()) {
+			document.body.style.cursor = "not-allowed";
+			return;
+		}
+
+		const scale = e.deltaY * 0.001;
+		if (scale < 0) {
+			document.body.style.cursor = "zoom-out";
+		} else if (scale > 0) {
+			document.body.style.cursor = "zoom-in";
+		}
+
+		// Update the scale, publishing it.
+		broadcast.targetPosition.set((prev) => ({
+			...prev,
+			scale: Math.max(Math.min((prev.scale ?? 1) + scale, 4), 0.25),
+		}));
+
+		broadcast.publishPosition();
 	}
 
 	#at(point: Vector): Broadcast | undefined {
@@ -369,7 +386,7 @@ export class Space {
 		const padding = 30 * scale;
 		const boxWidth = 400 * scale;
 		const height = 80 * scale;
-		const y = (ctx.canvas.height - height - padding);
+		const y = ctx.canvas.height - height - padding;
 		const x = (width - boxWidth) / 2;
 		const borderRadius = 16 * scale;
 

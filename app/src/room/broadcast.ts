@@ -75,7 +75,10 @@ const JOIN_ANNOUNCEMENTS = [
 	{ text: "Sound the horns, {name} has arrived at the gates.", weight: 0.15 },
 	{ text: "By the ancient laws, we welcome {name} to our realm.", weight: 0.1 },
 	{ text: "The stars have aligned to bring us {name}.", weight: 0.1 },
-	{ text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has joined the hang!", weight: 0.1 },
+	{
+		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has joined the hang!",
+		weight: 0.1,
+	},
 ] as const;
 
 const JOIN_ANNOUNCEMENTS_WEIGHT = JOIN_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
@@ -127,7 +130,10 @@ const LEAVE_ANNOUNCEMENTS = [
 	{ text: "The void calls, and {name} must answer.", weight: 0.1 },
 	{ text: "{name} has gone where no one can follow.", weight: 0.1 },
 	{ text: "{name} has been sent to the void.", weight: 0.1 },
-	{ text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has left the hang!", weight: 0.1 },
+	{
+		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has left the hang!",
+		weight: 0.1,
+	},
 ];
 
 const LEAVE_ANNOUNCEMENTS_WEIGHT = LEAVE_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
@@ -272,8 +278,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const load = () => {
 				this.avatar = newAvatar;
 			};
-			newAvatar.addEventListener("load", load);
-			effect.cleanup(() => newAvatar.removeEventListener("load", load));
+
+			effect.eventListener(newAvatar, "load", load);
 		});
 
 		this.signals.effect((effect) => {

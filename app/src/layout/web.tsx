@@ -9,7 +9,7 @@ import { Logo } from "./logo";
 
 export default function Web(props: { children: JSX.Element }) {
 	return (
-		<div class="p-4 mx-auto w-full flex flex-col min-h-0 max-w-[900px]">
+		<div class="p-4 mx-auto w-full flex flex-col max-w-[900px]">
 			<header class="flex items-center justify-between mb-4">
 				<Logo />
 				<div id="support" />

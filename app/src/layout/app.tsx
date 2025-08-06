@@ -12,7 +12,7 @@ import { Logo } from "./logo";
 
 export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client; room: string }) {
 	return (
-		<div class="p-4 mx-auto w-full flex flex-col min-h-0">
+		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">
 			<header class="flex items-center justify-between mb-4">
 				<Logo connection={props.connection} />
 				<div id="support" />
