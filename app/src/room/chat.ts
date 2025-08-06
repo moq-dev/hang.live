@@ -88,6 +88,11 @@ export class Chat {
 			wrapper.style.marginTop = `${offset}px`;
 		});
 
+		effect.effect((effect) => {
+			const z = effect.get(this.broadcast.targetPosition).z;
+			wrapper.style.zIndex = `${100 + z}`;
+		});
+
 		const iconContainer = document.createElement("div");
 		iconContainer.className = "animate-pulse";
 		wrapper.appendChild(iconContainer);
