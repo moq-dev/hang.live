@@ -10,23 +10,8 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconVideo from "~icons/mdi/video";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 
-export function PreviewRoom(props: { room: string; api: Api.Client }): JSX.Element {
-	const connection = new Connection();
-	onCleanup(() => connection.close());
-
-	connection.signals.effect(async (effect) => {
-		// Given the room name, fetch a cooresponding token from the API server.
-		const response = await props.api.routes.room[":name"].join.$post({ param: { name: props.room } });
-		if (!response.ok) {
-			throw new Error(`Failed to join room: ${response.statusText}`);
-		}
-		const data = await response.json();
-
-		connection.url.set(new URL(data.url));
-		effect.cleanup(() => connection.url.set(undefined));
-	});
-
-	const room = new Preview.Room(connection, { enabled: true });
+export function PreviewRoom(props: { connection: Connection; room: string; api: Api.Client }): JSX.Element {
+	const room = new Preview.Room(props.connection, { enabled: true });
 	onCleanup(() => room.close());
 
 	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
