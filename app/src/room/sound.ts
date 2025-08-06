@@ -1,5 +1,8 @@
 import { Effect, Signal } from "@kixelated/signals";
+import * as Comlink from "comlink";
 import Settings from "../settings";
+
+import type { SoundWorker, Voice } from "./worker/sound";
 
 const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
@@ -25,6 +28,8 @@ export class Sound {
 
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Effect();
+
+	#worker: Comlink.Remote<SoundWorker> | undefined;
 
 	suspended: Signal<boolean>;
 
@@ -59,6 +64,20 @@ export class Sound {
 			window.addEventListener("click", unsuspend, { once: true });
 			window.addEventListener("keydown", unsuspend, { once: true });
 		}
+
+		this.#signals.effect((effect) => {
+			// Only start loading the TTS model when the context is unsuspended.
+			// This is kind of a hack to avoid it when the demo is loaded before interaction.
+			if (effect.get(this.suspended)) return;
+
+			const worker = new Worker(new URL("./worker/sound", import.meta.url), { type: "module" });
+			effect.cleanup(() => worker.terminate());
+
+			const workerApi = Comlink.wrap<SoundWorker>(worker);
+
+				this.#worker = workerApi;
+				effect.cleanup(() => { this.#worker = undefined });
+		});
 
 		this.#sounds = sounds;
 
@@ -95,6 +114,34 @@ export class Sound {
 		const source = new AudioBufferSourceNode(this.context, { buffer });
 		source.connect(this.context.destination);
 		source.start();
+	}
+
+	async say(text: string, voice: Voice = "af_sky") {
+		if (!this.#worker) return;
+
+		// Give the worker at most 2s to load the model before timing out.
+		const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
+		const ready = await Promise.race([this.#worker.ready().then(() => true), timeout]);
+
+		if (!ready) {
+			console.warn("TTS worker timed out");
+			return;
+		}
+
+			const audioUrl = await this.#worker.tts(text, voice);
+
+			// Fetch the audio from the object URL
+			const response = await fetch(audioUrl);
+			const arrayBuffer = await response.arrayBuffer();
+			const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+
+			// Play the audio through the panner
+			const source = new AudioBufferSourceNode(this.context, { buffer: audioBuffer });
+			source.connect(this.context.destination);
+			source.start();
+
+			// Clean up the object URL
+			URL.revokeObjectURL(audioUrl);
 	}
 
 	resume() {
@@ -165,6 +212,7 @@ export class PannedNotifications {
 		const when = Math.max(this.#parent.context.currentTime, 0.2);
 		source.start(when);
 	}
+
 
 	// NOTE: We don't cache elements because the browser will.
 	// Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.

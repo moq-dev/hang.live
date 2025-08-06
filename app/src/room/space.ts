@@ -169,7 +169,7 @@ export class Space {
 		return undefined;
 	}
 
-	add(name: string, broadcast: Broadcast) {
+	add(id: string, broadcast: Broadcast) {
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.
 		broadcast.targetPosition.set((prev) => ({
@@ -177,11 +177,11 @@ export class Space {
 			z: ++this.#maxZ,
 		}));
 
-		if (this.lookup.has(name)) {
-			throw new Error(`broadcast already exists: ${name}`);
+		if (this.lookup.has(id)) {
+			throw new Error(`broadcast already exists: ${id}`);
 		}
 
-		this.lookup.set(name, broadcast);
+		this.lookup.set(id, broadcast);
 
 		// Insert the broadcast into the room based on it's z-index.
 		this.ordered.set((prev) => [...prev, broadcast]);

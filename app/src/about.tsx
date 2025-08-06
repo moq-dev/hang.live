@@ -20,23 +20,27 @@ export function About(): JSX.Element {
 
 	const two = room.create({
 		location: randomLocation(),
-		user: { name: "ya boy", avatar: "/avatar/43.svg" },
+		user: { name: "homie", avatar: "/avatar/43.svg" },
 	});
 
 	const three = room.create({
 		location: randomLocation(),
+		user: { name: "Chad", avatar: "/avatar/42.svg" },
 	});
 
 	const four = room.create({
 		location: randomLocation(),
+		user: { name: "Gargoyle Boy", avatar: "/avatar/41.svg" },
 	});
 
 	const five = room.create({
 		location: randomLocation(),
+		user: { name: "The Black Dot", avatar: "/avatar/40.svg" },
 	});
 
 	const six = room.create({
 		location: randomLocation(),
+		user: { name: "Oaf", avatar: "/avatar/39.svg" },
 	});
 
 	const seven = room.create({
@@ -75,9 +79,9 @@ export function About(): JSX.Element {
 		() => {},
 		() => one.chat.message.set("try turning your webcam on"),
 		() => {},
-		() => two.user.set({ name: "omni", avatar: "/avatar/omni.jpg" }),
+		() => two.user.set({ name: "omni-man", avatar: "/avatar/omni.jpg" }),
 		() => two.chat.message.set("oops wrong button"),
-		() => two.user.set({ name: "omni", avatar: "/avatar/43.svg" }),
+		() => two.user.set({ name: "omni-man", avatar: "/avatar/43.svg" }),
 		() => three.chat.message.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
 		() => three.location.current.set(randomLocation()),
@@ -136,8 +140,9 @@ export function About(): JSX.Element {
 		() => one.chat.message.set("okay, that's enough of a demo"),
 		() => room.remove("4"),
 		() => room.remove("5"),
-		() => one.chat.message.set("[start a hang](https://hang.live/fave)"),
 		() => room.remove("6"),
+		() => one.chat.message.set("[start a hang](https://hang.live/fave)"),
+		() => {},
 		() => one.chat.message.set("there's a lot more, but it's hard to demo"),
 		() => two.audio.caption.set("like automatic captions"),
 		() => one.audio.caption.set("(laughing)"),
@@ -160,12 +165,14 @@ export function About(): JSX.Element {
 	return (
 		<Layout>
 			<p>
-				I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
-			</p>
-			<p>
-				It's fun and free. <a href="/fave">Start a hang</a>. Invite your friends.
+				I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out. It's fun
+				and free. <a href="/fave">Start a hang</a>. Invite your friends.
 			</p>
 			<div class="p-4 h-128">{canvas}</div>
+			<p>
+				For the nerds in the audience, this site uses bleeding edge web technologies. It's not WebRTC, it's{" "}
+				<a href="https://quic.video">MoQ</a>.
+			</p>
 		</Layout>
 	);
 }
