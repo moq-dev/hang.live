@@ -52,7 +52,6 @@ body {
 	margin: 0;
 	min-width: 320px;
 	min-height: 100vh;
-	overflow-x: hidden;
 }
 
 /* Make the hang div take up at least full viewport height */
