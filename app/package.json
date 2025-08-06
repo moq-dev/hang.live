@@ -22,6 +22,7 @@
 		"@tauri-apps/api": "^2.6.0",
 		"@tauri-apps/plugin-opener": "^2.4.0",
 		"dompurify": "^3.2.6",
+		"kokoro-js": "^1.2.1",
 		"marked": "^15.0.12",
 		"solid-js": "^1.9.7",
 		"tailwindcss": "^4.1.11",
@@ -31,8 +32,8 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.1.1",
-		"@iconify-json/mdi": "^1.2.3",
 		"@iconify-json/material-symbols": "^1.2.30",
+		"@iconify-json/mdi": "^1.2.3",
 		"@tauri-apps/cli": "^2.6.2",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.234",
 		"globals": "^16.3.0",

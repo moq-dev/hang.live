@@ -123,7 +123,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Load the broadcaster's position from the network.
 		this.signals.effect((effect) => {
-			if (!effect.get(this.source.enabled)) {
+			if (!effect.get(this.online)) {
 				// Change the target position to somewhere outside the screen.
 				this.targetPosition.set((prev) => {
 					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);

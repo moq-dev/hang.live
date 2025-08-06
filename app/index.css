@@ -39,7 +39,7 @@ a {
 }
 
 .border-link-hue {
-	border-color: hsl(var(--link-hue), 75%, 50%, 0.5);
+	border-color: hsl(var(--link-hue), 75%, 50%);
 }
 
 /*

@@ -90,6 +90,7 @@ export class Audio {
 			effect.cleanup(() => gain.gain.cancelScheduledValues(gain.context.currentTime));
 
 			const volume = effect.get(Settings.muted) ? 0 : effect.get(Settings.volume);
+
 			if (volume < GAIN_MIN) {
 				gain.gain.exponentialRampToValueAtTime(GAIN_MIN, gain.context.currentTime + FADE_TIME);
 				gain.gain.setValueAtTime(0, gain.context.currentTime + FADE_TIME + 0.01);
@@ -99,7 +100,7 @@ export class Audio {
 		});
 
 		// Don't output to the speakers if we're publishing the broadcast.
-		if (this.broadcast.source instanceof Watch.Broadcast) {
+		if (!(this.broadcast.source instanceof Publish.Broadcast)) {
 			this.#signals.effect(this.#runOutput.bind(this));
 		}
 

@@ -47,13 +47,13 @@ export class Sound {
 			sounds.set(sound, load);
 		}
 
-		// TODO do this in a UI element.
 		this.suspended = new Signal(this.context.state === "suspended");
 
 		if (this.suspended.peek()) {
 			// Determine when the user has interacted with the page so we can potentially unmute audio.
 			const unsuspend = () => {
 				this.suspended.set(false);
+				this.context.resume();
 			};
 
 			window.addEventListener("click", unsuspend, { once: true });
