@@ -1,10 +1,10 @@
 import { createEffect, type JSX, onCleanup } from "solid-js";
 import Layout from "./layout/web";
 import { Canvas } from "./room/canvas";
-import { FakeBroadcast, FakeRoom } from "./room/fake";
+import { FakeRoom } from "./room/fake";
 
 export function About(): JSX.Element {
-	const canvas = <canvas class="w-full border-2 border-link-hue rounded-lg" />;
+	const canvas = <canvas class="border-3 border-link-hue rounded-lg w-full h-full" />;
 
 	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement, { demo: true }));
 	onCleanup(() => room.close());
@@ -13,31 +13,33 @@ export function About(): JSX.Element {
 	const randomLocation = () => ({ x: random(), y: random() });
 	const randomLeft = () => ({ x: -0.5 * Math.random() * Math.random(), y: random() });
 
-	const one = new FakeBroadcast({
+	const one = room.create({
 		location: randomLocation(),
 		user: { name: "kixelated", avatar: "/avatar/kixel.svg" },
 	});
-	const two = new FakeBroadcast({
+
+	const two = room.create({
 		location: randomLocation(),
 		user: { name: "ya boy", avatar: "/avatar/43.svg" },
 	});
-	const three = new FakeBroadcast({
+
+	const three = room.create({
 		location: randomLocation(),
 	});
 
-	const four = new FakeBroadcast({
+	const four = room.create({
 		location: randomLocation(),
 	});
 
-	const five = new FakeBroadcast({
+	const five = room.create({
 		location: randomLocation(),
 	});
 
-	const six = new FakeBroadcast({
+	const six = room.create({
 		location: randomLocation(),
 	});
 
-	const seven = new FakeBroadcast({
+	const seven = room.create({
 		location: { x: 0.25, y: 0, scale: 1.5 },
 	});
 
@@ -52,7 +54,7 @@ export function About(): JSX.Element {
 		() => {},
 		() => two.chat.message.set("okay I guess"),
 		() => two.location.current.set((prev) => ({ ...prev, scale: 1.5 })),
-		() => two.chat.message.set("mouse wheel to zoom"),
+		() => two.chat.message.set("mouse wheel or pinch to zoom"),
 		() => two.location.current.set((prev) => ({ ...prev, scale: 0.75 })),
 		() => two.location.current.set((prev) => ({ ...prev, scale: 1 })),
 		() => two.chat.message.set("drag to move"),
@@ -78,9 +80,8 @@ export function About(): JSX.Element {
 		() => two.user.set({ name: "omni", avatar: "/avatar/43.svg" }),
 		() => three.chat.message.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
-		() => {},
-		() => three.chat.message.set("omg"),
 		() => three.location.current.set(randomLocation()),
+		() => three.chat.message.set("omg"),
 		() => two.stop(),
 		() => two.chat.message.set("on second thought, maybe not"),
 		() => one.chat.message.set("lame"),
@@ -94,9 +95,9 @@ export function About(): JSX.Element {
 		() => two.chat.message.set("/huh"),
 		() => {},
 		() => one.chat.message.set("that's right, I added dumb memes"),
-		() => two.chat.message.set("huh?"),
-		() => two.location.current.set(randomLocation()),
 		() => {},
+		() => {},
+		() => two.chat.message.set("huh?"),
 		() => one.chat.message.set("inviting the squad"),
 		() => two.chat.message.set("oh no"),
 		() => room.add("4", four),
@@ -111,7 +112,6 @@ export function About(): JSX.Element {
 		() => six.location.current.set(randomLocation()),
 		() => {},
 		() => six.chat.message.set("let's watch something"),
-		() => six.location.current.set(randomLeft()),
 		() => {
 			room.add("7", seven);
 			seven.play(new URL("/meme/bing-chilling.webm", import.meta.url));
@@ -119,6 +119,7 @@ export function About(): JSX.Element {
 		() => {
 			one.location.current.set(randomLeft());
 			four.location.current.set(randomLeft());
+			six.location.current.set(randomLeft());
 		},
 		() => {
 			five.location.current.set(randomLeft());
@@ -137,7 +138,6 @@ export function About(): JSX.Element {
 		() => room.remove("5"),
 		() => one.chat.message.set("[start a hang](https://hang.live/fave)"),
 		() => room.remove("6"),
-		() => room.remove("3"),
 		() => one.chat.message.set("let me know what you think!"),
 		() => two.chat.message.set("bye!"),
 		() => room.remove("2"),
@@ -163,7 +163,7 @@ export function About(): JSX.Element {
 			<p>
 				It's fun and free. <a href="/fave">Start a hang</a>. Invite your friends.
 			</p>
-			<div class="p-4">{canvas}</div>
+			<div class="p-4 h-128">{canvas}</div>
 		</Layout>
 	);
 }

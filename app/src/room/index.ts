@@ -47,12 +47,12 @@ export class Room {
 	constructor(canvas: Canvas, api: Api.Client, props?: RoomProps) {
 		this.connection = new Connection();
 		this.api = api;
+		this.space = new Space(canvas);
 		this.name = new Signal(props?.name);
 		this.user = new Signal(props?.user);
 		this.avatar = new Signal(props?.avatar ?? Api.randomAvatar());
 
 		this.sound = new Sound();
-		this.space = new Space(canvas, this.sound);
 
 		this.#signals.effect((effect) => {
 			const name = effect.get(this.name);

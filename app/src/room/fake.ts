@@ -11,7 +11,9 @@ export type FakeBroadcastProps = {
 };
 
 export class FakeBroadcast {
-	enabled = new Signal(true);
+	sound: Sound;
+
+	enabled = new Signal(false);
 
 	location = {
 		current: new Signal<Catalog.Position | undefined>(undefined),
@@ -43,7 +45,9 @@ export class FakeBroadcast {
 
 	#video: HTMLVideoElement | undefined;
 
-	constructor(props?: FakeBroadcastProps) {
+	constructor(sound: Sound, props?: FakeBroadcastProps) {
+		this.sound = sound;
+
 		this.user.set(props?.user);
 		this.location.current.set(props?.location);
 		this.location.handle.set(Math.random().toString(36).substring(2, 15));
@@ -64,23 +68,37 @@ export class FakeBroadcast {
 	}
 
 	play(src: URL) {
-		this.#video = document.createElement("video");
-		this.#video.src = src.toString();
-		this.#video.muted = true;
-		this.#video.playsInline = true;
-		this.#video.autoplay = true;
-		this.#video.load();
-		this.#video.play();
+		const video = document.createElement("video");
+		video.src = src.toString();
+
+		if (this.sound.suspended.peek()) {
+			video.muted = true;
+			this.signals.effect((effect) => {
+				video.muted = effect.get(this.sound.suspended);
+			});
+		}
+
+		video.playsInline = true;
+		video.autoplay = true;
+		video.load();
+		video.play();
+
+		this.#video = video;
 		this.video.active.set(true);
 
-		const media = new MediaStream([this.#video])
-		this.audio.root.set(this.#video);
+		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });
+		this.audio.root.set(source);
 	}
 
 	stop() {
 		this.#video?.pause();
 		this.#video = undefined;
 		this.video.active.set(false);
+
+		this.audio.root.set((prev) => {
+			prev?.disconnect();
+			return undefined;
+		});
 	}
 
 	close() {
@@ -95,6 +113,10 @@ export class FakeRoom {
 	constructor(canvas: Canvas) {
 		this.sound = new Sound();
 		this.space = new Space(canvas, this.sound);
+	}
+
+	create(props?: FakeBroadcastProps): FakeBroadcast {
+		return new FakeBroadcast(this.sound, props);
 	}
 
 	add(name: string, broadcast: FakeBroadcast) {

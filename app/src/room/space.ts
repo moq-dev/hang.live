@@ -217,6 +217,16 @@ export class Space {
 				}));
 			}
 		});
+
+		broadcast.signals.effect((effect) => {
+			const message = effect.get(broadcast.source.chat.message);
+			if (!message) return;
+
+			broadcast.targetPosition.set((prev) => ({
+				...prev,
+				z: ++this.#maxZ,
+			}));
+		});
 	}
 
 	remove(name: string) {
@@ -239,7 +249,7 @@ export class Space {
 			this.#rip.splice(this.#rip.indexOf(broadcast), 1);
 
 			// Don't close local broadcasts, we keep them open and toggle instead.
-			if (broadcast.source instanceof Watch.Broadcast) {
+			if (!(broadcast.source instanceof Publish.Broadcast)) {
 				broadcast.close();
 			}
 		}, 1000);
@@ -247,7 +257,7 @@ export class Space {
 
 	removeAll() {
 		for (const broadcast of this.ordered.peek()) {
-			if (broadcast.source instanceof Watch.Broadcast) {
+			if (!(broadcast.source instanceof Publish.Broadcast)) {
 				broadcast.close();
 			}
 		}
