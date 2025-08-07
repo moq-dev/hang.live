@@ -5,10 +5,13 @@ import type { JSX } from "solid-js/jsx-runtime";
 import IconClosedCaption from "~icons/material-symbols/closed-caption";
 import IconClosedCaptionDisabled from "~icons/material-symbols/closed-caption-disabled";
 import IconCamera from "~icons/mdi/camera";
+import IconCameraOff from "~icons/mdi/camera-off";
 import IconSettings from "~icons/mdi/cog";
 import IconFullscreen from "~icons/mdi/fullscreen";
 import IconMicrophone from "~icons/mdi/microphone";
+import IconMicrophoneOff from "~icons/mdi/microphone-off";
 import IconScreen from "~icons/mdi/monitor-screenshot";
+import IconScreenOff from "~icons/mdi/monitor-off";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
 import Tooltip from "./components/tooltip";
@@ -52,7 +55,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	});
 
 	return (
-		<Tooltip content="Toggle microphone" position="top">
+		<Tooltip content={root() ? "Disable microphone" : "Enable microphone"} position="top">
 			<fieldset
 				class="flex flex-col-reverse"
 				aria-label="Microphone controls"
@@ -75,7 +78,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 					}}
 				>
 					<Visualize audio={props.audio} />
-					<IconMicrophone />
+					{root() ? <IconMicrophone /> : <IconMicrophoneOff />}
 				</button>
 				<Show when={opacity() > 0}>
 					<input
@@ -106,7 +109,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const media = solid(props.video.media);
 
 	return (
-		<Tooltip content="Toggle camera" position="top">
+		<Tooltip content={media() ? "Disable camera" : "Enable camera"} position="top">
 			<button
 				type="button"
 				onClick={toggle}
@@ -119,7 +122,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 					"border-transparent": !media(),
 				}}
 			>
-				<IconCamera />
+				{media() ? <IconCamera /> : <IconCameraOff />}
 			</button>
 		</Tooltip>
 	);
@@ -136,7 +139,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 	const media = solid(props.video.media);
 
 	return (
-		<Tooltip content="Toggle screen sharing" position="top">
+		<Tooltip content={media() ? "Disable screen sharing" : "Enable screen sharing"} position="top">
 			<button
 				type="button"
 				onClick={toggle}
@@ -149,7 +152,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 					"border-transparent": !media(),
 				}}
 			>
-				<IconScreen />
+				{media() ? <IconScreen /> : <IconScreenOff />}
 			</button>
 		</Tooltip>
 	);
@@ -326,7 +329,7 @@ function Volume(props: { room: Room }): JSX.Element {
 	};
 
 	return (
-		<Tooltip content="Toggle mute" position="top">
+		<Tooltip content={muted() || suspended() ? "Enable audio" : "Disable audio"} position="top">
 			<fieldset
 				class="flex flex-col-reverse"
 				aria-label="Volume controls"
@@ -445,8 +448,19 @@ function Advanced(): JSX.Element {
 function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 	const toggle = () => props.canvas.toggleFullscreen();
 
+	const [isFullscreen, setIsFullscreen] = createSignal(false);
+
+	onMount(() => {
+		const checkFullscreen = () => {
+			setIsFullscreen(document.fullscreenElement === props.canvas.element);
+		};
+		checkFullscreen();
+		document.addEventListener("fullscreenchange", checkFullscreen);
+		onCleanup(() => document.removeEventListener("fullscreenchange", checkFullscreen));
+	});
+
 	return (
-		<Tooltip content="Toggle fullscreen" position="top">
+		<Tooltip content={isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"} position="top">
 			<button
 				type="button"
 				onClick={toggle}
