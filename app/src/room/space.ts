@@ -35,13 +35,7 @@ export class Space {
 		this.#signals.eventListener(window, "mousemove", this.#onMouseMove.bind(this));
 		this.#signals.eventListener(window, "mouseup", this.#onMouseUp.bind(this));
 		this.#signals.eventListener(window, "mouseleave", this.#onMouseLeave.bind(this));
-
 		this.#signals.eventListener(window, "wheel", this.#onMouseWheel.bind(this), { passive: false });
-		console.log("added wheel");
-
-		this.#signals.cleanup(() => {
-			console.log("removed wheel");
-		});
 
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
