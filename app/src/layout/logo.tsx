@@ -17,7 +17,10 @@ export function Logo(props: { connection?: Connection }) {
 	});
 
 	return (
-		<a href="/" class="rounded backdrop-blur-sm px-4 py-2 text-2xl">
+		<a
+			href="/"
+			class="rounded bg-black/80 backdrop-blur-sm px-4 py-2 text-2xl text-white hover:bg-gray-700 hover:text-gray-100 transition-all cursor-pointer"
+		>
 			<span>hang</span>
 			<span
 				id="status"

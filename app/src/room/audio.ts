@@ -53,10 +53,6 @@ export class Audio {
 		});
 
 		this.#signals.effect((effect) => {
-			// Don't analyze the audio in potato mode.
-			// TODO I'm just assuming this is slow. Use SIMD?
-			if (effect.get(Settings.potato)) return;
-
 			const root = effect.get(this.broadcast.source.audio.root);
 			if (!root) return;
 
@@ -142,8 +138,6 @@ export class Audio {
 	}
 
 	renderBackground(ctx: CanvasRenderingContext2D) {
-		if (Settings.potato.peek()) return;
-
 		ctx.save();
 
 		const bounds = this.broadcast.bounds.peek();

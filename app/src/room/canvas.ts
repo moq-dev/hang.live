@@ -1,5 +1,4 @@
 import { Effect, Signal } from "@kixelated/signals";
-import Settings from "../settings";
 import { Vector } from "./geometry";
 
 const LINE_SPACING = 64;
@@ -23,9 +22,6 @@ export class Canvas {
 	onRender?: (ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) => void;
 	#animate?: number;
 
-	// Load a pre-rendered SVG instead of rendering it live.
-	#potato = new Image();
-
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
 	demo: Signal<boolean>;
@@ -40,10 +36,6 @@ export class Canvas {
 		this.#canvas = element;
 
 		this.demo = new Signal(props?.demo ?? false);
-
-		// Load the pre-rendered SVG instead of rendering it live.
-		this.#potato = new Image();
-		this.#potato.src = "/image/background.svg";
 
 		const context = this.#canvas.getContext("2d");
 		if (!context) {
@@ -123,10 +115,6 @@ export class Canvas {
 			mutationObserver.disconnect();
 		});
 
-		this.#signals.effect((effect: Effect) => {
-			this.#potato.src = effect.get(Settings.potato) ? "/image/background.svg" : "";
-		});
-
 		// Only render the canvas when it's visible.
 		this.#signals.effect((effect) => {
 			const visible = effect.get(this.visible);
@@ -139,7 +127,7 @@ export class Canvas {
 
 	#render(now: DOMHighResTimeStamp) {
 		const ctx = this.#context;
-		ctx.imageSmoothingEnabled = !Settings.potato.peek();
+		ctx.imageSmoothingEnabled = true;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
 		this.#renderBackground(this.#context, now);
@@ -186,11 +174,6 @@ export class Canvas {
 
 	#renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		ctx.save();
-
-		if (Settings.potato.peek()) {
-			ctx.drawImage(this.#potato, 0, 0, ctx.canvas.width, ctx.canvas.height);
-			return;
-		}
 
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;

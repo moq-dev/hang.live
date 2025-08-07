@@ -132,7 +132,6 @@ export class Space {
 
 		if (!isOverCanvas) return;
 
-		console.log("preventing default");
 		e.preventDefault();
 
 		let broadcast = this.#dragging;
