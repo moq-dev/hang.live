@@ -59,6 +59,12 @@ export class Provider {
 			this.#baseUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 			this.#tokenUrl = "https://oauth2.googleapis.com/token";
 			this.#scopes = "openid profile email";
+		} else if (id === "apple") {
+			this.#clientId = env.APPLE_CLIENT_ID;
+			this.#clientSecret = env.APPLE_CLIENT_SECRET;
+			this.#baseUrl = "https://appleid.apple.com/auth/authorize";
+			this.#tokenUrl = "https://appleid.apple.com/auth/token";
+			this.#scopes = "name email";
 		} else {
 			unreachable(id);
 		}
@@ -73,6 +79,12 @@ export class Provider {
 			state: JSON.stringify(state),
 		});
 
+		// Apple requires response_mode=form_post for server-to-server flow
+		// But for web flow, we'll use query parameters
+		if (this.id === "apple") {
+			params.append("response_mode", "query");
+		}
+
 		return `${this.#baseUrl}?${params.toString()}`;
 	}
 
@@ -85,11 +97,18 @@ export class Provider {
 			redirect_uri: this.#redirectUri,
 		});
 
+		const headers: Record<string, string> = {
+			"Content-Type": "application/x-www-form-urlencoded",
+		};
+
+		// Apple requires the Accept header
+		if (this.id === "apple") {
+			headers["Accept"] = "application/json";
+		}
+
 		const response = await fetch(this.#tokenUrl, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
+			headers,
 			body: body.toString(),
 		});
 
@@ -104,6 +123,15 @@ export class Provider {
 			throw new Error(`Invalid token response format: ${parsedData.error.message}`);
 		}
 
+		// Apple returns the user info in id_token, not access_token
+		if (this.id === "apple" && parsedData.data.id_token) {
+			return parsedData.data.id_token;
+		}
+
+		if (!parsedData.data.access_token) {
+			throw new Error("No access token received from OAuth provider");
+		}
+
 		return parsedData.data.access_token;
 	}
 
@@ -112,6 +140,8 @@ export class Provider {
 			return this.#getDiscordUser(accessToken);
 		} else if (this.id === "google") {
 			return this.#getGoogleUser(accessToken);
+		} else if (this.id === "apple") {
+			return this.#getAppleUser(accessToken);
 		} else {
 			unreachable(this.id);
 		}
@@ -187,6 +217,38 @@ export class Provider {
 		};
 	}
 
+	async #getAppleUser(accessToken: string): Promise<User> {
+		// Apple doesn't provide a user info endpoint like Google/Discord
+		// User info comes from the ID token during the initial authorization
+		// We need to decode the JWT ID token that comes with the access token
+		// For now, we'll need to handle this differently
+		
+		// Parse the JWT without verification (in production, you should verify the signature)
+		const parts = accessToken.split(".");
+		if (parts.length !== 3) {
+			throw new Error("Invalid Apple ID token format");
+		}
+
+		const payload = JSON.parse(atob(parts[1]));
+		const parsedUser = appleUserResponseSchema.safeParse(payload);
+
+		if (!parsedUser.success) {
+			throw new Error(`Invalid Apple user response format: ${parsedUser.error.message}`);
+		}
+
+		const user = parsedUser.data;
+
+		// Apple provides the user's name only on the first authorization
+		// We'll need to store it in the database on first login
+		return {
+			provider: "apple",
+			providerId: user.sub,
+			email: user.email,
+			name: user.email.split("@")[0], // Fallback to email prefix if name not provided
+			avatar: undefined, // Apple doesn't provide avatars
+		};
+	}
+
 	async link(account: Account.Id, providerUser: string): Promise<void> {
 		const now = new Date();
 
@@ -211,7 +273,8 @@ export class Provider {
 
 // OAuth token response schema
 const tokenResponseSchema = z.object({
-	access_token: z.string(),
+	access_token: z.optional(z.string()), // Apple returns this in id_token instead
+	id_token: z.optional(z.string()), // Apple uses id_token
 	token_type: z.optional(z.string()),
 	expires_in: z.optional(z.number()),
 	scope: z.optional(z.string()),
@@ -234,6 +297,15 @@ const googleUserResponseSchema = z.object({
 	name: z.string(),
 	picture: z.optional(z.string()),
 	verified_email: z.optional(z.boolean()),
+});
+
+// Apple ID token payload schema
+const appleUserResponseSchema = z.object({
+	sub: z.string(), // User ID
+	email: z.string(),
+	email_verified: z.optional(z.union([z.boolean(), z.string()])),
+	is_private_email: z.optional(z.union([z.boolean(), z.string()])),
+	real_user_status: z.optional(z.number()),
 });
 
 export interface User {

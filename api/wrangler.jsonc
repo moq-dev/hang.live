@@ -39,15 +39,24 @@
 	"vars": {
 		"API_URL": "http://localhost:3000",
 		"APP_URL": "http://localhost:1420",
+
 		// "AUTH_SECRET": <stored in .dev.vars>
+
 		"GOOGLE_CLIENT_ID": "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com",
 		// "GOOGLE_CLIENT_SECRET": <stored in .dev.vars>
+
 		"DISCORD_CLIENT_ID": "1392633766010294494",
 		// "DISCORD_CLIENT_SECRET": <stored in .dev.vars>
+
+		// Apple doesn't support localhost, so it's more difficult to test.
+		"APPLE_CLIENT_ID": "",
+		// "APPLE_CLIENT_SECRET": <stored in .dev.vars>
+
 		"R2_PUBLIC_URL": "http://localhost:3000/public",
-		// "RELAY_SECRET": <stored in .dev.vars>
+
 		"RELAY_URL": "http://localhost:4443",
 		"RELAY_PREFIX": "anon"
+		// "RELAY_SECRET": <stored in .dev.vars>
 	},
 
 	// Staging environment overrides
@@ -74,15 +83,23 @@
 			"vars": {
 				"API_URL": "https://api.hang.now",
 				"APP_URL": "https://hang.now",
+
 				// "AUTH_SECRET": npx wrangler secret put AUTH_SECRET --env staging
+
 				"GOOGLE_CLIENT_ID": "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com",
 				// "GOOGLE_CLIENT_SECRET": npx wrangler secret put GOOGLE_CLIENT_SECRET --env staging
+
 				"DISCORD_CLIENT_ID": "1392629623812259940",
 				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env staging
+
+				"APPLE_CLIENT_ID": "now.hang.service",
+				// "APPLE_CLIENT_SECRET": npx wrangler secret put APPLE_CLIENT_SECRET --env staging
+
 				"R2_PUBLIC_URL": "https://public.hang.now",
-				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
+
 				"RELAY_URL": "https://relay.quic.video",
 				"RELAY_PREFIX": "staging"
+				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
 			}
 		},
 		// Live/production environment overrides
@@ -108,15 +125,23 @@
 			"vars": {
 				"API_URL": "https://api.hang.live",
 				"APP_URL": "https://hang.live",
+
 				// "AUTH_SECRET": npx wrangler secret put AUTH_SECRET --env live
+
 				"GOOGLE_CLIENT_ID": "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com",
 				// "GOOGLE_CLIENT_SECRET": npx wrangler secret put GOOGLE_CLIENT_SECRET --env live
+
 				"DISCORD_CLIENT_ID": "1389725440020840548",
 				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env live
+
+				"APPLE_CLIENT_ID": "live.hang.service",
+				// "APPLE_CLIENT_SECRET": npx wrangler secret put APPLE_CLIENT_SECRET --env live
+
 				"R2_PUBLIC_URL": "https://public.hang.live",
-				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
+
 				"RELAY_URL": "https://relay.quic.video",
 				"RELAY_PREFIX": "live"
+				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
 			}
 		}
 	}
