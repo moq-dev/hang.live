@@ -77,7 +77,7 @@ const JOIN_ANNOUNCEMENTS = [
 	{ text: "The stars have aligned to bring us {name}.", weight: 0.1 },
 	{
 		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has joined the hang!",
-		weight: 0.1,
+		weight: 0.01,
 	},
 ] as const;
 
@@ -132,7 +132,7 @@ const LEAVE_ANNOUNCEMENTS = [
 	{ text: "{name} has been sent to the void.", weight: 0.1 },
 	{
 		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has left the hang!",
-		weight: 0.1,
+		weight: 0.01,
 	},
 ];
 
