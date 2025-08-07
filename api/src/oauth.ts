@@ -34,6 +34,7 @@ export class Provider {
 	#redirectUri: string;
 	#baseUrl: string;
 	#tokenUrl: string;
+	#scopes: string;
 
 	env: Env;
 	db: Database.Context;
@@ -51,11 +52,13 @@ export class Provider {
 			this.#clientSecret = env.DISCORD_CLIENT_SECRET;
 			this.#baseUrl = "https://discord.com/oauth2/authorize";
 			this.#tokenUrl = "https://discord.com/api/oauth2/token";
+			this.#scopes = "identify email";
 		} else if (id === "google") {
 			this.#clientId = env.GOOGLE_CLIENT_ID;
 			this.#clientSecret = env.GOOGLE_CLIENT_SECRET;
 			this.#baseUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 			this.#tokenUrl = "https://oauth2.googleapis.com/token";
+			this.#scopes = "openid profile email";
 		} else {
 			unreachable(id);
 		}
@@ -66,7 +69,7 @@ export class Provider {
 			client_id: this.#clientId,
 			redirect_uri: this.#redirectUri,
 			response_type: "code",
-			scope: "openid profile email",
+			scope: this.#scopes,
 			state: JSON.stringify(state),
 		});
 
