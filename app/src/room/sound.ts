@@ -177,20 +177,10 @@ export class PannedNotifications {
 
 		this.pan = pan;
 
-		// Only create the analyser if we're not in potato mode.
-		this.#signals.effect((effect) => {
-			if (effect.get(Settings.potato)) return;
-
-			const analyser = new AnalyserNode(this.#parent.context, { fftSize: this.#buffer.length });
-			this.#panner.connect(analyser);
-
-			this.analyser = analyser;
-
-			effect.cleanup(() => {
-				analyser.disconnect();
-				this.analyser = undefined;
-			});
-		});
+		// Always create the analyser
+		const analyser = new AnalyserNode(this.#parent.context, { fftSize: this.#buffer.length });
+		this.#panner.connect(analyser);
+		this.analyser = analyser;
 
 		this.#signals.effect((effect) => {
 			effect.cleanup(() => this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime));
@@ -224,8 +214,8 @@ export class PannedNotifications {
 		const videoPath = MEME_VIDEO[lower as MemeVideo];
 		const audioPath = MEME_AUDIO[lower as MemeAudio];
 
-		// Use the video if it's available, unless the user has potato mode enabled and would prefer audio.
-		if (videoPath && (!audioPath || !Settings.potato.peek())) {
+		// Use the video if it's available
+		if (videoPath) {
 			const video = document.createElement("video") as HTMLVideoElement;
 			video.src = `/meme/${videoPath}`;
 
