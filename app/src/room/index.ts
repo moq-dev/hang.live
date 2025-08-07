@@ -73,7 +73,6 @@ export class Room {
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
-				vad: true, // Always enable VAD because it's cheap.
 			},
 			// Publish our camera's location, starting at a random position.
 			location: {
@@ -95,8 +94,17 @@ export class Room {
 
 		// Enable transcription when the setting is enabled.
 		// The publisher is responsible for transcribing, regardless of if they want to display captions.
-		this.#signals.subscribe(Settings.captureCaptions, (transcription) => {
-			this.camera.audio.transcribe.set(transcription);
+		this.#signals.effect((effect) => {
+			// Only enable vad/transcription if audio is enabled.
+			const enabled = effect.get(this.camera.audio.enabled);
+			if (!enabled) return;
+
+			// Always enable VAD because it's cheap and powers the "speaking" indicator.
+			effect.set(this.camera.audio.vad, true, false);
+
+			// Only enable transcription if the setting is enabled.
+			const transcription = effect.get(Settings.captureCaptions);
+			effect.set(this.camera.audio.transcribe, transcription, false);
 		});
 
 		// Apply echo cancellation based on the headphones setting.
