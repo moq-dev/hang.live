@@ -87,6 +87,9 @@ importers:
       '@hang/api':
         specifier: workspace:*
         version: link:../api
+      '@huggingface/transformers':
+        specifier: ^3.7.1
+        version: 3.7.1
       '@kixelated/hang':
         specifier: link:../moq/js/hang
         version: link:../moq/js/hang

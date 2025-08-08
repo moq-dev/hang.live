@@ -21,8 +21,9 @@ export class SoundWorker {
 		);
 	}
 
-	async ready() {
+	async ready(): Promise<boolean> {
 		await this.#model;
+		return true;
 	}
 
 	async tts(text: string, voice: Voice): Promise<string> {

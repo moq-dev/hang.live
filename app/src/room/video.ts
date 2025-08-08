@@ -42,9 +42,9 @@ export class Video {
 		this.targetSize = Vector.create(128, 128);
 	}
 
-	tick(now: DOMHighResTimeStamp) {
+	tick() {
 		const active = this.broadcast.source.video.active.peek();
-		const next = this.broadcast.source.video.frame(now);
+		const next = this.broadcast.source.video.frame.peek();
 
 		if (active && next) {
 			this.transition = Math.min(this.transition + 0.05, 1);
@@ -52,12 +52,12 @@ export class Video {
 			let width: number;
 			let height: number;
 
-			if (next.frame instanceof HTMLVideoElement) {
-				width = next.frame.videoWidth;
-				height = next.frame.videoHeight;
+			if (next instanceof HTMLVideoElement) {
+				width = next.videoWidth;
+				height = next.videoHeight;
 			} else {
-				width = next.frame.displayWidth;
-				height = next.frame.displayHeight;
+				width = next.displayWidth;
+				height = next.displayHeight;
 			}
 
 			this.targetSize = Vector.create(width, height);
@@ -138,7 +138,7 @@ export class Video {
 			ctx.globalAlpha *= 0.7;
 		}
 
-		const next = this.broadcast.source.video.frame(now);
+		const next = this.broadcast.source.video.frame.peek();
 
 		if (next && this.transition > 0) {
 			ctx.save();
@@ -152,7 +152,7 @@ export class Video {
 			}
 				*/
 
-			ctx.drawImage(next.frame, 1, 1, bounds.size.x - 2, bounds.size.y - 2);
+			ctx.drawImage(next, 1, 1, bounds.size.x - 2, bounds.size.y - 2);
 			ctx.restore();
 
 			/*

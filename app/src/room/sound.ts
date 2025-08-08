@@ -123,7 +123,7 @@ export class Sound {
 
 		// Give the worker at most 2s to load the model before timing out.
 		const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
-		const ready = await Promise.race([this.#worker.ready().then(() => true), timeout]);
+		const ready = await Promise.race([this.#worker.ready(), timeout]);
 
 		if (!ready) {
 			console.warn("TTS worker timed out");
