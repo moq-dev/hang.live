@@ -1,6 +1,9 @@
 # Wrangler local development files
 .wrangler/
 
+# Local development files
+dev/
+
 # Build output
 dist/
 *.tsbuildinfo

@@ -173,9 +173,10 @@ export function About(): JSX.Element {
 				</p>
 				<div class="p-4 h-128">{canvas}</div>
 				<p class="px-4">
-					For the nerds in the audience, this site uses bleeding edge web technologies. The core media stack
-					uses <a href="https://quic.video">Media over QUIC</a> and is{" "}
-					<a href="https://github.com/kixelated/moq">open source</a>. This ain't your usual Zoom clone.
+					For the nerds in the audience, this site uses bleeding edge web technologies. We're using{" "}
+					<a href="https://quic.video">Media over QUIC</a> which is an{" "}
+					<a href="https://github.com/kixelated/moq">open source</a> WebRTC alternative. This ain't your usual
+					Zoom clone.
 				</p>
 			</div>
 		</Layout>
