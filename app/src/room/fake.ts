@@ -35,10 +35,7 @@ export class FakeBroadcast {
 	video = {
 		media: new Signal<MediaStream | undefined>(undefined),
 		active: new Signal(false),
-		frame: (): { frame: HTMLVideoElement } | undefined => {
-			if (!this.#video) return undefined;
-			return { frame: this.#video };
-		},
+		frame: new Signal<HTMLVideoElement | undefined>(undefined),
 	};
 
 	signals = new Effect();

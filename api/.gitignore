@@ -1,5 +1,6 @@
 # Wrangler local development files
 .wrangler/
+dev/
 
 # Local development files
 dev/

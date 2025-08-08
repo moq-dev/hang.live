@@ -5,6 +5,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
+import { Detector } from "./detection";
 import { Sound } from "./sound";
 import { Space } from "./space";
 
@@ -39,6 +40,9 @@ export class Room {
 
 	// The physics space for the room.
 	space: Space;
+
+	// Object detection for video
+	#detector: Detector;
 
 	#signals = new Effect();
 
@@ -90,6 +94,10 @@ export class Room {
 			preview: {
 				enabled: true,
 			},
+		});
+
+		this.#detector = new Detector(this.camera.video, {
+			enabled: true,
 		});
 
 		// Enable transcription when the setting is enabled.
@@ -384,7 +392,7 @@ export class Room {
 
 	close() {
 		this.#signals.close();
-
+		this.#detector.close();
 		this.space.close();
 		this.camera.close();
 		this.screen.close();

@@ -281,13 +281,13 @@ export class Space {
 			this.#tickScale();
 
 			for (const broadcast of this.#rip) {
-				broadcast.tick(now, this.#scale);
+				broadcast.tick(this.#scale);
 			}
 
 			const broadcasts = this.ordered.peek();
 
 			for (const broadcast of broadcasts) {
-				broadcast.tick(now, this.#scale);
+				broadcast.tick(this.#scale);
 			}
 
 			// Check for collisions.
