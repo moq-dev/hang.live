@@ -1,6 +1,7 @@
 import * as Api from "@hang/api/client";
 import { createSignal, For, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import IconApple from "~icons/mdi/apple";
 import IconDiscord from "~icons/mdi/discord";
 import IconGoogle from "~icons/mdi/google";
 import { unreachable } from "../util/unreachable";
@@ -9,6 +10,8 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 	const [loading, setLoading] = createSignal(false);
 	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
 		switch (provider) {
+			case "apple":
+				return <IconApple class="w-5 h-5" />;
 			case "google":
 				return <IconGoogle class="w-5 h-5" />;
 			case "discord":
@@ -20,6 +23,8 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 
 	const getProviderColor = (provider: Api.OAuth.ProviderId) => {
 		switch (provider) {
+			case "apple":
+				return "bg-gray-600 hover:bg-gray-700";
 			case "google":
 				return "bg-red-600 hover:bg-red-700";
 			case "discord":
@@ -29,9 +34,14 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 		}
 	};
 
-	const handleProviderLogin = (provider: Api.OAuth.ProviderId) => {
+	const handleProviderLogin = async (provider: Api.OAuth.ProviderId) => {
 		setLoading(true);
-		props.api.login(provider);
+		try {
+			await props.api.login(provider);
+		} catch (error) {
+			console.error("Login failed:", error);
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -57,7 +67,7 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 						<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
 							{getProviderIcon(provider)}
 						</div>
-						<span class="capitalize">Login with {provider}</span>
+						<span>Sign in with {provider.charAt(0).toUpperCase() + provider.slice(1)}</span>
 					</button>
 				)}
 			</For>

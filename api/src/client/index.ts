@@ -45,7 +45,7 @@ export class Client {
 		return this.#token !== null;
 	}
 
-	login(provider: Api.OAuth.ProviderId): void {
+	async login(provider: Api.OAuth.ProviderId): Promise<void> {
 		const state = {
 			random: Math.random().toString(36).substring(2, 15),
 			redirectUrl: window.location.href,
@@ -53,16 +53,18 @@ export class Client {
 
 		localStorage.setItem("auth.state", JSON.stringify(state));
 
-		// Redirect to the login page.
-		// TODO save the redirect URL in the URL params.
-		window.location.href = this.routes.auth[":provider"].login
-			.$url({
-				param: {
-					provider,
-				},
-				query: state,
-			})
-			.toString();
+		// Fetch the OAuth URL from the API
+		const response = await this.routes.auth[":provider"].login.$get({
+			param: {
+				provider,
+			},
+			query: state,
+		});
+
+		const data = await response.json();
+
+		// Navigate to the OAuth provider
+		window.location.href = data.url;
 	}
 
 	async logout(): Promise<void> {

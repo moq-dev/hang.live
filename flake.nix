@@ -24,6 +24,8 @@
             nodejs
             pnpm
             typescript
+            mkcert
+            just
           ];
         };
       }

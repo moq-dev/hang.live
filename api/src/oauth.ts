@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import * as jose from "jose";
 import { z } from "zod";
 import * as Account from "./account";
 import * as Database from "./database";
@@ -59,6 +60,13 @@ export class Provider {
 			this.#baseUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 			this.#tokenUrl = "https://oauth2.googleapis.com/token";
 			this.#scopes = "openid profile email";
+		} else if (id === "apple") {
+			this.#clientId = env.APPLE_CLIENT_ID;
+			// Apple client secret is generated on-demand
+			this.#clientSecret = "";
+			this.#baseUrl = "https://appleid.apple.com/auth/authorize";
+			this.#tokenUrl = "https://appleid.apple.com/auth/token";
+			this.#scopes = "name email";
 		} else {
 			unreachable(id);
 		}
@@ -73,10 +81,20 @@ export class Provider {
 			state: JSON.stringify(state),
 		});
 
+		// Apple requires response_mode=form_post when name or email scope is requested
+		if (this.id === "apple") {
+			params.append("response_mode", "form_post");
+		}
+
 		return `${this.#baseUrl}?${params.toString()}`;
 	}
 
 	async exchangeCodeForToken(code: string): Promise<string> {
+		// Generate Apple client secret JWT if needed
+		if (!this.#clientSecret && this.id === "apple") {
+			this.#clientSecret = await this.#generateAppleJwt();
+		}
+
 		const body = new URLSearchParams({
 			client_id: this.#clientId,
 			client_secret: this.#clientSecret,
@@ -85,16 +103,24 @@ export class Provider {
 			redirect_uri: this.#redirectUri,
 		});
 
+		const headers: Record<string, string> = {
+			"Content-Type": "application/x-www-form-urlencoded",
+		};
+
+		// Apple requires the Accept header
+		if (this.id === "apple") {
+			headers.Accept = "application/json";
+		}
+
 		const response = await fetch(this.#tokenUrl, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
+			headers,
 			body: body.toString(),
 		});
 
 		if (!response.ok) {
-			throw new Error(`Failed to exchange code for token: ${response.statusText}`);
+			const errorText = await response.text();
+			throw new Error(`Failed to exchange code for token: ${response.statusText} - ${errorText}`);
 		}
 
 		const data = await response.json();
@@ -102,6 +128,15 @@ export class Provider {
 
 		if (!parsedData.success) {
 			throw new Error(`Invalid token response format: ${parsedData.error.message}`);
+		}
+
+		// Apple returns the user info in id_token, not access_token
+		if (this.id === "apple" && parsedData.data.id_token) {
+			return parsedData.data.id_token;
+		}
+
+		if (!parsedData.data.access_token) {
+			throw new Error("No access token received from OAuth provider");
 		}
 
 		return parsedData.data.access_token;
@@ -112,9 +147,40 @@ export class Provider {
 			return this.#getDiscordUser(accessToken);
 		} else if (this.id === "google") {
 			return this.#getGoogleUser(accessToken);
+		} else if (this.id === "apple") {
+			return this.#getAppleUser(accessToken);
 		} else {
 			unreachable(this.id);
 		}
+	}
+
+	async #generateAppleJwt(): Promise<string> {
+		if (this.id !== "apple") {
+			throw new Error("Apple JWT generation only available for Apple provider");
+		}
+
+		// The private key is stored in APPLE_CLIENT_SECRET as base64 content only
+		// Construct proper PEM format
+		const base64Content = this.env.APPLE_CLIENT_SECRET.trim();
+		const formattedBase64 = base64Content.match(/.{1,64}/g)?.join("\n") || base64Content;
+		const privateKeyPem = `-----BEGIN PRIVATE KEY-----\n${formattedBase64}\n-----END PRIVATE KEY-----`;
+
+		const privateKey = await jose.importPKCS8(privateKeyPem, "ES256");
+
+		const jwt = await new jose.SignJWT({})
+			.setProtectedHeader({
+				alg: "ES256",
+				kid: this.env.APPLE_KEY_ID,
+				typ: "JWT",
+			})
+			.setIssuer(this.env.APPLE_TEAM_ID)
+			.setIssuedAt()
+			.setExpirationTime("6h") // Generate fresh JWT every 6 hours
+			.setAudience("https://appleid.apple.com")
+			.setSubject(this.#clientId)
+			.sign(privateKey);
+
+		return jwt;
 	}
 
 	async #getDiscordUser(accessToken: string): Promise<User> {
@@ -187,6 +253,64 @@ export class Provider {
 		};
 	}
 
+	async #getAppleUser(idToken: string): Promise<User> {
+		// Apple provides user info in the ID token, which must be verified
+		// Fetch Apple's public keys for verification
+		const JWKS = jose.createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
+
+		// Verify and decode the ID token
+		const { payload } = await jose.jwtVerify(idToken, JWKS, {
+			issuer: "https://appleid.apple.com",
+			audience: this.#clientId,
+		});
+
+		// Validate the payload structure
+		const parsedUser = appleUserResponseSchema.safeParse(payload);
+		if (!parsedUser.success) {
+			throw new Error(`Invalid Apple user response format: ${parsedUser.error.message}`);
+		}
+
+		const user = parsedUser.data;
+
+		// Apple provides the user's name only on the first authorization in the callback
+		// Use email prefix as fallback for display name
+		return {
+			provider: "apple",
+			providerId: user.sub,
+			email: user.email,
+			name: user.email.split("@")[0] || "Apple User", // Fallback to email prefix
+			avatar: undefined, // Apple doesn't provide avatars
+		};
+	}
+
+	// Apple sends user info in the callback on first authorization
+	async updateAppleUser(user: string): Promise<void> {
+		if (this.id !== "apple") {
+			throw new Error("User update only available for Apple provider");
+		}
+
+		const rawUserData = JSON.parse(user);
+		const parseResult = appleCallbackUserSchema.safeParse(rawUserData);
+		if (!parseResult.success) {
+			throw new Error(`Invalid Apple user data format: ${parseResult.error.message}`);
+		}
+
+		let name = parseResult.data.name.firstName || "";
+		if (parseResult.data.name.lastName) {
+			if (name) {
+				name += " ";
+			}
+			name += parseResult.data.name.lastName;
+		}
+
+		if (!name) {
+			// I guess this is possible.
+			return;
+		}
+
+		await this.db.update(Account.table).set({ name }).where(eq(Account.table.email, parseResult.data.email));
+	}
+
 	async link(account: Account.Id, providerUser: string): Promise<void> {
 		const now = new Date();
 
@@ -211,7 +335,8 @@ export class Provider {
 
 // OAuth token response schema
 const tokenResponseSchema = z.object({
-	access_token: z.string(),
+	access_token: z.optional(z.string()), // Apple returns this in id_token instead
+	id_token: z.optional(z.string()), // Apple uses id_token
 	token_type: z.optional(z.string()),
 	expires_in: z.optional(z.number()),
 	scope: z.optional(z.string()),
@@ -234,6 +359,24 @@ const googleUserResponseSchema = z.object({
 	name: z.string(),
 	picture: z.optional(z.string()),
 	verified_email: z.optional(z.boolean()),
+});
+
+// Apple ID token payload schema
+const appleUserResponseSchema = z.object({
+	sub: z.string(), // User ID
+	email: z.string(),
+	email_verified: z.optional(z.union([z.boolean(), z.string()])),
+	is_private_email: z.optional(z.union([z.boolean(), z.string()])),
+	real_user_status: z.optional(z.number()),
+});
+
+// Apple callback user data schema (sent on first authorization)
+const appleCallbackUserSchema = z.object({
+	name: z.object({
+		firstName: z.string(),
+		lastName: z.string(),
+	}),
+	email: z.string(),
 });
 
 export interface User {
@@ -304,20 +447,14 @@ export const router = rpc
 			const state = c.req.valid("query");
 			const url = provider.authUrl(state);
 
-			return c.redirect(url);
+			return c.json({ url });
 		},
 	)
-	.get(
+	.all(
 		"/:provider/callback",
 		rpc.withParam(
 			z.object({
 				provider: providerIdSchema,
-			}),
-		),
-		rpc.withQuery(
-			z.object({
-				code: z.string(),
-				state: z.string(),
 			}),
 		),
 		async (c) => {
@@ -326,19 +463,51 @@ export const router = rpc
 			// Validate provider parameter using Zod
 			const provider = ctx.oauth.provider(c.req.valid("param").provider);
 
+			// Handle both GET (Google/Discord) and POST (Apple) callbacks
+			let callbackData: { code: string; state: string; user?: string };
+
+			if (c.req.method === "POST") {
+				// Apple form_post callback
+				const formData = await c.req.formData();
+				callbackData = {
+					code: formData.get("code") as string,
+					state: formData.get("state") as string,
+					user: (formData.get("user") as string) || undefined,
+				};
+			} else {
+				// Google/Discord query params callback
+				const url = new URL(c.req.url);
+				callbackData = {
+					code: url.searchParams.get("code") as string,
+					state: url.searchParams.get("state") as string,
+					user: (url.searchParams.get("user") as string) || undefined,
+				};
+			}
+
+			// Validate required fields
+			if (!callbackData.code || !callbackData.state) {
+				throw new Error("Missing required callback parameters");
+			}
+
 			// Exchange code for access token
-			const accessToken = await provider.exchangeCodeForToken(c.req.valid("query").code);
+			const accessToken = await provider.exchangeCodeForToken(callbackData.code);
 
 			// Get user info
 			const oauthUser = await provider.getUser(accessToken);
 
-			// Find or create user
+			// Apple sends user info in the callback on first authorization
+			if (provider.id === "apple" && callbackData.user) {
+				await provider.updateAppleUser(callbackData.user);
+			}
+
+			// Get or create a user account.
+			// TODO Should we only use the email address to link accounts? Why look up by providerId?
 			let user = await ctx.account.getByProvider(oauthUser.provider, oauthUser.providerId);
 			if (!user) {
-				const existingUser = await ctx.account.getByEmail(oauthUser.email);
-				if (existingUser) {
-					user = existingUser;
-				} else {
+				// Try to find an existing account with the same email.
+				user = await ctx.account.getByEmail(oauthUser.email);
+				if (!user) {
+					// Make a new account.
 					user = await ctx.account.create({
 						email: oauthUser.email,
 						name: oauthUser.name,
@@ -351,7 +520,7 @@ export const router = rpc
 
 			// Generate JWT token
 			const token = await ctx.auth.create(user.id);
-			const state = c.req.valid("query").state;
+			const state = callbackData.state;
 
 			// Redirect to frontend with token
 			const redirectUrl = `${ctx.env.APP_URL}?token=${encodeURIComponent(token)}&state=${encodeURIComponent(state)}`;
