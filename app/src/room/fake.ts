@@ -29,13 +29,20 @@ export class FakeBroadcast {
 
 	audio = {
 		root: new Signal<AudioNode | undefined>(undefined),
-		caption: new Signal<string | undefined>(undefined),
+		captions: {
+			text: new Signal<string | undefined>(undefined),
+			speaking: new Signal<boolean | undefined>(undefined),
+		},
 	};
 
 	video = {
 		media: new Signal<MediaStream | undefined>(undefined),
 		active: new Signal(false),
 		frame: new Signal<HTMLVideoElement | undefined>(undefined),
+		detection: {
+			enabled: new Signal(false),
+			objects: new Signal<Catalog.DetectionObjects | undefined>(undefined),
+		},
 	};
 
 	signals = new Effect();
@@ -57,10 +64,10 @@ export class FakeBroadcast {
 		});
 
 		this.signals.effect((effect) => {
-			const caption = effect.get(this.audio.caption);
+			const caption = effect.get(this.audio.captions.text);
 			if (!caption) return;
 
-			effect.timer(() => this.audio.caption.set(undefined), 5000);
+			effect.timer(() => this.audio.captions.text.set(undefined), 5000);
 		});
 	}
 
