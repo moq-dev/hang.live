@@ -10,8 +10,8 @@ import IconSettings from "~icons/mdi/cog";
 import IconFullscreen from "~icons/mdi/fullscreen";
 import IconMicrophone from "~icons/mdi/microphone";
 import IconMicrophoneOff from "~icons/mdi/microphone-off";
-import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconScreenOff from "~icons/mdi/monitor-off";
+import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
 import Tooltip from "./components/tooltip";
@@ -214,7 +214,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 			setPower(smoothed);
 			animation = requestAnimationFrame(tick);
 
-			setSpeaking(props.audio.speaking.peek() ?? false);
+			setSpeaking(props.audio.captions.speaking.peek() ?? false);
 		};
 
 		animation = requestAnimationFrame(tick);

@@ -271,7 +271,7 @@ export class Video {
 		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
-			const fontSize = 10 + 12 * Math.sqrt(scale);
+			const fontSize = 12 + 12 * Math.sqrt(scale);
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;
@@ -281,6 +281,22 @@ export class Video {
 			const offset = 16 * Math.sqrt(scale);
 			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
+			ctx.restore();
+		}
+
+		const detected = this.broadcast.source.video.detection.objects.peek();
+		if (detected) {
+			ctx.save();
+			ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+			ctx.lineWidth = 4;
+			ctx.font = `bold ${12 + 12 * Math.sqrt(scale)}px Arial`;
+			ctx.fillStyle = "rgba(255, 0, 0, 1.0)";
+
+			for (const object of detected) {
+				// the coordinates are in the range 0-1, so we need to convert them to pixels.
+				ctx.strokeRect(object.x * bounds.size.x, object.y * bounds.size.y, object.w * bounds.size.x, object.h * bounds.size.y);
+				ctx.fillText(object.label, object.x * bounds.size.x + 8, object.y * bounds.size.y + 24);
+			}
 			ctx.restore();
 		}
 

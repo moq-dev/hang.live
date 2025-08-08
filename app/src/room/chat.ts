@@ -34,7 +34,7 @@ export class Chat {
 		this.signals.effect((effect) => {
 			if (!effect.get(Settings.renderCaptions)) return;
 
-			const caption = effect.get(this.broadcast.source.audio.caption);
+			const caption = effect.get(this.broadcast.source.audio.captions.text);
 			if (!caption) return;
 
 			this.#message(effect, root, document.createTextNode(caption), "caption");

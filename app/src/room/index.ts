@@ -5,7 +5,6 @@ import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
-import { Detector } from "./detection";
 import { Sound } from "./sound";
 import { Space } from "./space";
 
@@ -41,9 +40,6 @@ export class Room {
 	// The physics space for the room.
 	space: Space;
 
-	// Object detection for video
-	#detector: Detector;
-
 	#signals = new Effect();
 
 	constructor(connection: Connection, canvas: Canvas, props?: RoomProps) {
@@ -67,13 +63,16 @@ export class Room {
 					facingMode: { ideal: "user" },
 					resizeMode: "none",
 				},
+				detection: {
+					enabled: true,
+					threshold: 0.5,
+				},
 			},
 			audio: {
 				enabled: false, // TODO automatically enable the microphone on join..?
 				constraints: {
 					// mono is fine? for microphone audio.
 					channelCount: { ideal: 1, max: 2 },
-					echoCancellation: Settings.headphones.peek() ? { exact: false } : { ideal: true },
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
@@ -96,10 +95,6 @@ export class Room {
 			},
 		});
 
-		this.#detector = new Detector(this.camera.video, {
-			enabled: true,
-		});
-
 		// Enable transcription when the setting is enabled.
 		// The publisher is responsible for transcribing, regardless of if they want to display captions.
 		this.#signals.effect((effect) => {
@@ -107,12 +102,9 @@ export class Room {
 			const enabled = effect.get(this.camera.audio.enabled);
 			if (!enabled) return;
 
-			// Always enable VAD because it's cheap and powers the "speaking" indicator.
-			effect.set(this.camera.audio.vad, true, false);
-
 			// Only enable transcription if the setting is enabled.
-			const transcription = effect.get(Settings.captureCaptions);
-			effect.set(this.camera.audio.transcribe, transcription, false);
+			const captions = effect.get(Settings.captureCaptions);
+			effect.set(this.camera.audio.captions.enabled, captions, false);
 		});
 
 		// Apply echo cancellation based on the headphones setting.
@@ -235,7 +227,7 @@ export class Room {
 
 		// Monitor VAD signal with some debouncing
 		this.camera.signals.effect((effect) => {
-			const speaking = effect.get(this.camera.audio.speaking);
+			const speaking = effect.get(this.camera.audio.captions.speaking);
 
 			// NOTE: The timer will get cleared when the effect is run again.
 			// So it has to stay set for at least 100ms or unset for 1000ms.
@@ -295,16 +287,6 @@ export class Room {
 			effect.cleanup(() => this.screen.enabled.set(false));
 		});
 
-		// Don't download audio if the AudioContext is suspended.
-		// TODO Move this to a separate class.
-		this.#signals.subscribe(this.sound.suspended, (suspended) => {
-			for (const broadcast of this.space.ordered.peek()) {
-				if (broadcast.source instanceof Watch.Broadcast) {
-					broadcast.source.audio.enabled.set(!suspended);
-				}
-			}
-		});
-
 		this.#signals.effect((effect) => {
 			const connection = effect.get(this.connection.established);
 			if (!connection) return;
@@ -358,12 +340,13 @@ export class Room {
 
 					// Download captions when the setting is enabled.
 					watch.signals.subscribe(Settings.renderCaptions, (closedCaptions) => {
-						watch.audio.transcribe.set(closedCaptions);
+						watch.audio.captions.enabled.set(closedCaptions);
 					});
 
 					// Download video when the canvas is visible.
 					watch.signals.subscribe(this.space.canvas.visible, (visible) => {
 						watch.video.enabled.set(visible);
+						watch.video.detection.enabled.set(visible);
 					});
 
 					// Download audio when the AudioContext is not suspended.
@@ -392,7 +375,6 @@ export class Room {
 
 	close() {
 		this.#signals.close();
-		this.#detector.close();
 		this.space.close();
 		this.camera.close();
 		this.screen.close();
