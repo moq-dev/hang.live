@@ -66,6 +66,8 @@ export class Sound {
 		}
 
 		this.#signals.effect((effect) => {
+			if (!effect.get(Settings.tts)) return;
+
 			// Only start loading the TTS model when the context is unsuspended.
 			// This is kind of a hack to avoid it when the demo is loaded before interaction.
 			if (effect.get(this.suspended)) return;

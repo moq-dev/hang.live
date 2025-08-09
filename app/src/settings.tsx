@@ -5,6 +5,7 @@ import IconBug from "~icons/mdi/bug";
 import IconCaptions from "~icons/mdi/closed-caption";
 import IconCursorMove from "~icons/mdi/cursor-move";
 import IconHeadphones from "~icons/mdi/headphones";
+import IconTextToSpeech from "~icons/mdi/text-to-speech";
 
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
@@ -19,6 +20,7 @@ const Settings = {
 	),
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
+	tts: new Signal(localStorage.getItem("settings.tts") !== "false"),
 };
 
 const effect = new Effect();
@@ -60,6 +62,10 @@ effect.subscribe(Settings.captureCaptions, (transcription) => {
 	}
 });
 
+effect.subscribe(Settings.tts, (tts) => {
+	localStorage.setItem("settings.tts", tts.toString());
+});
+
 // Mostly just to avoid console warnings about signals not being closed
 document.addEventListener("unload", () => {
 	effect.close();
@@ -71,6 +77,7 @@ export function Modal(): JSX.Element {
 	const headphones = solid(Settings.headphones);
 	const draggable = solid(Settings.draggable);
 	const captions = solid(Settings.captureCaptions);
+	const tts = solid(Settings.tts);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -95,6 +102,12 @@ export function Modal(): JSX.Element {
 			<span>generate captions</span>
 			<span title="Generate closed captions for your own speech. Requires WebGPU support.">
 				<IconCaptions />
+			</span>
+
+			<input type="checkbox" checked={tts()} onChange={() => Settings.tts.set((p) => !p)} />
+			<span>text-to-speech</span>
+			<span title="Enable text-to-speech for announcing members. WebGPU is recommended.">
+				<IconTextToSpeech />
 			</span>
 		</div>
 	);
