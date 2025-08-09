@@ -1,7 +1,6 @@
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconBug from "~icons/mdi/bug";
 import IconCaptions from "~icons/mdi/closed-caption";
 import IconCursorMove from "~icons/mdi/cursor-move";
 import IconHeadphones from "~icons/mdi/headphones";

@@ -1,8 +1,7 @@
 import { type Publish, Watch } from "@kixelated/hang";
-import { Effect } from "@kixelated/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import { Bounds, Vector } from "./geometry";
+import { Vector } from "./geometry";
 
 // Local or remote (Hang.Watch.Video) video source.
 /*
@@ -17,9 +16,6 @@ export interface VideoSource {
 	*/
 
 export type VideoSource = Watch.Video | Publish.Video;
-
-const ZOOM_TARGETS = ["person", "dog", "cat"] as const;
-type ZoomTarget = (typeof ZOOM_TARGETS)[number];
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
@@ -226,7 +222,7 @@ export class Video {
 			}
 				*/
 
-				/*
+			/*
 			const size =
 				next instanceof HTMLVideoElement
 					? Vector.create(next.videoWidth, next.videoHeight)
