@@ -63,10 +63,12 @@ export class Room {
 					facingMode: { ideal: "user" },
 					resizeMode: "none",
 				},
+				/* Not a great user experience, so disabled for now.
 				detection: {
 					enabled: true,
 					threshold: 0.5,
 				},
+				*/
 			},
 			audio: {
 				enabled: false, // TODO automatically enable the microphone on join..?
@@ -346,7 +348,7 @@ export class Room {
 					// Download video when the canvas is visible.
 					watch.signals.subscribe(this.space.canvas.visible, (visible) => {
 						watch.video.enabled.set(visible);
-						watch.video.detection.enabled.set(visible);
+						//watch.video.detection.enabled.set(visible);
 					});
 
 					// Download audio when the AudioContext is not suspended.

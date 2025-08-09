@@ -1,7 +1,8 @@
 import { type Publish, Watch } from "@kixelated/hang";
+import { Effect } from "@kixelated/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import { Vector } from "./geometry";
+import { Bounds, Vector } from "./geometry";
 
 // Local or remote (Hang.Watch.Video) video source.
 /*
@@ -17,6 +18,9 @@ export interface VideoSource {
 
 export type VideoSource = Watch.Video | Publish.Video;
 
+const ZOOM_TARGETS = ["person", "dog", "cat"] as const;
+type ZoomTarget = (typeof ZOOM_TARGETS)[number];
+
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
 	// So we use the Video class directly to get individual frames.
@@ -31,6 +35,12 @@ export class Video {
 	// The opacity from 0 to 1, where 0 is offline and 1 is online.
 	online = 0;
 
+	// Slowly zoom into the focus point, if present.
+	/*
+	#zoom: Bounds;
+	#zoomTarget: Bounds;
+	*/
+
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
@@ -40,6 +50,65 @@ export class Video {
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 		this.targetSize = Vector.create(128, 128);
+
+		/* Disabled for now because the user experience is eh.
+		this.#zoom = Bounds.create(Vector.create(0, 0), Vector.create(1, 1));
+		this.#zoomTarget = Bounds.create(Vector.create(0, 0), Vector.create(1, 1));
+
+		this.#signals.effect((effect) => {
+			const objects = effect.get(this.broadcast.source.video.detection.objects);
+
+			// Create a bounding box for all objects that match a zoom target.
+			let bounding: Bounds | undefined;
+
+			for (const object of objects || []) {
+				const label = object.label as ZoomTarget;
+				if (!ZOOM_TARGETS.includes(label)) {
+					console.log("not a zoom target", object.label);
+					continue;
+				}
+
+				if (!bounding) {
+					bounding = Bounds.create(Vector.create(object.x, object.y), Vector.create(object.w, object.h));
+				} else {
+					bounding.position.x = Math.min(bounding.position.x, object.x);
+					bounding.position.y = Math.min(bounding.position.y, object.y);
+					bounding.size.x = Math.max(bounding.size.x, object.x + object.w);
+					bounding.size.y = Math.max(bounding.size.y, object.y + object.h);
+				}
+			}
+
+			if (!bounding) {
+				// Unzoom
+				this.#zoomTarget = Bounds.create(Vector.create(0, 0), Vector.create(1, 1));
+				return;
+			}
+
+			const ZOOM_MAX = 0.5; // Don't zoom in more than 2x
+			const ZOOM_PADDING = 0.1; // Add 10% padding to the zoom target
+
+			let left = Math.max(0, bounding.position.x - (bounding.size.x * ZOOM_PADDING) / 2);
+			let right = Math.min(1, bounding.position.x + bounding.size.x + (bounding.size.x * ZOOM_PADDING) / 2);
+			let top = Math.max(0, bounding.position.y - (bounding.size.y * ZOOM_PADDING) / 2);
+			let bottom = Math.min(1, bounding.position.y + bounding.size.y + (bounding.size.y * ZOOM_PADDING) / 2);
+
+			const width = right - left;
+			const height = bottom - top;
+
+			if (width < ZOOM_MAX) {
+				left = Math.max(0, left - (ZOOM_MAX - width) / 2);
+				right = Math.min(1, right + (ZOOM_MAX - width) / 2);
+			}
+
+			if (height < ZOOM_MAX) {
+				top = Math.max(0, top - (ZOOM_MAX - height) / 2);
+				bottom = Math.min(1, bottom + (ZOOM_MAX - height) / 2);
+			}
+
+			this.#zoomTarget = Bounds.create(Vector.create(left, top), Vector.create(right - left, bottom - top));
+
+		});
+		*/
 	}
 
 	tick() {
@@ -80,6 +149,11 @@ export class Video {
 		} else {
 			this.online += (0 - this.online) * 0.1;
 		}
+
+		/*
+		const ZOOM_SPEED = 0.005;
+		this.#zoom = this.#zoom.lerp(this.#zoomTarget, ZOOM_SPEED);
+		*/
 	}
 
 	// Try to avoid any mutations in this function; do it in tick instead.
@@ -152,7 +226,46 @@ export class Video {
 			}
 				*/
 
-			ctx.drawImage(next, 1, 1, bounds.size.x - 2, bounds.size.y - 2);
+				/*
+			const size =
+				next instanceof HTMLVideoElement
+					? Vector.create(next.videoWidth, next.videoHeight)
+					: Vector.create(next.codedWidth, next.codedHeight);
+
+			// Calculate source rectangle (which part of the video to show)
+			const source = Bounds.create(
+				Vector.create(this.#zoom.position.x * size.x, this.#zoom.position.y * size.y),
+				Vector.create(this.#zoom.size.x * size.x, this.#zoom.size.y * size.y),
+			);
+
+			// Calculate destination rectangle to maintain aspect ratio
+			const sourceAspect = source.size.x / source.size.y;
+			const destAspect = bounds.size.x / bounds.size.y;
+
+			const dst = Bounds.create(Vector.create(0, 0), bounds.size);
+			if (sourceAspect > destAspect) {
+				// Source is wider - letterbox top/bottom
+				dst.size.y = bounds.size.x / sourceAspect;
+				dst.position.y = (bounds.size.y - dst.size.y) / 2;
+			} else if (sourceAspect < destAspect) {
+				// Source is taller - letterbox left/right
+				dst.size.x = bounds.size.y * sourceAspect;
+				dst.position.x = (bounds.size.x - dst.size.x) / 2;
+			}
+
+			ctx.drawImage(
+				next,
+				source.position.x,
+				source.position.y,
+				source.size.x,
+				source.size.y,
+				dst.position.x,
+				dst.position.y,
+				dst.size.x,
+				dst.size.y,
+			);
+			*/
+			ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
 			ctx.restore();
 
 			/*
@@ -281,22 +394,6 @@ export class Video {
 			const offset = 16 * Math.sqrt(scale);
 			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
-			ctx.restore();
-		}
-
-		const detected = this.broadcast.source.video.detection.objects.peek();
-		if (detected) {
-			ctx.save();
-			ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-			ctx.lineWidth = 4;
-			ctx.font = `bold ${12 + 12 * Math.sqrt(scale)}px Arial`;
-			ctx.fillStyle = "rgba(255, 0, 0, 1.0)";
-
-			for (const object of detected) {
-				// the coordinates are in the range 0-1, so we need to convert them to pixels.
-				ctx.strokeRect(object.x * bounds.size.x, object.y * bounds.size.y, object.w * bounds.size.x, object.h * bounds.size.y);
-				ctx.fillText(object.label, object.x * bounds.size.x + 8, object.y * bounds.size.y + 24);
-			}
 			ctx.restore();
 		}
 

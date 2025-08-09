@@ -14,7 +14,9 @@ const Settings = {
 	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 
 	renderCaptions: new Signal(localStorage.getItem("settings.renderCaptions") !== "false"),
-	captureCaptions: new Signal(localStorage.getItem("settings.captureCaptions") !== "false"),
+	captureCaptions: new Signal(
+		supportsWebGPU() ? localStorage.getItem("settings.captureCaptions") !== "false" : false,
+	),
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 };
@@ -50,7 +52,12 @@ effect.subscribe(Settings.renderCaptions, (closedCaptions) => {
 });
 
 effect.subscribe(Settings.captureCaptions, (transcription) => {
-	localStorage.setItem("settings.captureCaptions", transcription.toString());
+	if (!supportsWebGPU()) {
+		// Don't save this setting if WebGPU is not supported.
+		localStorage.removeItem("settings.captureCaptions");
+	} else {
+		localStorage.setItem("settings.captureCaptions", transcription.toString());
+	}
 });
 
 // Mostly just to avoid console warnings about signals not being closed
@@ -63,7 +70,6 @@ export default Settings;
 export function Modal(): JSX.Element {
 	const headphones = solid(Settings.headphones);
 	const draggable = solid(Settings.draggable);
-	const debug = solid(Settings.debug);
 	const captions = solid(Settings.captureCaptions);
 
 	return (
@@ -80,17 +86,21 @@ export function Modal(): JSX.Element {
 				<IconCursorMove />
 			</span>
 
-			<input type="checkbox" checked={debug()} onChange={() => Settings.debug.set((p) => !p)} />
-			<span>debug</span>
-			<span title="Show debug visualizations.">
-				<IconBug />
-			</span>
-
-			<input type="checkbox" checked={captions()} onChange={() => Settings.captureCaptions.set((p) => !p)} />
+			<input
+				type="checkbox"
+				checked={captions()}
+				disabled={!supportsWebGPU()}
+				onChange={() => Settings.captureCaptions.set((p) => !p)}
+			/>
 			<span>generate captions</span>
-			<span title="Generate closed captions for your own speech.">
+			<span title="Generate closed captions for your own speech. Requires WebGPU support.">
 				<IconCaptions />
 			</span>
 		</div>
 	);
+}
+
+export function supportsWebGPU() {
+	// @ts-expect-error Not typed yet.
+	return !!navigator.gpu;
 }

@@ -1,6 +1,15 @@
 import * as Comlink from "comlink";
 import { KokoroTTS } from "kokoro-js";
-import { detectWebGPU } from "./util";
+
+async function detectWebGPU() {
+	try {
+		// @ts-expect-error - navigator.gpu is not typed yet
+		const adapter = await navigator.gpu.requestAdapter();
+		return !!adapter;
+	} catch {
+		return false;
+	}
+}
 
 // Get Voice type from an instance's voices property
 export type Voice = KokoroTTS extends { voices: infer V } ? keyof V : never;

@@ -7,6 +7,10 @@ export class Bounds {
 		this.size = size;
 	}
 
+	static create(position: Vector, size: Vector) {
+		return new Bounds(position, size);
+	}
+
 	static dom(el: DOMRect) {
 		return new Bounds(Vector.create(el.x, el.y), Vector.create(el.width, el.height));
 	}
@@ -52,6 +56,10 @@ export class Bounds {
 
 	clone() {
 		return new Bounds(this.position.clone(), this.size.clone());
+	}
+
+	lerp(other: Bounds, t: number) {
+		return new Bounds(this.position.lerp(other.position, t), this.size.lerp(other.size, t));
 	}
 }
 
@@ -99,5 +107,9 @@ export class Vector {
 
 	clone() {
 		return new Vector(this.x, this.y);
+	}
+
+	lerp(other: Vector, t: number) {
+		return new Vector(this.x + (other.x - this.x) * t, this.y + (other.y - this.y) * t);
 	}
 }
