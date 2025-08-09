@@ -421,7 +421,7 @@ export class Space {
 		const fillRatio = broadcastArea / canvasArea;
 		const targetFill = 0.25;
 
-		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 2);
+		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 1.5);
 	}
 
 	close() {

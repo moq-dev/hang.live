@@ -2,7 +2,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import * as Comlink from "comlink";
 import Settings from "../settings";
 
-import type { SoundWorker, Voice } from "./worker/sound";
+import type { SoundWorker, Voice } from "./sound-worker";
 
 const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
@@ -70,7 +70,7 @@ export class Sound {
 			// This is kind of a hack to avoid it when the demo is loaded before interaction.
 			if (effect.get(this.suspended)) return;
 
-			const worker = new Worker(new URL("./worker/sound", import.meta.url), { type: "module" });
+			const worker = new Worker(new URL("./sound-worker", import.meta.url), { type: "module" });
 			effect.cleanup(() => worker.terminate());
 
 			const workerApi = Comlink.wrap<SoundWorker>(worker);
