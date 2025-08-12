@@ -142,7 +142,7 @@ function Preview(props: {
 				<div class="flex flex-wrap gap-6 mb-8 items-start">
 					{/* Left Column: Participants List */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<PreviewRoom connection={props.connection} room={props.room} api={props.api} />
+						<PreviewRoom connection={props.connection} api={props.api} />
 					</div>
 
 					{/* Right Column: Avatar/Name Preview */}

@@ -26,7 +26,22 @@ export class Context {
 			return new URL(root, this.#env.RELAY_URL);
 		}
 
-		const token = await Token.sign(this.#key, { root, sub: "", pub: account });
+		const token = await Token.sign(this.#key, { root, put: account });
+		return new URL(`${root}/?jwt=${token}`, this.#env.RELAY_URL);
+	}
+
+	// Returns a URL to preview a list of rooms
+	async signPreview(rooms: Name[]): Promise<URL> {
+		const root = this.#env.RELAY_PREFIX;
+		if (!this.#key) {
+			// NOTE: On local dev with no key configured, this will be a firehose of all announcements
+			return new URL(root, this.#env.RELAY_URL);
+		}
+
+		const token = await Token.sign(this.#key, {
+			root,
+			get: rooms,
+		});
 		return new URL(`${root}/?jwt=${token}`, this.#env.RELAY_URL);
 	}
 }
