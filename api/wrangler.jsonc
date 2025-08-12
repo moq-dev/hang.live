@@ -60,8 +60,8 @@
 		"R2_PUBLIC_URL": "https://api.hang.dev:3000/public",
 
 		"RELAY_URL": "http://localhost:4443",
-		"RELAY_PREFIX": "anon"
-		// "RELAY_SECRET": <stored in .dev.vars>
+		"RELAY_PREFIX": "demo"
+		// "RELAY_SECRET": <stored in .dev.vars, set dynamically>
 	},
 
 	// Staging environment overrides
