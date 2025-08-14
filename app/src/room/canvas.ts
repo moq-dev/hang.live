@@ -1,6 +1,5 @@
 import { Effect, Signal } from "@kixelated/signals";
-import { Vector } from "./room/geometry";
-import Settings from "./settings";
+import { Vector } from "./geometry";
 
 const LINE_SPACING = 64;
 const LINE_WIDTH = 10;
@@ -11,6 +10,10 @@ const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
 
+export type CanvasProps = {
+	demo?: boolean;
+};
+
 export class Canvas {
 	#canvas: HTMLCanvasElement;
 	#context: CanvasRenderingContext2D;
@@ -19,20 +22,20 @@ export class Canvas {
 	onRender?: (ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) => void;
 	#animate?: number;
 
-	// Load a pre-rendered SVG instead of rendering it live.
-	#potato = new Image();
-
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
+	demo: Signal<boolean>;
 
 	#signals = new Effect();
 
-	constructor(element: HTMLCanvasElement) {
+	get element() {
+		return this.#canvas;
+	}
+
+	constructor(element: HTMLCanvasElement, props?: CanvasProps) {
 		this.#canvas = element;
 
-		// Load the pre-rendered SVG instead of rendering it live.
-		this.#potato = new Image();
-		this.#potato.src = "/image/background.svg";
+		this.demo = new Signal(props?.demo ?? false);
 
 		const context = this.#canvas.getContext("2d");
 		if (!context) {
@@ -44,8 +47,24 @@ export class Canvas {
 		this.viewport = new Signal(Vector.create(0, 0));
 
 		const resize = () => {
-			this.#canvas.width = window.devicePixelRatio * window.innerWidth;
-			this.#canvas.height = window.devicePixelRatio * window.innerHeight;
+			// Check if we're in fullscreen or fixed position
+			const isFullscreen = document.fullscreenElement === this.#canvas;
+			const style = window.getComputedStyle(this.#canvas);
+			const isFixed = style.position === "fixed";
+
+			if (isFullscreen || isFixed) {
+				// Use window dimensions for fullscreen or fixed position
+				this.#canvas.width = window.devicePixelRatio * window.innerWidth;
+				this.#canvas.height = window.devicePixelRatio * window.innerHeight;
+			} else {
+				// Use parent container dimensions
+				const parent = this.#canvas.parentElement;
+				if (!parent) return;
+
+				const rect = parent.getBoundingClientRect();
+				this.#canvas.width = window.devicePixelRatio * rect.width;
+				this.#canvas.height = window.devicePixelRatio * rect.height;
+			}
 
 			// NOTE: devicePixelRatio is transparently handled by the browser.
 			this.viewport.set(Vector.create(this.#canvas.width, this.#canvas.height));
@@ -58,16 +77,42 @@ export class Canvas {
 		resize();
 		visible();
 
-		window.addEventListener("resize", resize);
-		document.addEventListener("visibilitychange", visible);
+		// Listen for window resize events (for fullscreen/fixed position)
+		this.#signals.eventListener(window, "resize", resize);
 
-		this.#signals.cleanup(() => {
-			window.removeEventListener("resize", resize);
-			document.removeEventListener("visibilitychange", visible);
+		// Set up ResizeObserver for parent when canvas is added to DOM
+		let resizeObserver: ResizeObserver | null = null;
+
+		const setupParentObserver = () => {
+			const parent = this.#canvas.parentElement;
+			if (parent && !resizeObserver) {
+				resizeObserver = new ResizeObserver(resize);
+				resizeObserver.observe(parent);
+			}
+		};
+
+		// Try to set up observer immediately if already in DOM
+		setupParentObserver();
+
+		// Watch for canvas being added to DOM
+		const mutationObserver = new MutationObserver(() => {
+			if (this.#canvas.parentElement) {
+				setupParentObserver();
+				mutationObserver.disconnect();
+			}
 		});
 
-		this.#signals.effect((effect: Effect) => {
-			this.#potato.src = effect.get(Settings.potato) ? "/image/background.svg" : "";
+		if (!this.#canvas.parentElement) {
+			mutationObserver.observe(document.body, { childList: true, subtree: true });
+		}
+
+		this.#signals.eventListener(document, "visibilitychange", visible);
+
+		this.#signals.cleanup(() => {
+			if (resizeObserver) {
+				resizeObserver.disconnect();
+			}
+			mutationObserver.disconnect();
 		});
 
 		// Only render the canvas when it's visible.
@@ -82,10 +127,14 @@ export class Canvas {
 
 	#render(now: DOMHighResTimeStamp) {
 		const ctx = this.#context;
-		ctx.imageSmoothingEnabled = !Settings.potato.peek();
+		ctx.imageSmoothingEnabled = true;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
 		this.#renderBackground(this.#context, now);
+
+		if (this.demo.peek()) {
+			this.#renderDemo(this.#context);
+		}
 
 		if (this.onRender) {
 			this.onRender(this.#context, now);
@@ -93,13 +142,38 @@ export class Canvas {
 		this.#animate = requestAnimationFrame(this.#render.bind(this));
 	}
 
-	#renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
+	#renderDemo(ctx: CanvasRenderingContext2D) {
 		ctx.save();
 
-		if (Settings.potato.peek()) {
-			ctx.drawImage(this.#potato, 0, 0, ctx.canvas.width, ctx.canvas.height);
-			return;
+		const width = ctx.canvas.width;
+		const height = ctx.canvas.height;
+
+		ctx.font = "bold 120px sans-serif";
+		ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+
+		const positions = [
+			{ x: width * 0.3, y: height * 0.3, angle: -25 },
+			{ x: width * 0.7, y: height * 0.5, angle: 30 },
+			{ x: width * 0.5, y: height * 0.7, angle: -15 },
+			{ x: width * 0.2, y: height * 0.6, angle: 20 },
+			{ x: width * 0.8, y: height * 0.25, angle: -35 },
+		];
+
+		for (const pos of positions) {
+			ctx.save();
+			ctx.translate(pos.x, pos.y);
+			ctx.rotate((pos.angle * Math.PI) / 180);
+			ctx.fillText("DEMO", 0, 0);
+			ctx.restore();
 		}
+
+		ctx.restore();
+	}
+
+	#renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
+		ctx.save();
 
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;
@@ -149,9 +223,20 @@ export class Canvas {
 		}
 	}
 
-	mousePosition(e: MouseEvent): Vector {
+	relative(x: number, y: number): Vector {
 		const rect = this.#canvas.getBoundingClientRect();
-		return Vector.create(e.clientX - rect.left, e.clientY - rect.top).mult(window.devicePixelRatio);
+		const viewport = this.viewport.peek();
+
+		// Convert from page coordinates to canvas coordinates
+		// Account for both position offset and scaling
+		const pageX = x - rect.left;
+		const pageY = y - rect.top;
+
+		// Scale from displayed size to internal canvas size
+		const canvasX = (pageX / rect.width) * viewport.x;
+		const canvasY = (pageY / rect.height) * viewport.y;
+
+		return Vector.create(canvasX, canvasY);
 	}
 
 	close() {
@@ -160,7 +245,7 @@ export class Canvas {
 }
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
-	const hue = (i * 25 + now * 0.03) % 360;
+	const hue = (i * 25 + now * 0.1) % 360;
 	return `hsl(${hue}, 75%, 50%)`;
 }
 

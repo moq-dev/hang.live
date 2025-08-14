@@ -1,5 +1,6 @@
 @import "@fontsource-variable/montserrat";
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
 	--font-montserrat: "Montserrat Variable", system-ui, sans-serif;
@@ -34,6 +35,14 @@ a {
 	@apply font-bold;
 }
 
+.text-link-hue {
+	color: hsl(var(--link-hue), 75%, 50%);
+}
+
+.border-link-hue {
+	border-color: hsl(var(--link-hue), 75%, 50%);
+}
+
 /*
 a:hover {
 	text-decoration-color: gold;
@@ -44,12 +53,10 @@ body {
 	margin: 0;
 	min-width: 320px;
 	min-height: 100vh;
-	overflow-x: hidden;
 }
 
-/* Make the hang div take up at least full viewport height */
+/* Container for the app */
 #hang {
-	/*min-height: 90vh; */
 	display: flex;
 	flex-direction: column;
 	position: relative;

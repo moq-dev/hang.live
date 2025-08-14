@@ -2,7 +2,7 @@ import { createSignal, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { Portal } from "solid-js/web";
 
-export function Tooltip(props: {
+export default function Tooltip(props: {
 	content: string;
 	position: "top" | "bottom" | "left" | "right";
 	children: JSX.Element;

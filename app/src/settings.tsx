@@ -1,24 +1,25 @@
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconBug from "~icons/mdi/bug";
 import IconCaptions from "~icons/mdi/closed-caption";
 import IconCursorMove from "~icons/mdi/cursor-move";
-import IconPotato from "~icons/mdi/fried-potatoes";
 import IconHeadphones from "~icons/mdi/headphones";
+import IconTextToSpeech from "~icons/mdi/text-to-speech";
 
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 	volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.volume") ?? "1")),
 	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
-	potato: new Signal(localStorage.getItem("settings.potato") === "true"),
 	headphones: new Signal(localStorage.getItem("settings.headphones") === "true"),
 	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 
 	renderCaptions: new Signal(localStorage.getItem("settings.renderCaptions") !== "false"),
-	captureCaptions: new Signal(localStorage.getItem("settings.captureCaptions") !== "false"),
+	captureCaptions: new Signal(
+		supportsWebGPU() ? localStorage.getItem("settings.captureCaptions") !== "false" : false,
+	),
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
+	tts: new Signal(localStorage.getItem("settings.tts") !== "false"),
 };
 
 const effect = new Effect();
@@ -33,10 +34,6 @@ effect.subscribe(Settings.volume, (volume) => {
 
 effect.subscribe(Settings.muted, (muted) => {
 	localStorage.setItem("settings.muted", muted.toString());
-});
-
-effect.subscribe(Settings.potato, (potato) => {
-	localStorage.setItem("settings.potato", potato.toString());
 });
 
 effect.subscribe(Settings.headphones, (headphones) => {
@@ -56,15 +53,16 @@ effect.subscribe(Settings.renderCaptions, (closedCaptions) => {
 });
 
 effect.subscribe(Settings.captureCaptions, (transcription) => {
-	localStorage.setItem("settings.captureCaptions", transcription.toString());
+	if (!supportsWebGPU()) {
+		// Don't save this setting if WebGPU is not supported.
+		localStorage.removeItem("settings.captureCaptions");
+	} else {
+		localStorage.setItem("settings.captureCaptions", transcription.toString());
+	}
 });
 
-effect.subscribe(Settings.potato, (potato) => {
-	if (potato) {
-		document.documentElement.classList.add("potato");
-	} else {
-		document.documentElement.classList.remove("potato");
-	}
+effect.subscribe(Settings.tts, (tts) => {
+	localStorage.setItem("settings.tts", tts.toString());
 });
 
 // Mostly just to avoid console warnings about signals not being closed
@@ -77,9 +75,8 @@ export default Settings;
 export function Modal(): JSX.Element {
 	const headphones = solid(Settings.headphones);
 	const draggable = solid(Settings.draggable);
-	const potato = solid(Settings.potato);
-	const debug = solid(Settings.debug);
 	const captions = solid(Settings.captureCaptions);
+	const tts = solid(Settings.tts);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -95,23 +92,27 @@ export function Modal(): JSX.Element {
 				<IconCursorMove />
 			</span>
 
-			<input type="checkbox" checked={potato()} onChange={() => Settings.potato.set((p) => !p)} />
-			<span>potato mode</span>
-			<span title="Disable special effects and laggy animations.">
-				<IconPotato />
-			</span>
-
-			<input type="checkbox" checked={debug()} onChange={() => Settings.debug.set((p) => !p)} />
-			<span>debug</span>
-			<span title="Show debug visualizations.">
-				<IconBug />
-			</span>
-
-			<input type="checkbox" checked={captions()} onChange={() => Settings.captureCaptions.set((p) => !p)} />
+			<input
+				type="checkbox"
+				checked={captions()}
+				disabled={!supportsWebGPU()}
+				onChange={() => Settings.captureCaptions.set((p) => !p)}
+			/>
 			<span>generate captions</span>
-			<span title="Generate closed captions for your own speech.">
+			<span title="Generate closed captions for your own speech. Requires WebGPU support.">
 				<IconCaptions />
+			</span>
+
+			<input type="checkbox" checked={tts()} onChange={() => Settings.tts.set((p) => !p)} />
+			<span>text-to-speech</span>
+			<span title="Enable text-to-speech for announcing members. WebGPU is recommended.">
+				<IconTextToSpeech />
 			</span>
 		</div>
 	);
+}
+
+export function supportsWebGPU() {
+	// @ts-expect-error Not typed yet.
+	return !!navigator.gpu;
 }

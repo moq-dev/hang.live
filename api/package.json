@@ -26,6 +26,7 @@
 	},
 	"devDependencies": {
 		"@types/uuid": "^10.0.0",
+		"@vitejs/plugin-basic-ssl": "^2.1.0",
 		"typescript": "^5.8.3",
 		"wrangler": "^4.24.3"
 	},

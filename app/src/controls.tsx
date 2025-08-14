@@ -5,16 +5,19 @@ import type { JSX } from "solid-js/jsx-runtime";
 import IconClosedCaption from "~icons/material-symbols/closed-caption";
 import IconClosedCaptionDisabled from "~icons/material-symbols/closed-caption-disabled";
 import IconCamera from "~icons/mdi/camera";
+import IconCameraOff from "~icons/mdi/camera-off";
 import IconSettings from "~icons/mdi/cog";
 import IconFullscreen from "~icons/mdi/fullscreen";
 import IconMicrophone from "~icons/mdi/microphone";
+import IconMicrophoneOff from "~icons/mdi/microphone-off";
+import IconScreenOff from "~icons/mdi/monitor-off";
 import IconScreen from "~icons/mdi/monitor-screenshot";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
-import type { Canvas } from "./canvas";
+import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
+import type { Canvas } from "./room/canvas";
 import Settings, { Modal } from "./settings";
-import { Tooltip } from "./tooltip";
 
 export function Controls(props: {
 	room: Room;
@@ -24,15 +27,25 @@ export function Controls(props: {
 }): JSX.Element {
 	return (
 		<div class="controls pointer-gaps" role="toolbar" aria-label="Media controls">
-			<Microphone audio={props.camera.audio} />
-			<Camera video={props.camera.video} room={props.room} />
-			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
-			<Chat broadcast={props.camera} />
-			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
-			<Volume room={props.room} />
-			<ClosedCaptions />
-			<Advanced />
-			<Fullscreen canvas={props.canvas} />
+			{/* Left group */}
+			<div class="flex gap-inherit">
+				<Microphone audio={props.camera.audio} />
+				<Camera video={props.camera.video} room={props.room} />
+				<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
+			</div>
+
+			{/* Center group */}
+			<div class="flex-1 flex justify-center">
+				<Chat broadcast={props.camera} />
+			</div>
+
+			{/* Right group */}
+			<div class="flex gap-inherit">
+				<Volume room={props.room} />
+				<ClosedCaptions />
+				<Advanced />
+				<Fullscreen canvas={props.canvas} />
+			</div>
 		</div>
 	);
 }
@@ -52,7 +65,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	});
 
 	return (
-		<Tooltip content="Toggle microphone" position="top">
+		<Tooltip content={root() ? "Disable microphone" : "Enable microphone"} position="top">
 			<fieldset
 				class="flex flex-col-reverse"
 				aria-label="Microphone controls"
@@ -75,7 +88,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 					}}
 				>
 					<Visualize audio={props.audio} />
-					<IconMicrophone />
+					{root() ? <IconMicrophone /> : <IconMicrophoneOff />}
 				</button>
 				<Show when={opacity() > 0}>
 					<input
@@ -106,7 +119,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 	const media = solid(props.video.media);
 
 	return (
-		<Tooltip content="Toggle camera" position="top">
+		<Tooltip content={media() ? "Disable camera" : "Enable camera"} position="top">
 			<button
 				type="button"
 				onClick={toggle}
@@ -119,7 +132,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 					"border-transparent": !media(),
 				}}
 			>
-				<IconCamera />
+				{media() ? <IconCamera /> : <IconCameraOff />}
 			</button>
 		</Tooltip>
 	);
@@ -136,7 +149,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 	const media = solid(props.video.media);
 
 	return (
-		<Tooltip content="Toggle screen sharing" position="top">
+		<Tooltip content={media() ? "Disable screen sharing" : "Enable screen sharing"} position="top">
 			<button
 				type="button"
 				onClick={toggle}
@@ -149,7 +162,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 					"border-transparent": !media(),
 				}}
 			>
-				<IconScreen />
+				{media() ? <IconScreen /> : <IconScreenOff />}
 			</button>
 		</Tooltip>
 	);
@@ -211,7 +224,7 @@ function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 			setPower(smoothed);
 			animation = requestAnimationFrame(tick);
 
-			setSpeaking(props.audio.speaking.peek() ?? false);
+			setSpeaking(props.audio.captions.speaking.peek() ?? false);
 		};
 
 		animation = requestAnimationFrame(tick);
@@ -276,17 +289,17 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	};
 
 	return (
-		<form id="chat" onSubmit={submit} class="flex-1 min-w-48">
+		<form id="chat" onSubmit={submit} class="w-full max-w-md">
 			<input
 				type="text"
 				autocomplete="off"
-				placeholder="chat"
+				placeholder="type to chat"
 				ref={setInput}
 				value={message()}
 				onInput={(e) => setMessage(e.currentTarget.value)}
 				aria-label="Chat message"
 				tabIndex={0}
-				class="w-full"
+				class="w-full text-center placeholder:text-center"
 			/>
 		</form>
 	);
@@ -298,8 +311,8 @@ function Volume(props: { room: Room }): JSX.Element {
 	const toggle = () => {
 		// If we were just suspended due to autoplay policies, then don't toggle mute.
 		// This seems racey but maybe it works.
-		if (props.room.suspended.peek()) {
-			props.room.suspended.set(false);
+		if (props.room.sound.suspended.peek()) {
+			props.room.sound.suspended.set(false);
 
 			// If we unmuted but appeared to be muted, then don't toggle mute.
 			if (!Settings.muted.peek()) {
@@ -313,7 +326,7 @@ function Volume(props: { room: Room }): JSX.Element {
 	const muted = solid(Settings.muted);
 	const volume = solid(Settings.volume);
 	const opacity = Opacity(() => showSlider());
-	const suspended = solid(props.room.suspended);
+	const suspended = solid(props.room.sound.suspended);
 
 	const setVolume = (v: number) => {
 		if (v === 0) {
@@ -326,7 +339,7 @@ function Volume(props: { room: Room }): JSX.Element {
 	};
 
 	return (
-		<Tooltip content="Toggle mute" position="top">
+		<Tooltip content={muted() || suspended() ? "Enable audio" : "Disable audio"} position="top">
 			<fieldset
 				class="flex flex-col-reverse"
 				aria-label="Volume controls"
@@ -445,8 +458,19 @@ function Advanced(): JSX.Element {
 function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 	const toggle = () => props.canvas.toggleFullscreen();
 
+	const [isFullscreen, setIsFullscreen] = createSignal(false);
+
+	onMount(() => {
+		const checkFullscreen = () => {
+			setIsFullscreen(document.fullscreenElement === props.canvas.element);
+		};
+		checkFullscreen();
+		document.addEventListener("fullscreenchange", checkFullscreen);
+		onCleanup(() => document.removeEventListener("fullscreenchange", checkFullscreen));
+	});
+
 	return (
-		<Tooltip content="Toggle fullscreen" position="top">
+		<Tooltip content={isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"} position="top">
 			<button
 				type="button"
 				onClick={toggle}
