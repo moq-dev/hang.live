@@ -24,6 +24,11 @@ export class Space {
 
 	#maxZ = 0;
 
+	// Touch handling for mobile
+	#touches = new Map<number, { x: number; y: number }>();
+	#pinchStartDistance = 0;
+	#pinchStartScale = 1;
+
 	#signals = new Effect();
 
 	constructor(canvas: Canvas, sound?: Sound) {
@@ -36,6 +41,12 @@ export class Space {
 		this.#signals.eventListener(window, "mouseup", this.#onMouseUp.bind(this));
 		this.#signals.eventListener(window, "mouseleave", this.#onMouseLeave.bind(this));
 		this.#signals.eventListener(window, "wheel", this.#onMouseWheel.bind(this), { passive: false });
+
+		// Touch event listeners for mobile
+		this.#signals.eventListener(window, "touchstart", this.#onTouchStart.bind(this), { passive: false });
+		this.#signals.eventListener(window, "touchmove", this.#onTouchMove.bind(this), { passive: false });
+		this.#signals.eventListener(window, "touchend", this.#onTouchEnd.bind(this), { passive: false });
+		this.#signals.eventListener(window, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
 
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
@@ -163,6 +174,211 @@ export class Space {
 		}));
 
 		broadcast.publishPosition();
+	}
+
+	#onTouchStart(e: TouchEvent) {
+		const rect = this.canvas.element.getBoundingClientRect();
+
+		// Store all active touches
+		this.#touches.clear();
+		for (const touch of e.touches) {
+			const isOverCanvas =
+				touch.clientX >= rect.left &&
+				touch.clientX <= rect.right &&
+				touch.clientY >= rect.top &&
+				touch.clientY <= rect.bottom;
+
+			if (isOverCanvas) {
+				this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+			}
+		}
+
+		if (this.#touches.size === 0) return;
+
+		e.preventDefault();
+
+		// Single touch - start dragging
+		if (this.#touches.size === 1) {
+			const touch = e.touches[0];
+			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
+
+			this.#dragging = undefined;
+
+			const broadcast = this.#at(mouse);
+			if (!broadcast) return;
+
+			if (broadcast.locked()) return;
+
+			const viewport = this.canvas.viewport.peek();
+
+			// Bump the z-index unless we're already at the top.
+			broadcast.targetPosition.set((prev) => ({
+				...prev,
+				x: mouse.x / viewport.x - 0.5,
+				y: mouse.y / viewport.y - 0.5,
+				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
+			}));
+
+			this.#dragging = broadcast;
+		}
+		// Two touches - start pinch zoom
+		else if (this.#touches.size === 2) {
+			const touches = Array.from(e.touches);
+			const touch1 = touches[0];
+			const touch2 = touches[1];
+
+			// Calculate the center point between the two touches
+			const centerX = (touch1.clientX + touch2.clientX) / 2;
+			const centerY = (touch1.clientY + touch2.clientY) / 2;
+			const center = this.canvas.relative(centerX, centerY);
+
+			// Find the broadcast at the center point
+			const broadcast = this.#at(center);
+			if (!broadcast) return;
+
+			if (broadcast.locked()) return;
+
+			// Store the initial distance for pinch zoom
+			const dx = touch2.clientX - touch1.clientX;
+			const dy = touch2.clientY - touch1.clientY;
+			this.#pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
+			this.#pinchStartScale = broadcast.targetPosition.peek().scale ?? 1;
+
+			// Set as dragging to track which broadcast we're zooming
+			this.#dragging = broadcast;
+
+			// Bump the z-index
+			broadcast.targetPosition.set((prev) => ({
+				...prev,
+				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
+			}));
+		}
+	}
+
+	#onTouchMove(e: TouchEvent) {
+		if (this.#touches.size === 0) return;
+
+		const rect = this.canvas.element.getBoundingClientRect();
+
+		// Update touch positions
+		for (const touch of e.touches) {
+			if (this.#touches.has(touch.identifier)) {
+				const isOverCanvas =
+					touch.clientX >= rect.left &&
+					touch.clientX <= rect.right &&
+					touch.clientY >= rect.top &&
+					touch.clientY <= rect.bottom;
+
+				if (isOverCanvas) {
+					this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+				}
+			}
+		}
+
+		e.preventDefault();
+
+		// Single touch - drag
+		if (e.touches.length === 1 && this.#dragging) {
+			const touch = e.touches[0];
+			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
+			const viewport = this.canvas.viewport.peek();
+
+			// Update the position but don't publish it yet.
+			this.#dragging.targetPosition.set((prev) => ({
+				...prev,
+				x: mouse.x / viewport.x - 0.5,
+				y: mouse.y / viewport.y - 0.5,
+			}));
+		}
+		// Two touches - pinch zoom
+		else if (e.touches.length === 2 && this.#dragging) {
+			const touches = Array.from(e.touches);
+			const touch1 = touches[0];
+			const touch2 = touches[1];
+
+			// Calculate current distance
+			const dx = touch2.clientX - touch1.clientX;
+			const dy = touch2.clientY - touch1.clientY;
+			const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+			// Calculate scale factor
+			if (this.#pinchStartDistance > 0) {
+				const scaleFactor = currentDistance / this.#pinchStartDistance;
+				const newScale = this.#pinchStartScale * scaleFactor;
+
+				// Update the scale
+				this.#dragging.targetPosition.set((prev) => ({
+					...prev,
+					scale: Math.max(Math.min(newScale, 4), 0.25),
+				}));
+			}
+
+			// Also update position to the center of the pinch
+			const centerX = (touch1.clientX + touch2.clientX) / 2;
+			const centerY = (touch1.clientY + touch2.clientY) / 2;
+			const center = this.canvas.relative(centerX, centerY);
+			const viewport = this.canvas.viewport.peek();
+
+			this.#dragging.targetPosition.set((prev) => ({
+				...prev,
+				x: center.x / viewport.x - 0.5,
+				y: center.y / viewport.y - 0.5,
+			}));
+		}
+	}
+
+	#onTouchEnd(e: TouchEvent) {
+		// Remove ended touches
+		for (const touch of e.changedTouches) {
+			this.#touches.delete(touch.identifier);
+		}
+
+		// If all touches ended, publish the final position
+		if (this.#touches.size === 0 && this.#dragging) {
+			this.#dragging.publishPosition();
+			this.#dragging = undefined;
+			this.#hovering = undefined;
+			this.#pinchStartDistance = 0;
+			this.#pinchStartScale = 1;
+		}
+		// If we go from 2 touches to 1, switch from pinch to drag
+		else if (this.#touches.size === 1 && e.touches.length === 1) {
+			// Reset pinch state
+			this.#pinchStartDistance = 0;
+			this.#pinchStartScale = 1;
+
+			// Check if we should start dragging a different broadcast
+			const touch = e.touches[0];
+			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
+			const broadcast = this.#at(mouse);
+
+			if (broadcast && !broadcast.locked()) {
+				if (this.#dragging && this.#dragging !== broadcast) {
+					// Publish the old broadcast's position
+					this.#dragging.publishPosition();
+				}
+				this.#dragging = broadcast;
+			}
+		}
+
+		if (e.touches.length === 0) {
+			e.preventDefault();
+		}
+	}
+
+	#onTouchCancel(e: TouchEvent) {
+		// Clear all touches and reset state
+		this.#touches.clear();
+
+		if (this.#dragging) {
+			this.#dragging.publishPosition();
+			this.#dragging = undefined;
+			this.#hovering = undefined;
+			this.#pinchStartDistance = 0;
+			this.#pinchStartScale = 1;
+		}
+
+		e.preventDefault();
 	}
 
 	#at(point: Vector): Broadcast | undefined {
@@ -411,17 +627,15 @@ export class Space {
 			return;
 		}
 
-		const canvasArea = this.canvas.viewport.peek().area();
+		const canvas = this.canvas.viewport.peek();
+		const total = (canvas.x + canvas.y) / 2;
 
-		let broadcastArea = 0;
+		let covered = 0;
 		for (const broadcast of broadcasts) {
-			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y;
+			covered += (broadcast.video.targetSize.x + broadcast.video.targetSize.y) / 2;
 		}
 
-		const fillRatio = broadcastArea / canvasArea;
-		const targetFill = 0.25;
-
-		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 1.5);
+		this.#scale = Math.min(total / covered / 2, window.devicePixelRatio);
 	}
 
 	close() {

@@ -11,22 +11,30 @@ export type Name = z.infer<typeof nameSchema>;
 // TODO: Add proper type for Env.MOQ_JWK in worker-configuration.d.ts if needed
 
 export class Context {
-	#key?: Token.Key;
+	#key: Token.Key;
 	#env: Env;
 
 	constructor(env: Env) {
-		this.#key = env.RELAY_SECRET ? Token.load(env.RELAY_SECRET) : undefined;
+		this.#key = Token.load(env.RELAY_SECRET);
 		this.#env = env;
 	}
 
 	// Returns the URL to join the room
 	async sign(room: Name, account: Account.Id): Promise<URL> {
 		const root = `${this.#env.RELAY_PREFIX}/${room}`;
-		if (!this.#key) {
-			return new URL(root, this.#env.RELAY_URL);
-		}
+		// TODO add a field to force publishing, preventing someone from lurking.
+		const token = await Token.sign(this.#key, { root, get: "", put: account });
+		return new URL(`${root}/?jwt=${token}`, this.#env.RELAY_URL);
+	}
 
-		const token = await Token.sign(this.#key, { root, sub: "", pub: account });
+	// Returns a URL to preview a list of rooms
+	async signPreview(rooms: Name[]): Promise<URL> {
+		const root = this.#env.RELAY_PREFIX;
+		const token = await Token.sign(this.#key, {
+			root,
+			get: rooms,
+			// no put permission
+		});
 		return new URL(`${root}/?jwt=${token}`, this.#env.RELAY_URL);
 	}
 }

@@ -2,7 +2,7 @@ import * as Api from "@hang/api/client";
 import { Connection, Preview } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
-import { For, onCleanup, Show } from "solid-js";
+import { createEffect, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
 import IconChat from "~icons/mdi/message-text";
@@ -10,8 +10,100 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconVideo from "~icons/mdi/video";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 
-export function PreviewRoom(props: { connection: Connection; room: string; api: Api.Client }): JSX.Element {
-	const room = new Preview.Room(props.connection, { enabled: true });
+export function PreviewRoomCompact(props: {
+	connection: Connection;
+	path?: string;
+	api: Api.Client;
+	onMemberCountChange?: (count: number) => void;
+}): JSX.Element {
+	const room = new Preview.Room(props.connection, {
+		name: props.path ? Path.from(props.path) : undefined,
+		enabled: true,
+	});
+	onCleanup(() => room.close());
+
+	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
+
+	room.onMember((name, member) => {
+		setMembers(name, member ?? undefined);
+	});
+
+	// Track member count changes
+	createEffect(() => {
+		const count = Object.values(members).filter(Boolean).length;
+		props.onMemberCountChange?.(count);
+	});
+
+	const memberList = () => Object.values(members).filter(Boolean);
+
+	// Only show if there are members
+	return (
+		<Show when={memberList().length > 0}>
+			<div class="flex flex-wrap gap-2">
+				<For each={memberList()}>
+					{(member) => <Show when={member}>{(member) => <PreviewMemberCompact member={member()} />}</Show>}
+				</For>
+			</div>
+		</Show>
+	);
+}
+
+function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
+	const info = solid(props.member.info);
+	return (
+		<Show when={info()}>
+			{(info) => (
+				<div
+					class="relative flex items-center gap-2 p-2 rounded-lg flex-1 hover:scale-[1.05] transition-all duration-500"
+					style={{ "flex-basis": "calc(50% - 0.25rem)", "min-width": "140px" }}
+					classList={{
+						"ring-1 ring-green-400/50 bg-green-500/10": info().speaking,
+						"bg-gray-800/30": !info().speaking,
+					}}
+				>
+					<div class="relative">
+						<img src={info().avatar} alt={info().name} class="w-8 h-8 rounded-lg object-cover" />
+						<div
+							class="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-green-300 rounded-full border border-gray-900 shadow-lg flex items-center justify-center transition-all duration-300"
+							classList={{
+								"opacity-100 scale-100": info().speaking,
+								"opacity-0 scale-0": !info().speaking,
+							}}
+						>
+							<IconVolumeHigh class="w-2.5 h-2.5 text-gray-900" />
+							<Show when={info().speaking}>
+								<div class="absolute w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
+							</Show>
+						</div>
+					</div>
+					<div class="flex-1 min-w-0">
+						<div class="text-xs font-medium text-white truncate">{info().name}</div>
+						<div class="flex items-center gap-1">
+							<Show when={info().audio}>
+								<IconMicrophone class="w-3 h-3 text-green-400" />
+							</Show>
+							<Show when={info().video}>
+								<IconVideo class="w-3 h-3 text-blue-400" />
+							</Show>
+							<Show when={info().chat}>
+								<IconChat class="w-3 h-3 text-purple-400" />
+							</Show>
+							<Show when={info().speaking}>
+								<IconVolumeHigh class="w-3 h-3 text-green-300 animate-pulse" />
+							</Show>
+						</div>
+					</div>
+				</div>
+			)}
+		</Show>
+	);
+}
+
+export function PreviewRoom(props: { connection: Connection; path?: string; api: Api.Client }): JSX.Element {
+	const room = new Preview.Room(props.connection, {
+		name: props.path ? Path.from(props.path) : undefined,
+		enabled: true,
+	});
 	onCleanup(() => room.close());
 
 	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
@@ -37,7 +129,7 @@ export function PreviewRoom(props: { connection: Connection; room: string; api: 
 			>
 				<div class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500">
 					<For each={Object.values(members)}>
-						{(member) => <Show when={member}>{(member) => <RoomMember member={member()} />}</Show>}
+						{(member) => <Show when={member}>{(member) => <PreviewMember member={member()} />}</Show>}
 					</For>
 				</div>
 			</Show>
@@ -45,7 +137,7 @@ export function PreviewRoom(props: { connection: Connection; room: string; api: 
 	);
 }
 
-function RoomMember(props: { member: Preview.Member }): JSX.Element {
+function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 	const info = solid(props.member.info);
 	return (
 		<Show
@@ -66,12 +158,11 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 		>
 			{(info) => (
 				<div
-					class="group relative flex items-center gap-4 p-4 m-1 rounded-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+					class="group relative flex items-center gap-4 p-4 m-1 rounded-xl hover:scale-[1.05] transition-all duration-500"
 					classList={{
-						"bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent border border-green-400/20 shadow-lg shadow-green-500/5":
-							info().audio || info().video || info().chat,
+						"ring-2 ring-green-400/50 bg-green-500/10": info().speaking,
 						"bg-gradient-to-r from-gray-800/50 to-gray-800/30 hover:from-gray-700/50 hover:to-gray-700/30":
-							!info().audio && !info().video && !info().chat,
+							!info().speaking,
 					}}
 				>
 					<div class="relative z-10">
@@ -88,12 +179,18 @@ function RoomMember(props: { member: Preview.Member }): JSX.Element {
 								class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
 							/>
 						</div>
-						<Show when={info().speaking}>
-							<div class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center">
-								<IconVolumeHigh class="w-3 h-3 text-gray-900" />
+						<div
+							class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center transition-all duration-300"
+							classList={{
+								"opacity-100 scale-100": info().speaking,
+								"opacity-0 scale-0": !info().speaking,
+							}}
+						>
+							<IconVolumeHigh class="w-3 h-3 text-gray-900" />
+							<Show when={info().speaking}>
 								<div class="absolute w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
-							</div>
-						</Show>
+							</Show>
+						</div>
 					</div>
 					<div class="flex-1 min-w-0 relative z-10">
 						<div class="text-base font-semibold text-white truncate group-hover:text-green-100 transition-colors mb-1">

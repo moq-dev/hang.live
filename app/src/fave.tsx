@@ -1,6 +1,7 @@
 import * as Api from "@hang/api/client";
+import { Connection } from "@kixelated/hang";
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createResource, createSignal, For, Match, onMount, Show, Switch } from "solid-js";
+import { createMemo, createResource, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconDelete from "~icons/mdi/delete";
 import IconHeart from "~icons/mdi/heart";
@@ -12,6 +13,7 @@ import Dialog from "./components/dialog";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
 import Layout from "./layout/web";
+import { PreviewRoomCompact } from "./preview";
 import * as Random from "./util/random";
 
 export function Fave(props: { api: Api.Client }): JSX.Element {
@@ -30,6 +32,10 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 		return () => clearInterval(interval);
 	});
 
+	// Connection for live previews
+	const connection = new Connection();
+	onCleanup(() => connection.close());
+
 	const [favorites, { refetch }] = createResource(async () => {
 		if (!props.api.authenticated()) return null;
 
@@ -37,6 +43,7 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 			const response = await props.api.routes.fave.all.$get();
 			if (response.ok) {
 				const data = await response.json();
+				connection.url.set(new URL(data.token));
 				return data.favorites;
 			}
 		} catch (error) {
@@ -71,15 +78,6 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 			navigate(`/@${name}`);
 		}
 	};
-
-	// Determine how many favorites to show initially
-	const visibleFavorites = createMemo(() => {
-		const favs = favorites() || [];
-		if (showMore() || favs.length <= 6) {
-			return favs;
-		}
-		return favs.slice(0, 6);
-	});
 
 	return (
 		<Layout>
@@ -133,12 +131,14 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 										{(favs) => (
 											<>
 												<div class="space-y-3">
-													<For each={visibleFavorites()}>
+													<For each={favs()}>
 														{(favorite) => (
 															<FavoriteRoom
 																room={favorite.room}
 																createdAt={favorite.created_at}
 																onRemove={handleRemove}
+																connection={connection}
+																api={props.api}
 															/>
 														)}
 													</For>
@@ -217,8 +217,15 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 	);
 }
 
-function FavoriteRoom(props: { room: string; createdAt: number; onRemove: (room: string) => void }): JSX.Element {
+function FavoriteRoom(props: {
+	room: string;
+	createdAt: number;
+	onRemove: (room: string) => void;
+	connection: Connection;
+	api: Api.Client;
+}): JSX.Element {
 	const [removing, setRemoving] = createSignal(false);
+	const [memberCount, setMemberCount] = createSignal(0);
 
 	const handleRemove = async (e: MouseEvent) => {
 		e.preventDefault();
@@ -229,22 +236,32 @@ function FavoriteRoom(props: { room: string; createdAt: number; onRemove: (room:
 
 	return (
 		<div
-			class="group relative bg-gray-800/30 rounded-xl p-4 hover:bg-gray-800/50 transition-all flex items-center justify-between"
+			class="group relative bg-gray-800/30 rounded-xl px-5 py-3 hover:bg-gray-800/50 transition-all flex flex-col gap-3"
 			classList={{
 				"opacity-50 pointer-events-none": removing(),
 			}}
 		>
-			<a href={`/@${props.room}`} class="flex-1 min-w-0 cursor-pointer">
-				<h3 class="font-semibold text-lg truncate">{props.room}</h3>
-			</a>
-			<button
-				type="button"
-				onClick={handleRemove}
-				class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-500/20 rounded text-gray-400 hover:text-red-400 cursor-pointer ml-2"
-				title="Remove from favorites"
-			>
-				<IconDelete class="w-4 h-4" />
-			</button>
+			<div class="flex items-center justify-between">
+				<a href={`/@${props.room}`} class="flex-1 min-w-0 truncate cursor-pointer">
+					<h3 class="font-semibold text-lg truncate">{props.room}</h3>
+				</a>
+				<div class="relative flex items-center">
+					<Show when={memberCount() > 0}>
+						<span class="text-gray-400 font-semibold absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity">
+							{memberCount()}
+						</span>
+					</Show>
+					<button
+						type="button"
+						onClick={handleRemove}
+						class="opacity-0 group-hover:opacity-100 relative z-10 transition-all p-1 bg-gray-800 hover:bg-red-500/20 rounded text-gray-400 hover:text-red-400 cursor-pointer"
+						title="Remove from favorites"
+					>
+						<IconDelete class="w-4 h-4" />
+					</button>
+				</div>
+			</div>
+			<PreviewRoomCompact connection={props.connection} api={props.api} onMemberCountChange={setMemberCount} />
 		</div>
 	);
 }

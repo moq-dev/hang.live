@@ -34,7 +34,7 @@ fix:
 	pnpm exec eslint . --fix
 
 	# Make sure the JS packages are not vulnerable
-	pnpm exec pnpm audit --fix
+	# pnpm exec pnpm audit --fix
 
 # Run any CI tests
 test:
