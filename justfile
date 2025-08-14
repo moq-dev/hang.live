@@ -69,8 +69,11 @@ deploy env="staging":
 dev:
 	pnpm -r i
 
+	# Generate auth tokens if needed
+	@cd moq/rs && just auth-token
+
 	pnpm concurrently --kill-others --names api,app,native,relay --prefix-colors auto \
 		"just --justfile api/justfile dev" \
 		"just --justfile app/justfile dev" \
 		"just --justfile native/justfile dev" \
-		"just --justfile moq/justfile relay"
+		"just --justfile moq/justfile root"

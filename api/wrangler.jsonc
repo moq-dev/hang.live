@@ -60,8 +60,8 @@
 		"R2_PUBLIC_URL": "https://api.hang.dev:3000/public",
 
 		"RELAY_URL": "http://localhost:4443",
-		"RELAY_PREFIX": "anon"
-		// "RELAY_SECRET": <stored in .dev.vars>
+		"RELAY_PREFIX": "demo"
+		// "RELAY_SECRET": <stored in .dev.vars, set dynamically>
 	},
 
 	// Staging environment overrides
@@ -104,7 +104,7 @@
 
 				"R2_PUBLIC_URL": "https://public.hang.now",
 
-				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_URL": "https://relay.moq.dev",
 				"RELAY_PREFIX": "staging"
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
 			}
@@ -148,7 +148,7 @@
 
 				"R2_PUBLIC_URL": "https://public.hang.live",
 
-				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_URL": "https://relay.moq.dev",
 				"RELAY_PREFIX": "live"
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
 			}
