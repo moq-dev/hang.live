@@ -223,10 +223,10 @@ export class Room {
 			const message = effect.get(this.camera.chat.message);
 			if (!message) return;
 
-			// Clear the message after 5 seconds.
+			// Clear the message after 10 seconds.
 			effect.timer(() => {
 				this.camera.chat.message.set(undefined);
-			}, 5000);
+			}, 10000);
 		});
 
 		// Monitor VAD signal with some debouncing

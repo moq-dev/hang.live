@@ -1,10 +1,11 @@
 import { Effect } from "@kixelated/signals";
 import { render } from "solid-js/web";
-import IconText from "~icons/mdi/comment-text";
+import IconCaption from "~icons/mdi/microphone";
+import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
 
-export class Chat {
+export class Captions {
 	canvas: Canvas;
 	broadcast: Broadcast;
 
@@ -21,17 +22,19 @@ export class Chat {
 		const root = document.createElement("div");
 
 		this.signals.effect((effect) => {
-			const message = effect.get(this.broadcast.message);
-			if (!message) return;
+			if (!effect.get(Settings.renderCaptions)) return;
 
-			this.#message(effect, root, message.cloneNode(true));
+			const caption = effect.get(this.broadcast.source.audio.captions.text);
+			if (!caption) return;
+
+			this.#caption(effect, root, document.createTextNode(caption));
 		});
 
 		document.body.appendChild(root);
 		effect.cleanup(() => document.body.removeChild(root));
 	}
 
-	#message(effect: Effect, root: HTMLElement, node: Node) {
+	#caption(effect: Effect, root: HTMLElement, node: Node) {
 		const wrapper = document.createElement("div");
 		wrapper.className =
 			"flex items-center gap-2 px-3 py-2 backdrop-blur-md rounded-lg transition-opacity transition-transform duration-500 transform scale-125 opacity-0 shadow-lg bg-black/40 fixed max-w-sm";
@@ -56,14 +59,14 @@ export class Chat {
 				height: bounds.size.y * scaleY,
 			};
 
-			// Position message below the broadcast
-			const messageTop = pageBounds.y + pageBounds.height;
-			const top = Math.min(canvasRect.top + canvasRect.height - wrapper.clientHeight - 40, messageTop);
+			// Position caption ABOVE the broadcast
+			const captionBottom = pageBounds.y;
+			const top = Math.max(canvasRect.top, captionBottom - wrapper.clientHeight - 10);
 
-			// Center message horizontally on broadcast
-			const messageCenterX = pageBounds.x + pageBounds.width / 2;
+			// Center caption horizontally on broadcast
+			const captionCenterX = pageBounds.x + pageBounds.width / 2;
 			const left = Math.min(
-				Math.max(canvasRect.left, messageCenterX - wrapper.clientWidth / 2),
+				Math.max(canvasRect.left, captionCenterX - wrapper.clientWidth / 2),
 				canvasRect.left + canvasRect.width - wrapper.clientWidth,
 			);
 
@@ -81,7 +84,7 @@ export class Chat {
 		iconContainer.className = "animate-pulse";
 		wrapper.appendChild(iconContainer);
 
-		render(() => IconText({ class: "w-5 h-5 text-link-hue" }), iconContainer);
+		render(() => IconCaption({ class: "w-5 h-5 text-link-hue" }), iconContainer);
 
 		wrapper.appendChild(node);
 
@@ -99,7 +102,7 @@ export class Chat {
 			// Ensure smooth fade out
 			wrapper.style.transition = "all 500ms ease-out";
 			wrapper.style.opacity = "0";
-			wrapper.style.transform = "scale(0.95) translateY(-10px)";
+			wrapper.style.transform = "scale(0.95) translateY(10px)";
 			wrapper.style.pointerEvents = "none";
 
 			setTimeout(() => {
