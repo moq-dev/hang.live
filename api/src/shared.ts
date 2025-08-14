@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // This could be an RPC endpoint in the future.
-export const oauthProviders = ["google", "discord"] as const;
+export const oauthProviders = ["google", "discord", "apple"] as const;
 
 // This could be an RPC endpoint in the future.
 export function randomAvatar(): string {

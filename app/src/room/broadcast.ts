@@ -3,12 +3,17 @@ import { type Catalog, Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
-import { loadMeme } from "../meme";
 import { Audio, type AudioProps } from "./audio";
+import { Canvas } from "./canvas";
+import { Captions } from "./captions";
+import { Chat } from "./chat";
+import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
+import { Sound } from "./sound";
 import { Video } from "./video";
 
-export type BroadcastSource = Watch.Broadcast | Publish.Broadcast;
+export type BroadcastSource = Watch.Broadcast | Publish.Broadcast | FakeBroadcast;
+
 export type ChatMessage = {
 	audio?: HTMLAudioElement;
 	video?: HTMLVideoElement;
@@ -29,9 +34,113 @@ renderer.link = ({ href, title, text }) => {
 
 marked.use({ renderer });
 
+// Weighted join announcements with varying rarity
+const JOIN_ANNOUNCEMENTS = [
+	// Common (70% chance total)
+	{ text: "{name} joined.", weight: 20 },
+	{ text: "Sup {name}.", weight: 15 },
+	{ text: "{name} is here.", weight: 10 },
+	{ text: "What's up {name}?", weight: 10 },
+	{ text: "Yo {name}.", weight: 10 },
+	{ text: "{name} has entered.", weight: 8 },
+	{ text: "Welcome {name}.", weight: 7 },
+
+	// Uncommon (20% chance total)
+	{ text: "{name} has arrived.", weight: 4 },
+	{ text: "{name} rolled up.", weight: 3 },
+	{ text: "{name} showed up.", weight: 3 },
+	{ text: "{name} slid in.", weight: 2.5 },
+	{ text: "{name} just dropped.", weight: 2.5 },
+	{ text: "Look who it is, {name}.", weight: 2 },
+	{ text: "{name} in the building.", weight: 2 },
+	{ text: "{name} has graced us.", weight: 1 },
+
+	// Rare (8% chance total)
+	{ text: "Behold, {name} approaches.", weight: 1.5 },
+	{ text: "{name} has manifested.", weight: 1.5 },
+	{ text: "Alert: {name} detected.", weight: 1 },
+	{ text: "{name} teleported in.", weight: 1 },
+	{ text: "A wild {name} appeared.", weight: 1 },
+	{ text: "{name} spawned", weight: 1 },
+	{ text: "{name} has entered the chat.", weight: 0.5 },
+	{ text: "Everybody act normal, {name} is here.", weight: 0.5 },
+
+	// Ultra-rare (2% chance total)
+	{ text: "Praise be, the lord and savior {name} has graced us with their presence.", weight: 0.3 },
+	{ text: "Ladies and gentlemen, we got {name} here.", weight: 0.3 },
+	{ text: "Stop everything, {name} has blessed us with their divine presence.", weight: 0.2 },
+	{ text: "Breaking news: {name} has been spotted in the vicinity.", weight: 0.2 },
+	{ text: "The prophecy foretold of {name}'s arrival.", weight: 0.2 },
+	{ text: "Historians will mark this moment: {name} has joined.", weight: 0.2 },
+	{ text: "The legends spoke of this day when {name} would join us.", weight: 0.15 },
+	{ text: "Sound the horns, {name} has arrived at the gates.", weight: 0.15 },
+	{ text: "By the ancient laws, we welcome {name} to our realm.", weight: 0.1 },
+	{ text: "The stars have aligned to bring us {name}.", weight: 0.1 },
+	{
+		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has joined the hang!",
+		weight: 0.01,
+	},
+] as const;
+
+const JOIN_ANNOUNCEMENTS_WEIGHT = JOIN_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
+
+// Weighted leave announcements with varying rarity
+const LEAVE_ANNOUNCEMENTS = [
+	// Common (70% chance total)
+	{ text: "{name} has left.", weight: 20 },
+	{ text: "{name} left.", weight: 15 },
+	{ text: "Bye {name}.", weight: 10 },
+	{ text: "{name} is gone.", weight: 8 },
+	{ text: "{name} disconnected.", weight: 7 },
+	{ text: "See ya {name}.", weight: 5 },
+	{ text: "{name} dipped.", weight: 5 },
+
+	// Uncommon (20% chance total)
+	{ text: "{name} peaced out.", weight: 3 },
+	{ text: "{name} bounced.", weight: 3 },
+	{ text: "{name} vanished.", weight: 2.5 },
+	{ text: "{name} has departed.", weight: 2 },
+	{ text: "{name} ghosted.", weight: 2 },
+	{ text: "{name} rage quit.", weight: 2 },
+	{ text: "{name} went to get milk.", weight: 1.5 },
+	{ text: "{name} has abandoned us.", weight: 1.5 },
+	{ text: "{name} evaporated.", weight: 1.5 },
+
+	// Rare (8% chance total)
+	{ text: "{name} died.", weight: 1.5 },
+	{ text: "{name} got thanos snapped.", weight: 1 },
+	{ text: "{name} returned to the void.", weight: 1 },
+	{ text: "{name} has been yeeted from existence.", weight: 1 },
+	{ text: "{name} faded away.", weight: 0.8 },
+	{ text: "Press F to pay respects, {name} is gone.", weight: 0.8 },
+	{ text: "{name} has left the chat.", weight: 0.5 },
+	{ text: "{name} went poof.", weight: 0.5 },
+	{ text: "{name} disconnected from the matrix.", weight: 0.5 },
+	{ text: "{name} was recalled to headquarters.", weight: 0.4 },
+
+	// Ultra-rare (2% chance total)
+	{ text: "The universe is a sadder place now that {name} has left.", weight: 0.3 },
+	{ text: "And thus {name} departed, never to be seen again... probably.", weight: 0.25 },
+	{ text: "{name} has ascended to a higher plane of existence.", weight: 0.2 },
+	{ text: "Historians will note the tragic departure of {name}.", weight: 0.2 },
+	{ text: "With a heavy heart, we bid farewell to {name}.", weight: 0.2 },
+	{ text: "The prophecy has been fulfilled, {name} has left us.", weight: 0.15 },
+	{ text: "{name} has been banished to the shadow realm.", weight: 0.15 },
+	{ text: "Legends say {name} will return... but not today.", weight: 0.15 },
+	{ text: "As foretold by the ancients, {name} has departed.", weight: 0.1 },
+	{ text: "The void calls, and {name} must answer.", weight: 0.1 },
+	{ text: "{name} has gone where no one can follow.", weight: 0.1 },
+	{ text: "{name} has been sent to the void.", weight: 0.1 },
+	{
+		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has left the hang!",
+		weight: 0.01,
+	},
+];
+
+const LEAVE_ANNOUNCEMENTS_WEIGHT = LEAVE_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
+
 export type BroadcastProps = {
-	viewport: Signal<Vector>;
-	audio: AudioProps;
+	audio?: AudioProps;
 
 	position?: Catalog.Position;
 	camera?: Publish.Broadcast;
@@ -50,12 +159,13 @@ type Position = {
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	source: T;
-
-	// The canvas size, 0 to width/height.
-	viewport: Signal<Vector>;
+	canvas: Canvas;
+	sound: Sound;
 
 	audio: Audio;
 	video: Video;
+	chat: Chat;
+	captions: Captions;
 
 	// The current chat message, if any.
 	message = new Signal<DocumentFragment | undefined>(undefined);
@@ -73,9 +183,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
 
-	// The display name of the broadcaster.
-	display = new Signal<string | undefined>(undefined);
 	avatar = new Image();
+	name = new Signal<string | undefined>(undefined);
 
 	// The target position of the broadcast, while bounds contains the actual position.
 	// This is separate from the source.location.current so we can temporarily use our own value.
@@ -92,9 +201,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
 
-	constructor(source: T, props: BroadcastProps) {
+	constructor(source: T, canvas: Canvas, sound: Sound, props?: BroadcastProps) {
 		this.source = source;
-		this.viewport = props.viewport;
+		this.canvas = canvas;
+		this.sound = sound;
 		this.online = new Signal(props?.online ?? true);
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
@@ -109,21 +219,22 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.targetPosition = new Signal(position);
 
 		this.video = new Video(this);
-		this.audio = new Audio(this, props.audio);
-
-		const canvas = this.viewport.peek();
+		this.audio = new Audio(this, sound, props?.audio);
+		this.chat = new Chat(this, canvas);
+		this.captions = new Captions(this, canvas);
 
 		// Actually start the
 		// TODO This seems kinda buggy?
+		const viewport = this.canvas.viewport.peek();
 		const startPosition = Vector.create(position.x, position.y)
 			.normalize()
-			.mult(canvas.length())
-			.add(canvas.div(2));
+			.mult(viewport.length())
+			.add(viewport.div(2));
 		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
 		this.signals.effect((effect) => {
-			if (!effect.get(this.source.enabled)) {
+			if (!effect.get(this.online)) {
 				// Change the target position to somewhere outside the screen.
 				this.targetPosition.set((prev) => {
 					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
@@ -152,6 +263,12 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		// TODO Only start a broadcast after receiving the catalog to avoid this.
 		this.avatar.src = Api.randomAvatar();
 
+		// A separate signal to deduplicate name updates.
+		this.signals.effect((effect) => {
+			const user = effect.get(this.source.user);
+			this.name.set(user?.name);
+		});
+
 		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
 		this.signals.effect((effect) => {
 			const user = effect.get(this.source.user);
@@ -164,13 +281,24 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const load = () => {
 				this.avatar = newAvatar;
 			};
-			newAvatar.addEventListener("load", load);
-			effect.cleanup(() => newAvatar.removeEventListener("load", load));
+
+			effect.eventListener(newAvatar, "load", load);
 		});
 
-		// The display name is the user's name or the name if they don't have a name.
 		this.signals.effect((effect) => {
-			this.display.set(effect.get(this.source.user)?.name ?? effect.get(this.source.name));
+			if (!effect.get(this.online)) return;
+
+			const name = effect.get(this.name);
+			if (!name) return;
+			this.sound.say(this.#getJoinAnnouncement(name));
+		});
+
+		this.signals.effect((effect) => {
+			if (effect.get(this.online)) return;
+
+			const name = effect.get(this.name);
+			if (!name) return;
+			this.sound.say(this.getLeaveAnnouncement(name));
 		});
 
 		this.signals.effect(this.#runChat.bind(this));
@@ -179,6 +307,38 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		if (props?.camera && this.source instanceof Watch.Broadcast) {
 			this.#initRemote(this.source, props.camera, props.screen);
 		}
+	}
+
+	// Get a weighted random join announcement
+	#getJoinAnnouncement(name: string): string {
+		const random = Math.random() * JOIN_ANNOUNCEMENTS_WEIGHT;
+		let accumulated = 0;
+
+		for (const announcement of JOIN_ANNOUNCEMENTS) {
+			accumulated += announcement.weight;
+			if (random <= accumulated) {
+				return announcement.text.replace("{name}", name);
+			}
+		}
+
+		// Fallback (should never reach here)
+		return `${name} joined`;
+	}
+
+	// Get a weighted random leave announcement
+	getLeaveAnnouncement(name: string): string {
+		const random = Math.random() * LEAVE_ANNOUNCEMENTS_WEIGHT;
+		let accumulated = 0;
+
+		for (const announcement of LEAVE_ANNOUNCEMENTS) {
+			accumulated += announcement.weight;
+			if (random <= accumulated) {
+				return announcement.text.replace("{name}", name);
+			}
+		}
+
+		// Fallback (should never reach here)
+		return `${name} has left`;
 	}
 
 	// Special logic for only remote broadcasts.
@@ -195,7 +355,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		// Request the position we should use from this remote broadcast.
 		this.signals.effect((effect) => {
 			// Only update the camera position if the local broadcast allows it.
-			if (!effect.get(camera.location.peering)) return;
+			if (!effect.get(camera.location.handle)) return;
 
 			const position = effect.get(cameraUpdates.location);
 			if (!position) return;
@@ -210,7 +370,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 			this.signals.effect((effect) => {
 				// Only update the screen position if the local broadcast allows it.
-				if (!effect.get(screen.location.peering)) return;
+				if (!effect.get(screen.location.handle)) return;
 
 				const position = effect.get(screenUpdates.location);
 				if (!position) return;
@@ -229,10 +389,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			if (!effect.get(camera.published)) return;
 
 			// Only set the handle if the broadcast allows peering.
-			if (!effect.get(this.source.location.peering)) return;
+			const handle = effect.get(this.source.location.handle);
+			if (!handle) return;
 
-			peer.handle.set(effect.get(this.source.name));
-			effect.cleanup(() => peer.handle.set(undefined));
+			effect.set(peer.handle, handle);
 		});
 
 		this.#locationPeer = peer;
@@ -246,7 +406,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// First, try to match the message to a known video/sound file.
 		if (msg.startsWith("/")) {
-			const meme = loadMeme(msg.slice(1));
+			const meme = this.audio.sound.meme(msg.slice(1));
 			if (meme) {
 				this.meme.set((prev) => {
 					prev?.pause();
@@ -268,17 +428,17 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			RETURN_DOM_FRAGMENT: true,
 		});
 
-		this.audio.notifications.play("chat");
+		this.audio.sound.notification("chat");
 
 		effect.set(this.message, sanitized);
 	}
 
 	// TODO Also make scale a signal
-	tick(now: DOMHighResTimeStamp, scale: number) {
-		this.video.tick(now);
+	tick(scale: number) {
+		this.video.tick();
 
 		const bounds = this.bounds.peek().clone(); //  clone is needed so SolidJS can track changes
-		const viewport = this.viewport.peek();
+		const viewport = this.canvas.viewport.peek();
 
 		const targetPosition = this.targetPosition.peek();
 
@@ -345,7 +505,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns true if the broadcaster is locked to a position.
 	locked(): boolean {
 		if (this.source instanceof Watch.Broadcast) {
-			return !this.source.location.peering.peek();
+			return !this.source.location.handle.peek();
 		}
 
 		return false;
@@ -435,5 +595,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.close();
 		this.source.close();
 		this.audio.close();
+		this.chat.close();
+		this.captions.close();
 	}
 }

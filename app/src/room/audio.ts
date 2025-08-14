@@ -2,13 +2,13 @@ import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import { type Notifications, PannedNotifications } from "./notifications";
+import { PannedNotifications as PannedSound, Sound } from "./sound";
 
 const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
 export type AudioProps = {
-	notifications: Notifications;
+	sound?: Sound;
 	pan?: number;
 };
 
@@ -26,7 +26,7 @@ export class Audio {
 
 	// We use a different AudioContext for notifications, so we need a separate analyser.
 	// TODO reuse if the sample rate is the same?
-	notifications: PannedNotifications;
+	sound: PannedSound;
 
 	#volumeSmoothed = 0;
 
@@ -35,28 +35,24 @@ export class Audio {
 
 	#signals = new Effect();
 
-	constructor(broadcast: Broadcast, props: AudioProps) {
+	constructor(broadcast: Broadcast, sound: Sound, props?: AudioProps) {
 		this.broadcast = broadcast;
 		this.pan = new Signal(props?.pan ?? 0);
 
-		this.notifications = new PannedNotifications(props.notifications, this.pan);
+		this.sound = new PannedSound(sound, this.pan);
 
 		this.#signals.effect((effect) => {
 			const meme = effect.get(this.broadcast.meme);
 			if (!meme) return;
 
-			const source = new MediaElementAudioSourceNode(this.notifications.context, { mediaElement: meme });
+			const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: meme });
 
 			// Use the existing notifications context so we don't need to create our own panner/volume.
-			this.notifications.connect(source);
+			this.sound.connect(source);
 			effect.cleanup(() => source.disconnect());
 		});
 
 		this.#signals.effect((effect) => {
-			// Don't analyze the audio in potato mode.
-			// TODO I'm just assuming this is slow. Use SIMD?
-			if (effect.get(Settings.potato)) return;
-
 			const root = effect.get(this.broadcast.source.audio.root);
 			if (!root) return;
 
@@ -90,6 +86,7 @@ export class Audio {
 			effect.cleanup(() => gain.gain.cancelScheduledValues(gain.context.currentTime));
 
 			const volume = effect.get(Settings.muted) ? 0 : effect.get(Settings.volume);
+
 			if (volume < GAIN_MIN) {
 				gain.gain.exponentialRampToValueAtTime(GAIN_MIN, gain.context.currentTime + FADE_TIME);
 				gain.gain.setValueAtTime(0, gain.context.currentTime + FADE_TIME + 0.01);
@@ -99,14 +96,14 @@ export class Audio {
 		});
 
 		// Don't output to the speakers if we're publishing the broadcast.
-		if (this.broadcast.source instanceof Watch.Broadcast) {
+		if (!(this.broadcast.source instanceof Publish.Broadcast)) {
 			this.#signals.effect(this.#runOutput.bind(this));
 		}
 
 		// Track speaking state from publish broadcast
 		this.#signals.effect((effect) => {
 			if (this.broadcast.source instanceof Publish.Broadcast) {
-				const speaking = effect.get(this.broadcast.source.audio.speaking);
+				const speaking = effect.get(this.broadcast.source.audio.captions.speaking);
 				this.#speaking = speaking ?? false;
 			}
 		});
@@ -141,8 +138,6 @@ export class Audio {
 	}
 
 	renderBackground(ctx: CanvasRenderingContext2D) {
-		if (Settings.potato.peek()) return;
-
 		ctx.save();
 
 		const bounds = this.broadcast.bounds.peek();
@@ -170,7 +165,7 @@ export class Audio {
 
 	render(ctx: CanvasRenderingContext2D) {
 		// Compute average volume
-		const analyserBuffer = this.notifications.analyze();
+		const analyserBuffer = this.sound.analyze();
 		if (!analyserBuffer) return; // undefined in potato mode
 
 		const bounds = this.broadcast.bounds.peek();

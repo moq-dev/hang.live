@@ -3,6 +3,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import Icons from "unplugin-icons/vite";
 import { defineConfig } from "vite";
+import basicSsl from "vite-plugin-mkcert";
 import solid from "vite-plugin-solid";
 
 const host = process.env.TAURI_DEV_HOST;
@@ -21,7 +22,14 @@ export default defineConfig(async () => ({
 		format: "es",
 	},
 
-	plugins: [solid(), Icons({ scale: 1, compiler: "solid" }), tailwindcss()],
+	plugins: [
+		solid(),
+		Icons({ scale: 1, compiler: "solid" }),
+		tailwindcss(),
+		basicSsl({
+			hosts: ["localhost", "hang.dev"],
+		}),
+	],
 
 	resolve: {
 		dedupe: ["solid-js"],
@@ -32,8 +40,9 @@ export default defineConfig(async () => ({
 	server: {
 		port: 1420,
 		strictPort: true,
-		host: host || false,
+		host: host || "hang.dev",
 		hmr: false,
+		https: true,
 		// Add client-side routing support
 		historyApiFallback: {
 			rewrites: [{ from: /.*/, to: "/index.html" }],

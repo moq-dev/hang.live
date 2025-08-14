@@ -1,26 +1,37 @@
 import * as Api from "@hang/api/client";
-import { useParams } from "@solidjs/router";
-import { createEffect, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { Connection } from "@kixelated/hang";
+import {
+	Accessor,
+	createEffect,
+	createResource,
+	createSignal,
+	Match,
+	onCleanup,
+	onMount,
+	Show,
+	Switch,
+} from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
 import IconAccountEdit from "~icons/mdi/account-edit";
 import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
-import IconVideo from "~icons/mdi/video";
-import { AnotherOne } from "./another-one";
-import { Canvas } from "./canvas";
-import { Chat } from "./chat";
+import IconPlay from "~icons/mdi/play";
+import AnotherOne from "./components/another-one";
+import Gradient from "./components/gradient";
+import Login from "./components/login";
 import { Controls } from "./controls";
-import { useAnimatedGradient } from "./gradient";
-import { Layout } from "./layout";
-import { LoginButtons } from "./login-buttons";
+import AppLayout from "./layout/app";
+import WebLayout from "./layout/web";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
+import { Canvas } from "./room/canvas";
 
 interface Info {
 	name: string;
 	avatar: string;
 	guest: boolean;
+	account: Api.Account.Id;
 }
 
 function randomName(): string {
@@ -31,37 +42,67 @@ function randomName(): string {
 	});
 }
 
-export function Sup(props: { canvas: Canvas; api: Api.Client }): JSX.Element {
+export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
 	const [info, setInfo] = createSignal<Info | undefined>(undefined);
-	const room = useParams().room;
+
+	const connection = new Connection();
+	onCleanup(() => connection.close());
+
+	const [account] = createResource(async () => {
+		// Given the room name, fetch a cooresponding token from the API server.
+		const response = await props.api.routes.room[":name"].join.$post({ param: { name: props.room } });
+		if (!response.ok) {
+			throw new Error(`Failed to join room: ${response.statusText}`);
+		}
+		const data = await response.json();
+
+		connection.url.set(new URL(data.url));
+		return data.account;
+	});
 
 	return (
-		<Show when={info()} fallback={<Preview api={props.api} room={room} join={setInfo} />}>
-			{(info) => <App canvas={props.canvas} api={props.api} room={room} info={info()} />}
+		<Show
+			when={info()}
+			fallback={
+				<Preview connection={connection} api={props.api} room={props.room} join={setInfo} account={account} />
+			}
+		>
+			{(info) => (
+				<App connection={connection} canvas={props.canvas} api={props.api} room={props.room} info={info()} />
+			)}
 		</Show>
 	);
 }
 
-function App(props: { canvas: Canvas; room: string; api: Api.Client; info: Info }): JSX.Element {
-	const room = new Room(props.canvas, props.api, {
+function App(props: {
+	connection: Connection;
+	canvas: Canvas;
+	room: string;
+	api: Api.Client;
+	info: Info;
+}): JSX.Element {
+	const room = new Room(props.connection, props.canvas, {
 		name: props.room,
 		user: props.info.name,
 		avatar: props.info.avatar,
+		account: props.info.account,
 	});
-
 	onCleanup(() => room.close());
 
 	return (
-		<Layout app={true} connection={room.connection} api={props.api}>
-			<Chat canvas={props.canvas} room={room} />
+		<AppLayout connection={room.connection} api={props.api} room={props.room}>
 			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
-		</Layout>
+		</AppLayout>
 	);
 }
 
-function Preview(props: { api: Api.Client; room: string; join: (info: Info) => void }): JSX.Element {
-	const gradient = useAnimatedGradient();
-
+function Preview(props: {
+	connection: Connection;
+	api: Api.Client;
+	room: string;
+	join: (info: Info) => void;
+	account: Accessor<Api.Account.Id | undefined>;
+}): JSX.Element {
 	const [info, setInfo] = createSignal<Info | undefined>(undefined);
 
 	const join = () => {
@@ -70,9 +111,9 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 	};
 
 	return (
-		<Layout app={false} api={props.api}>
+		<WebLayout>
 			<div class="max-w-7xl p-4">
-				<div class="font-semibold mb-4 text-center text-gray-400">ready to hang?</div>
+				<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
 				{/* Join Button */}
 				<div class="mb-12 flex justify-center">
@@ -80,15 +121,15 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 						type="button"
 						class="min-w-64 px-6 py-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer text-lg"
 						classList={{
-							"opacity-50 cursor-not-allowed": !info(),
+							"opacity-50 cursor-not-allowed": !info() || !props.account(),
 						}}
 						onClick={join}
 						style={{
-							background: gradient.linear(),
+							background: Gradient(),
 							"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 						}}
 					>
-						<IconVideo class="w-5 h-5 inline mr-2" />
+						<IconPlay class="w-5 h-5 inline mr-2" />
 						<Switch>
 							<Match when={!info()}>Loading...</Match>
 							<Match when={info()?.guest}>Join as Guest</Match>
@@ -101,45 +142,67 @@ function Preview(props: { api: Api.Client; room: string; join: (info: Info) => v
 				<div class="flex flex-wrap gap-6 mb-8 items-start">
 					{/* Left Column: Participants List */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<PreviewRoom room={props.room} api={props.api} />
+						<PreviewRoom connection={props.connection} api={props.api} />
 					</div>
 
 					{/* Right Column: Avatar/Name Preview */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<Show
-							when={props.api.authenticated()}
-							fallback={
-								<div class="rounded-2xl border border-gray-800 p-6">
-									<AnonymousPreview api={props.api} room={props.room} setInfo={setInfo} />
-								</div>
-							}
-						>
-							<div class="rounded-2xl border border-gray-800 p-6">
-								<AuthenticatedPreview api={props.api} room={props.room} setInfo={setInfo} />
-							</div>
+						<Show when={props.account()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
+							{(account) => (
+								<Show
+									when={props.api.authenticated()}
+									fallback={
+										<div class="rounded-2xl border border-gray-800 p-6">
+											<AnonymousPreview
+												api={props.api}
+												room={props.room}
+												setInfo={setInfo}
+												account={account()}
+											/>
+										</div>
+									}
+								>
+									<div class="rounded-2xl border border-gray-800 p-6">
+										<AuthenticatedPreview
+											api={props.api}
+											room={props.room}
+											setInfo={setInfo}
+											account={account()}
+										/>
+									</div>
+								</Show>
+							)}
 						</Show>
 
 						{/* Login Options - only show for guests */}
 						<Show when={!props.api.authenticated()}>
-							<LoginButtons api={props.api} message="...or login to customize your profile" />
+							<div class="rounded-2xl border border-gray-800 p-6">
+								<div class="text-center text-gray-400">...or login to customize your profile</div>
+								<Login api={props.api} />
+							</div>
 						</Show>
 
 						{/* <MicrophoneControl /> */}
 					</div>
 				</div>
 			</div>
-		</Layout>
+		</WebLayout>
 	);
 }
 
-function AnonymousPreview(props: { api: Api.Client; room: string; setInfo: (info: Info) => void }): JSX.Element {
+function AnonymousPreview(props: {
+	api: Api.Client;
+	room: string;
+	setInfo: (info: Info) => void;
+	account: Api.Account.Id;
+}): JSX.Element {
 	const [avatar, setAvatar] = createSignal(Api.randomAvatar());
 	const [name, setName] = createSignal(randomName());
 	const [avatarClicks, setAvatarClicks] = createSignal(0);
 	const [nameClicks, setNameClicks] = createSignal(0);
 
 	createEffect(() => {
-		props.setInfo({ name: name(), avatar: avatar(), guest: true });
+		props.setInfo({ name: name(), avatar: avatar(), guest: true, account: props.account });
 	});
 
 	const handleRandomAvatar = () => {
@@ -222,13 +285,18 @@ function AnonymousPreview(props: { api: Api.Client; room: string; setInfo: (info
 	);
 }
 
-function AuthenticatedPreview(props: { api: Api.Client; room: string; setInfo: (info: Info) => void }): JSX.Element {
+function AuthenticatedPreview(props: {
+	api: Api.Client;
+	room: string;
+	setInfo: (info: Info) => void;
+	account: Api.Account.Id;
+}): JSX.Element {
 	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
 
 	createEffect(() => {
 		const i = info();
-		if (i) props.setInfo({ name: i.name, avatar: i.avatar, guest: false });
+		if (i) props.setInfo({ name: i.name, avatar: i.avatar, guest: false, account: props.account });
 	});
 
 	onMount(async () => {
