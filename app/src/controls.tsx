@@ -118,7 +118,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 			<button
 				type="button"
 				onClick={toggle}
-				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
 				role="switch"
 				aria-checked={!!media()}
 				aria-label="Toggle camera"
@@ -148,7 +148,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 			<button
 				type="button"
 				onClick={toggle}
-				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
 				role="switch"
 				aria-checked={!!media()}
 				aria-label="Toggle screen sharing"

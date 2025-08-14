@@ -5,6 +5,7 @@ import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { Audio, type AudioProps } from "./audio";
 import { Canvas } from "./canvas";
+import { Captions } from "./captions";
 import { Chat } from "./chat";
 import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
@@ -164,6 +165,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	audio: Audio;
 	video: Video;
 	chat: Chat;
+	captions: Captions;
 
 	// The current chat message, if any.
 	message = new Signal<DocumentFragment | undefined>(undefined);
@@ -219,6 +221,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.video = new Video(this);
 		this.audio = new Audio(this, sound, props?.audio);
 		this.chat = new Chat(this, canvas);
+		this.captions = new Captions(this, canvas);
 
 		// Actually start the
 		// TODO This seems kinda buggy?
@@ -592,5 +595,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.close();
 		this.source.close();
 		this.audio.close();
+		this.chat.close();
+		this.captions.close();
 	}
 }
