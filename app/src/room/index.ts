@@ -147,6 +147,8 @@ export class Room {
 				constraints: {
 					frameRate: { ideal: 60 },
 					resizeMode: "none",
+					width: { max: 1920 },
+					height: { max: 1080 },
 				},
 			},
 			user: {

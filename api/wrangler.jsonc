@@ -104,7 +104,7 @@
 
 				"R2_PUBLIC_URL": "https://public.hang.now",
 
-				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_URL": "https://relay.moq.dev",
 				"RELAY_PREFIX": "staging"
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
 			}
@@ -148,7 +148,7 @@
 
 				"R2_PUBLIC_URL": "https://public.hang.live",
 
-				"RELAY_URL": "https://relay.quic.video",
+				"RELAY_URL": "https://relay.moq.dev",
 				"RELAY_PREFIX": "live"
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
 			}

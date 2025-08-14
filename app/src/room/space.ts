@@ -627,17 +627,15 @@ export class Space {
 			return;
 		}
 
-		const canvasArea = this.canvas.viewport.peek().area();
+		const canvas = this.canvas.viewport.peek();
+		const total = (canvas.x + canvas.y) / 2;
 
-		let broadcastArea = 0;
+		let covered = 0;
 		for (const broadcast of broadcasts) {
-			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y;
+			covered += (broadcast.video.targetSize.x + broadcast.video.targetSize.y) / 2;
 		}
 
-		const fillRatio = broadcastArea / canvasArea;
-		const targetFill = 0.25;
-
-		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 1.5);
+		this.#scale = Math.min(total / covered / 2, window.devicePixelRatio);
 	}
 
 	close() {
