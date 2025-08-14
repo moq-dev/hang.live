@@ -60,14 +60,14 @@ export class FakeBroadcast {
 			const message = effect.get(this.chat.message);
 			if (!message) return;
 
-			effect.timer(() => this.chat.message.set(undefined), 5000);
+			effect.timer(() => this.chat.message.set(undefined), 10000);
 		});
 
 		this.signals.effect((effect) => {
 			const caption = effect.get(this.audio.captions.text);
 			if (!caption) return;
 
-			effect.timer(() => this.audio.captions.text.set(undefined), 5000);
+			effect.timer(() => this.audio.captions.text.set(undefined), 10000);
 		});
 	}
 
