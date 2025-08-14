@@ -27,15 +27,25 @@ export function Controls(props: {
 }): JSX.Element {
 	return (
 		<div class="controls pointer-gaps" role="toolbar" aria-label="Media controls">
-			<Microphone audio={props.camera.audio} />
-			<Camera video={props.camera.video} room={props.room} />
-			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
-			<Chat broadcast={props.camera} />
-			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
-			<Volume room={props.room} />
-			<ClosedCaptions />
-			<Advanced />
-			<Fullscreen canvas={props.canvas} />
+			{/* Left group */}
+			<div class="flex gap-inherit">
+				<Microphone audio={props.camera.audio} />
+				<Camera video={props.camera.video} room={props.room} />
+				<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
+			</div>
+
+			{/* Center group */}
+			<div class="flex-1 flex justify-center">
+				<Chat broadcast={props.camera} />
+			</div>
+
+			{/* Right group */}
+			<div class="flex gap-inherit">
+				<Volume room={props.room} />
+				<ClosedCaptions />
+				<Advanced />
+				<Fullscreen canvas={props.canvas} />
+			</div>
 		</div>
 	);
 }
@@ -279,17 +289,17 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	};
 
 	return (
-		<form id="chat" onSubmit={submit} class="flex-1 min-w-48">
+		<form id="chat" onSubmit={submit} class="w-full max-w-md">
 			<input
 				type="text"
 				autocomplete="off"
-				placeholder="chat"
+				placeholder="type to chat"
 				ref={setInput}
 				value={message()}
 				onInput={(e) => setMessage(e.currentTarget.value)}
 				aria-label="Chat message"
 				tabIndex={0}
-				class="w-full"
+				class="w-full text-center placeholder:text-center"
 			/>
 		</form>
 	);
