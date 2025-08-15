@@ -248,7 +248,6 @@ export class Local {
 			const info = effect.get(this.info);
 			if (!info) return;
 
-
 			effect.set(this.camera.user, info);
 			effect.set(this.screen.user, { ...info, name: `${info.name} (Screen)` });
 			effect.set(this.camera.preview.info, info);
