@@ -13,13 +13,11 @@ export const idSchema = Auth.accountIdSchema;
 export type Id = Auth.AccountId;
 
 // Account schemas
-export const infoSchema = z.object({
-	// Defined in jwt to avoid circular dependency
-	id: idSchema,
-	name: z.string(),
-	email: z.string().check(z.email()),
-	avatar: z.string(),
-});
+export interface Info {
+	id: Id;
+	name: string;
+	avatar: string;
+}
 
 export const createSchema = z.object({
 	name: z.string().check(z.minLength(4), z.maxLength(100)),
@@ -27,7 +25,6 @@ export const createSchema = z.object({
 	avatar: z.optional(z.string()),
 });
 
-export type Info = z.infer<typeof infoSchema>;
 export type Create = z.infer<typeof createSchema>;
 
 export const table = sqliteTable("accounts", {

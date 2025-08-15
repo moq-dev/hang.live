@@ -1,75 +1,39 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
-import {
-	Accessor,
-	createEffect,
-	createResource,
-	createSignal,
-	Match,
-	onCleanup,
-	onMount,
-	Show,
-	Switch,
-} from "solid-js";
+import solid from "@kixelated/signals/solid";
+import { createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
 import IconAccountEdit from "~icons/mdi/account-edit";
-import IconCamera from "~icons/mdi/camera";
 import IconDice from "~icons/mdi/dice-multiple";
 import IconPlay from "~icons/mdi/play";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
-import { Controls } from "./controls";
+import Tooltip from "./components/tooltip";
+import { Camera, Controls, Microphone } from "./controls";
 import AppLayout from "./layout/app";
 import WebLayout from "./layout/web";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 import { Canvas } from "./room/canvas";
-
-interface Info {
-	name: string;
-	avatar: string;
-	guest: boolean;
-	account: Api.Account.Id;
-}
-
-function randomName(): string {
-	return uniqueNamesGenerator({
-		dictionaries: [adjectives, animals],
-		separator: " ",
-		style: "capital",
-	});
-}
+import { Local, LocalPreview } from "./room/local";
 
 export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
-	const [info, setInfo] = createSignal<Info | undefined>(undefined);
-
 	const connection = new Connection();
 	onCleanup(() => connection.close());
 
-	const [account] = createResource(async () => {
-		// Given the room name, fetch a cooresponding token from the API server.
-		const response = await props.api.routes.room[":name"].join.$post({ param: { name: props.room } });
-		if (!response.ok) {
-			throw new Error(`Failed to join room: ${response.statusText}`);
-		}
-		const data = await response.json();
+	// Create the local broadcasts (camera and screen)
+	const local = new Local(connection, props.api, props.room);
+	onCleanup(() => local.close());
 
-		connection.url.set(new URL(data.url));
-		return data.account;
-	});
+	const publish = solid(local.publish);
 
 	return (
 		<Show
-			when={info()}
-			fallback={
-				<Preview connection={connection} api={props.api} room={props.room} join={setInfo} account={account} />
-			}
+			when={publish()}
+			fallback={<Preview connection={connection} api={props.api} room={props.room} local={local} />}
 		>
-			{(info) => (
-				<App connection={connection} canvas={props.canvas} api={props.api} room={props.room} info={info()} />
-			)}
+			<App connection={connection} canvas={props.canvas} api={props.api} room={props.room} local={local} />
 		</Show>
 	);
 }
@@ -79,36 +43,20 @@ function App(props: {
 	canvas: Canvas;
 	room: string;
 	api: Api.Client;
-	info: Info;
+	local: Local;
 }): JSX.Element {
-	const room = new Room(props.connection, props.canvas, {
-		name: props.room,
-		user: props.info.name,
-		avatar: props.info.avatar,
-		account: props.info.account,
-	});
+	const room = new Room(props.connection, props.canvas, props.local);
 	onCleanup(() => room.close());
 
 	return (
 		<AppLayout connection={room.connection} api={props.api} room={props.room}>
-			<Controls room={room} camera={room.camera} screen={room.screen} canvas={props.canvas} />
+			<Controls room={room} local={props.local} canvas={props.canvas} />
 		</AppLayout>
 	);
 }
 
-function Preview(props: {
-	connection: Connection;
-	api: Api.Client;
-	room: string;
-	join: (info: Info) => void;
-	account: Accessor<Api.Account.Id | undefined>;
-}): JSX.Element {
-	const [info, setInfo] = createSignal<Info | undefined>(undefined);
-
-	const join = () => {
-		const i = info();
-		if (i) props.join(i);
-	};
+function Preview(props: { connection: Connection; api: Api.Client; room: string; local: Local }): JSX.Element {
+	const info = solid(props.local.info);
 
 	return (
 		<WebLayout>
@@ -121,9 +69,9 @@ function Preview(props: {
 						type="button"
 						class="min-w-64 px-6 py-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer text-lg"
 						classList={{
-							"opacity-50 cursor-not-allowed": !info() || !props.account(),
+							"opacity-50 cursor-not-allowed": !info(),
 						}}
-						onClick={join}
+						onClick={() => props.local.publish.set(true)}
 						style={{
 							background: Gradient(),
 							"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
@@ -132,8 +80,8 @@ function Preview(props: {
 						<IconPlay class="w-5 h-5 inline mr-2" />
 						<Switch>
 							<Match when={!info()}>Loading...</Match>
-							<Match when={info()?.guest}>Join as Guest</Match>
-							<Match when={!info()?.guest}>Join</Match>
+							<Match when={props.api.authenticated()}>Join</Match>
+							<Match when={!props.api.authenticated()}>Join as Guest</Match>
 						</Switch>
 					</button>
 				</div>
@@ -147,30 +95,11 @@ function Preview(props: {
 
 					{/* Right Column: Avatar/Name Preview */}
 					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<Show when={props.account()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
-							{(account) => (
-								<Show
-									when={props.api.authenticated()}
-									fallback={
-										<div class="rounded-2xl border border-gray-800 p-6">
-											<AnonymousPreview
-												api={props.api}
-												room={props.room}
-												setInfo={setInfo}
-												account={account()}
-											/>
-										</div>
-									}
-								>
-									<div class="rounded-2xl border border-gray-800 p-6">
-										<AuthenticatedPreview
-											api={props.api}
-											room={props.room}
-											setInfo={setInfo}
-											account={account()}
-										/>
-									</div>
-								</Show>
+						<Show when={info()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
+							{(info) => (
+								<div class="rounded-2xl border border-gray-800 p-6">
+									<PreviewIcon api={props.api} room={props.room} local={props.local} info={info()} />
+								</div>
 							)}
 						</Show>
 
@@ -181,8 +110,6 @@ function Preview(props: {
 								<Login api={props.api} />
 							</div>
 						</Show>
-
-						{/* <MicrophoneControl /> */}
 					</div>
 				</div>
 			</div>
@@ -190,28 +117,25 @@ function Preview(props: {
 	);
 }
 
-function AnonymousPreview(props: {
-	api: Api.Client;
-	room: string;
-	setInfo: (info: Info) => void;
-	account: Api.Account.Id;
-}): JSX.Element {
-	const [avatar, setAvatar] = createSignal(Api.randomAvatar());
-	const [name, setName] = createSignal(randomName());
+function PreviewIcon(props: { api: Api.Client; room: string; local: Local; info: Api.Account.Info }): JSX.Element {
+	const [info, setInfo] = createSignal(props.info);
+
 	const [avatarClicks, setAvatarClicks] = createSignal(0);
 	const [nameClicks, setNameClicks] = createSignal(0);
 
-	createEffect(() => {
-		props.setInfo({ name: name(), avatar: avatar(), guest: true, account: props.account });
-	});
+	const canvas = document.createElement("canvas");
+	canvas.classList.add("w-full", "h-full");
+
+	const local = new LocalPreview(canvas, props.local.camera);
+	onCleanup(() => local.close());
 
 	const handleRandomAvatar = () => {
 		setAvatarClicks((prev) => prev + 1);
-		const oldAvatar = avatar();
+		const oldAvatar = info().avatar;
 		while (true) {
 			const newAvatar = Api.randomAvatar();
 			if (newAvatar !== oldAvatar) {
-				setAvatar(newAvatar);
+				setInfo((prev) => ({ ...prev, avatar: newAvatar }));
 				break;
 			}
 		}
@@ -219,11 +143,11 @@ function AnonymousPreview(props: {
 
 	const handleRandomName = () => {
 		setNameClicks((prev) => prev + 1);
-		const oldName = name();
+		const oldName = info().name;
 		while (true) {
-			const newName = randomName();
+			const newName = Api.randomName();
 			if (newName !== oldName) {
-				setName(newName);
+				setInfo((prev) => ({ ...prev, name: newName }));
 				break;
 			}
 		}
@@ -231,16 +155,83 @@ function AnonymousPreview(props: {
 
 	return (
 		<>
-			<h3 class="text-xl font-semibold mb-4">Guest Profile</h3>
+			<h3 class="text-xl font-semibold mb-4">Your Profile</h3>
 
-			{/* Avatar Preview */}
-			<div class="flex flex-col items-center mb-12">
+			{/* Avatar/Video Preview */}
+			<div class="flex flex-col items-center mb-4">
 				<div class="relative text-center">
-					<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-						<img src={avatar()} alt="Avatar Preview" class="w-full h-full object-cover" />
-					</div>
+					<div class="h-40 rounded-3xl flex items-center justify-center">{canvas}</div>
+				</div>
 
-					{/* Display Name Overlay */}
+				<Show when={!props.api.authenticated()}>
+					<div class="flex gap-3 mt-4">
+						<div class="relative">
+							<button
+								type="button"
+								onClick={handleRandomAvatar}
+								class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center gap-2"
+							>
+								<IconDice class="w-4 h-4" />
+								Avatar
+							</button>
+							<AnotherOne clicks={avatarClicks} />
+						</div>
+
+						<div class="relative">
+							<button
+								type="button"
+								onClick={handleRandomName}
+								class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center gap-2"
+							>
+								<IconDice class="w-4 h-4" />
+								Name
+							</button>
+							<AnotherOne clicks={nameClicks} />
+						</div>
+					</div>
+				</Show>
+			</div>
+
+			{/* Media Controls */}
+			<div class="flex gap-3 justify-center mb-6">
+				<Microphone audio={props.local.camera.audio} volume={false} />
+				<Camera video={props.local.camera.video} />
+				<Show when={props.api.authenticated()}>
+					<Tooltip content="Edit your profile" position="top">
+						<a
+							href="/account"
+							class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
+						>
+							<IconAccountEdit class="w-5 h-5" />
+						</a>
+					</Tooltip>
+				</Show>
+			</div>
+		</>
+	);
+}
+
+/*
+function AuthenticatedPreview(props: {
+	api: Api.Client;
+	room: string;
+	local: Local;
+	info: Api.Room.JoinInfo;
+}): JSX.Element {
+	const canvas = document.createElement("canvas");
+	canvas.classList.add("w-full", "h-full");
+
+	const local = new LocalPreview(canvas, props.local.camera);
+	onCleanup(() => local.close());
+
+	return (
+		<>
+			<h3 class="text-xl font-semibold mb-4">Preview</h3>
+
+			<div class="flex flex-col items-center mb-4">
+				<div class="relative text-center">
+					<div class="h-40">{canvas}</div>
+
 					<div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded-r-lg rounded-b-lg px-3 py-1 max-w-[calc(100%-1rem)]">
 						<div
 							class="text-sm font-bold truncate"
@@ -249,131 +240,15 @@ function AnonymousPreview(props: {
 								"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 							}}
 						>
-							{name()}
+							{props.info.name}
 						</div>
-					</div>
-				</div>
-
-				{/* Random Buttons */}
-				<div class="flex gap-3 mt-4">
-					<div class="relative">
-						<button
-							type="button"
-							onClick={handleRandomAvatar}
-							class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center gap-2"
-						>
-							<IconDice class="w-4 h-4" />
-							Avatar
-						</button>
-						<AnotherOne clicks={avatarClicks} />
-					</div>
-
-					<div class="relative">
-						<button
-							type="button"
-							onClick={handleRandomName}
-							class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center gap-2"
-						>
-							<IconDice class="w-4 h-4" />
-							Name
-						</button>
-						<AnotherOne clicks={nameClicks} />
 					</div>
 				</div>
 			</div>
 		</>
 	);
 }
-
-function AuthenticatedPreview(props: {
-	api: Api.Client;
-	room: string;
-	setInfo: (info: Info) => void;
-	account: Api.Account.Id;
-}): JSX.Element {
-	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
-	const [error, setError] = createSignal<string | undefined>(undefined);
-
-	createEffect(() => {
-		const i = info();
-		if (i) props.setInfo({ name: i.name, avatar: i.avatar, guest: false, account: props.account });
-	});
-
-	onMount(async () => {
-		try {
-			const response = await props.api.routes.account.info.$get();
-			if (response.ok) {
-				setInfo(await response.json());
-			} else {
-				setError(response.statusText);
-			}
-		} catch (e) {
-			setError(`Failed to load account info: ${e}`);
-		}
-	});
-
-	return (
-		<Switch>
-			<Match when={error()}>
-				<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-4 mb-6 text-red-300 text-center">
-					Error: {error()}
-				</div>
-			</Match>
-			<Match when={info()}>
-				{(userInfo) => (
-					<>
-						<h3 class="text-xl font-semibold mb-4">Your Profile</h3>
-
-						{/* Avatar Preview */}
-						<div class="flex flex-col items-center mb-4">
-							<div class="relative text-center">
-								<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-									<Show
-										when={userInfo().avatar}
-										fallback={<IconCamera class="w-8 h-8 text-gray-400" />}
-									>
-										<img
-											src={userInfo().avatar}
-											alt="Avatar Preview"
-											class="w-full h-full object-cover"
-										/>
-									</Show>
-								</div>
-
-								{/* Display Name Overlay */}
-								<div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded-r-lg rounded-b-lg px-3 py-1 max-w-[calc(100%-1rem)]">
-									<div
-										class="text-sm font-bold truncate"
-										style={{
-											color: "white",
-											"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-										}}
-									>
-										{userInfo().name}
-									</div>
-								</div>
-							</div>
-						</div>
-
-						{/* Account Link */}
-						<div class="text-center">
-							<a
-								href="/account"
-								class="text-gray-400 hover:text-white transition-colors flex items-center gap-2 justify-center"
-							>
-								<IconAccountEdit class="w-5 h-5" />
-								Edit
-							</a>
-						</div>
-					</>
-				)}
-			</Match>
-			<Match when={true}>
-				<div class="text-center text-gray-400">Loading...</div>
-			</Match>
-		</Switch>
-	);
-}
+*/
 
 /*
 function MicrophoneControl(): JSX.Element {

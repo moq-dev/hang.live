@@ -17,26 +17,22 @@ import IconVolumeMute from "~icons/mdi/volume-mute";
 import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
+import { Local } from "./room/local";
 import Settings, { Modal } from "./settings";
 
-export function Controls(props: {
-	room: Room;
-	camera: Publish.Broadcast;
-	screen: Publish.Broadcast;
-	canvas: Canvas;
-}): JSX.Element {
+export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	return (
 		<div class="controls pointer-gaps" role="toolbar" aria-label="Media controls">
 			{/* Left group */}
 			<div class="flex gap-inherit">
-				<Microphone audio={props.camera.audio} />
-				<Camera video={props.camera.video} room={props.room} />
-				<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
+				<Microphone audio={props.local.camera.audio} />
+				<Camera video={props.local.camera.video} room={props.room} />
+				<Screen video={props.local.screen.video} audio={props.local.screen.audio} room={props.room} />
 			</div>
 
 			{/* Center group */}
 			<div class="flex-1 flex justify-center">
-				<Chat broadcast={props.camera} />
+				<Chat broadcast={props.local.camera} />
 			</div>
 
 			{/* Right group */}
@@ -50,14 +46,16 @@ export function Controls(props: {
 	);
 }
 
-function Microphone(props: { audio: Publish.Audio }): JSX.Element {
+export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): JSX.Element {
 	const toggle = () => {
 		props.audio.enabled.set((prev) => !prev);
 	};
 	const root = solid(props.audio.root);
 
 	const [hover, setHover] = createSignal(false);
-	const opacity = Opacity(() => hover() && !!root());
+	const opacity = Opacity(() => {
+		return props.volume ? hover() && !!root() : false;
+	});
 
 	const volume = solid(props.audio.volume);
 	Settings.microphoneGain.subscribe((gain) => {
@@ -77,7 +75,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 				<button
 					type="button"
 					onClick={toggle}
-					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 rounded-md"
 					role="switch"
 					aria-checked={!!root()}
 					aria-label="Toggle microphone"
@@ -112,7 +110,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	);
 }
 
-function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
+export function Camera(props: { video: Publish.Video; room?: Room }): JSX.Element {
 	const toggle = () => {
 		props.video.enabled.set((prev) => !prev);
 	};
@@ -123,7 +121,7 @@ function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
 			<button
 				type="button"
 				onClick={toggle}
-				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 rounded-md"
 				role="switch"
 				aria-checked={!!media()}
 				aria-label="Toggle camera"
@@ -153,7 +151,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 			<button
 				type="button"
 				onClick={toggle}
-				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2"
+				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 rounded-md"
 				role="switch"
 				aria-checked={!!media()}
 				aria-label="Toggle screen sharing"
@@ -169,7 +167,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 }
 
 // Renders a volume meter in the background of an element.
-function Visualize(props: { audio: Publish.Audio }): JSX.Element {
+export function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 	const [speaking, setSpeaking] = createSignal(false);
 
@@ -299,7 +297,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 				onInput={(e) => setMessage(e.currentTarget.value)}
 				aria-label="Chat message"
 				tabIndex={0}
-				class="w-full text-center placeholder:text-center"
+				class="w-full text-center placeholder:text-center rounded-md"
 			/>
 		</form>
 	);
@@ -397,7 +395,7 @@ function ClosedCaptions(): JSX.Element {
 				role="switch"
 				aria-checked={enabled()}
 				aria-label="Toggle closed captions"
-				class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+				class="hover:bg-gray-700 transition-all cursor-pointer p-2 rounded-md"
 			>
 				{enabled() ? <IconClosedCaption /> : <IconClosedCaptionDisabled />}
 			</button>
@@ -440,7 +438,7 @@ function Advanced(): JSX.Element {
 					aria-label="Settings"
 					aria-expanded={showSettings()}
 					aria-haspopup="dialog"
-					class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+					class="hover:bg-gray-700 transition-all cursor-pointer p-2 rounded-md"
 				>
 					<IconSettings />
 				</button>
@@ -475,7 +473,7 @@ function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 				type="button"
 				onClick={toggle}
 				aria-label="Toggle fullscreen"
-				class="hover:bg-gray-700 transition-all cursor-pointer p-2"
+				class="hover:bg-gray-700 transition-all cursor-pointer p-2 rounded-md"
 			>
 				<IconFullscreen />
 			</button>

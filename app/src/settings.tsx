@@ -20,6 +20,10 @@ const Settings = {
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 	tts: new Signal(localStorage.getItem("settings.tts") !== "false"),
+
+	// Device states that persist across sessions
+	microphoneEnabled: new Signal(localStorage.getItem("settings.microphone.enabled") === "true"),
+	cameraEnabled: new Signal(localStorage.getItem("settings.camera.enabled") === "true"),
 };
 
 const effect = new Effect();
@@ -63,6 +67,14 @@ effect.subscribe(Settings.captureCaptions, (transcription) => {
 
 effect.subscribe(Settings.tts, (tts) => {
 	localStorage.setItem("settings.tts", tts.toString());
+});
+
+effect.subscribe(Settings.microphoneEnabled, (enabled) => {
+	localStorage.setItem("settings.microphone.enabled", enabled.toString());
+});
+
+effect.subscribe(Settings.cameraEnabled, (enabled) => {
+	localStorage.setItem("settings.camera.enabled", enabled.toString());
 });
 
 // Mostly just to avoid console warnings about signals not being closed
