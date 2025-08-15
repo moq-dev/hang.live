@@ -7,6 +7,7 @@ import {
 } from "@huggingface/transformers";
 import { phonemize } from "./phonemize";
 
+/*
 const VOICES = [
 	"expr-voice-2-f",
 	"expr-voice-2-m",
@@ -19,8 +20,9 @@ const VOICES = [
 ] as const;
 
 export type Voice = (typeof VOICES)[number];
+*/
 
-const DEFAULT_VOICE: Voice = "expr-voice-5-f";
+const DEFAULT_VOICE = "expr-voice-5-f";
 
 const voicesURL = "https://huggingface.co/onnx-community/kitten-tts-nano-0.1-ONNX/resolve/main/voices";
 const modelName = "onnx-community/kitten-tts-nano-0.1-ONNX";
@@ -48,10 +50,7 @@ export class TTS {
 		return new TTS(await model, await tokenizer, await voice);
 	}
 
-	async generate(
-		text: string,
-		speed = 1.1,
-	): Promise<string> {
+	async generate(text: string, speed = 1.1): Promise<string> {
 		const phonemes = await phonemize(text, "en");
 
 		const { input_ids } = await this.#tokenizer(phonemes, {
