@@ -84,6 +84,7 @@ export class FakeBroadcast {
 
 		video.playsInline = true;
 		video.autoplay = true;
+		video.volume = 0.25;
 		video.load();
 		video.play();
 
