@@ -120,7 +120,7 @@ export class Sound {
 		source.start();
 	}
 
-	async say(text: string, voice: Voice = "af_sky") {
+	async say(text: string, voice: Voice = "default") {
 		if (!this.#worker) return;
 
 		// Give the worker at most 2s to load the model before timing out.
