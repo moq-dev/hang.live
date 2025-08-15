@@ -1,3 +1,4 @@
+import * as Api from "@hang/api";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
@@ -20,7 +21,23 @@ const Settings = {
 
 	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 	tts: new Signal(localStorage.getItem("settings.tts") !== "false"),
+
+	// Device states that persist across sessions
+	microphoneEnabled: new Signal(localStorage.getItem("settings.microphone.enabled") === "true"),
+	cameraEnabled: new Signal(localStorage.getItem("settings.camera.enabled") === "true"),
+
+	// Guest account settings
+	guest: new Signal<Api.Account.Info | undefined>(undefined),
 };
+
+const guestRaw = localStorage.getItem("settings.guest");
+if (guestRaw) {
+	try {
+		Settings.guest.set(Api.Account.infoSchema.safeParse(JSON.parse(guestRaw)).data);
+	} catch (error) {
+		console.error("Failed to parse guest settings", error);
+	}
+}
 
 const effect = new Effect();
 
@@ -63,6 +80,18 @@ effect.subscribe(Settings.captureCaptions, (transcription) => {
 
 effect.subscribe(Settings.tts, (tts) => {
 	localStorage.setItem("settings.tts", tts.toString());
+});
+
+effect.subscribe(Settings.microphoneEnabled, (enabled) => {
+	localStorage.setItem("settings.microphone.enabled", enabled.toString());
+});
+
+effect.subscribe(Settings.cameraEnabled, (enabled) => {
+	localStorage.setItem("settings.camera.enabled", enabled.toString());
+});
+
+effect.subscribe(Settings.guest, (guest) => {
+	localStorage.setItem("settings.guest", JSON.stringify(guest));
 });
 
 // Mostly just to avoid console warnings about signals not being closed

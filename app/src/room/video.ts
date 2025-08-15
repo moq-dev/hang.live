@@ -140,7 +140,7 @@ export class Video {
 			}
 		}
 
-		if (this.broadcast.online.peek()) {
+		if (this.broadcast.visible.peek()) {
 			this.online += (1 - this.online) * 0.1;
 		} else {
 			this.online += (0 - this.online) * 0.1;

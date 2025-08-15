@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as Account from "./account";
 import * as Auth from "./auth";
 import * as rpc from "./rpc";
+import { randomAvatar, randomName } from "./shared";
 
 export const nameSchema = z.string().check(z.minLength(1), z.maxLength(100));
 export type Name = z.infer<typeof nameSchema>;
@@ -20,7 +21,7 @@ export class Context {
 	}
 
 	// Returns the URL to join the room
-	async sign(room: Name, account: Account.Id): Promise<URL> {
+	async sign(room: Name, account: string): Promise<URL> {
 		const root = `${this.#env.RELAY_PREFIX}/${room}`;
 		// TODO add a field to force publishing, preventing someone from lurking.
 		const token = await Token.sign(this.#key, { root, get: "", put: account });
@@ -45,13 +46,42 @@ export const joinSchema = z.object({
 
 export const router = rpc
 	.router()
-	.post("/:name/join", rpc.withParam(z.object({ name: nameSchema })), Auth.optional, async (c) => {
-		const ctx = c.var.ctx;
-		const room = c.req.valid("param").name;
+	.post(
+		"/:room/join",
+		rpc.withParam(z.object({ room: nameSchema })),
+		rpc.withJson(z.object({ guest: z.lazy(() => Account.infoSchema).optional() })),
+		Auth.optional,
+		async (c) => {
+			const ctx = c.var.ctx;
+			const room = c.req.valid("param").room;
 
-		// Generate a random account ID if not authenticated
-		const account = c.var.account_id ?? Account.idSchema.parse(Uuid.v4());
+			let info: Account.Info;
+			if (c.var.account_id) {
+				const row = await ctx.account.get(c.var.account_id);
+				if (!row) {
+					throw new Error("Account not found");
+				}
 
-		const url = await ctx.room.sign(room, account);
-		return c.json({ url, account });
-	});
+				info = {
+					id: c.var.account_id,
+					name: row.name,
+					avatar: row.avatar,
+				};
+			} else {
+				// Let the client provide it's own info but only if the ID starts with "guest/"
+				const guest = c.req.valid("json").guest;
+				if (guest?.id.startsWith("guest/")) {
+					info = guest;
+				} else {
+					info = {
+						id: Account.idSchema.parse(`guest/${Uuid.v4()}`),
+						name: randomName(),
+						avatar: randomAvatar(),
+					};
+				}
+			}
+
+			const url = await ctx.room.sign(room, info.id);
+			return c.json({ url, info });
+		},
+	);

@@ -17,42 +17,50 @@ import IconVolumeMute from "~icons/mdi/volume-mute";
 import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
+import { Local } from "./room/local";
 import Settings, { Modal } from "./settings";
 
-export function Controls(props: {
-	room: Room;
-	camera: Publish.Broadcast;
-	screen: Publish.Broadcast;
-	canvas: Canvas;
-}): JSX.Element {
+export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	return (
 		<div
-			class="fixed bottom-0 left-0 right-0 flex items-end gap-3 p-3 text-shadow-lg text-xl pointer-events-none"
+			class="fixed bottom-0 left-0 right-0 flex items-end gap-3 p-4 text-shadow-lg text-xl pointer-events-none"
 			style={{ "z-index": "10" }}
 			role="toolbar"
 			aria-label="Media controls"
 		>
-			<Microphone audio={props.camera.audio} />
-			<Camera video={props.camera.video} room={props.room} />
-			<Screen video={props.screen.video} audio={props.screen.audio} room={props.room} />
-			<Chat broadcast={props.camera} />
-			<div style={{ "flex-grow": "1", "pointer-events": "none", "backdrop-filter": "none" }} />
-			<Volume room={props.room} />
-			<ClosedCaptions />
-			<Advanced />
-			<Fullscreen canvas={props.canvas} />
+			{/* Left group */}
+			<div class="flex gap-3">
+				<Microphone audio={props.local.camera.audio} />
+				<Camera video={props.local.camera.video} room={props.room} />
+				<Screen video={props.local.screen.video} audio={props.local.screen.audio} room={props.room} />
+			</div>
+
+			{/* Center group */}
+			<div class="flex-1 flex justify-center">
+				<Chat broadcast={props.local.camera} />
+			</div>
+
+			{/* Right group */}
+			<div class="flex gap-3">
+				<Volume room={props.room} />
+				<ClosedCaptions />
+				<Advanced />
+				<Fullscreen canvas={props.canvas} />
+			</div>
 		</div>
 	);
 }
 
-function Microphone(props: { audio: Publish.Audio }): JSX.Element {
+export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): JSX.Element {
 	const toggle = () => {
 		props.audio.enabled.set((prev) => !prev);
 	};
 	const root = solid(props.audio.root);
 
 	const [hover, setHover] = createSignal(false);
-	const opacity = Opacity(() => hover() && !!root());
+	const opacity = Opacity(() => {
+		return props.volume ? hover() && !!root() : false;
+	});
 
 	const volume = solid(props.audio.volume);
 	Settings.microphoneGain.subscribe((gain) => {
@@ -107,7 +115,7 @@ function Microphone(props: { audio: Publish.Audio }): JSX.Element {
 	);
 }
 
-function Camera(props: { video: Publish.Video; room: Room }): JSX.Element {
+export function Camera(props: { video: Publish.Video; room?: Room }): JSX.Element {
 	const toggle = () => {
 		props.video.enabled.set((prev) => !prev);
 	};
@@ -164,7 +172,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 }
 
 // Renders a volume meter in the background of an element.
-function Visualize(props: { audio: Publish.Audio }): JSX.Element {
+export function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 	const [speaking, setSpeaking] = createSignal(false);
 
@@ -294,7 +302,7 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 				onInput={(e) => setMessage(e.currentTarget.value)}
 				aria-label="Chat message"
 				tabIndex={0}
-				class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none"
+				class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none text-center placeholder:text-center"
 			/>
 		</form>
 	);
@@ -434,7 +442,7 @@ function Advanced(): JSX.Element {
 					aria-label="Settings"
 					aria-expanded={showSettings()}
 					aria-haspopup="dialog"
-					class="hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
+					class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
 				>
 					<IconSettings />
 				</button>

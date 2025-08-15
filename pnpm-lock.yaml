@@ -59,6 +59,9 @@ importers:
       nanoid:
         specifier: ^5.1.5
         version: 5.1.5
+      unique-names-generator:
+        specifier: ^4.7.1
+        version: 4.7.1
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -129,9 +132,6 @@ importers:
       tauri-plugin-web-transport:
         specifier: ^0.1.0
         version: 0.1.0
-      unique-names-generator:
-        specifier: ^4.7.1
-        version: 4.7.1
       zod:
         specifier: ^4.0.5
         version: 4.0.5
