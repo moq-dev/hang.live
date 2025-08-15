@@ -91,8 +91,8 @@ importers:
         specifier: workspace:*
         version: link:../api
       '@huggingface/transformers':
-        specifier: ^3.7.1
-        version: 3.7.1
+        specifier: ^3.7.2
+        version: 3.7.2
       '@kixelated/hang':
         specifier: link:../moq/js/hang
         version: link:../moq/js/hang
@@ -123,6 +123,9 @@ importers:
       marked:
         specifier: ^15.0.12
         version: 15.0.12
+      phonemizer:
+        specifier: ^1.2.0
+        version: 1.2.1
       solid-js:
         specifier: ^1.9.7
         version: 1.9.7
@@ -762,8 +765,8 @@ packages:
     resolution: {integrity: sha512-yUZLld4lrM9iFxHCwFQ7D1HW2MWMwSbeB7WzWqFYDWK+rEb+WldkLdAJxUPOmgICMHZLzZGVcVjFh3w/YGubng==}
     engines: {node: '>=18'}
 
-  '@huggingface/transformers@3.7.1':
-    resolution: {integrity: sha512-z14yXkm7G/FKGM8Y24NLDbrSP/kbn62byKNYF04pZ6pidTVpucqRSderQgpfQWoMVrhOKmrZs29G3yQ1R28sIA==}
+  '@huggingface/transformers@3.7.2':
+    resolution: {integrity: sha512-6SOxo6XziupnQ5Vs5vbbs74CNB6ViHLHGQJjY6zj88JeiDtJ2d/ADKxaay688Sf2KcjtdF3dyBL11C5pJS2NxQ==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -3364,7 +3367,7 @@ snapshots:
 
   '@huggingface/jinja@0.5.1': {}
 
-  '@huggingface/transformers@3.7.1':
+  '@huggingface/transformers@3.7.2':
     dependencies:
       '@huggingface/jinja': 0.5.1
       onnxruntime-node: 1.21.0
@@ -4629,7 +4632,7 @@ snapshots:
 
   kokoro-js@1.2.1:
     dependencies:
-      '@huggingface/transformers': 3.7.1
+      '@huggingface/transformers': 3.7.2
       phonemizer: 1.2.1
 
   kolorist@1.8.0: {}
