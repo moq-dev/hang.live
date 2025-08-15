@@ -1,3 +1,4 @@
+import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
 import { z } from "zod";
 
 // This could be an RPC endpoint in the future.
@@ -7,6 +8,14 @@ export const oauthProviders = ["google", "discord", "apple"] as const;
 export function randomAvatar(): string {
 	const index = Math.floor(Math.random() * 50) + 1;
 	return `/avatar/${index}.svg`;
+}
+
+export function randomName(): string {
+	return uniqueNamesGenerator({
+		dictionaries: [adjectives, animals],
+		separator: " ",
+		style: "capital",
+	});
 }
 
 export const oauthStateSchema = z.object({

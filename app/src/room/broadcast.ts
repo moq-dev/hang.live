@@ -146,7 +146,7 @@ export type BroadcastProps = {
 	camera?: Publish.Broadcast;
 	screen?: Publish.Broadcast;
 
-	online?: boolean;
+	visible?: boolean;
 };
 
 // Catalog.Position but all fields are required.
@@ -178,7 +178,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	//targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
 	//targetScale = 1.0; // 1 is 100%
 
-	online: Signal<boolean>;
+	visible: Signal<boolean>;
 
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	transition = 0;
@@ -205,7 +205,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.source = source;
 		this.canvas = canvas;
 		this.sound = sound;
-		this.online = new Signal(props?.online ?? true);
+		this.visible = new Signal(props?.visible ?? true);
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
 		const start = () => (Math.random() - 0.5) / 100;
@@ -234,7 +234,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Load the broadcaster's position from the network.
 		this.signals.effect((effect) => {
-			if (!effect.get(this.online)) {
+			if (!effect.get(this.visible)) {
 				// Change the target position to somewhere outside the screen.
 				this.targetPosition.set((prev) => {
 					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
@@ -286,7 +286,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 
 		this.signals.effect((effect) => {
-			if (!effect.get(this.online)) return;
+			if (!effect.get(this.visible)) return;
 
 			const name = effect.get(this.name);
 			if (!name) return;
@@ -294,7 +294,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 
 		this.signals.effect((effect) => {
-			if (effect.get(this.online)) return;
+			if (effect.get(this.visible)) return;
 
 			const name = effect.get(this.name);
 			if (!name) return;
@@ -526,7 +526,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
 		if (!this.source.enabled.peek()) return;
 
-		if (!this.online.peek()) {
+		if (!this.visible.peek()) {
 			this.#locatorStart = undefined;
 			return;
 		}
@@ -593,9 +593,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	close() {
 		this.signals.close();
-		this.source.close();
 		this.audio.close();
 		this.chat.close();
 		this.captions.close();
+
+		// NOTE: Don't close the source broadcast; we need it for the local preview.
+		// this.source.close();
 	}
 }
