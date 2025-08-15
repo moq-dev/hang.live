@@ -242,5 +242,6 @@ export class Audio {
 
 	close() {
 		this.#signals.close();
+		this.sound.close();
 	}
 }

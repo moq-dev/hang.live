@@ -90,6 +90,7 @@ export class FakeBroadcast {
 
 		this.#video = video;
 		this.video.active.set(true);
+		this.video.frame.set(video);
 
 		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });
 		this.audio.root.set(source);
@@ -98,7 +99,9 @@ export class FakeBroadcast {
 	stop() {
 		this.#video?.pause();
 		this.#video = undefined;
+
 		this.video.active.set(false);
+		this.video.frame.set(undefined);
 
 		this.audio.root.set((prev) => {
 			prev?.disconnect();

@@ -29,17 +29,17 @@ export function About(): JSX.Element {
 	});
 
 	const four = room.create({
-		location: randomLocation(),
+		location: randomLeft(),
 		user: { name: "Gargoyle Boy", avatar: "/avatar/41.svg" },
 	});
 
 	const five = room.create({
-		location: randomLocation(),
+		location: randomLeft(),
 		user: { name: "The Black Dot", avatar: "/avatar/40.svg" },
 	});
 
 	const six = room.create({
-		location: randomLocation(),
+		location: randomLeft(),
 		user: { name: "Oaf", avatar: "/avatar/39.svg" },
 	});
 
@@ -86,34 +86,37 @@ export function About(): JSX.Element {
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
 		() => three.location.current.set(randomLocation()),
 		() => three.chat.message.set("omg"),
+		() => {},
+		() => {},
 		() => two.stop(),
 		() => two.chat.message.set("on second thought, maybe not"),
-		() => one.chat.message.set("lame"),
-		() => two.location.current.set((prev) => ({ ...prev, scale: 1 })),
 		() => three.chat.message.set("gotta run"),
 		() => room.remove("3"),
-		() => one.chat.message.set("k then"),
+		() => one.chat.message.set("lame"),
 		() => {},
 		() => one.chat.message.set("try typing /huh"),
 		() => {},
 		() => two.chat.message.set("/huh"),
-		() => {},
+		() => two.location.current.set({ x: -0.5, y: 0 }),
 		() => one.chat.message.set("that's right, I added dumb memes"),
-		() => {},
-		() => {},
+		() => two.location.current.set({ x: 0.5, y: 0 }),
+		() => one.chat.message.set("and audio panning"),
 		() => two.chat.message.set("huh?"),
 		() => one.chat.message.set("inviting the squad"),
-		() => two.chat.message.set("oh no"),
+		() => {
+			two.chat.message.set("oh no");
+			two.location.current.set(randomLocation());
+		},
 		() => room.add("4", four),
 		() => room.add("5", five),
 		() => four.chat.message.set("hey"),
 		() => room.add("6", six),
 		() => five.chat.message.set("yo"),
 		() => six.chat.message.set("poop"),
-		() => four.location.current.set(randomLocation()),
-		() => two.location.current.set(randomLocation()),
+		() => {},
+		() => {},
 		() => two.chat.message.set("good lord"),
-		() => six.location.current.set(randomLocation()),
+		() => {},
 		() => {},
 		() => six.chat.message.set("let's watch something"),
 		() => {
@@ -135,8 +138,9 @@ export function About(): JSX.Element {
 		() => {},
 		() => {},
 		() => {},
-		() => room.remove("7"),
 		() => {},
+		() => {},
+		() => room.remove("7"),
 		() => one.chat.message.set("okay, that's enough of a demo"),
 		() => room.remove("4"),
 		() => room.remove("5"),
@@ -157,7 +161,7 @@ export function About(): JSX.Element {
 		const interval = setInterval(() => {
 			const action = timeline.shift();
 			if (action) action();
-		}, 2000);
+		}, 1500);
 
 		onCleanup(() => clearInterval(interval));
 	});
@@ -174,9 +178,9 @@ export function About(): JSX.Element {
 				<div class="p-4 h-128">{canvas}</div>
 				<p class="px-4">
 					For the nerds in the audience, this site uses bleeding edge web technologies. We're using{" "}
-					<a href="https://moq.dev">Media over QUIC</a> which is an{" "}
+					<a href="https://moq.dev">Media over QUIC</a>: an{" "}
 					<a href="https://github.com/kixelated/moq">open source</a> WebRTC alternative. This ain't your usual
-					Zoom clone.
+					Zoom clone, but there's still a TON of work to do.
 				</p>
 			</div>
 		</Layout>
