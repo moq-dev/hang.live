@@ -1,33 +1,19 @@
 import * as Comlink from "comlink";
-import { KokoroTTS } from "kokoro-js";
+import { pipeline, env } from "@huggingface/transformers";
 
-async function detectWebGPU() {
-	try {
-		// @ts-expect-error - navigator.gpu is not typed yet
-		const adapter = await navigator.gpu.requestAdapter();
-		return !!adapter;
-	} catch {
-		return false;
-	}
-}
+// Configure transformers.js environment
+env.allowLocalModels = false;
 
-// Get Voice type from an instance's voices property
-export type Voice = KokoroTTS extends { voices: infer V } ? keyof V : never;
+// For now, Kitten TTS doesn't have multiple voices like Kokoro
+export type Voice = "default";
 
 export class SoundWorker {
-	#model: Promise<KokoroTTS>;
+	#model: Promise<any>;
 
 	constructor() {
-		const device = detectWebGPU().then((webgpu) => (webgpu ? "webgpu" : "wasm"));
-
-		// Load the model
-		const model_id = "onnx-community/Kokoro-82M-v1.0-ONNX";
-		this.#model = device.then((device) =>
-			KokoroTTS.from_pretrained(model_id, {
-				dtype: device === "wasm" ? "q8" : "fp32",
-				device,
-			}),
-		);
+		// Load the Kitten TTS model
+		const model_id = "onnx-community/kitten-tts-nano-0.1-ONNX";
+		this.#model = pipeline("text-to-speech", model_id);
 	}
 
 	async ready(): Promise<boolean> {
@@ -35,12 +21,56 @@ export class SoundWorker {
 		return true;
 	}
 
-	async tts(text: string, voice: Voice): Promise<string> {
-		const tts = await this.#model;
-		const audio = await tts.generate(text, { voice });
-		const blob = audio.toBlob();
-		return URL.createObjectURL(blob);
+	async tts(text: string, _voice: Voice): Promise<string> {
+		const synthesizer = await this.#model;
+		const output = await synthesizer(text);
+		
+		// Convert the audio output to a blob
+		const audioData = output.audio;
+		const sampleRate = output.sampling_rate;
+		
+		// Create WAV file from the audio data
+		const wavBlob = createWavBlob(audioData, sampleRate);
+		return URL.createObjectURL(wavBlob);
 	}
+}
+
+// Helper function to create a WAV blob from audio data
+function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
+	const length = audioData.length;
+	const buffer = new ArrayBuffer(44 + length * 2);
+	const view = new DataView(buffer);
+
+	// WAV header
+	const writeString = (offset: number, string: string) => {
+		for (let i = 0; i < string.length; i++) {
+			view.setUint8(offset + i, string.charCodeAt(i));
+		}
+	};
+
+	writeString(0, "RIFF");
+	view.setUint32(4, 36 + length * 2, true);
+	writeString(8, "WAVE");
+	writeString(12, "fmt ");
+	view.setUint32(16, 16, true); // fmt chunk size
+	view.setUint16(20, 1, true); // PCM format
+	view.setUint16(22, 1, true); // mono
+	view.setUint32(24, sampleRate, true);
+	view.setUint32(28, sampleRate * 2, true); // byte rate
+	view.setUint16(32, 2, true); // block align
+	view.setUint16(34, 16, true); // bits per sample
+	writeString(36, "data");
+	view.setUint32(40, length * 2, true);
+
+	// Convert float samples to 16-bit PCM
+	let offset = 44;
+	for (let i = 0; i < length; i++) {
+		const sample = Math.max(-1, Math.min(1, audioData[i]));
+		view.setInt16(offset, sample * 0x7fff, true);
+		offset += 2;
+	}
+
+	return new Blob([buffer], { type: "audio/wav" });
 }
 
 // Expose the worker API via Comlink
