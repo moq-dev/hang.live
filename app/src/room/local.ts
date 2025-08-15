@@ -12,6 +12,10 @@ import { Sound } from "./sound";
  * It creates them early (before joining) and can optionally render a preview.
  */
 export class Local {
+	connection: Connection;
+	api: Api.Client;
+	room: string;
+
 	camera: Publish.Broadcast;
 	screen: Publish.Broadcast;
 
@@ -24,6 +28,10 @@ export class Local {
 	#signals = new Effect();
 
 	constructor(connection: Connection, api: Api.Client, room: string) {
+		this.connection = connection;
+		this.api = api;
+		this.room = room;
+
 		this.sound = new Sound();
 
 		this.#signals.spawn(async () => {
@@ -38,6 +46,9 @@ export class Local {
 			connection.url.set(new URL(data.url));
 
 			this.info.set(data.info);
+
+			this.camera.name.set(Path.from(data.info.id, "camera"));
+			this.screen.name.set(Path.from(data.info.id, "screen"));
 		});
 
 		// Create the camera broadcast
@@ -237,8 +248,6 @@ export class Local {
 			const info = effect.get(this.info);
 			if (!info) return;
 
-			effect.set(this.camera.name, Path.from(info.id, "camera"));
-			effect.set(this.screen.name, Path.from(info.id, "screen"));
 
 			effect.set(this.camera.user, info);
 			effect.set(this.screen.user, { ...info, name: `${info.name} (Screen)` });
@@ -252,6 +261,33 @@ export class Local {
 			if (!info) return;
 
 			Settings.guest.set(info);
+		});
+
+		// Auto-join if our ID is already published.
+		this.#signals.effect((effect) => {
+			const enabled = effect.get(this.camera.enabled);
+			if (enabled) return;
+
+			const id = effect.get(this.camera.name);
+			if (!id) return;
+
+			const connection = effect.get(this.connection.established);
+			if (!connection) return;
+
+			const announced = connection.announced();
+			effect.spawn(async (cancel) => {
+				for (;;) {
+					const next = await Promise.race([announced.next(), cancel]);
+					if (!next) break;
+
+					// If our ID is announced and active, join the room immediately.
+					// This makes refreshing much easier; you don't need to click rejoin.
+					if (next.name === id && next.active) {
+						this.camera.enabled.set(true);
+						break;
+					}
+				}
+			});
 		});
 	}
 
