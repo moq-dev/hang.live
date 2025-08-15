@@ -23,13 +23,13 @@ import Settings, { Modal } from "./settings";
 export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	return (
 		<div
-			class="fixed bottom-0 left-0 right-0 flex items-end gap-3 p-4 text-shadow-lg text-xl pointer-events-none"
+			class="fixed bottom-0 left-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-none"
 			style={{ "z-index": "10" }}
 			role="toolbar"
 			aria-label="Media controls"
 		>
 			{/* Left group */}
-			<div class="flex gap-3">
+			<div class="flex gap-4">
 				<Microphone audio={props.local.camera.audio} />
 				<Camera video={props.local.camera.video} room={props.room} />
 				<Screen video={props.local.screen.video} audio={props.local.screen.audio} room={props.room} />
@@ -41,7 +41,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 			</div>
 
 			{/* Right group */}
-			<div class="flex gap-3">
+			<div class="flex gap-4">
 				<Volume room={props.room} />
 				<ClosedCaptions />
 				<Advanced />
