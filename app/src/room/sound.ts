@@ -2,7 +2,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import * as Comlink from "comlink";
 import Settings from "../settings";
 
-import type { SoundWorker, Voice } from "./sound-worker";
+import type { TTS } from "./tts";
 
 const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
@@ -29,7 +29,7 @@ export class Sound {
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Effect();
 
-	#worker: Comlink.Remote<SoundWorker> | undefined;
+	#tts: Comlink.Remote<TTS> | undefined;
 
 	suspended: Signal<boolean>;
 
@@ -72,14 +72,12 @@ export class Sound {
 			// This is kind of a hack to avoid it when the demo is loaded before interaction.
 			if (effect.get(this.suspended)) return;
 
-			const worker = new Worker(new URL("./sound-worker", import.meta.url), { type: "module" });
+			const worker = new Worker(new URL("./tts", import.meta.url), { type: "module" });
 			effect.cleanup(() => worker.terminate());
 
-			const workerApi = Comlink.wrap<SoundWorker>(worker);
-
-			this.#worker = workerApi;
+			this.#tts = Comlink.wrap<TTS>(worker);
 			effect.cleanup(() => {
-				this.#worker = undefined;
+				this.#tts = undefined;
 			});
 		});
 
@@ -120,19 +118,19 @@ export class Sound {
 		source.start();
 	}
 
-	async say(text: string, { voice, speed }: { voice?: Voice; speed?: number } = {}) {
-		if (!this.#worker) return;
+	async say(text: string) {
+		if (!this.#tts) return;
 
 		// Give the worker at most 2s to load the model before timing out.
 		const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
-		const ready = await Promise.race([this.#worker.ready(), timeout]);
+		const ready = await Promise.race([this.#tts.ready(), timeout]);
 
 		if (!ready) {
 			console.warn("TTS worker timed out");
 			return;
 		}
 
-		const audioUrl = await this.#worker.tts(text, { voice, speed });
+		const audioUrl = await this.#tts.generate(text);
 
 		// Fetch the audio from the object URL
 		const response = await fetch(audioUrl);

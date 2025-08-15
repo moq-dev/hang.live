@@ -91,7 +91,7 @@ importers:
         specifier: workspace:*
         version: link:../api
       '@huggingface/transformers':
-        specifier: ^3.7.1
+        specifier: ^3.7.2
         version: 3.7.2
       '@kixelated/hang':
         specifier: link:../moq/js/hang
@@ -123,6 +123,9 @@ importers:
       marked:
         specifier: ^15.0.12
         version: 15.0.12
+      phonemizer:
+        specifier: ^1.2.0
+        version: 1.2.1
       solid-js:
         specifier: ^1.9.7
         version: 1.9.7
