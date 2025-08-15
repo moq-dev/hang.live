@@ -477,6 +477,7 @@ export class Space {
 			// Don't close local broadcasts, we keep them open and toggle instead.
 			if (!(broadcast.source instanceof Publish.Broadcast)) {
 				broadcast.close();
+				broadcast.source.close();
 			}
 		}, 1000);
 	}
@@ -485,6 +486,7 @@ export class Space {
 		for (const broadcast of this.ordered.peek()) {
 			if (!(broadcast.source instanceof Publish.Broadcast)) {
 				broadcast.close();
+				broadcast.source.close();
 			}
 		}
 
@@ -644,10 +646,12 @@ export class Space {
 
 		for (const broadcast of this.ordered.peek()) {
 			broadcast.close();
+			broadcast.source.close();
 		}
 
 		for (const broadcast of this.#rip) {
 			broadcast.close();
+			broadcast.source.close();
 		}
 
 		this.#rip = [];

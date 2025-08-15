@@ -15,8 +15,6 @@ export class Local {
 	camera: Publish.Broadcast;
 	screen: Publish.Broadcast;
 
-	publish = new Signal<boolean>(false);
-
 	// For notifications, created here just because it's more convenient.
 	sound: Sound;
 
@@ -42,7 +40,7 @@ export class Local {
 
 		// Create the camera broadcast
 		this.camera = new Publish.Broadcast(connection, {
-			enabled: false, // Don't connect until join
+			enabled: false,
 			device: "camera",
 			video: {
 				enabled: Settings.cameraEnabled.peek(),
@@ -76,7 +74,7 @@ export class Local {
 
 		// Create the screen broadcast
 		this.screen = new Publish.Broadcast(connection, {
-			enabled: false, // Don't connect until join
+			enabled: false,
 			device: "screen",
 			audio: {
 				enabled: false,
@@ -226,9 +224,6 @@ export class Local {
 
 		// Enable the screen when a media device is selected.
 		this.screen.signals.effect((effect) => {
-			const publish = effect.get(this.publish);
-			if (!publish) return;
-
 			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
 			if (!active) return;
 
@@ -248,20 +243,6 @@ export class Local {
 			effect.set(this.camera.preview.info, info);
 			effect.set(this.screen.preview.info, { ...info, name: `${info.name} (Screen)` });
 		});
-
-		// Enable the camera when publishing is enabled.
-		this.screen.signals.effect((effect) => {
-			const publish = effect.get(this.publish);
-			effect.set(this.camera.enabled, publish, false);
-		});
-	}
-
-	/**
-	 * Enable the broadcasts to start publishing
-	 */
-	enable() {
-		this.camera.enabled.set(true);
-		// Screen is enabled separately when screen sharing is started
 	}
 
 	close() {
@@ -309,26 +290,19 @@ export class LocalPreview {
 		const viewport = this.canvas.viewport.peek();
 		const targetSize = this.broadcast.video.targetSize;
 
-		const scale = Math.min(viewport.x / targetSize.x, viewport.y / targetSize.y) * 0.9;
+		const scale = Math.min(viewport.x / targetSize.x, viewport.y / targetSize.y) * 0.8;
 
 		// Update broadcast physics (simplified for preview)
 		this.broadcast.tick(scale);
 
-		// Render audio visualization if active
-		const audioMedia = this.broadcast.source.audio.media.peek();
-		if (audioMedia) {
-			this.broadcast.audio.renderBackground(ctx);
-			this.broadcast.audio.render(ctx);
-		}
-
-		// Render the video/avatar
+		this.broadcast.audio.renderBackground(ctx);
+		this.broadcast.audio.render(ctx);
 		this.broadcast.video.render(now, ctx, { hovering: true });
 	}
 
 	close() {
-		this.broadcast.close();
 		this.canvas.close();
 		this.sound.close();
-		// Note: Don't close the canvas as it might be managed externally
+		this.broadcast.close(); // NOTE: Doesn't close the source broadcast.
 	}
 }

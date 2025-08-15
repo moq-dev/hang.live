@@ -593,9 +593,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	close() {
 		this.signals.close();
-		this.source.close();
 		this.audio.close();
 		this.chat.close();
 		this.captions.close();
+
+		// NOTE: Don't close the source broadcast; we need it for the local preview.
+		// this.source.close();
 	}
 }

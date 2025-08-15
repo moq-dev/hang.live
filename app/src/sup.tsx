@@ -26,7 +26,7 @@ export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): J
 	const local = new Local(connection, props.api, props.room);
 	onCleanup(() => local.close());
 
-	const publish = solid(local.publish);
+	const publish = solid(local.camera.enabled);
 
 	return (
 		<Show
@@ -71,7 +71,7 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 						classList={{
 							"opacity-50 cursor-not-allowed": !info(),
 						}}
-						onClick={() => props.local.publish.set(true)}
+						onClick={() => props.local.camera.enabled.set(true)}
 						style={{
 							background: Gradient(),
 							"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
@@ -170,13 +170,9 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 			</h3>
 
 			{/* Avatar/Video Preview */}
-			<div class="flex flex-col items-center mb-4">
-				<div class="relative text-center">
-					<div class="h-40 rounded-3xl flex items-center justify-center">{canvas}</div>
-				</div>
-
+			<div class="flex flex-col items-center mb-4 space-y-4">
 				<Show when={!props.api.authenticated()}>
-					<div class="flex gap-3 mt-4">
+					<div class="flex gap-3">
 						<div class="relative">
 							<button
 								type="button"
@@ -202,6 +198,10 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 						</div>
 					</div>
 				</Show>
+
+				<div class="relative text-center">
+					<div class="h-48 rounded-3xl flex items-center justify-center">{canvas}</div>
+				</div>
 			</div>
 
 			{/* Media Controls */}
