@@ -412,7 +412,7 @@ export class Space {
 		// Insert the broadcast into the room based on it's z-index.
 		this.ordered.set((prev) => [...prev, broadcast]);
 
-		broadcast.online.set(true);
+		broadcast.visible.set(true);
 
 		// Resort the broadcasts when the z-index changes.
 		broadcast.signals.effect((effect) => {
@@ -468,7 +468,7 @@ export class Space {
 		this.#rip.push(broadcast);
 
 		// Slowly fade out the offline broadcast.
-		broadcast.online.set(false);
+		broadcast.visible.set(false);
 
 		// Wait for the fade to complete, roughly.
 		setTimeout(() => {
@@ -477,6 +477,7 @@ export class Space {
 			// Don't close local broadcasts, we keep them open and toggle instead.
 			if (!(broadcast.source instanceof Publish.Broadcast)) {
 				broadcast.close();
+				broadcast.source.close();
 			}
 		}, 1000);
 	}
@@ -485,6 +486,7 @@ export class Space {
 		for (const broadcast of this.ordered.peek()) {
 			if (!(broadcast.source instanceof Publish.Broadcast)) {
 				broadcast.close();
+				broadcast.source.close();
 			}
 		}
 
@@ -632,7 +634,8 @@ export class Space {
 
 		let covered = 0;
 		for (const broadcast of broadcasts) {
-			covered += (broadcast.video.targetSize.x + broadcast.video.targetSize.y) / 2;
+			const target = broadcast.video.targetSize;
+			covered += (target.x + target.y) / 2;
 		}
 
 		this.#scale = Math.min(total / covered / 2, window.devicePixelRatio);
@@ -643,10 +646,12 @@ export class Space {
 
 		for (const broadcast of this.ordered.peek()) {
 			broadcast.close();
+			broadcast.source.close();
 		}
 
 		for (const broadcast of this.#rip) {
 			broadcast.close();
+			broadcast.source.close();
 		}
 
 		this.#rip = [];
