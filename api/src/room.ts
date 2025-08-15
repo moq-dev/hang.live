@@ -48,7 +48,8 @@ export const router = rpc
 	.router()
 	.post(
 		"/:room/join",
-		rpc.withParam(z.object({ room: nameSchema, guest: Auth.accountIdSchema.optional() })),
+		rpc.withParam(z.object({ room: nameSchema })),
+		rpc.withJson(z.object({ guest: z.lazy(() => Account.infoSchema).optional() })),
 		Auth.optional,
 		async (c) => {
 			const ctx = c.var.ctx;
@@ -67,17 +68,17 @@ export const router = rpc
 					avatar: row.avatar,
 				};
 			} else {
-				// Let the client provide it's own ID but only if it starts with "guest/"
-				let id: Account.Id;
-
-				const guest = c.req.valid("param").guest;
-				if (guest?.startsWith("guest/")) {
-					id = guest;
+				// Let the client provide it's own info but only if the ID starts with "guest/"
+				const guest = c.req.valid("json").guest;
+				if (guest?.id.startsWith("guest/")) {
+					info = guest;
 				} else {
-					id = Account.idSchema.parse(`guest/${Uuid.v4()}`);
+					info = {
+						id: Account.idSchema.parse(`guest/${Uuid.v4()}`),
+						name: randomName(),
+						avatar: randomAvatar(),
+					};
 				}
-
-				info = { id, name: randomName(), avatar: randomAvatar() };
 			}
 
 			const url = await ctx.room.sign(room, info.id);

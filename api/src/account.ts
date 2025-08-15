@@ -9,15 +9,17 @@ import * as OAuth from "./oauth";
 import * as rpc from "./rpc";
 import * as Storage from "./storage";
 
+// Account schemas
 export const idSchema = Auth.accountIdSchema;
 export type Id = Auth.AccountId;
 
-// Account schemas
-export interface Info {
-	id: Id;
-	name: string;
-	avatar: string;
-}
+export const infoSchema = z.object({
+	id: idSchema,
+	name: z.string().check(z.minLength(4), z.maxLength(100)),
+	avatar: z.string(),
+});
+
+export type Info = z.infer<typeof infoSchema>;
 
 export const createSchema = z.object({
 	name: z.string().check(z.minLength(4), z.maxLength(100)),

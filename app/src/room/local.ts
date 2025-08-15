@@ -27,7 +27,9 @@ export class Local {
 		this.sound = new Sound();
 
 		this.#signals.spawn(async () => {
-			const response = await api.routes.room[":room"].join.$post({ param: { room } });
+			const guest = Settings.guest.peek();
+
+			const response = await api.routes.room[":room"].join.$post({ param: { room }, json: { guest } });
 			if (!response.ok) {
 				throw new Error(`Failed to join room: ${response.statusText}`);
 			}
@@ -242,6 +244,14 @@ export class Local {
 			effect.set(this.screen.user, { ...info, name: `${info.name} (Screen)` });
 			effect.set(this.camera.preview.info, info);
 			effect.set(this.screen.preview.info, { ...info, name: `${info.name} (Screen)` });
+		});
+
+		// Save the guest account settings
+		this.#signals.effect((effect) => {
+			const info = effect.get(this.info);
+			if (!info) return;
+
+			Settings.guest.set(info);
 		});
 	}
 
