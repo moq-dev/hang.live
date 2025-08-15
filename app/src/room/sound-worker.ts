@@ -1,76 +1,87 @@
+import {
+	AutoTokenizer,
+	PreTrainedTokenizer,
+	RawAudio,
+	StyleTextToSpeech2Model,
+	Tensor,
+} from "@huggingface/transformers";
 import * as Comlink from "comlink";
-import { pipeline, env } from "@huggingface/transformers";
+import { phonemize } from "./phonemize";
 
-// Configure transformers.js environment
-env.allowLocalModels = false;
+const VOICES = [
+	"expr-voice-2-f",
+	"expr-voice-2-m",
+	"expr-voice-3-f",
+	"expr-voice-3-m",
+	"expr-voice-4-f",
+	"expr-voice-4-m",
+	"expr-voice-5-f",
+	"expr-voice-5-m",
+] as const;
 
-// For now, Kitten TTS doesn't have multiple voices like Kokoro
-export type Voice = "default";
+export type Voice = (typeof VOICES)[number];
+
+const voiceDataUrl = "https://huggingface.co/onnx-community/kitten-tts-nano-0.1-ONNX/resolve/main/voices";
 
 export class SoundWorker {
-	#model: Promise<any>;
+	#model: Promise<StyleTextToSpeech2Model>;
+	#tokenizer: Promise<PreTrainedTokenizer>;
+	#voiceCache = new Map<Voice, Promise<Float32Array>>();
 
 	constructor() {
-		// Load the Kitten TTS model
+		// Load the model
 		const model_id = "onnx-community/kitten-tts-nano-0.1-ONNX";
-		this.#model = pipeline("text-to-speech", model_id);
+		this.#model = StyleTextToSpeech2Model.from_pretrained(model_id, {
+			dtype: "q8",
+		});
+		this.#tokenizer = AutoTokenizer.from_pretrained(model_id);
 	}
 
 	async ready(): Promise<boolean> {
 		await this.#model;
+		await this.#tokenizer;
 		return true;
 	}
 
-	async tts(text: string, _voice: Voice): Promise<string> {
-		const synthesizer = await this.#model;
-		const output = await synthesizer(text);
-		
-		// Convert the audio output to a blob
-		const audioData = output.audio;
-		const sampleRate = output.sampling_rate;
-		
-		// Create WAV file from the audio data
-		const wavBlob = createWavBlob(audioData, sampleRate);
-		return URL.createObjectURL(wavBlob);
+	async tts(
+		text: string,
+		{ voice = "expr-voice-5-f", speed = 1.0 }: { voice?: Voice; speed?: number },
+	): Promise<string> {
+		const voiceData = await this.#voiceData(voice);
+
+		const phonemes = await phonemize(text, "en");
+
+		const tokenizer = await this.#tokenizer;
+		const { input_ids } = await tokenizer(phonemes, {
+			truncation: true,
+		});
+
+		// Prepare model inputs
+		const inputs = {
+			input_ids,
+			style: new Tensor("float32", voiceData, [1, voiceData.length]),
+			speed: new Tensor("float32", [speed], [1]),
+		};
+
+		// Generate audio
+		const model = await this.#model;
+		const { waveform } = await model(inputs);
+		const wav = new RawAudio(waveform.data, 24000);
+
+		return URL.createObjectURL(wav.toBlob());
 	}
-}
 
-// Helper function to create a WAV blob from audio data
-function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
-	const length = audioData.length;
-	const buffer = new ArrayBuffer(44 + length * 2);
-	const view = new DataView(buffer);
-
-	// WAV header
-	const writeString = (offset: number, string: string) => {
-		for (let i = 0; i < string.length; i++) {
-			view.setUint8(offset + i, string.charCodeAt(i));
+	#voiceData(voice: Voice): Promise<Float32Array> {
+		let cache = this.#voiceCache.get(voice);
+		if (!cache) {
+			const url = `${voiceDataUrl}/${voice}.bin`;
+			cache = fetch(url)
+				.then((response) => response.arrayBuffer())
+				.then((arrayBuffer) => new Float32Array(arrayBuffer));
+			this.#voiceCache.set(voice, cache);
 		}
-	};
-
-	writeString(0, "RIFF");
-	view.setUint32(4, 36 + length * 2, true);
-	writeString(8, "WAVE");
-	writeString(12, "fmt ");
-	view.setUint32(16, 16, true); // fmt chunk size
-	view.setUint16(20, 1, true); // PCM format
-	view.setUint16(22, 1, true); // mono
-	view.setUint32(24, sampleRate, true);
-	view.setUint32(28, sampleRate * 2, true); // byte rate
-	view.setUint16(32, 2, true); // block align
-	view.setUint16(34, 16, true); // bits per sample
-	writeString(36, "data");
-	view.setUint32(40, length * 2, true);
-
-	// Convert float samples to 16-bit PCM
-	let offset = 44;
-	for (let i = 0; i < length; i++) {
-		const sample = Math.max(-1, Math.min(1, audioData[i]));
-		view.setInt16(offset, sample * 0x7fff, true);
-		offset += 2;
+		return cache;
 	}
-
-	return new Blob([buffer], { type: "audio/wav" });
 }
 
 // Expose the worker API via Comlink

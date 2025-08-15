@@ -120,7 +120,7 @@ export class Sound {
 		source.start();
 	}
 
-	async say(text: string, voice: Voice = "default") {
+	async say(text: string, { voice, speed }: { voice?: Voice; speed?: number } = {}) {
 		if (!this.#worker) return;
 
 		// Give the worker at most 2s to load the model before timing out.
@@ -132,7 +132,7 @@ export class Sound {
 			return;
 		}
 
-		const audioUrl = await this.#worker.tts(text, voice);
+		const audioUrl = await this.#worker.tts(text, { voice, speed });
 
 		// Fetch the audio from the object URL
 		const response = await fetch(audioUrl);
