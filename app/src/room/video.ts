@@ -380,14 +380,14 @@ export class Video {
 		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
-			const fontSize = Math.max(12 * scale * devicePixelRatio, 10 * devicePixelRatio);
+			const fontSize = Math.max(14 * scale * devicePixelRatio, 10 * devicePixelRatio);
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;
 			ctx.fillStyle = "white";
 			ctx.strokeStyle = "black";
-			ctx.lineWidth = 4 * scale;
-			const offset = 24 * scale;
+			ctx.lineWidth = 2 * scale * devicePixelRatio;
+			const offset = 12 * scale * devicePixelRatio;
 			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();
