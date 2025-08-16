@@ -60,55 +60,53 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 
 	return (
 		<WebLayout>
-			<div class="max-w-7xl p-4">
-				<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
+			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
-				{/* Join Button */}
-				<div class="mb-12 flex justify-center">
-					<button
-						type="button"
-						class="min-w-64 px-6 py-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer text-lg"
-						classList={{
-							"opacity-50 cursor-not-allowed": !info(),
-						}}
-						onClick={() => props.local.camera.enabled.set(true)}
-						style={{
-							background: Gradient(),
-							"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-						}}
-					>
-						<IconPlay class="w-5 h-5 inline mr-2" />
-						<Switch>
-							<Match when={!info()}>Loading...</Match>
-							<Match when={props.api.authenticated()}>Join</Match>
-							<Match when={!props.api.authenticated()}>Join as Guest</Match>
-						</Switch>
-					</button>
+			{/* Join Button */}
+			<div class="mb-12 flex justify-center">
+				<button
+					type="button"
+					class="min-w-64 px-6 py-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer text-lg"
+					classList={{
+						"opacity-50 cursor-not-allowed": !info(),
+					}}
+					onClick={() => props.local.camera.enabled.set(true)}
+					style={{
+						background: Gradient(),
+						"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
+					}}
+				>
+					<IconPlay class="w-5 h-5 inline mr-2" />
+					<Switch>
+						<Match when={!info()}>Loading...</Match>
+						<Match when={props.api.authenticated()}>Join</Match>
+						<Match when={!props.api.authenticated()}>Join as Guest</Match>
+					</Switch>
+				</button>
+			</div>
+
+			{/* Two Column Layout */}
+			<div class="flex flex-wrap gap-6 mb-8 items-start">
+				{/* Left Column: Participants List */}
+				<div class="flex-1 min-w-[300px] grow space-y-6">
+					<PreviewRoom connection={props.connection} api={props.api} />
 				</div>
 
-				{/* Two Column Layout */}
-				<div class="flex flex-wrap gap-6 mb-8 items-start">
-					{/* Left Column: Participants List */}
-					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<PreviewRoom connection={props.connection} api={props.api} />
-					</div>
+				{/* Right Column: Avatar/Name Preview */}
+				<div class="flex-1 min-w-[300px] grow space-y-6">
+					<Show when={info()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
+						<div class="rounded-2xl border border-gray-800 p-6">
+							<PreviewIcon api={props.api} room={props.room} local={props.local} />
+						</div>
+					</Show>
 
-					{/* Right Column: Avatar/Name Preview */}
-					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<Show when={info()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
-							<div class="rounded-2xl border border-gray-800 p-6">
-								<PreviewIcon api={props.api} room={props.room} local={props.local} />
-							</div>
-						</Show>
-
-						{/* Login Options - only show for guests */}
-						<Show when={!props.api.authenticated()}>
-							<div class="rounded-2xl border border-gray-800 p-6">
-								<div class="text-center text-gray-400 mb-4">...or login to customize your profile</div>
-								<Login api={props.api} />
-							</div>
-						</Show>
-					</div>
+					{/* Login Options - only show for guests */}
+					<Show when={!props.api.authenticated()}>
+						<div class="rounded-2xl border border-gray-800 p-6">
+							<div class="text-center text-gray-400 mb-4">...or login to customize your profile</div>
+							<Login api={props.api} />
+						</div>
+					</Show>
 				</div>
 			</div>
 		</WebLayout>

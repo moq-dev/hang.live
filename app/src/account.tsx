@@ -206,7 +206,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	};
 
 	return (
-		<div class="max-w-7xl p-4">
+		<>
 			{/* Profile Section - Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
 				{/* Form Controls */}
@@ -378,7 +378,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 					</Show>
 				</div>
 			</div>
-		</div>
+		</>
 	);
 }
 
