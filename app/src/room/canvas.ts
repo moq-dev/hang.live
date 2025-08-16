@@ -1,11 +1,11 @@
 import { Effect, Signal } from "@kixelated/signals";
 import { Vector } from "./geometry";
 
-const LINE_SPACING = 64;
-const LINE_WIDTH = 10;
+const LINE_SPACING = 32 * devicePixelRatio;
+const LINE_WIDTH = 5 * devicePixelRatio;
 const SEGMENTS = 16;
-const WOBBLE_AMPLITUDE = 10;
-const BEND_AMPLITUDE = 16;
+const WOBBLE_AMPLITUDE = 5 * devicePixelRatio;
+const BEND_AMPLITUDE = 8 * devicePixelRatio;
 const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
@@ -148,7 +148,9 @@ export class Canvas {
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;
 
-		ctx.font = "bold 120px sans-serif";
+		const fontSize = 64 * devicePixelRatio;
+
+		ctx.font = `bold ${fontSize}px sans-serif`;
 		ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
@@ -178,7 +180,7 @@ export class Canvas {
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;
 
-		const LINE_COUNT = Math.ceil(height / LINE_SPACING) + LINE_OVERDRAW * 2;
+		const LINE_COUNT = Math.ceil(height / (LINE_SPACING)) + LINE_OVERDRAW * 2;
 
 		ctx.lineWidth = LINE_WIDTH;
 		ctx.lineCap = "round";

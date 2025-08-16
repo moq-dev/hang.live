@@ -21,7 +21,7 @@ export class TTS {
 
 	async generate(text: string, props?: { voice?: Voice; speed?: number }): Promise<string> {
 		const audio = await this.#model.generate(text, {
-			voice: props?.voice || "af_sky",
+			voice: props?.voice || "af_bella",
 			speed: props?.speed || 1.0,
 		});
 		const blob = audio.toBlob();
