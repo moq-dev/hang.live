@@ -55,7 +55,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 		<>
 			<Tooltip content="Leave" position="bottom">
 				<a
-					href="/fave"
+					href="/start"
 					class="p-2 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
 					<IconLeave class="w-5 h-5" />

@@ -69,7 +69,7 @@ function OtherNav() {
 	return (
 		<Tooltip content="Join a hang" position="bottom">
 			<a
-				href="/fave"
+				href="/start"
 				class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 			>
 				<IconPlay class="w-5 h-5" />

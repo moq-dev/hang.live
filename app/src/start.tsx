@@ -16,7 +16,7 @@ import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
 import * as Random from "./util/random";
 
-export function Fave(props: { api: Api.Client }): JSX.Element {
+export function Start(props: { api: Api.Client }): JSX.Element {
 	const navigate = useNavigate();
 	const [roomInput, setRoomInput] = createSignal("");
 	const [placeholder, setPlaceholder] = createSignal(Random.room());
