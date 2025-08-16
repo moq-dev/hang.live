@@ -9,9 +9,9 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
-import { Fave } from "./fave";
 import { NotFound } from "./not-found";
 import { Canvas } from "./room/canvas";
+import { Start } from "./start";
 import { Sup } from "./sup";
 
 export function Hang(): JSX.Element {
@@ -27,7 +27,7 @@ export function Hang(): JSX.Element {
 			<Router>
 				<Route path="/" component={About} />
 				<Route path="/account" component={() => <Account api={api} />} />
-				<Route path="/fave" component={() => <Fave api={api} />} />
+				<Route path="/start" component={() => <Start api={api} />} />
 				<Route path="*" component={() => <Fallback canvas={canvas} api={api} />} />
 			</Router>
 		</>

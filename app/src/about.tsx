@@ -145,7 +145,7 @@ export function About(): JSX.Element {
 		() => room.remove("4"),
 		() => room.remove("5"),
 		() => room.remove("6"),
-		() => one.chat.message.set("[start a hang](https://hang.live/fave)"),
+		() => one.chat.message.set("[start a hang](https://hang.live/start)"),
 		() => {},
 		() => one.chat.message.set("there's a lot more, but it's hard to demo"),
 		() => two.audio.captions.text.set("like automatic captions"),
@@ -173,7 +173,7 @@ export function About(): JSX.Element {
 					I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
 				</p>
 				<p class="px-4">
-					It's fun, free, and a little bit cringe. <a href="/fave">Start a hang</a> and invite your friends.
+					It's fun, free, and a little bit cringe. <a href="/start">Start a hang</a> and invite your friends.
 				</p>
 				<div class="p-4 h-128">{canvas}</div>
 				<p class="px-4">
