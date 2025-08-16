@@ -121,13 +121,6 @@ nav > * {
 }
 
 main {
-	@apply w-full bg-black text-white p-4 rounded-xl;
-
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	min-height: 0;
-
 	p {
 		@apply m-4;
 	}

@@ -81,136 +81,131 @@ export function Fave(props: { api: Api.Client }): JSX.Element {
 
 	return (
 		<Layout>
-			<div class="max-w-7xl p-4">
-				<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
+			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
-				{/* Two Column Layout */}
-				<div class="flex flex-wrap gap-6 mb-8 items-start">
-					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<div class="rounded-2xl border border-gray-800 p-6">
-							<div class="flex items-center justify-between mb-8">
-								<div class="flex items-center gap-2">
-									<IconHeart class="w-5 h-5 text-red-500" />
-									<h2 class="text-xl font-semibold">Favorites</h2>
-								</div>
+			{/* Two Column Layout */}
+			<div class="flex flex-wrap gap-6 mb-8 items-start">
+				<div class="flex-1 min-w-[300px] grow space-y-6">
+					<div class="rounded-2xl border border-gray-800 p-6">
+						<div class="flex items-center justify-between mb-8">
+							<div class="flex items-center gap-2">
+								<IconHeart class="w-5 h-5 text-red-500" />
+								<h2 class="text-xl font-semibold">Favorites</h2>
 							</div>
-							<Show
-								when={props.api.authenticated()}
-								fallback={
-									<div class="text-center">
-										<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
-										<h3 class="text-lg font-semibold mb-8">Sign in to favorite hangs</h3>
-										<Login api={props.api} />
-									</div>
-								}
-							>
-								<Switch>
-									<Match when={favorites.loading}>
-										<div class="space-y-3">
-											<For each={[1, 2, 3]}>
-												{() => (
-													<div class="bg-gray-800/30 rounded-xl p-4 animate-pulse">
-														<div class="h-5 bg-gray-700 rounded mb-2 w-3/4" />
-														<div class="h-4 bg-gray-700 rounded w-1/2" />
-													</div>
-												)}
-											</For>
-										</div>
-									</Match>
-									<Match when={favorites()?.length === 0}>
-										<div class="text-center py-8">
-											<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
-											<h3 class="text-lg font-semibold mb-2">No favorites yet</h3>
-											<p class="text-gray-400 text-sm leading-relaxed">
-												Enjoyed yourself? Click the heart icon to save a hang and (eventually)
-												get notifications when others join.
-											</p>
-										</div>
-									</Match>
-									<Match when={favorites()}>
-										{(favs) => (
-											<>
-												<div class="space-y-3">
-													<For each={favs()}>
-														{(favorite) => (
-															<FavoriteRoom
-																room={favorite.room}
-																createdAt={favorite.created_at}
-																onRemove={handleRemove}
-																connection={connection}
-																api={props.api}
-															/>
-														)}
-													</For>
+						</div>
+						<Show
+							when={props.api.authenticated()}
+							fallback={
+								<div class="text-center">
+									<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
+									<h3 class="text-lg font-semibold mb-8">Sign in to favorite hangs</h3>
+									<Login api={props.api} />
+								</div>
+							}
+						>
+							<Switch>
+								<Match when={favorites.loading}>
+									<div class="space-y-3">
+										<For each={[1, 2, 3]}>
+											{() => (
+												<div class="bg-gray-800/30 rounded-xl p-4 animate-pulse">
+													<div class="h-5 bg-gray-700 rounded mb-2 w-3/4" />
+													<div class="h-4 bg-gray-700 rounded w-1/2" />
 												</div>
-												<Show when={favs().length > 6}>
-													<div class="mt-4 text-center">
-														<button
-															type="button"
-															onClick={() => setShowMore(!showMore())}
-															class="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-														>
-															{showMore()
-																? "Show less"
-																: `Show ${favs().length - 6} more`}
-														</button>
-													</div>
-												</Show>
-											</>
-										)}
-									</Match>
-								</Switch>
-							</Show>
-						</div>
+											)}
+										</For>
+									</div>
+								</Match>
+								<Match when={favorites()?.length === 0}>
+									<div class="text-center py-8">
+										<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
+										<h3 class="text-lg font-semibold mb-2">No favorites yet</h3>
+										<p class="text-gray-400 text-sm leading-relaxed">
+											Enjoyed yourself? Click the heart icon to save a hang and (eventually) get
+											notifications when others join.
+										</p>
+									</div>
+								</Match>
+								<Match when={favorites()}>
+									{(favs) => (
+										<>
+											<div class="space-y-3">
+												<For each={favs()}>
+													{(favorite) => (
+														<FavoriteRoom
+															room={favorite.room}
+															createdAt={favorite.created_at}
+															onRemove={handleRemove}
+															connection={connection}
+															api={props.api}
+														/>
+													)}
+												</For>
+											</div>
+											<Show when={favs().length > 6}>
+												<div class="mt-4 text-center">
+													<button
+														type="button"
+														onClick={() => setShowMore(!showMore())}
+														class="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+													>
+														{showMore() ? "Show less" : `Show ${favs().length - 6} more`}
+													</button>
+												</div>
+											</Show>
+										</>
+									)}
+								</Match>
+							</Switch>
+						</Show>
 					</div>
-					<div class="flex-1 min-w-[300px] grow space-y-6">
-						<div class="rounded-2xl border border-gray-800 p-6">
-							<div class="flex items-center justify-between mb-8">
-								<div class="flex items-center gap-2">
-									<IconPlus class="w-5 h-5 text-green-500" />
-									<h2 class="text-xl font-semibold">Create</h2>
-								</div>
+				</div>
+				<div class="flex-1 min-w-[300px] grow space-y-6">
+					<div class="rounded-2xl border border-gray-800 p-6">
+						<div class="flex items-center justify-between mb-8">
+							<div class="flex items-center gap-2">
+								<IconPlus class="w-5 h-5 text-green-500" />
+								<h2 class="text-xl font-semibold">Create</h2>
+							</div>
+						</div>
+
+						<form onSubmit={handleCreate} class="space-y-4">
+							<div class="flex gap-3">
+								<input
+									type="text"
+									value={roomInput()}
+									onInput={(e) => setRoomInput(e.currentTarget.value)}
+									placeholder={placeholder()}
+									class="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-xl focus:outline-none focus:border-blue-500 transition-colors text-lg"
+									autocomplete="off"
+									autocorrect="off"
+									autocapitalize="off"
+									spellcheck={false}
+								/>
+								<button
+									type="submit"
+									class="px-3 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 cursor-pointer"
+									style={{
+										background: Gradient(),
+									}}
+								>
+									<IconPlay class="w-5 h-5" />
+								</button>
 							</div>
 
-							<form onSubmit={handleCreate} class="space-y-4">
-								<div class="flex gap-3">
-									<input
-										type="text"
-										value={roomInput()}
-										onInput={(e) => setRoomInput(e.currentTarget.value)}
-										placeholder={placeholder()}
-										class="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-xl focus:outline-none focus:border-blue-500 transition-colors text-lg"
-										autocomplete="off"
-										autocorrect="off"
-										autocapitalize="off"
-										spellcheck={false}
-									/>
-									<button
-										type="submit"
-										class="px-3 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 cursor-pointer"
-										style={{
-											background: Gradient(),
-										}}
-									>
-										<IconPlay class="w-5 h-5" />
-									</button>
-								</div>
+							{/* Live URL Preview */}
+							<div class="text-sm text-gray-500">
+								<span>URL: </span>
+								<span class="text-gray-300 font-mono">hang.live/@{roomName()}</span>
+							</div>
+						</form>
 
-								{/* Live URL Preview */}
-								<div class="text-sm text-gray-500">
-									<span>URL: </span>
-									<span class="text-gray-300 font-mono">hang.live/@{roomName()}</span>
-								</div>
-							</form>
-
-							<Dialog
-								Icon={IconInformation}
-								title="Hangs are public"
-								description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
-							/>
-						</div>
+						<Dialog
+							Icon={IconInformation}
+							title="Hangs are public"
+							description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
+						/>
 					</div>
-					;
 				</div>
 			</div>
 		</Layout>
