@@ -180,7 +180,7 @@ export class Canvas {
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;
 
-		const LINE_COUNT = Math.ceil(height / (LINE_SPACING)) + LINE_OVERDRAW * 2;
+		const LINE_COUNT = Math.ceil(height / LINE_SPACING) + LINE_OVERDRAW * 2;
 
 		ctx.lineWidth = LINE_WIDTH;
 		ctx.lineCap = "round";
@@ -218,10 +218,11 @@ export class Canvas {
 	}
 
 	toggleFullscreen() {
-		if (document.fullscreenElement === this.#canvas) {
+		if (document.fullscreenElement) {
 			document.exitFullscreen();
 		} else {
-			this.#canvas.requestFullscreen();
+			// Request fullscreen on the document element to include all UI
+			document.documentElement.requestFullscreen();
 		}
 	}
 
