@@ -102,6 +102,7 @@ export function About(): JSX.Element {
 		() => two.location.current.set({ x: 0.5, y: 0 }),
 		() => one.chat.message.set("and audio panning"),
 		() => two.chat.message.set("huh?"),
+		() => {},
 		() => one.chat.message.set("inviting the squad"),
 		() => {
 			two.chat.message.set("oh no");

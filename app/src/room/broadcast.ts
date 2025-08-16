@@ -453,7 +453,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const force = target.sub(middle);
 		this.velocity = this.velocity.add(force);
 
-		const PADDING = 64;
+		const PADDING = 32 * devicePixelRatio;
 
 		const top = PADDING - bounds.position.y;
 		const down = bounds.position.y + bounds.size.y - viewport.y + PADDING;
@@ -542,15 +542,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 
 		const bounds = this.bounds.peek();
-		const fontScale = Math.sqrt(this.scale); // NOTE: We don't use the room scale
 
 		ctx.save();
 		ctx.globalAlpha *= alpha;
 
 		// Calculate arrow position and animation
-		const arrowSize = 16 * fontScale;
+		const arrowSize = 12 * this.scale * devicePixelRatio;
 		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * fontScale;
+		const offset = 10 * this.scale * devicePixelRatio;
 
 		const gap = 2 * (arrowSize + offset);
 
@@ -567,14 +566,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		ctx.closePath();
 
 		// Style the arrow
-		ctx.lineWidth = 2 * fontScale;
+		ctx.lineWidth = 4 * this.scale;
 		ctx.strokeStyle = "#000"; // Gold color
 		ctx.fillStyle = "#FFD700";
 		ctx.stroke();
 		ctx.fill();
 
 		// Draw "YOU" text
-		ctx.font = `bold ${14 + 12 * fontScale}px Arial`;
+		ctx.font = `bold ${32 * this.scale}px Arial`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillStyle = "#FFD700";

@@ -144,8 +144,8 @@ export class Audio {
 
 		ctx.translate(bounds.position.x, bounds.position.y);
 
-		const RADIUS = 8 + 16 * Math.sqrt(this.broadcast.scale);
-		const PADDING = 8 + 16 * Math.sqrt(this.broadcast.scale);
+		const RADIUS = 12 * this.broadcast.scale * devicePixelRatio;
+		const PADDING = 12 * this.broadcast.scale * devicePixelRatio;
 
 		// Background outline
 		ctx.beginPath();
@@ -174,8 +174,8 @@ export class Audio {
 		ctx.save();
 		ctx.translate(bounds.position.x, bounds.position.y);
 
-		const PADDING = 8 + 16 * Math.sqrt(scale);
-		const RADIUS = 8 + 16 * Math.sqrt(scale);
+		const PADDING = 12 * scale * devicePixelRatio;
+		const RADIUS = 12 * scale * devicePixelRatio;
 
 		// Take the absolute value of the distance from 128, which is silence.
 		for (let i = 0; i < this.#analyserBuffer.length; i++) {

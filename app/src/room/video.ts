@@ -179,7 +179,7 @@ export class Video {
 		ctx.shadowOffsetY = 4 * scale;
 
 		// Create a rounded rectangle path
-		const radius = 8 + 16 * Math.sqrt(scale);
+		const radius = 12 * scale * devicePixelRatio;
 		const w = bounds.size.x;
 		const h = bounds.size.y;
 
@@ -329,7 +329,7 @@ export class Video {
 					// Add a pixel in each direction to account for any rounding errors.
 					ctx.drawImage(meme, x - 1, y - 1, width + 2, height + 2);
 				} else {
-					const fontSize = 32 + 32 * Math.sqrt(scale);
+					const fontSize = 32 + 32 * scale;
 					// Draw an audio symbol.
 					ctx.fillStyle = "white";
 					ctx.font = `bold ${fontSize}px Arial`;
@@ -380,14 +380,14 @@ export class Video {
 		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
-			const fontSize = 12 + 12 * Math.sqrt(scale);
+			const fontSize = Math.max(24 * scale, 8 * devicePixelRatio);
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;
 			ctx.fillStyle = "white";
 			ctx.strokeStyle = "black";
-			ctx.lineWidth = 1 + 2 * Math.sqrt(scale);
-			const offset = 16 * Math.sqrt(scale);
+			ctx.lineWidth = 4 * scale;
+			const offset = 24 * scale;
 			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();
