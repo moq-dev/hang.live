@@ -51,7 +51,7 @@ export class TTS {
 	}
 
 	async generate(text: string, speed = 1.1): Promise<string> {
-		const phonemes = await phonemize(text, "en");
+		const phonemes = await phonemize(text);
 
 		const { input_ids } = await this.#tokenizer(phonemes, {
 			truncation: true,

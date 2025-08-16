@@ -90,6 +90,7 @@ export function About(): JSX.Element {
 		() => {},
 		() => two.stop(),
 		() => two.chat.message.set("on second thought, maybe not"),
+		() => {},
 		() => three.chat.message.set("gotta run"),
 		() => room.remove("3"),
 		() => one.chat.message.set("lame"),
