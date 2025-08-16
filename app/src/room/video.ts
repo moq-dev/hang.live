@@ -380,7 +380,7 @@ export class Video {
 		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
-			const fontSize = Math.max(24 * scale, 8 * devicePixelRatio);
+			const fontSize = Math.max(12 * scale * devicePixelRatio, 10 * devicePixelRatio);
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;
