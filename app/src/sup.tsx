@@ -18,6 +18,8 @@ import { Room } from "./room";
 import { Canvas } from "./room/canvas";
 import { Local, LocalPreview } from "./room/local";
 
+import "@kixelated/hang/support/element";
+
 export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
 	const connection = new Connection();
 	onCleanup(() => connection.close());
@@ -61,6 +63,8 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 	return (
 		<WebLayout>
 			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
+
+			<hang-support class="text-2xl" prop:show="partial" />
 
 			{/* Join Button */}
 			<div class="mb-12 flex justify-center">
@@ -156,15 +160,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 	return (
 		<>
 			<h3 class="text-xl font-semibold mb-4">
-				Your Profile{" "}
-				<Show when={props.api.authenticated()} fallback="(guest)">
-					<a
-						href="/account"
-						class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
-					>
-						<IconAccountEdit class="w-5 h-5" />
-					</a>
-				</Show>
+				Your Profile <Show when={!props.api.authenticated()}>(guest)</Show>
 			</h3>
 
 			{/* Avatar/Video Preview */}

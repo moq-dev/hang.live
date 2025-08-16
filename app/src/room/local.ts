@@ -274,6 +274,8 @@ export class Local {
 			if (!connection) return;
 
 			const announced = connection.announced();
+			effect.cleanup(() => announced.close());
+
 			effect.spawn(async (cancel) => {
 				for (;;) {
 					const next = await Promise.race([announced.next(), cancel]);
