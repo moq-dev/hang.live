@@ -191,14 +191,17 @@ export class Local {
 		this.camera.signals.effect((effect) => {
 			const speaking = effect.get(this.camera.audio.captions.speaking);
 
-			// Only update the preview if it's been stable for at least 1s.
+			// Only update the preview if we've been speaking for at least 200ms, or not for 1s.
 			// NOTE: The timer will get cleared when the effect is run again.
-			effect.timer(() => {
-				this.camera.preview.info.set((prev) => ({
-					...prev,
-					speaking,
-				}));
-			}, 1000);
+			effect.timer(
+				() => {
+					this.camera.preview.info.set((prev) => ({
+						...prev,
+						speaking,
+					}));
+				},
+				speaking ? 1000 : 200,
+			);
 		});
 
 		this.screen.signals.effect((effect) => {
