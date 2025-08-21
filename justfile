@@ -8,7 +8,7 @@ default:
 
 # Run the CI checks
 check:
-	pnpm -r i
+	pnpm i
 
 	# Make sure Typescript compiles
 	pnpm -r run check
@@ -28,7 +28,7 @@ check:
 # Automatically fix some issues.
 fix:
 	# Fix the JS packages
-	pnpm -r i
+	pnpm i
 
 	# Format and lint
 	pnpm -r exec biome check --fix
@@ -56,7 +56,7 @@ upgrade:
 
 # Build the packages
 build:
-	pnpm -r i
+	pnpm i
 	pnpm -r run build
 
 prod: build
@@ -67,7 +67,7 @@ deploy env="staging":
 	just --justfile app/justfile deploy "{{env}}"
 
 dev:
-	pnpm -r i
+	pnpm i
 
 	# Generate auth tokens if needed
 	@cd moq/rs && just auth-token

@@ -2,15 +2,16 @@ import * as Comlink from "comlink";
 import * as Kitten from "./kitten";
 import * as Kokoro from "./kokoro";
 
-async function detectWebGPU() {
-	try {
-		// @ts-expect-error - navigator.gpu is not typed yet
-		const adapter = await navigator.gpu.requestAdapter();
-		return !!adapter;
-	} catch {
-		return false;
-	}
-}
+// Disabled for now - uncomment when re-enabling Kokoro TTS
+// async function detectWebGPU() {
+// 	try {
+// 		// @ts-expect-error - navigator.gpu is not typed yet
+// 		const adapter = await navigator.gpu.requestAdapter();
+// 		return !!adapter;
+// 	} catch {
+// 		return false;
+// 	}
+// }
 
 export class TTS {
 	#cpu: Promise<Kitten.TTS>;
@@ -19,7 +20,9 @@ export class TTS {
 	constructor() {
 		this.#cpu = Kitten.TTS.load();
 		// Only start loading the GPU model after the CPU model is loaded, and if it's supported.
-		this.#gpu = this.#cpu.then(() => detectWebGPU()).then((webgpu) => (webgpu ? Kokoro.TTS.load() : undefined));
+		// Temporary disabled Kokoro TTS because it's huge/expensive.
+		//this.#gpu = this.#cpu.then(() => detectWebGPU()).then((webgpu) => (webgpu ? Kokoro.TTS.load() : undefined));
+		this.#gpu = Promise.resolve(undefined);
 	}
 
 	async ready(): Promise<boolean> {

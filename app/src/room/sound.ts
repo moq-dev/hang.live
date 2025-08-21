@@ -30,6 +30,7 @@ export class Sound {
 	#signals = new Effect();
 
 	#tts: Comlink.Remote<TTS> | undefined;
+	#ttsQueue: AudioBufferSourceNode[] = [];
 
 	suspended: Signal<boolean>;
 
@@ -140,7 +141,19 @@ export class Sound {
 		// Play the audio through the panner
 		const source = new AudioBufferSourceNode(this.context, { buffer: audioBuffer });
 		source.connect(this.context.destination);
-		source.start();
+
+		// Queue the audio to play after the current one ends.
+		if (this.#ttsQueue.length === 0) {
+			source.start();
+		}
+
+		this.#ttsQueue.push(source);
+		source.onended = () => {
+			this.#ttsQueue.shift();
+			if (this.#ttsQueue.length > 0) {
+				this.#ttsQueue[0].start();
+			}
+		};
 
 		// Clean up the object URL
 		URL.revokeObjectURL(audioUrl);

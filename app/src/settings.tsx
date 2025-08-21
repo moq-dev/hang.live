@@ -39,6 +39,11 @@ if (guestRaw) {
 	}
 }
 
+const volume = Settings.volume.peek();
+if (Number.isNaN(volume) || volume < 0 || volume > 1) {
+	Settings.volume.set(1);
+}
+
 const effect = new Effect();
 
 effect.subscribe(Settings.draggable, (draggable) => {
