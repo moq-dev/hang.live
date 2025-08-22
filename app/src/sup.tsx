@@ -47,6 +47,9 @@ function App(props: {
 	api: Api.Client;
 	local: Local;
 }): JSX.Element {
+	// Try to start the sound immediately on click.
+	props.local.sound.enabled.set(true);
+
 	const room = new Room(props.connection, props.canvas, props.local);
 	onCleanup(() => room.close());
 
