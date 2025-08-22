@@ -12,7 +12,7 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
 	build: {
 		target: "esnext",
-		sourcemap: true,
+		sourcemap: process.env.NODE_ENV === "production" ? false : "inline",
 		rollupOptions: {
 			input: "index.html",
 		},
