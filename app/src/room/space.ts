@@ -57,6 +57,12 @@ export class Space {
 
 	#onMouseDown(e: MouseEvent) {
 		const mouse = this.canvas.relative(e.clientX, e.clientY);
+		const viewport = this.canvas.viewport.peek();
+
+		// Try enabling sound if we clicked the canvas.
+		if (mouse.x > 0 && mouse.x < viewport.x && mouse.y > 0 && mouse.y < viewport.y) {
+			this.sound?.enabled.set(() => true);
+		}
 
 		this.#dragging = undefined;
 
@@ -68,7 +74,6 @@ export class Space {
 			return;
 		}
 
-		const viewport = this.canvas.viewport.peek();
 
 		// Bump the z-index unless we're already at the top.
 		broadcast.targetPosition.set((prev) => ({

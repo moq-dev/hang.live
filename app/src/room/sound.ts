@@ -22,7 +22,12 @@ export type NotificationSound = keyof typeof NOTIFICATIONS;
 const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
+export type SoundProps = {
+	enabled?: boolean;
+}
+
 export class Sound {
+	enabled: Signal<boolean>;
 	context: AudioContext;
 	gain: GainNode;
 
@@ -34,8 +39,16 @@ export class Sound {
 
 	suspended: Signal<boolean>;
 
-	constructor() {
-		this.context = new AudioContext();
+	constructor(props?: SoundProps) {
+		this.context = new AudioContext({
+			latencyHint: "playback",
+		});
+		this.enabled = new Signal(props?.enabled ?? false);
+
+		if (!this.enabled.peek()) {
+			this.context.suspend();
+		}
+
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
 
@@ -55,22 +68,25 @@ export class Sound {
 
 		this.suspended = new Signal(this.context.state === "suspended");
 
-		if (this.suspended.peek()) {
-			// Determine when the user has interacted with the page so we can potentially unmute audio.
-			const unsuspend = () => {
-				this.suspended.set(false);
-				this.context.resume();
-			};
-
-			this.#signals.eventListener(window, "click", unsuspend, { once: true });
-			this.#signals.eventListener(window, "keydown", unsuspend, { once: true });
+		this.context.onstatechange = () => {
+			this.suspended.set(this.context.state === "suspended");
 		}
+
+		this.#signals.effect((effect) => {
+			const enabled = effect.get(this.enabled);
+			const suspended = effect.get(this.suspended);
+
+			if (enabled && suspended) {
+				this.context.resume();
+			} else if (!enabled && !suspended) {
+				this.context.suspend();
+			}
+		});
 
 		this.#signals.effect((effect) => {
 			if (!effect.get(Settings.tts)) return;
 
-			// Only start loading the TTS model when the context is unsuspended.
-			// This is kind of a hack to avoid it when the demo is loaded before interaction.
+			// Only start loading the TTS model when sound is enabled.
 			if (effect.get(this.suspended)) return;
 
 			const worker = new Worker(new URL("./tts", import.meta.url), { type: "module" });
@@ -110,8 +126,7 @@ export class Sound {
 	}
 
 	async play(sound: NotificationSound) {
-		// Can't play sounds when the context is suspended, and we don't want to queue them either.
-		if (this.context.state === "suspended") return;
+		if (this.suspended.peek()) return;
 
 		const buffer = await this.load(sound);
 		const source = new AudioBufferSourceNode(this.context, { buffer });
@@ -121,6 +136,7 @@ export class Sound {
 
 	async say(text: string) {
 		if (!this.#tts) return;
+		if (this.suspended.peek()) return;
 
 		// Give the worker at most 2s to load the model before timing out.
 		const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
@@ -204,8 +220,7 @@ export class PannedNotifications {
 	}
 
 	async notification(sound: NotificationSound) {
-		// Can't play sounds when the context is suspended, and we don't want to queue them either.
-		if (this.#parent.context.state === "suspended") return;
+		if (this.#parent.suspended.peek()) return;
 
 		const buffer = await this.#parent.load(sound);
 
