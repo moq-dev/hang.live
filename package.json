@@ -9,7 +9,7 @@
 		"deploy": "pnpm -r run deploy"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.1.1",
+		"@biomejs/biome": "^2.2.0",
 		"concurrently": "^9.2.0",
 		"@eslint/js": "^9.30.1",
 		"eslint-plugin-solid": "^0.14.5",
