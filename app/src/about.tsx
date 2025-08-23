@@ -175,14 +175,14 @@ export function About(): JSX.Element {
 					I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
 				</p>
 				<p class="px-4">
-					It's fun, free, and a little bit cringe. <a href="/start">Start a hang</a> and invite your friends.
+					It's fun, free, and a bit cringe. <a href="/start">Start a hang</a> and invite your friends.
 				</p>
 				<div class="p-4 h-128">{canvas}</div>
 				<p class="px-4">
 					For the nerds in the audience, this site uses bleeding edge web technologies. We're using{" "}
 					<a href="https://moq.dev">Media over QUIC</a>: an{" "}
 					<a href="https://github.com/kixelated/moq">open source</a> WebRTC alternative. This ain't your usual
-					Zoom clone, but there's still a TON of work to do.
+					Zoom clone.
 				</p>
 			</div>
 		</Layout>
