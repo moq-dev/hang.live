@@ -2,6 +2,10 @@ packages:
   - .
   - app
   - api
+  - moq/js/moq
+  - moq/js/hang
+  - moq/js/moq-token
+  - moq/js/signals
 
 onlyBuiltDependencies:
   - '@biomejs/biome'
