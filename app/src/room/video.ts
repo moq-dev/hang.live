@@ -2,6 +2,7 @@ import { type Publish, Watch } from "@kixelated/hang";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
+import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP } from "./meme";
 
 // Local or remote (Hang.Watch.Video) video source.
 /*
@@ -306,35 +307,94 @@ export class Video {
 				ctx.globalAlpha *= this.#memeOpacity;
 
 				if (meme instanceof HTMLVideoElement) {
-					// Figure out the correct aspect ratio such that we fill the bounds.
-					const aspectRatio = meme.videoWidth / meme.videoHeight;
-					let width: number;
-					let height: number;
+					// Get the video meme data to check for fit/position settings
+					const memeName = this.broadcast.memeName.peek();
+					let fit = "cover"; // Default to cover
+					let position = "center"; // Default to center
 
-					// Calculate dimensions to fill the bounds while maintaining aspect ratio
-					if (aspectRatio > bounds.size.x / bounds.size.y) {
-						// Video is wider than bounds - use height to fill
-						height = bounds.size.y;
-						width = height * aspectRatio;
-					} else {
-						// Video is taller than bounds - use width to fill
-						width = bounds.size.x;
-						height = width / aspectRatio;
+					if (memeName) {
+						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
+						const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
+						const memeData = MEME_VIDEO[memeKey as keyof typeof MEME_VIDEO];
+						if (memeData) {
+							fit = memeData.fit || "cover";
+							position = memeData.position || "center";
+						}
 					}
 
-					// Center the video.
-					const x = bounds.size.x / 2 - width / 2;
-					const y = bounds.size.y / 2 - height / 2;
+					const aspectRatio = meme.videoWidth / meme.videoHeight;
+					const boundsAspectRatio = bounds.size.x / bounds.size.y;
+					let width: number;
+					let height: number;
+					let x: number;
+					let y: number;
+
+					if (fit === "contain") {
+						// Scale to fit inside bounds while maintaining aspect ratio
+						if (aspectRatio > boundsAspectRatio) {
+							// Video is wider - fit to width
+							width = bounds.size.x;
+							height = width / aspectRatio;
+						} else {
+							// Video is taller - fit to height
+							height = bounds.size.y;
+							width = height * aspectRatio;
+						}
+					} else {
+						// Default "cover" - fill the bounds
+						if (aspectRatio > boundsAspectRatio) {
+							// Video is wider than bounds - use height to fill
+							height = bounds.size.y;
+							width = height * aspectRatio;
+						} else {
+							// Video is taller than bounds - use width to fill
+							width = bounds.size.x;
+							height = width / aspectRatio;
+						}
+					}
+
+					// Calculate position based on the position setting
+					if (position === "bottom left") {
+						x = 0;
+						y = bounds.size.y - height;
+					} else if (position === "bottom right") {
+						x = bounds.size.x - width;
+						y = bounds.size.y - height;
+					} else if (position === "top left") {
+						x = 0;
+						y = 0;
+					} else if (position === "top right") {
+						x = bounds.size.x - width;
+						y = 0;
+					} else {
+						// Default center
+						x = bounds.size.x / 2 - width / 2;
+						y = bounds.size.y / 2 - height / 2;
+					}
 
 					// Add a pixel in each direction to account for any rounding errors.
 					ctx.drawImage(meme, x - 1, y - 1, width + 2, height + 2);
 				} else {
+					// Get the emoji for this audio meme
+					const memeName = this.broadcast.memeName.peek();
+					let emoji = "🔊"; // Default speaker emoji
+
+					if (memeName) {
+						// Remove hyphens for lookup if needed
+						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
+						const memeKey = MEME_AUDIO_LOOKUP[lookupKey] || memeName;
+						const memeData = MEME_AUDIO[memeKey as keyof typeof MEME_AUDIO];
+						if (memeData) {
+							emoji = memeData.emoji;
+						}
+					}
+
 					const fontSize = 32 + 32 * scale;
-					// Draw an audio symbol.
+					// Draw the emoji for this audio meme
 					ctx.fillStyle = "white";
 					ctx.font = `bold ${fontSize}px Arial`;
 					// Render it at the bottom center of the bounds.
-					ctx.fillText("🔊", bounds.size.x / 2 - fontSize / 2, bounds.size.y - fontSize / 2);
+					ctx.fillText(emoji, bounds.size.x / 2 - fontSize / 2, bounds.size.y - fontSize / 2);
 				}
 
 				ctx.restore();
@@ -344,6 +404,7 @@ export class Video {
 				this.#memeOpacity += -this.#memeOpacity * 0.1;
 				if (this.#memeOpacity <= 0) {
 					this.broadcast.meme.set(undefined);
+					this.broadcast.memeName.set(undefined);
 				}
 			} else {
 				this.#memeOpacity += (1 - this.#memeOpacity) * 0.1;
