@@ -12,8 +12,10 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconMicrophoneOff from "~icons/mdi/microphone-off";
 import IconScreenOff from "~icons/mdi/monitor-off";
 import IconScreen from "~icons/mdi/monitor-screenshot";
+import IconSticker from "~icons/mdi/sticker-emoji";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
+import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
@@ -36,7 +38,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 			{/* Center group */}
 			<div class="flex-1 flex justify-center">
-				<Chat broadcast={props.local.camera} />
+				<Chat broadcast={props.local.camera} room={props.room} />
 			</div>
 
 			{/* Right group */}
@@ -52,7 +54,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): JSX.Element {
 	const toggle = () => {
-		props.audio.enabled.set((prev) => !prev);
+		props.audio.enabled.set((prev: boolean) => !prev);
 	};
 	const root = solid(props.audio.root);
 
@@ -116,7 +118,7 @@ export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): J
 
 export function Camera(props: { video: Publish.Video; room?: Room }): JSX.Element {
 	const toggle = () => {
-		props.video.enabled.set((prev) => !prev);
+		props.video.enabled.set((prev: boolean) => !prev);
 	};
 	const media = solid(props.video.media);
 
@@ -144,8 +146,8 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 	const toggle = () => {
 		// We need to batch otherwise we'll request the device twice.
 		batch(() => {
-			props.video.enabled.set((prev) => !prev);
-			props.audio.enabled.set((prev) => !prev);
+			props.video.enabled.set((prev: boolean) => !prev);
+			props.audio.enabled.set((prev: boolean) => !prev);
 		});
 	};
 	const media = solid(props.video.media);
@@ -247,9 +249,10 @@ export function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	);
 }
 
-function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
+function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element {
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
+	const [showMemeSelector, setShowMemeSelector] = createSignal(false);
 
 	const keydown = (e: KeyboardEvent) => {
 		if (
@@ -291,19 +294,41 @@ function Chat(props: { broadcast: Publish.Broadcast }): JSX.Element {
 	};
 
 	return (
-		<form id="chat" onSubmit={submit} class="flex-1 min-w-48">
-			<input
-				type="text"
-				autocomplete="off"
-				placeholder="chat"
-				ref={setInput}
-				value={message()}
-				onInput={(e) => setMessage(e.currentTarget.value)}
-				aria-label="Chat message"
-				tabIndex={0}
-				class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none text-center placeholder:text-center"
-			/>
-		</form>
+		<div class="flex items-center gap-2 flex-1 min-w-48">
+			<Tooltip content="Memes & Emojis" position="top">
+				<button
+					type="button"
+					onClick={() => setShowMemeSelector((prev) => !prev)}
+					aria-label="Open meme selector"
+					aria-expanded={showMemeSelector()}
+					class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
+				>
+					<IconSticker />
+				</button>
+			</Tooltip>
+			<Show when={showMemeSelector()}>
+				<MemeSelector
+					broadcast={props.broadcast}
+					chatInput={input()}
+					chatMessage={message()}
+					setChatMessage={setMessage}
+					onClose={() => setShowMemeSelector(false)}
+				/>
+			</Show>
+			<form id="chat" onSubmit={submit} class="flex-1">
+				<input
+					type="text"
+					autocomplete="off"
+					placeholder="chat"
+					ref={setInput}
+					value={message()}
+					onInput={(e) => setMessage(e.currentTarget.value)}
+					aria-label="Chat message"
+					tabIndex={0}
+					class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none text-center placeholder:text-center"
+				/>
+			</form>
+		</div>
 	);
 }
 

@@ -193,6 +193,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	// The meme video/audio we're rendering, if any.
 	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
+	memeName = new Signal<string | undefined>(undefined);
 
 	#locationPeer?: Publish.LocationPeer;
 
@@ -406,12 +407,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// First, try to match the message to a known video/sound file.
 		if (msg.startsWith("/")) {
-			const meme = this.audio.sound.meme(msg.slice(1));
+			const memeName = msg.slice(1);
+			const meme = this.audio.sound.meme(memeName);
 			if (meme) {
 				this.meme.set((prev) => {
 					prev?.pause();
 					return meme;
 				});
+				this.memeName.set(memeName);
 
 				return;
 			}

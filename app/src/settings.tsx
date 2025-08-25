@@ -6,6 +6,7 @@ import IconCaptions from "~icons/mdi/closed-caption";
 import IconCursorMove from "~icons/mdi/cursor-move";
 import IconHeadphones from "~icons/mdi/headphones";
 import IconTextToSpeech from "~icons/mdi/text-to-speech";
+import { Tab } from "./components/meme-selector";
 
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
@@ -28,6 +29,9 @@ const Settings = {
 
 	// Guest account settings
 	guest: new Signal<Api.Account.Info | undefined>(undefined),
+
+	// Meme selector settings
+	memeTab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
 };
 
 const guestRaw = localStorage.getItem("settings.guest");
@@ -97,6 +101,10 @@ effect.subscribe(Settings.cameraEnabled, (enabled) => {
 
 effect.subscribe(Settings.guest, (guest) => {
 	localStorage.setItem("settings.guest", JSON.stringify(guest));
+});
+
+effect.subscribe(Settings.memeTab, (tab) => {
+	localStorage.setItem("settings.meme.tab", tab);
 });
 
 // Mostly just to avoid console warnings about signals not being closed
