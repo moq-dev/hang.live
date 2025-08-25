@@ -82,9 +82,12 @@ export class Room {
 					});
 
 					// Download captions when the setting is enabled.
+					// TEMPORARILY DISABLED - Caption generation disabled
+					/*
 					watch.signals.subscribe(Settings.renderCaptions, (closedCaptions) => {
 						watch.audio.captions.enabled.set(closedCaptions);
 					});
+					*/
 
 					// Download video when the canvas is visible.
 					watch.signals.subscribe(this.space.canvas.visible, (visible) => {

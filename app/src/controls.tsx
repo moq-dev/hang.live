@@ -44,7 +44,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 			{/* Right group */}
 			<div class="flex items-end gap-4">
 				<Volume room={props.room} />
-				<ClosedCaptions />
+				{/* <ClosedCaptions /> */}
 				<Advanced />
 				<Fullscreen canvas={props.canvas} />
 			</div>
