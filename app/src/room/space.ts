@@ -74,7 +74,6 @@ export class Space {
 			return;
 		}
 
-
 		// Bump the z-index unless we're already at the top.
 		broadcast.targetPosition.set((prev) => ({
 			...prev,

@@ -311,7 +311,7 @@ export class Video {
 					const memeName = this.broadcast.memeName.peek();
 					let fit = "cover"; // Default to cover
 					let position = "center"; // Default to center
-					
+
 					if (memeName) {
 						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
 						const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
@@ -378,7 +378,7 @@ export class Video {
 					// Get the emoji for this audio meme
 					const memeName = this.broadcast.memeName.peek();
 					let emoji = "🔊"; // Default speaker emoji
-					
+
 					if (memeName) {
 						// Remove hyphens for lookup if needed
 						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
@@ -388,7 +388,7 @@ export class Video {
 							emoji = memeData.emoji;
 						}
 					}
-					
+
 					const fontSize = 32 + 32 * scale;
 					// Draw the emoji for this audio meme
 					ctx.fillStyle = "white";

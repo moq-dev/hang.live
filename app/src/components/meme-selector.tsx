@@ -1,5 +1,6 @@
 import type { Publish } from "@kixelated/hang";
-import { createSignal, For, onCleanup, onMount, Show, type Setter } from "solid-js";
+import solid from "@kixelated/signals/solid";
+import { createSignal, For, onCleanup, onMount, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import IconClose from "~icons/mdi/close";
 import IconEmoticon from "~icons/mdi/emoticon-happy";
@@ -8,9 +9,10 @@ import IconPause from "~icons/mdi/pause";
 import IconPlay from "~icons/mdi/play";
 import IconVideo from "~icons/mdi/video";
 import IconVolumeHigh from "~icons/mdi/volume-high";
-import { ALL_EMOJIS, EMOJI_CATEGORIES, MEME_AUDIO, MEME_VIDEO } from "../room/meme";
+import { EMOJI_CATEGORIES, MEME_AUDIO, MEME_VIDEO, MemeVideoName } from "../room/meme";
+import Settings from "../settings";
 
-type Tab = "emoji" | "audio" | "video";
+export type Tab = "emoji" | "audio" | "video";
 
 export type MemeSelectorProps = {
 	broadcast: Publish.Broadcast;
@@ -22,8 +24,7 @@ export type MemeSelectorProps = {
 
 export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	// Get the initial tab from localStorage, default to "emoji"
-	const storedTab = localStorage.getItem("settings.memeSelector.tab") as Tab | null;
-	const [activeTab, setActiveTab] = createSignal<Tab>(storedTab || "emoji");
+	const activeTab = solid(Settings.memeTab);
 	const [previewAudio, setPreviewAudio] = createSignal<HTMLAudioElement | null>(null);
 	const [previewVideo, setPreviewVideo] = createSignal<HTMLVideoElement | null>(null);
 	const [playingVideoMeme, setPlayingVideoMeme] = createSignal<string | null>(null);
@@ -158,14 +159,13 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 		// Filter out audio memes that have corresponding video versions
 		const videoMemeNames = Object.keys(MEME_VIDEO);
 		return Object.keys(MEME_AUDIO)
-			.filter(name => !videoMemeNames.includes(name))
+			.filter((name) => !videoMemeNames.includes(name))
 			.sort();
 	};
 
 	const sortedVideoMemes = () => {
 		return Object.keys(MEME_VIDEO).sort();
 	};
-
 
 	return (
 		<div
@@ -177,7 +177,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 				<div class="flex gap-2">
 					<button
 						type="button"
-						onClick={() => setActiveTab("emoji")}
+						onClick={() => Settings.memeTab.set("emoji")}
 						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "emoji",
@@ -189,7 +189,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					</button>
 					<button
 						type="button"
-						onClick={() => setActiveTab("audio")}
+						onClick={() => Settings.memeTab.set("audio")}
 						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "audio",
@@ -201,7 +201,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					</button>
 					<button
 						type="button"
-						onClick={() => setActiveTab("video")}
+						onClick={() => Settings.memeTab.set("video")}
 						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "video",
@@ -231,12 +231,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 				</div>
 			</div>
 
-
 			{/* Content area */}
-			<div 
-				class="p-3 max-h-[400px] overflow-y-auto custom-scrollbar"
-				onWheel={(e) => e.stopPropagation()}
-			>
+			<div class="p-3 max-h-[400px] overflow-y-auto custom-scrollbar" onWheel={(e) => e.stopPropagation()}>
 				{/* Emoji Grid */}
 				<Show when={activeTab() === "emoji"}>
 					<div class="space-y-4">
@@ -311,8 +307,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					<div class="grid grid-cols-3 gap-3">
 						<For each={sortedVideoMemes()}>
 							{(meme) => {
-								const memeData = MEME_VIDEO[meme as keyof typeof MEME_VIDEO];
-								const thumbnailName = memeData.file.replace(/\.(webm|mp4)$/, '.png');
+								const memeData = MEME_VIDEO[meme as MemeVideoName];
+								const thumbnailName = memeData.file.replace(/\.(webm|mp4)$/, ".png");
 								const isPlaying = () => playingVideoMeme() === meme;
 								return (
 									<div class="group relative bg-white/10 hover:bg-white/20 rounded overflow-hidden transition-colors cursor-pointer aspect-video">
@@ -329,10 +325,6 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 												autoplay
 												muted
 												class="absolute inset-0 w-full h-full opacity-70"
-												style={{
-													"object-fit": memeData.fit || "cover",
-													"object-position": memeData.position || "center",
-												}}
 											/>
 										</Show>
 										<button
@@ -341,7 +333,9 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 											class="relative z-10 w-full h-full flex items-center justify-center p-3 cursor-pointer"
 											title={`Send /${meme}`}
 										>
-											<span class="text-sm text-white font-medium text-center drop-shadow-lg">/{meme}</span>
+											<span class="text-sm text-white font-medium text-center drop-shadow-lg">
+												/{meme}
+											</span>
 										</button>
 										<button
 											type="button"

@@ -12,11 +12,11 @@ import IconMicrophone from "~icons/mdi/microphone";
 import IconMicrophoneOff from "~icons/mdi/microphone-off";
 import IconScreenOff from "~icons/mdi/monitor-off";
 import IconScreen from "~icons/mdi/monitor-screenshot";
+import IconSticker from "~icons/mdi/sticker-emoji";
 import IconVolumeHigh from "~icons/mdi/volume-high";
 import IconVolumeMute from "~icons/mdi/volume-mute";
-import IconSticker from "~icons/mdi/sticker-emoji";
-import Tooltip from "./components/tooltip";
 import { MemeSelector } from "./components/meme-selector";
+import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
@@ -317,15 +317,15 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 			</Show>
 			<form id="chat" onSubmit={submit} class="flex-1">
 				<input
-				type="text"
-				autocomplete="off"
-				placeholder="chat"
-				ref={setInput}
-				value={message()}
-				onInput={(e) => setMessage(e.currentTarget.value)}
-				aria-label="Chat message"
-				tabIndex={0}
-				class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none text-center placeholder:text-center"
+					type="text"
+					autocomplete="off"
+					placeholder="chat"
+					ref={setInput}
+					value={message()}
+					onInput={(e) => setMessage(e.currentTarget.value)}
+					aria-label="Chat message"
+					tabIndex={0}
+					class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none text-center placeholder:text-center"
 				/>
 			</form>
 		</div>

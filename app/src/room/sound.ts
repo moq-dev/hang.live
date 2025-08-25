@@ -24,7 +24,7 @@ const GAIN_MIN = 0.001;
 
 export type SoundProps = {
 	enabled?: boolean;
-}
+};
 
 export class Sound {
 	enabled: Signal<boolean>;
@@ -70,7 +70,7 @@ export class Sound {
 
 		this.context.onstatechange = () => {
 			this.suspended.set(this.context.state === "suspended");
-		}
+		};
 
 		this.#signals.effect((effect) => {
 			const enabled = effect.get(this.enabled);
@@ -186,7 +186,7 @@ export class Sound {
 	}
 }
 
-import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeAudio, type MemeVideo } from "./meme";
+import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, MemeAudioName, MemeVideoName } from "./meme";
 
 export class PannedNotifications {
 	#parent: Sound;
@@ -243,8 +243,8 @@ export class PannedNotifications {
 		const lookupKey = lower.replace(/-/g, "");
 
 		// Check lookup tables first (for slash commands without hyphens)
-		const videoKey = MEME_VIDEO_LOOKUP[lookupKey] || (lower as MemeVideo);
-		const audioKey = MEME_AUDIO_LOOKUP[lookupKey] || (lower as MemeAudio);
+		const videoKey = MEME_VIDEO_LOOKUP[lookupKey] || (lower as MemeVideoName);
+		const audioKey = MEME_AUDIO_LOOKUP[lookupKey] || (lower as MemeAudioName);
 
 		const videoData = MEME_VIDEO[videoKey];
 		const audioData = MEME_AUDIO[audioKey];
