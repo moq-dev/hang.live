@@ -88,6 +88,9 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 							<Show when={info().chat}>
 								<IconChat class="w-3 h-3 text-purple-400" />
 							</Show>
+							<Show when={info().typing}>
+								<span class="text-xs text-gray-400 italic">typing...</span>
+							</Show>
 							<Show when={info().speaking}>
 								<IconVolumeHigh class="w-3 h-3 text-green-300 animate-pulse" />
 							</Show>
@@ -227,6 +230,11 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 							>
 								<IconChat class="w-4 h-4 text-purple-400" />
 							</div>
+							<Show when={info().typing}>
+								<div class="relative transition-all duration-300 ease-in-out" title="Typing">
+									<span class="text-xs text-gray-400 italic animate-pulse">typing...</span>
+								</div>
+							</Show>
 							<Show when={info().speaking}>
 								<div
 									class="relative transition-all duration-300 ease-in-out animate-pulse"

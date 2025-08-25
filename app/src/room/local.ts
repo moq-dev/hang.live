@@ -64,6 +64,7 @@ export class Local {
 					facingMode: { ideal: "user" },
 					resizeMode: "none",
 				},
+				flip: true, // TODO setting?
 			},
 			audio: {
 				enabled: Settings.microphoneEnabled.peek(),
@@ -151,6 +152,20 @@ export class Local {
 		});
 		*/
 
+		// Say hi when the camera is enabled
+		this.camera.signals.effect((effect) => {
+			const enabled = effect.get(this.camera.enabled);
+			if (!enabled) return;
+
+			const name = effect.get(this.info)?.name;
+			if (!name) return;
+
+			// Give the TTS worker a chance to start loading the model.
+			effect.timer(() => {
+				this.sound.joined(name);
+			}, 100);
+		});
+
 		// Update draggable settings
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
 			// Generate a random handle
@@ -173,7 +188,7 @@ export class Local {
 		});
 
 		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.message);
+			const message = effect.get(this.camera.chat.markdown);
 			this.camera.preview.info.set((prev) => ({
 				...prev,
 				chat: !!message,
@@ -181,18 +196,18 @@ export class Local {
 		});
 
 		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.message);
+			const message = effect.get(this.camera.chat.markdown);
 			if (!message) return;
 
 			// Clear the message after 10 seconds.
 			effect.timer(() => {
-				this.camera.chat.message.set(undefined);
+				this.camera.chat.markdown.set(undefined);
 			}, 10000);
 		});
 
 		// Monitor VAD signal with some debouncing
 		this.camera.signals.effect((effect) => {
-			const speaking = effect.get(this.camera.audio.captions.speaking);
+			const speaking = effect.get(this.camera.audio.speaking.active);
 
 			// Only update the preview if we've been speaking for at least 200ms, or not for 1s.
 			// NOTE: The timer will get cleared when the effect is run again.
@@ -234,11 +249,13 @@ export class Local {
 			...prev,
 			chat: false,
 			speaking: false,
+			typing: false,
 		}));
 		this.screen.preview.info.set((prev) => ({
 			...prev,
 			chat: false,
 			speaking: false,
+			typing: false,
 		}));
 
 		// Enable the screen when a media device is selected.

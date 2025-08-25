@@ -2,7 +2,7 @@ import { type Publish, Watch } from "@kixelated/hang";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
-import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP } from "./meme";
+import { MEME_AUDIO, MEME_AUDIO_LOOKUP } from "./meme";
 
 // Local or remote (Hang.Watch.Video) video source.
 /*
@@ -262,7 +262,20 @@ export class Video {
 				dst.size.y,
 			);
 			*/
-			ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
+
+			// Apply horizontal flip if specified in the video config
+			// Both Watch.Video and Publish.Video have a flip signal
+			const flip = this.broadcast.source.video.flip?.peek();
+
+			if (flip) {
+				ctx.save();
+				ctx.scale(-1, 1);
+				ctx.translate(-bounds.size.x, 0);
+				ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
+				ctx.restore();
+			} else {
+				ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
+			}
 			ctx.restore();
 
 			/*
@@ -307,70 +320,24 @@ export class Video {
 				ctx.globalAlpha *= this.#memeOpacity;
 
 				if (meme instanceof HTMLVideoElement) {
-					// Get the video meme data to check for fit/position settings
-					const memeName = this.broadcast.memeName.peek();
-					let fit = "cover"; // Default to cover
-					let position = "center"; // Default to center
-
-					if (memeName) {
-						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
-						const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
-						const memeData = MEME_VIDEO[memeKey as keyof typeof MEME_VIDEO];
-						if (memeData) {
-							fit = memeData.fit || "cover";
-							position = memeData.position || "center";
-						}
-					}
-
 					const aspectRatio = meme.videoWidth / meme.videoHeight;
 					const boundsAspectRatio = bounds.size.x / bounds.size.y;
 					let width: number;
 					let height: number;
-					let x: number;
-					let y: number;
 
-					if (fit === "contain") {
-						// Scale to fit inside bounds while maintaining aspect ratio
-						if (aspectRatio > boundsAspectRatio) {
-							// Video is wider - fit to width
-							width = bounds.size.x;
-							height = width / aspectRatio;
-						} else {
-							// Video is taller - fit to height
-							height = bounds.size.y;
-							width = height * aspectRatio;
-						}
+					// Default "cover" - fill the bounds
+					if (aspectRatio > boundsAspectRatio) {
+						// Video is wider than bounds - use height to fill
+						height = bounds.size.y;
+						width = height * aspectRatio;
 					} else {
-						// Default "cover" - fill the bounds
-						if (aspectRatio > boundsAspectRatio) {
-							// Video is wider than bounds - use height to fill
-							height = bounds.size.y;
-							width = height * aspectRatio;
-						} else {
-							// Video is taller than bounds - use width to fill
-							width = bounds.size.x;
-							height = width / aspectRatio;
-						}
+						// Video is taller than bounds - use width to fill
+						width = bounds.size.x;
+						height = width / aspectRatio;
 					}
 
-					// Calculate position based on the position setting
-					if (position === "bottom left") {
-						x = 0;
-						y = bounds.size.y - height;
-					} else if (position === "bottom right") {
-						x = bounds.size.x - width;
-						y = bounds.size.y - height;
-					} else if (position === "top left") {
-						x = 0;
-						y = 0;
-					} else if (position === "top right") {
-						x = bounds.size.x - width;
-						y = 0;
-					} else {
-						// Default center
-						x = bounds.size.x / 2 - width / 2;
-						y = bounds.size.y / 2 - height / 2;
-					}
+					const x = bounds.size.x / 2 - width / 2;
+					const y = bounds.size.y / 2 - height / 2;
 
 					// Add a pixel in each direction to account for any rounding errors.
 					ctx.drawImage(meme, x - 1, y - 1, width + 2, height + 2);

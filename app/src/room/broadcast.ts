@@ -34,111 +34,6 @@ renderer.link = ({ href, title, text }) => {
 
 marked.use({ renderer });
 
-// Weighted join announcements with varying rarity
-const JOIN_ANNOUNCEMENTS = [
-	// Common (70% chance total)
-	{ text: "{name} joined.", weight: 20 },
-	{ text: "Sup {name}.", weight: 15 },
-	{ text: "{name} is here.", weight: 10 },
-	{ text: "What's up {name}?", weight: 10 },
-	{ text: "Yo {name}.", weight: 10 },
-	{ text: "{name} has entered.", weight: 8 },
-	{ text: "Welcome {name}.", weight: 7 },
-
-	// Uncommon (20% chance total)
-	{ text: "{name} has arrived.", weight: 4 },
-	{ text: "{name} rolled up.", weight: 3 },
-	{ text: "{name} showed up.", weight: 3 },
-	{ text: "{name} slid in.", weight: 2.5 },
-	{ text: "{name} just dropped.", weight: 2.5 },
-	{ text: "Look who it is, {name}.", weight: 2 },
-	{ text: "{name} in the building.", weight: 2 },
-	{ text: "{name} has graced us.", weight: 1 },
-
-	// Rare (8% chance total)
-	{ text: "Behold, {name} approaches.", weight: 1.5 },
-	{ text: "{name} has manifested.", weight: 1.5 },
-	{ text: "Alert: {name} detected.", weight: 1 },
-	{ text: "{name} teleported in.", weight: 1 },
-	{ text: "A wild {name} appeared.", weight: 1 },
-	{ text: "{name} spawned", weight: 1 },
-	{ text: "{name} has entered the chat.", weight: 0.5 },
-	{ text: "Everybody act normal, {name} is here.", weight: 0.5 },
-
-	// Ultra-rare (2% chance total)
-	{ text: "Praise be, the lord and savior {name} has graced us with their presence.", weight: 0.3 },
-	{ text: "Ladies and gentlemen, we got {name} here.", weight: 0.3 },
-	{ text: "Stop everything, {name} has blessed us with their divine presence.", weight: 0.2 },
-	{ text: "Breaking news: {name} has been spotted in the vicinity.", weight: 0.2 },
-	{ text: "The prophecy foretold of {name}'s arrival.", weight: 0.2 },
-	{ text: "Historians will mark this moment: {name} has joined.", weight: 0.2 },
-	{ text: "The legends spoke of this day when {name} would join us.", weight: 0.15 },
-	{ text: "Sound the horns, {name} has arrived at the gates.", weight: 0.15 },
-	{ text: "By the ancient laws, we welcome {name} to our realm.", weight: 0.1 },
-	{ text: "The stars have aligned to bring us {name}.", weight: 0.1 },
-	{
-		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has joined the hang!",
-		weight: 0.01,
-	},
-] as const;
-
-const JOIN_ANNOUNCEMENTS_WEIGHT = JOIN_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
-
-// Weighted leave announcements with varying rarity
-const LEAVE_ANNOUNCEMENTS = [
-	// Common (70% chance total)
-	{ text: "{name} has left.", weight: 20 },
-	{ text: "{name} left.", weight: 15 },
-	{ text: "Bye {name}.", weight: 10 },
-	{ text: "{name} is gone.", weight: 8 },
-	{ text: "{name} disconnected.", weight: 7 },
-	{ text: "See ya {name}.", weight: 5 },
-	{ text: "{name} dipped.", weight: 5 },
-
-	// Uncommon (20% chance total)
-	{ text: "{name} peaced out.", weight: 3 },
-	{ text: "{name} bounced.", weight: 3 },
-	{ text: "{name} vanished.", weight: 2.5 },
-	{ text: "{name} has departed.", weight: 2 },
-	{ text: "{name} ghosted.", weight: 2 },
-	{ text: "{name} rage quit.", weight: 2 },
-	{ text: "{name} went to get milk.", weight: 1.5 },
-	{ text: "{name} has abandoned us.", weight: 1.5 },
-	{ text: "{name} evaporated.", weight: 1.5 },
-
-	// Rare (8% chance total)
-	{ text: "{name} died.", weight: 1.5 },
-	{ text: "{name} got thanos snapped.", weight: 1 },
-	{ text: "{name} returned to the void.", weight: 1 },
-	{ text: "{name} has been yeeted from existence.", weight: 1 },
-	{ text: "{name} faded away.", weight: 0.8 },
-	{ text: "Press F to pay respects, {name} is gone.", weight: 0.8 },
-	{ text: "{name} has left the chat.", weight: 0.5 },
-	{ text: "{name} went poof.", weight: 0.5 },
-	{ text: "{name} disconnected from the matrix.", weight: 0.5 },
-	{ text: "{name} was recalled to headquarters.", weight: 0.4 },
-
-	// Ultra-rare (2% chance total)
-	{ text: "The universe is a sadder place now that {name} has left.", weight: 0.3 },
-	{ text: "And thus {name} departed, never to be seen again... probably.", weight: 0.25 },
-	{ text: "{name} has ascended to a higher plane of existence.", weight: 0.2 },
-	{ text: "Historians will note the tragic departure of {name}.", weight: 0.2 },
-	{ text: "With a heavy heart, we bid farewell to {name}.", weight: 0.2 },
-	{ text: "The prophecy has been fulfilled, {name} has left us.", weight: 0.15 },
-	{ text: "{name} has been banished to the shadow realm.", weight: 0.15 },
-	{ text: "Legends say {name} will return... but not today.", weight: 0.15 },
-	{ text: "As foretold by the ancients, {name} has departed.", weight: 0.1 },
-	{ text: "The void calls, and {name} must answer.", weight: 0.1 },
-	{ text: "{name} has gone where no one can follow.", weight: 0.1 },
-	{ text: "{name} has been sent to the void.", weight: 0.1 },
-	{
-		text: "From the Ghastly Eyrie I can see to the ends of the world, and from this vantage point I declare with utter certainty that {name} has left the hang!",
-		weight: 0.01,
-	},
-];
-
-const LEAVE_ANNOUNCEMENTS_WEIGHT = LEAVE_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
-
 export type BroadcastProps = {
 	audio?: AudioProps;
 
@@ -197,10 +92,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	#locationPeer?: Publish.LocationPeer;
 
-	signals = new Effect();
-
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
+
+	signals = new Effect();
 
 	constructor(source: T, canvas: Canvas, sound: Sound, props?: BroadcastProps) {
 		this.source = source;
@@ -286,60 +181,12 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			effect.eventListener(newAvatar, "load", load);
 		});
 
-		this.signals.effect((effect) => {
-			if (!effect.get(this.visible)) return;
-
-			const name = effect.get(this.name);
-			if (!name) return;
-			this.sound.say(this.#getJoinAnnouncement(name));
-		});
-
-		this.signals.effect((effect) => {
-			if (effect.get(this.visible)) return;
-
-			const name = effect.get(this.name);
-			if (!name) return;
-			this.sound.say(this.getLeaveAnnouncement(name));
-		});
-
 		this.signals.effect(this.#runChat.bind(this));
 
 		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
 		if (props?.camera && this.source instanceof Watch.Broadcast) {
 			this.#initRemote(this.source, props.camera, props.screen);
 		}
-	}
-
-	// Get a weighted random join announcement
-	#getJoinAnnouncement(name: string): string {
-		const random = Math.random() * JOIN_ANNOUNCEMENTS_WEIGHT;
-		let accumulated = 0;
-
-		for (const announcement of JOIN_ANNOUNCEMENTS) {
-			accumulated += announcement.weight;
-			if (random <= accumulated) {
-				return announcement.text.replace("{name}", name);
-			}
-		}
-
-		// Fallback (should never reach here)
-		return `${name} joined`;
-	}
-
-	// Get a weighted random leave announcement
-	getLeaveAnnouncement(name: string): string {
-		const random = Math.random() * LEAVE_ANNOUNCEMENTS_WEIGHT;
-		let accumulated = 0;
-
-		for (const announcement of LEAVE_ANNOUNCEMENTS) {
-			accumulated += announcement.weight;
-			if (random <= accumulated) {
-				return announcement.text.replace("{name}", name);
-			}
-		}
-
-		// Fallback (should never reach here)
-		return `${name} has left`;
 	}
 
 	// Special logic for only remote broadcasts.
@@ -402,7 +249,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	async #runChat(effect: Effect) {
 		if (!effect.get(this.source.chat.enabled)) return;
 
-		const msg = effect.get(this.source.chat.message);
+		const msg = effect.get(this.source.chat.markdown);
 		if (!msg) return;
 
 		// First, try to match the message to a known video/sound file.

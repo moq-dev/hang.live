@@ -2,8 +2,8 @@ import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
 import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconClosedCaption from "~icons/material-symbols/closed-caption";
-import IconClosedCaptionDisabled from "~icons/material-symbols/closed-caption-disabled";
+// import IconClosedCaption from "~icons/material-symbols/closed-caption";
+// import IconClosedCaptionDisabled from "~icons/material-symbols/closed-caption-disabled";
 import IconCamera from "~icons/mdi/camera";
 import IconCameraOff from "~icons/mdi/camera-off";
 import IconSettings from "~icons/mdi/cog";
@@ -228,7 +228,7 @@ export function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 			setPower(smoothed);
 			animation = requestAnimationFrame(tick);
 
-			setSpeaking(props.audio.captions.speaking.peek() ?? false);
+			setSpeaking(props.audio.speaking.active.peek() ?? false);
 		};
 
 		animation = requestAnimationFrame(tick);
@@ -253,6 +253,15 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
 	const [showMemeSelector, setShowMemeSelector] = createSignal(false);
+
+	// Update typing status in preview
+	createEffect(() => {
+		const hasText = message().length > 0;
+		props.broadcast.preview.info.set((prev) => ({
+			...prev,
+			typing: hasText,
+		}));
+	});
 
 	const keydown = (e: KeyboardEvent) => {
 		if (
@@ -288,7 +297,7 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 		if (!props.broadcast.chat.enabled.peek()) return;
 
 		// Use a function to avoid the dequal check.
-		props.broadcast.chat.message.set(() => m);
+		props.broadcast.chat.markdown.set(() => m);
 
 		setMessage("");
 	};
@@ -408,28 +417,29 @@ function Volume(props: { room: Room }): JSX.Element {
 	);
 }
 
-function ClosedCaptions(): JSX.Element {
-	const toggle = () => {
-		Settings.renderCaptions.set((prev) => !prev);
-	};
+// Temporarily disabled - Caption generation disabled
+// function ClosedCaptions(): JSX.Element {
+// 	const toggle = () => {
+// 		Settings.renderCaptions.set((prev) => !prev);
+// 	};
 
-	const enabled = solid(Settings.renderCaptions);
+// 	const enabled = solid(Settings.renderCaptions);
 
-	return (
-		<Tooltip content={enabled() ? "Disable closed captions" : "Enable closed captions"} position="top">
-			<button
-				type="button"
-				onClick={toggle}
-				role="switch"
-				aria-checked={enabled()}
-				aria-label="Toggle closed captions"
-				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-			>
-				{enabled() ? <IconClosedCaption /> : <IconClosedCaptionDisabled />}
-			</button>
-		</Tooltip>
-	);
-}
+// 	return (
+// 		<Tooltip content={enabled() ? "Disable closed captions" : "Enable closed captions"} position="top">
+// 			<button
+// 				type="button"
+// 				onClick={toggle}
+// 				role="switch"
+// 				aria-checked={enabled()}
+// 				aria-label="Toggle closed captions"
+// 				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
+// 			>
+// 				{enabled() ? <IconClosedCaption /> : <IconClosedCaptionDisabled />}
+// 			</button>
+// 		</Tooltip>
+// 	);
+// }
 
 function Advanced(): JSX.Element {
 	const [showSettings, setShowSettings] = createSignal(false);
