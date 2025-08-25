@@ -186,7 +186,7 @@ export class Sound {
 	}
 }
 
-import { MEME_AUDIO, MEME_VIDEO, type MemeAudio, type MemeVideo } from "./meme";
+import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeAudio, type MemeVideo } from "./meme";
 
 export class PannedNotifications {
 	#parent: Sound;
@@ -238,16 +238,21 @@ export class PannedNotifications {
 	// NOTE: We don't cache elements because the browser will.
 	// Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
 	meme(name: string): HTMLAudioElement | HTMLVideoElement | undefined {
-		// Make the name lowercase.
+		// Make the name lowercase and remove hyphens for lookup
 		const lower = name.toLowerCase();
+		const lookupKey = lower.replace(/-/g, "");
 
-		const videoPath = MEME_VIDEO[lower as MemeVideo];
-		const audioPath = MEME_AUDIO[lower as MemeAudio];
+		// Check lookup tables first (for slash commands without hyphens)
+		const videoKey = MEME_VIDEO_LOOKUP[lookupKey] || (lower as MemeVideo);
+		const audioKey = MEME_AUDIO_LOOKUP[lookupKey] || (lower as MemeAudio);
+
+		const videoData = MEME_VIDEO[videoKey];
+		const audioData = MEME_AUDIO[audioKey];
 
 		// Use the video if it's available
-		if (videoPath) {
+		if (videoData) {
 			const video = document.createElement("video") as HTMLVideoElement;
-			video.src = `/meme/${videoPath}`;
+			video.src = `/meme/${videoData.file}`;
 
 			if (this.#parent.suspended.peek()) {
 				video.muted = true; // so we can start loading
@@ -262,8 +267,8 @@ export class PannedNotifications {
 			return video;
 		}
 
-		if (audioPath) {
-			const audio = new Audio(`/meme/${audioPath}`);
+		if (audioData) {
+			const audio = new Audio(`/meme/${audioData.file}`);
 			audio.autoplay = true;
 			audio.load();
 			return audio;

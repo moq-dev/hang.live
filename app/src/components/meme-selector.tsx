@@ -4,8 +4,10 @@ import type { JSX } from "solid-js/jsx-runtime";
 import IconClose from "~icons/mdi/close";
 import IconEmoticon from "~icons/mdi/emoticon-happy";
 import IconMusic from "~icons/mdi/music";
+import IconPause from "~icons/mdi/pause";
 import IconPlay from "~icons/mdi/play";
 import IconVideo from "~icons/mdi/video";
+import IconVolumeHigh from "~icons/mdi/volume-high";
 import { ALL_EMOJIS, EMOJI_CATEGORIES, MEME_AUDIO, MEME_VIDEO } from "../room/meme";
 
 type Tab = "emoji" | "audio" | "video";
@@ -19,10 +21,13 @@ export type MemeSelectorProps = {
 };
 
 export function MemeSelector(props: MemeSelectorProps): JSX.Element {
-	const [activeTab, setActiveTab] = createSignal<Tab>("emoji");
-	const [searchQuery, setSearchQuery] = createSignal("");
+	// Get the initial tab from localStorage, default to "emoji"
+	const storedTab = localStorage.getItem("settings.memeSelector.tab") as Tab | null;
+	const [activeTab, setActiveTab] = createSignal<Tab>(storedTab || "emoji");
 	const [previewAudio, setPreviewAudio] = createSignal<HTMLAudioElement | null>(null);
 	const [previewVideo, setPreviewVideo] = createSignal<HTMLVideoElement | null>(null);
+	const [playingVideoMeme, setPlayingVideoMeme] = createSignal<string | null>(null);
+	const [playingAudioMeme, setPlayingAudioMeme] = createSignal<string | null>(null);
 	const [modal, setModal] = createSignal<HTMLDivElement | undefined>(undefined);
 
 	// Clean up any playing previews when component unmounts
@@ -41,6 +46,11 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	onMount(() => {
 		window.addEventListener("keydown", handleKeyDown);
 		onCleanup(() => window.removeEventListener("keydown", handleKeyDown));
+	});
+
+	// Save tab preference when it changes
+	createSignal(() => {
+		localStorage.setItem("settings.memeSelector.tab", activeTab());
 	});
 
 	// Handle clicking outside
@@ -87,65 +97,91 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	};
 
 	const previewMeme = (memeName: string, type: "audio" | "video") => {
+		// Check if this meme is already playing
+		if (type === "audio" && playingAudioMeme() === memeName) {
+			// Stop the audio
+			previewAudio()?.pause();
+			setPreviewAudio(null);
+			setPlayingAudioMeme(null);
+			return;
+		}
+		if (type === "video" && playingVideoMeme() === memeName) {
+			// Stop the video
+			previewVideo()?.pause();
+			previewVideo()?.remove();
+			setPreviewVideo(null);
+			setPlayingVideoMeme(null);
+			return;
+		}
+
 		// Stop any existing preview
 		previewAudio()?.pause();
 		previewVideo()?.pause();
 		setPreviewAudio(null);
 		setPreviewVideo(null);
+		setPlayingVideoMeme(null);
+		setPlayingAudioMeme(null);
 
 		if (type === "audio") {
-			const audio = new Audio(`/meme/${MEME_AUDIO[memeName as keyof typeof MEME_AUDIO]}`);
+			const audio = new Audio(`/meme/${MEME_AUDIO[memeName as keyof typeof MEME_AUDIO].file}`);
 			audio.volume = 0.5; // Lower volume for preview
 			audio.play();
 			setPreviewAudio(audio);
+			setPlayingAudioMeme(memeName);
 
 			// Clean up when done
-			audio.onended = () => setPreviewAudio(null);
+			audio.onended = () => {
+				setPreviewAudio(null);
+				setPlayingAudioMeme(null);
+			};
 		} else {
+			// For video, play with sound
 			const video = document.createElement("video");
-			video.src = `/meme/${MEME_VIDEO[memeName as keyof typeof MEME_VIDEO]}`;
+			video.src = `/meme/${MEME_VIDEO[memeName as keyof typeof MEME_VIDEO].file}`;
 			video.volume = 0.5;
 			video.style.display = "none";
 			document.body.appendChild(video);
 			video.play();
 			setPreviewVideo(video);
+			setPlayingVideoMeme(memeName);
 
 			// Clean up when done
 			video.onended = () => {
 				video.remove();
 				setPreviewVideo(null);
+				setPlayingVideoMeme(null);
 			};
 		}
 	};
 
-	const filteredAudioMemes = () => {
-		const query = searchQuery().toLowerCase();
-		if (!query) return Object.keys(MEME_AUDIO);
-		return Object.keys(MEME_AUDIO).filter((name) => name.toLowerCase().includes(query));
+	const sortedAudioMemes = () => {
+		// Filter out audio memes that have corresponding video versions
+		const videoMemeNames = Object.keys(MEME_VIDEO);
+		return Object.keys(MEME_AUDIO)
+			.filter(name => !videoMemeNames.includes(name))
+			.sort();
 	};
 
-	const filteredVideoMemes = () => {
-		const query = searchQuery().toLowerCase();
-		if (!query) return Object.keys(MEME_VIDEO);
-		return Object.keys(MEME_VIDEO).filter((name) => name.toLowerCase().includes(query));
+	const sortedVideoMemes = () => {
+		return Object.keys(MEME_VIDEO).sort();
 	};
 
 
 	return (
 		<div
 			ref={setModal}
-			class="fixed bottom-20 left-1/2 transform -translate-x-1/2 w-[600px] max-w-[90vw] bg-gray-900 border border-gray-700 rounded-lg shadow-2xl pointer-events-auto backdrop-blur-md z-[100]"
+			class="fixed bottom-20 left-1/2 transform -translate-x-1/2 w-[600px] max-w-[90vw] bg-black/80 border border-white/20 rounded-lg shadow-2xl pointer-events-auto backdrop-blur-lg z-[100]"
 		>
 			{/* Header with tabs */}
-			<div class="flex items-center justify-between border-b border-gray-700 p-3">
+			<div class="flex items-center justify-between border-b border-white/20 p-3">
 				<div class="flex gap-2">
 					<button
 						type="button"
 						onClick={() => setActiveTab("emoji")}
-						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors"
+						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
 						classList={{
-							"bg-gray-700 text-white": activeTab() === "emoji",
-							"hover:bg-gray-800 text-gray-400": activeTab() !== "emoji",
+							"bg-white/20 text-white": activeTab() === "emoji",
+							"hover:bg-white/10 text-white/60": activeTab() !== "emoji",
 						}}
 					>
 						<IconEmoticon class="w-4 h-4" />
@@ -154,10 +190,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					<button
 						type="button"
 						onClick={() => setActiveTab("audio")}
-						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors"
+						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
 						classList={{
-							"bg-gray-700 text-white": activeTab() === "audio",
-							"hover:bg-gray-800 text-gray-400": activeTab() !== "audio",
+							"bg-white/20 text-white": activeTab() === "audio",
+							"hover:bg-white/10 text-white/60": activeTab() !== "audio",
 						}}
 					>
 						<IconMusic class="w-4 h-4" />
@@ -166,55 +202,55 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					<button
 						type="button"
 						onClick={() => setActiveTab("video")}
-						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors"
+						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
 						classList={{
-							"bg-gray-700 text-white": activeTab() === "video",
-							"hover:bg-gray-800 text-gray-400": activeTab() !== "video",
+							"bg-white/20 text-white": activeTab() === "video",
+							"hover:bg-white/10 text-white/60": activeTab() !== "video",
 						}}
 					>
 						<IconVideo class="w-4 h-4" />
 						Video
 					</button>
 				</div>
-				<button
-					type="button"
-					onClick={props.onClose}
-					class="p-1 hover:bg-gray-700 rounded transition-colors"
-					aria-label="Close"
-				>
-					<IconClose class="w-5 h-5" />
-				</button>
+				<div class="flex items-center gap-2">
+					{/* Playing indicator */}
+					<Show when={previewAudio() || previewVideo()}>
+						<div class="bg-green-600 text-white text-xs px-2 py-1 rounded animate-pulse flex items-center gap-1">
+							<IconVolumeHigh class="w-3 h-3" />
+							<span>Preview</span>
+						</div>
+					</Show>
+					<button
+						type="button"
+						onClick={props.onClose}
+						class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer text-white"
+						aria-label="Close"
+					>
+						<IconClose class="w-5 h-5" />
+					</button>
+				</div>
 			</div>
 
-			{/* Search bar */}
-			<Show when={activeTab() !== "emoji"}>
-				<div class="p-3 border-b border-gray-700">
-					<input
-						type="text"
-						placeholder={`Search ${activeTab()} memes...`}
-						value={searchQuery()}
-						onInput={(e) => setSearchQuery(e.currentTarget.value)}
-						class="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-sm focus:outline-none focus:border-gray-500"
-					/>
-				</div>
-			</Show>
 
 			{/* Content area */}
-			<div class="p-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+			<div 
+				class="p-3 max-h-[400px] overflow-y-auto custom-scrollbar"
+				onWheel={(e) => e.stopPropagation()}
+			>
 				{/* Emoji Grid */}
 				<Show when={activeTab() === "emoji"}>
 					<div class="space-y-4">
 						<For each={Object.entries(EMOJI_CATEGORIES)}>
 							{([category, emojis]) => (
 								<div>
-									<div class="text-xs text-gray-400 uppercase tracking-wider mb-2">{category}</div>
-									<div class="grid grid-cols-10 gap-1">
+									<div class="text-xs text-white/40 uppercase tracking-wider mb-2">{category}</div>
+									<div class="grid grid-cols-12 gap-0.5">
 										<For each={emojis}>
 											{(emoji) => (
 												<button
 													type="button"
 													onClick={() => insertEmoji(emoji)}
-													class="p-2 hover:bg-gray-700 rounded transition-colors text-xl cursor-pointer"
+													class="p-1.5 hover:bg-white/10 rounded transition-colors text-xl cursor-pointer"
 													title={`Insert ${emoji}`}
 												>
 													{emoji}
@@ -231,72 +267,106 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 				{/* Audio Memes Grid */}
 				<Show when={activeTab() === "audio"}>
 					<div class="grid grid-cols-3 gap-2">
-						<For each={filteredAudioMemes()}>
-							{(meme) => (
-								<div class="group relative bg-gray-800 hover:bg-gray-700 rounded p-3 transition-colors">
-									<button
-										type="button"
-										onClick={() => sendMeme(meme)}
-										class="w-full text-left text-sm truncate"
-										title={`Send /${meme}`}
-									>
-										{meme}
-									</button>
-									<button
-										type="button"
-										onClick={(e) => {
-											e.stopPropagation();
-											previewMeme(meme, "audio");
-										}}
-										class="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-gray-600 hover:bg-gray-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-										title="Preview"
-									>
-										<IconPlay class="w-4 h-4" />
-									</button>
-								</div>
-							)}
+						<For each={sortedAudioMemes()}>
+							{(meme) => {
+								const memeData = MEME_AUDIO[meme as keyof typeof MEME_AUDIO];
+								const isPlaying = () => playingAudioMeme() === meme;
+								return (
+									<div class="group relative bg-white/10 hover:bg-white/20 rounded p-3 transition-colors cursor-pointer">
+										<button
+											type="button"
+											onClick={() => sendMeme(meme)}
+											class="w-full text-left text-sm truncate text-white cursor-pointer flex items-center gap-2"
+											title={`Send /${meme}`}
+										>
+											<span class="text-lg">{memeData.emoji}</span>
+											<span>/{meme}</span>
+										</button>
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												previewMeme(meme, "audio");
+											}}
+											class="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-white/20 hover:bg-white/30 rounded transition-opacity cursor-pointer"
+											classList={{
+												"opacity-100": isPlaying(),
+												"opacity-0 group-hover:opacity-100": !isPlaying(),
+											}}
+											title={isPlaying() ? "Stop" : "Preview"}
+										>
+											<Show when={isPlaying()} fallback={<IconPlay class="w-4 h-4 text-white" />}>
+												<IconPause class="w-4 h-4 text-white" />
+											</Show>
+										</button>
+									</div>
+								);
+							}}
 						</For>
 					</div>
 				</Show>
 
 				{/* Video Memes Grid */}
 				<Show when={activeTab() === "video"}>
-					<div class="grid grid-cols-3 gap-2">
-						<For each={filteredVideoMemes()}>
-							{(meme) => (
-								<div class="group relative bg-gray-800 hover:bg-gray-700 rounded p-3 transition-colors">
-									<button
-										type="button"
-										onClick={() => sendMeme(meme)}
-										class="w-full text-left text-sm truncate"
-										title={`Send /${meme}`}
-									>
-										{meme}
-									</button>
-									<button
-										type="button"
-										onClick={(e) => {
-											e.stopPropagation();
-											previewMeme(meme, "video");
-										}}
-										class="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-gray-600 hover:bg-gray-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-										title="Preview"
-									>
-										<IconPlay class="w-4 h-4" />
-									</button>
-								</div>
-							)}
+					<div class="grid grid-cols-3 gap-3">
+						<For each={sortedVideoMemes()}>
+							{(meme) => {
+								const memeData = MEME_VIDEO[meme as keyof typeof MEME_VIDEO];
+								const thumbnailName = memeData.file.replace(/\.(webm|mp4)$/, '.png');
+								const isPlaying = () => playingVideoMeme() === meme;
+								return (
+									<div class="group relative bg-white/10 hover:bg-white/20 rounded overflow-hidden transition-colors cursor-pointer aspect-video">
+										{/* Thumbnail background */}
+										<img
+											src={`/meme/${thumbnailName}`}
+											alt={meme}
+											class="absolute inset-0 w-full h-full object-cover opacity-30"
+										/>
+										{/* Video preview when playing */}
+										<Show when={isPlaying()}>
+											<video
+												src={`/meme/${memeData.file}`}
+												autoplay
+												muted
+												class="absolute inset-0 w-full h-full opacity-70"
+												style={{
+													"object-fit": memeData.fit || "cover",
+													"object-position": memeData.position || "center",
+												}}
+											/>
+										</Show>
+										<button
+											type="button"
+											onClick={() => sendMeme(meme)}
+											class="relative z-10 w-full h-full flex items-center justify-center p-3 cursor-pointer"
+											title={`Send /${meme}`}
+										>
+											<span class="text-sm text-white font-medium text-center drop-shadow-lg">/{meme}</span>
+										</button>
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												previewMeme(meme, "video");
+											}}
+											class="absolute right-2 bottom-2 z-20 p-1 bg-white/20 hover:bg-white/30 rounded transition-opacity cursor-pointer"
+											classList={{
+												"opacity-100": isPlaying(),
+												"opacity-0 group-hover:opacity-100": !isPlaying(),
+											}}
+											title={isPlaying() ? "Stop" : "Preview"}
+										>
+											<Show when={isPlaying()} fallback={<IconPlay class="w-4 h-4 text-white" />}>
+												<IconPause class="w-4 h-4 text-white" />
+											</Show>
+										</button>
+									</div>
+								);
+							}}
 						</For>
 					</div>
 				</Show>
 			</div>
-
-			{/* Playing indicator */}
-			<Show when={previewAudio() || previewVideo()}>
-				<div class="absolute top-2 right-12 bg-green-600 text-white text-xs px-2 py-1 rounded animate-pulse">
-					Playing preview...
-				</div>
-			</Show>
 		</div>
 	);
 }
