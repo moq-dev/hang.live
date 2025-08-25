@@ -92,7 +92,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	const sendMeme = (memeName: string) => {
 		// Send the slash command
 		if (props.broadcast.chat.enabled.peek()) {
-			props.broadcast.chat.message.set(() => `/${memeName}`);
+			props.broadcast.chat.markdown.set(() => `/${memeName}`);
 		}
 		props.onClose();
 	};

@@ -22,7 +22,8 @@ export class FakeBroadcast {
 
 	chat = {
 		enabled: new Signal(true),
-		message: new Signal<string | undefined>(undefined),
+		markdown: new Signal<string | undefined>(undefined),
+		typing: new Signal<boolean | undefined>(undefined),
 	};
 
 	user = new Signal<Catalog.User | undefined>(undefined);
@@ -39,6 +40,7 @@ export class FakeBroadcast {
 		media: new Signal<MediaStream | undefined>(undefined),
 		active: new Signal(false),
 		frame: new Signal<HTMLVideoElement | undefined>(undefined),
+		flip: new Signal<boolean | undefined>(undefined),
 		detection: {
 			enabled: new Signal(false),
 			objects: new Signal<Catalog.DetectionObjects | undefined>(undefined),
@@ -57,10 +59,10 @@ export class FakeBroadcast {
 		this.location.handle.set(Math.random().toString(36).substring(2, 15));
 
 		this.signals.effect((effect) => {
-			const message = effect.get(this.chat.message);
+			const message = effect.get(this.chat.markdown);
 			if (!message) return;
 
-			effect.timer(() => this.chat.message.set(undefined), 10000);
+			effect.timer(() => this.chat.markdown.set(undefined), 10000);
 		});
 
 		this.signals.effect((effect) => {

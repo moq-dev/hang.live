@@ -1,6 +1,5 @@
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Effect } from "@kixelated/signals";
-import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
@@ -22,6 +21,9 @@ export class Room {
 	// The physics space for the room.
 	space: Space;
 
+	// For the first second after joining, don't announce new members.
+	#tts = false;
+
 	#signals = new Effect();
 
 	constructor(connection: Connection, canvas: Canvas, local: Local) {
@@ -39,6 +41,11 @@ export class Room {
 
 			effect.spawn(this.#runRemotes.bind(this, announced));
 		});
+
+		// After 1 second, start announcing new members.
+		this.#signals.timer(() => {
+			this.#tts = true;
+		}, 1000);
 	}
 
 	async #runRemotes(announced: Moq.AnnouncedConsumer, cancel: Promise<void>) {
@@ -79,6 +86,8 @@ export class Room {
 						location: { enabled: true },
 						// Download the chat of the broadcaster.
 						chat: { enabled: true },
+						// Download the preview track for typing indicators.
+						preview: { enabled: true },
 					});
 
 					// Download captions when the setting is enabled.
@@ -109,6 +118,28 @@ export class Room {
 					});
 
 					this.space.add(update.name, broadcast);
+
+					broadcast.signals.effect((effect) => {
+						if (!effect.get(broadcast.visible)) return;
+
+						const name = effect.get(broadcast.name);
+						if (!name) return;
+
+						if (this.#tts) {
+							this.sound.joined(name);
+						}
+					});
+
+					broadcast.signals.effect((effect) => {
+						if (effect.get(broadcast.visible)) return;
+
+						const name = effect.get(broadcast.name);
+						if (!name) return;
+
+						if (this.#tts) {
+							this.sound.left(name);
+						}
+					});
 				} else {
 					this.space.remove(update.name);
 				}
