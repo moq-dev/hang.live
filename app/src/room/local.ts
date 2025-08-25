@@ -138,6 +138,8 @@ export class Local {
 		});
 
 		// Enable transcription when the setting is enabled
+		// TEMPORARILY DISABLED - Caption generation disabled
+		/*
 		this.camera.signals.effect((effect) => {
 			// Only enable vad/transcription if audio is enabled
 			const enabled = effect.get(this.camera.audio.enabled);
@@ -147,6 +149,7 @@ export class Local {
 			const captions = effect.get(Settings.captureCaptions);
 			effect.set(this.camera.audio.captions.enabled, captions, false);
 		});
+		*/
 
 		// Update draggable settings
 		this.#signals.subscribe(Settings.draggable, (draggable) => {
