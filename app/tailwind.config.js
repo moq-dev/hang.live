@@ -7,7 +7,7 @@ export default {
 		addIconsPlugin({
 			collections: {
 				"material-symbols": () => import("@iconify-json/material-symbols/icons.json").then((m) => m.default),
-				"mdi": () => import("@iconify-json/mdi/icons.json").then((m) => m.default),
+				mdi: () => import("@iconify-json/mdi/icons.json").then((m) => m.default),
 			},
 			scale: 1,
 			prefix: "icon",

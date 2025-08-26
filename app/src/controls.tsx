@@ -286,10 +286,10 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 		const m = message();
 		if (!m) return;
 
-		if (!props.broadcast.chat.markdown.enabled.peek()) return;
+		if (!props.broadcast.chat.message.enabled.peek()) return;
 
 		// Use a function to avoid the dequal check.
-		props.broadcast.chat.markdown.message.set(() => m);
+		props.broadcast.chat.message.latest.set(() => m);
 
 		setMessage("");
 	};

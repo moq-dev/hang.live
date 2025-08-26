@@ -247,9 +247,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	}
 
 	async #runChat(effect: Effect) {
-		if (!effect.get(this.source.chat.markdown.enabled)) return;
+		if (!effect.get(this.source.chat.message.enabled)) return;
 
-		const msg = effect.get(this.source.chat.markdown.message);
+		const msg = effect.get(this.source.chat.message.latest);
 		if (!msg) return;
 
 		// First, try to match the message to a known video/sound file.
@@ -372,7 +372,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		if (this.source instanceof Publish.Broadcast) {
 			this.source.location.current.set((old) => ({ ...old, ...position }));
 		} else if (this.#locationPeer) {
-			this.#locationPeer.producer.peek()?.update(position);
+			this.#locationPeer.producer.peek()?.writeJson(position);
 		}
 	}
 

@@ -292,7 +292,10 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 					{/* Avatar Preview with Name Overlay */}
 					<div class="relative text-center">
 						<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-							<Show when={currentAvatarUrl()} fallback={<span class="icon-[mdi--camera] w-8 h-8 text-gray-400" />}>
+							<Show
+								when={currentAvatarUrl()}
+								fallback={<span class="icon-[mdi--camera] w-8 h-8 text-gray-400" />}
+							>
 								{(avatarUrl) => (
 									<img src={avatarUrl()} alt="Avatar Preview" class="w-full h-full object-cover" />
 								)}
