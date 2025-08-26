@@ -2,19 +2,6 @@ import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
 import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-// import IconClosedCaption from "~icons/material-symbols/closed-caption";
-// import IconClosedCaptionDisabled from "~icons/material-symbols/closed-caption-disabled";
-import IconCamera from "~icons/mdi/camera";
-import IconCameraOff from "~icons/mdi/camera-off";
-import IconSettings from "~icons/mdi/cog";
-import IconFullscreen from "~icons/mdi/fullscreen";
-import IconMicrophone from "~icons/mdi/microphone";
-import IconMicrophoneOff from "~icons/mdi/microphone-off";
-import IconScreenOff from "~icons/mdi/monitor-off";
-import IconScreen from "~icons/mdi/monitor-screenshot";
-import IconSticker from "~icons/mdi/sticker-emoji";
-import IconVolumeHigh from "~icons/mdi/volume-high";
-import IconVolumeMute from "~icons/mdi/volume-mute";
 import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
@@ -92,7 +79,7 @@ export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): J
 					}}
 				>
 					<Visualize audio={props.audio} />
-					{root() ? <IconMicrophone /> : <IconMicrophoneOff />}
+					<span class={root() ? "icon-[mdi--microphone]" : "icon-[mdi--microphone-off]"} />
 				</button>
 				<Show when={opacity() > 0}>
 					<input
@@ -136,7 +123,7 @@ export function Camera(props: { video: Publish.Video; room?: Room }): JSX.Elemen
 					"border-transparent": !media(),
 				}}
 			>
-				{media() ? <IconCamera /> : <IconCameraOff />}
+				<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
 			</button>
 		</Tooltip>
 	);
@@ -166,7 +153,7 @@ function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room 
 					"border-transparent": !media(),
 				}}
 			>
-				{media() ? <IconScreen /> : <IconScreenOff />}
+				<span class={media() ? "icon-[mdi--monitor-screenshot]" : "icon-[mdi--monitor-off]"} />
 			</button>
 		</Tooltip>
 	);
@@ -288,16 +275,21 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 		onCleanup(() => window.removeEventListener("keydown", keydown));
 	});
 
+	createEffect(() => {
+		const typing = message().length > 0;
+		props.broadcast.chat.typing.active.set(typing);
+	});
+
 	const submit = (e: SubmitEvent) => {
 		e.preventDefault();
 
 		const m = message();
 		if (!m) return;
 
-		if (!props.broadcast.chat.enabled.peek()) return;
+		if (!props.broadcast.chat.markdown.enabled.peek()) return;
 
 		// Use a function to avoid the dequal check.
-		props.broadcast.chat.markdown.set(() => m);
+		props.broadcast.chat.markdown.message.set(() => m);
 
 		setMessage("");
 	};
@@ -312,7 +304,7 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 					aria-expanded={showMemeSelector()}
 					class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
 				>
-					<IconSticker />
+					<span class="icon-[mdi--sticker-emoji]" />
 				</button>
 			</Tooltip>
 			<Show when={showMemeSelector()}>
@@ -393,7 +385,7 @@ function Volume(props: { room: Room }): JSX.Element {
 					class="hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
 					classList={{ "text-red-500": muted() || suspended() }}
 				>
-					{muted() ? <IconVolumeMute /> : <IconVolumeHigh />}
+					<span class={muted() ? "icon-[mdi--volume-mute]" : "icon-[mdi--volume-high]"} />
 				</button>
 				<Show when={opacity() > 0}>
 					<input
@@ -478,7 +470,7 @@ function Advanced(): JSX.Element {
 					aria-haspopup="dialog"
 					class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
 				>
-					<IconSettings />
+					<span class="icon-[mdi--cog]" />
 				</button>
 			</Tooltip>
 
@@ -516,7 +508,7 @@ function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 				aria-label="Toggle fullscreen"
 				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
 			>
-				<IconFullscreen />
+				<span class="icon-[mdi--fullscreen]" />
 			</button>
 		</Tooltip>
 	);

@@ -50,77 +50,111 @@ export function About(): JSX.Element {
 	// Every 2 seconds, perform the next action in the timeline.
 	const timeline = [
 		() => room.add("1", one),
-		() => room.add("2", two),
-		() => one.chat.markdown.set("sup"),
-		() => two.chat.markdown.set("yo"),
+		() => {
+			room.add("2", two);
+			one.chat.typing.active.set(true);
+		},
+		() => {
+			one.chat.markdown.message.set("sup");
+			two.chat.typing.active.set(true);
+		},
+		() => two.chat.markdown.message.set("yo"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("how's life as a simulation?"),
 		() => {},
-		() => one.chat.markdown.set("how's life as a simulation?"),
-		() => {},
-		() => two.chat.markdown.set("okay I guess"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("okay I guess"),
 		() => two.location.current.set((prev) => ({ ...prev, scale: 1.5 })),
-		() => two.chat.markdown.set("mouse wheel or pinch to zoom"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("mouse wheel or pinch to zoom"),
 		() => two.location.current.set((prev) => ({ ...prev, scale: 0.75 })),
 		() => two.location.current.set((prev) => ({ ...prev, scale: 1 })),
-		() => two.chat.markdown.set("drag to move"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("drag to move"),
 		() => two.location.current.set(randomLocation()),
 		() => {
 			two.location.current.set(randomLocation());
-			one.chat.markdown.set("try it!");
+			one.chat.typing.active.set(true);
+			one.chat.markdown.message.set("try it!");
 		},
-		() => two.chat.markdown.set("you can even drag others"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("you can even drag others"),
 		() => one.location.current.set(randomLocation()),
-		() => one.chat.markdown.set("sick"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("sick"),
 		() => room.add("3", three),
 		() => {
-			one.chat.markdown.set("hey");
-			two.chat.markdown.set("sup");
+			one.chat.typing.active.set(true);
+			two.chat.typing.active.set(true);
+			one.chat.markdown.message.set("hey");
+			two.chat.markdown.message.set("sup");
 		},
-		() => three.chat.markdown.set("hello"),
+		() => three.chat.typing.active.set(true),
+		() => three.chat.markdown.message.set("hello"),
 		() => {},
-		() => one.chat.markdown.set("try turning your webcam on"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("try turning your webcam on"),
 		() => {},
 		() => two.user.set({ name: "omni-chan", avatar: "/avatar/omni.jpg" }),
-		() => two.chat.markdown.set("oops wrong button"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("oops wrong button"),
 		() => two.user.set({ name: "omni-chan", avatar: "/avatar/43.svg" }),
-		() => three.chat.markdown.set("dude"),
+		() => three.chat.typing.active.set(true),
+		() => three.chat.markdown.message.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
 		() => three.location.current.set(randomLocation()),
-		() => three.chat.markdown.set("omg"),
+		() => three.chat.typing.active.set(true),
+		() => three.chat.markdown.message.set("omg"),
 		() => {},
 		() => {},
 		() => two.stop(),
-		() => two.chat.markdown.set("on second thought, maybe not"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("on second thought, maybe not"),
 		() => {},
-		() => three.chat.markdown.set("gotta run"),
+		() => three.chat.typing.active.set(true),
+		() => three.chat.markdown.message.set("gotta run"),
 		() => room.remove("3"),
-		() => one.chat.markdown.set("lame"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("lame"),
 		() => {},
-		() => one.chat.markdown.set("try typing /huh"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("try typing /huh"),
 		() => {},
-		() => two.chat.markdown.set("/huh"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("/huh"),
 		() => two.location.current.set({ x: -0.5, y: 0 }),
-		() => one.chat.markdown.set("that's right, I added dumb memes"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("that's right, I added dumb memes"),
 		() => two.location.current.set({ x: 0.5, y: 0 }),
-		() => one.chat.markdown.set("and audio panning"),
-		() => two.chat.markdown.set("huh?"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("and audio panning"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("huh?"),
 		() => {},
-		() => one.chat.markdown.set("inviting the squad"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("inviting the squad"),
 		() => {
-			two.chat.markdown.set("oh no");
+			two.chat.typing.active.set(true);
+			two.chat.markdown.message.set("oh no");
 			two.location.current.set(randomLocation());
 		},
 		() => room.add("4", four),
 		() => room.add("5", five),
-		() => four.chat.markdown.set("hey"),
+		() => four.chat.typing.active.set(true),
+		() => four.chat.markdown.message.set("hey"),
 		() => room.add("6", six),
-		() => five.chat.markdown.set("yo"),
-		() => six.chat.markdown.set("poop"),
+		() => five.chat.typing.active.set(true),
+		() => five.chat.markdown.message.set("yo"),
+		() => six.chat.typing.active.set(true),
+		() => six.chat.markdown.message.set("poop"),
 		() => {},
 		() => {},
-		() => two.chat.markdown.set("good lord"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("good lord"),
 		() => {},
 		() => {},
-		() => six.chat.markdown.set("let's watch something"),
+		() => six.chat.typing.active.set(true),
+		() => six.chat.markdown.message.set("let's watch something"),
 		() => {
 			room.add("7", seven);
 			seven.play(new URL("/meme/bing-chilling.webm", import.meta.url));
@@ -133,7 +167,8 @@ export function About(): JSX.Element {
 		() => {
 			five.location.current.set(randomLeft());
 			three.location.current.set(randomLeft());
-			two.chat.markdown.set("this shit again");
+			two.chat.typing.active.set(true);
+			two.chat.markdown.message.set("this shit again");
 		},
 		() => two.location.current.set(randomLeft()),
 		() => {},
@@ -143,18 +178,23 @@ export function About(): JSX.Element {
 		() => {},
 		() => {},
 		() => room.remove("7"),
-		() => one.chat.markdown.set("okay, that's enough of a demo"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("okay, that's enough of a demo"),
 		() => room.remove("4"),
 		() => room.remove("5"),
 		() => room.remove("6"),
-		() => one.chat.markdown.set("there's a lot more, but it's hard to demo"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("there's a lot more, but it's hard to demo"),
 		() => {},
-		() => one.chat.markdown.set("[start a hang](https://hang.live/start)"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("[start a hang](https://hang.live/start)"),
 		() => two.audio.captions.text.set("like automatic captions"),
 		() => one.audio.captions.text.set("(laughing)"),
-		() => two.chat.markdown.set("bye!"),
+		() => two.chat.typing.active.set(true),
+		() => two.chat.markdown.message.set("bye!"),
 		() => room.remove("2"),
-		() => one.chat.markdown.set("enjoy"),
+		() => one.chat.typing.active.set(true),
+		() => one.chat.markdown.message.set("enjoy"),
 		() => {},
 		() => room.remove("1"),
 	];

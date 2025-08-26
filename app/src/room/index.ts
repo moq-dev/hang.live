@@ -84,10 +84,18 @@ export class Room {
 						reload: false,
 						// Download the location of the broadcaster.
 						location: { enabled: true },
-						// Download the chat of the broadcaster.
-						chat: { enabled: true },
+						chat: {
+							// Download the chat of the broadcaster.
+							markdown: { enabled: true },
+							// And download the typing indicator.
+							typing: { enabled: true },
+						},
 						// Download the preview track for typing indicators.
 						preview: { enabled: true },
+						audio: {
+							// Download the speaking indicator.
+							speaking: { enabled: true },
+						},
 					});
 
 					// Download captions when the setting is enabled.

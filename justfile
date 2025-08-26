@@ -33,9 +33,6 @@ fix:
 	# Format and lint
 	pnpm -r exec biome check --fix
 
-	# Some additional linting.
-	pnpm -r exec eslint . --fix
-
 	# Fix the Rust code
 	just --justfile native/justfile fix
 

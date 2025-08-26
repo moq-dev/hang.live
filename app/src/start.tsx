@@ -3,12 +3,6 @@ import { Connection } from "@kixelated/hang";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconDelete from "~icons/mdi/delete";
-import IconHeart from "~icons/mdi/heart";
-import IconHeartOutline from "~icons/mdi/heart-outline";
-import IconInformation from "~icons/mdi/information-outline";
-import IconPlay from "~icons/mdi/play";
-import IconPlus from "~icons/mdi/plus-box";
 import Dialog from "./components/dialog";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
@@ -89,7 +83,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
-								<IconHeart class="w-5 h-5 text-red-500" />
+								<span class="icon-[mdi--heart] w-5 h-5 text-red-500" />
 								<h2 class="text-xl font-semibold">Favorites</h2>
 							</div>
 						</div>
@@ -97,7 +91,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 							when={props.api.authenticated()}
 							fallback={
 								<div class="text-center">
-									<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
+									<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />
 									<h3 class="text-lg font-semibold mb-8">Sign in to favorite hangs</h3>
 									<Login api={props.api} />
 								</div>
@@ -118,7 +112,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 								</Match>
 								<Match when={favorites()?.length === 0}>
 									<div class="text-center py-8">
-										<IconHeartOutline class="w-12 h-12 text-gray-500 mx-auto mb-4" />
+										<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />
 										<h3 class="text-lg font-semibold mb-2">No favorites yet</h3>
 										<p class="text-gray-400 text-sm leading-relaxed">
 											Enjoyed yourself? Click the heart icon to save a hang and (eventually) get
@@ -164,7 +158,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
-								<IconPlus class="w-5 h-5 text-green-500" />
+								<span class="icon-[mdi--plus-box] w-5 h-5 text-green-500" />
 								<h2 class="text-xl font-semibold">Create</h2>
 							</div>
 						</div>
@@ -189,7 +183,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 										background: Gradient(),
 									}}
 								>
-									<IconPlay class="w-5 h-5" />
+									<span class="icon-[mdi--play] w-5 h-5" />
 								</button>
 							</div>
 
@@ -201,7 +195,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 						</form>
 
 						<Dialog
-							Icon={IconInformation}
+							Icon={() => <span class="icon-[mdi--information-outline]" />}
 							title="Hangs are public"
 							description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
 						/>
@@ -252,7 +246,7 @@ function FavoriteRoom(props: {
 						class="opacity-0 group-hover:opacity-100 relative z-10 transition-all p-1 bg-gray-800 hover:bg-red-500/20 rounded text-gray-400 hover:text-red-400 cursor-pointer"
 						title="Remove from favorites"
 					>
-						<IconDelete class="w-4 h-4" />
+						<span class="icon-[mdi--delete] w-4 h-4" />
 					</button>
 				</div>
 			</div>

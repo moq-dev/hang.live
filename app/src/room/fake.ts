@@ -21,9 +21,14 @@ export class FakeBroadcast {
 	};
 
 	chat = {
-		enabled: new Signal(true),
-		markdown: new Signal<string | undefined>(undefined),
-		typing: new Signal<boolean | undefined>(undefined),
+		markdown: {
+			enabled: new Signal(true),
+			message: new Signal<string | undefined>(undefined),
+		},
+		typing: {
+			enabled: new Signal(true),
+			active: new Signal<boolean | undefined>(undefined),
+		},
 	};
 
 	user = new Signal<Catalog.User | undefined>(undefined);
@@ -31,8 +36,12 @@ export class FakeBroadcast {
 	audio = {
 		root: new Signal<AudioNode | undefined>(undefined),
 		captions: {
+			enabled: new Signal(true),
 			text: new Signal<string | undefined>(undefined),
-			speaking: new Signal<boolean | undefined>(undefined),
+		},
+		speaking: {
+			enabled: new Signal(false),
+			active: new Signal<boolean | undefined>(undefined),
 		},
 	};
 
@@ -59,10 +68,10 @@ export class FakeBroadcast {
 		this.location.handle.set(Math.random().toString(36).substring(2, 15));
 
 		this.signals.effect((effect) => {
-			const message = effect.get(this.chat.markdown);
+			const message = effect.get(this.chat.markdown.message);
 			if (!message) return;
 
-			effect.timer(() => this.chat.markdown.set(undefined), 10000);
+			effect.timer(() => this.chat.markdown.message.set(undefined), 10000);
 		});
 
 		this.signals.effect((effect) => {
@@ -70,6 +79,12 @@ export class FakeBroadcast {
 			if (!caption) return;
 
 			effect.timer(() => this.audio.captions.text.set(undefined), 10000);
+		});
+
+		// A helper to automatically unset the typing indicator when the message is sent.
+		this.signals.effect((effect) => {
+			const message = effect.get(this.chat.markdown.message);
+			if (message) this.chat.typing.active.set(false);
 		});
 	}
 

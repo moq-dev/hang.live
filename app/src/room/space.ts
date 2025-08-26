@@ -449,7 +449,7 @@ export class Space {
 		});
 
 		broadcast.signals.effect((effect) => {
-			const message = effect.get(broadcast.source.chat.markdown);
+			const message = effect.get(broadcast.source.chat.markdown.message);
 			if (!message) return;
 
 			broadcast.targetPosition.set((prev) => ({

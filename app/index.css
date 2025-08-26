@@ -1,6 +1,7 @@
 @import "@fontsource-variable/montserrat";
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@plugin "@iconify/tailwind4";
 
 @theme {
 	--font-montserrat: "Montserrat Variable", system-ui, sans-serif;

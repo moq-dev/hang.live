@@ -2,13 +2,6 @@ import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
 import { createSignal, For, onCleanup, onMount, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconClose from "~icons/mdi/close";
-import IconEmoticon from "~icons/mdi/emoticon-happy";
-import IconMusic from "~icons/mdi/music";
-import IconPause from "~icons/mdi/pause";
-import IconPlay from "~icons/mdi/play";
-import IconVideo from "~icons/mdi/video";
-import IconVolumeHigh from "~icons/mdi/volume-high";
 import { EMOJI_CATEGORIES, MEME_AUDIO, MEME_VIDEO, MemeVideoName } from "../room/meme";
 import Settings from "../settings";
 
@@ -91,8 +84,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 
 	const sendMeme = (memeName: string) => {
 		// Send the slash command
-		if (props.broadcast.chat.enabled.peek()) {
-			props.broadcast.chat.markdown.set(() => `/${memeName}`);
+		if (props.broadcast.chat.markdown.enabled.peek()) {
+			props.broadcast.chat.markdown.message.set(() => `/${memeName}`);
 		}
 		props.onClose();
 	};
@@ -184,7 +177,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 							"hover:bg-white/10 text-white/60": activeTab() !== "emoji",
 						}}
 					>
-						<IconEmoticon class="w-4 h-4" />
+						<span class="icon-[mdi--emoticon-happy] w-4 h-4" />
 						Emoji
 					</button>
 					<button
@@ -196,7 +189,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 							"hover:bg-white/10 text-white/60": activeTab() !== "audio",
 						}}
 					>
-						<IconMusic class="w-4 h-4" />
+						<span class="icon-[mdi--music] w-4 h-4" />
 						Audio
 					</button>
 					<button
@@ -208,7 +201,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 							"hover:bg-white/10 text-white/60": activeTab() !== "video",
 						}}
 					>
-						<IconVideo class="w-4 h-4" />
+						<span class="icon-[mdi--video] w-4 h-4" />
 						Video
 					</button>
 				</div>
@@ -216,7 +209,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					{/* Playing indicator */}
 					<Show when={previewAudio() || previewVideo()}>
 						<div class="bg-green-600 text-white text-xs px-2 py-1 rounded animate-pulse flex items-center gap-1">
-							<IconVolumeHigh class="w-3 h-3" />
+							<span class="icon-[mdi--volume-high] w-3 h-3" />
 							<span>Preview</span>
 						</div>
 					</Show>
@@ -226,7 +219,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 						class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer text-white"
 						aria-label="Close"
 					>
-						<IconClose class="w-5 h-5" />
+						<span class="icon-[mdi--close] w-5 h-5" />
 					</button>
 				</div>
 			</div>
@@ -291,8 +284,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 											}}
 											title={isPlaying() ? "Stop" : "Preview"}
 										>
-											<Show when={isPlaying()} fallback={<IconPlay class="w-4 h-4 text-white" />}>
-												<IconPause class="w-4 h-4 text-white" />
+											<Show when={isPlaying()} fallback={<span class="icon-[mdi--play] w-4 h-4 text-white" />}>
+												<span class="icon-[mdi--pause] w-4 h-4 text-white" />
 											</Show>
 										</button>
 									</div>
@@ -350,8 +343,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 											}}
 											title={isPlaying() ? "Stop" : "Preview"}
 										>
-											<Show when={isPlaying()} fallback={<IconPlay class="w-4 h-4 text-white" />}>
-												<IconPause class="w-4 h-4 text-white" />
+											<Show when={isPlaying()} fallback={<span class="icon-[mdi--play] w-4 h-4 text-white" />}>
+												<span class="icon-[mdi--pause] w-4 h-4 text-white" />
 											</Show>
 										</button>
 									</div>
