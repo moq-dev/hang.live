@@ -102,10 +102,8 @@ export class Audio {
 
 		// Track speaking state from publish broadcast
 		this.#signals.effect((effect) => {
-			if (this.broadcast.source instanceof Publish.Broadcast) {
-				const speaking = effect.get(this.broadcast.source.audio.speaking.active);
-				this.#speaking = speaking ?? false;
-			}
+			const speaking = effect.get(this.broadcast.source.audio.speaking.active);
+			this.#speaking = speaking ?? false;
 		});
 	}
 

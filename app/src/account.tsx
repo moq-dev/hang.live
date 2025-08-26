@@ -1,10 +1,6 @@
 import * as Api from "@hang/api/client";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconArrowLeft from "~icons/mdi/arrow-left";
-import IconCamera from "~icons/mdi/camera";
-import IconLogout from "~icons/mdi/logout";
-import IconUpload from "~icons/mdi/upload";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
@@ -64,7 +60,7 @@ function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 						onClick={() => window.history.back()}
 						class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
 					>
-						<IconArrowLeft class="w-4 h-4 mr-2" />
+						<span class="icon-[mdi--arrow-left] w-4 h-4 mr-2" />
 						Back
 					</button>
 					<button
@@ -73,7 +69,7 @@ function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 						class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
 					>
 						Sign out
-						<IconLogout class="w-4 h-4 ml-2" />
+						<span class="icon-[mdi--logout] w-4 h-4 ml-2" />
 					</button>
 				</div>
 			</div>
@@ -231,8 +227,8 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 												"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 											}}
 										>
-											<IconUpload
-												class="w-4 h-4"
+											<span
+												class="icon-[mdi--upload] w-4 h-4"
 												style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
 											/>
 											{currentAvatarUrl() ? "Choose new avatar" : "Choose an avatar"}
@@ -296,7 +292,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 					{/* Avatar Preview with Name Overlay */}
 					<div class="relative text-center">
 						<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-							<Show when={currentAvatarUrl()} fallback={<IconCamera class="w-8 h-8 text-gray-400" />}>
+							<Show when={currentAvatarUrl()} fallback={<span class="icon-[mdi--camera] w-8 h-8 text-gray-400" />}>
 								{(avatarUrl) => (
 									<img src={avatarUrl()} alt="Avatar Preview" class="w-full h-full object-cover" />
 								)}

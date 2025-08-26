@@ -3,9 +3,6 @@ import { Connection } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
 import { createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconAccountEdit from "~icons/mdi/account-edit";
-import IconDice from "~icons/mdi/dice-multiple";
-import IconPlay from "~icons/mdi/play";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
@@ -83,7 +80,7 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 						"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 					}}
 				>
-					<IconPlay class="w-5 h-5 inline mr-2" />
+					<span class="icon-[mdi--play] w-5 h-5 inline mr-2" />
 					<Switch>
 						<Match when={!info()}>Loading...</Match>
 						<Match when={props.api.authenticated()}>Join</Match>
@@ -176,7 +173,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 								onClick={handleRandomAvatar}
 								class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center gap-2"
 							>
-								<IconDice class="w-4 h-4" />
+								<span class="icon-[mdi--dice-multiple] w-4 h-4" />
 								Avatar
 							</button>
 							<AnotherOne clicks={avatarClicks} />
@@ -188,7 +185,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 								onClick={handleRandomName}
 								class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center gap-2"
 							>
-								<IconDice class="w-4 h-4" />
+								<span class="icon-[mdi--dice-multiple] w-4 h-4" />
 								Name
 							</button>
 							<AnotherOne clicks={nameClicks} />
@@ -211,7 +208,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 							href="/account"
 							class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
 						>
-							<IconAccountEdit class="w-5 h-5" />
+							<span class="icon-[mdi--account-edit] w-5 h-5" />
 						</a>
 					</Tooltip>
 				</Show>

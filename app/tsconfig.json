@@ -12,7 +12,7 @@
 		"noPropertyAccessFromIndexSignature": false,
 		"noUncheckedIndexedAccess": false,
 		"erasableSyntaxOnly": true,
-		"types": ["unplugin-icons/types/solid", "vite/client", "../api/worker-configuration.d.ts"]
+		"types": ["vite/client", "../api/worker-configuration.d.ts"]
 	},
 	"include": ["src"]
 }

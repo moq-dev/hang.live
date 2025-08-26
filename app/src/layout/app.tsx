@@ -1,11 +1,6 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
 import { createMemo, createResource, createSignal, JSX, Show } from "solid-js";
-import IconAccount from "~icons/mdi/account";
-import IconLeave from "~icons/mdi/exit-run";
-import IconHeart from "~icons/mdi/heart";
-import IconHeartOutline from "~icons/mdi/heart-outline";
-import IconShare from "~icons/mdi/share-variant";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";
 import { Logo } from "./logo";
@@ -25,7 +20,7 @@ export default function App(props: { children: JSX.Element; connection: Connecti
 							target="_blank"
 							class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 						>
-							<IconAccount class="w-5 h-5" />
+							<span class="icon-[mdi--account] w-5 h-5" />
 						</a>
 					</Tooltip>
 				</nav>
@@ -58,7 +53,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 					href="/start"
 					class="p-2 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
-					<IconLeave class="w-5 h-5" />
+					<span class="icon-[mdi--exit-run] w-5 h-5" />
 				</a>
 			</Tooltip>
 			<FavoriteButton api={props.api} room={props.room} />
@@ -68,7 +63,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 					onClick={share}
 					class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
-					<IconShare class="w-5 h-5" />
+					<span class="icon-[mdi--share-variant] w-5 h-5" />
 				</button>
 			</Tooltip>
 		</>
@@ -156,10 +151,10 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 						"text-gray-400": !props.api.authenticated(),
 					}}
 				>
-					<Show when={props.api.authenticated()} fallback={<IconHeartOutline class="w-5 h-5" />}>
-						<Show when={!isFavorite.loading} fallback={<IconHeartOutline class="w-5 h-5 animate-pulse" />}>
-							<Show when={isFavorite()} fallback={<IconHeartOutline class="w-5 h-5" />}>
-								<IconHeart class="w-5 h-5 text-red-400" />
+					<Show when={props.api.authenticated()} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}>
+						<Show when={!isFavorite.loading} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5 animate-pulse" />}>
+							<Show when={isFavorite()} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}>
+								<span class="icon-[mdi--heart] w-5 h-5 text-red-400" />
 							</Show>
 						</Show>
 					</Show>

@@ -5,10 +5,6 @@ import solid from "@kixelated/signals/solid";
 import { createEffect, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
-import IconChat from "~icons/mdi/message-text";
-import IconMicrophone from "~icons/mdi/microphone";
-import IconVideo from "~icons/mdi/video";
-import IconVolumeHigh from "~icons/mdi/volume-high";
 
 export function PreviewRoomCompact(props: {
 	connection: Connection;
@@ -70,7 +66,7 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 								"opacity-0 scale-0": !info().speaking,
 							}}
 						>
-							<IconVolumeHigh class="w-2.5 h-2.5 text-gray-900" />
+							<span class="icon-[mdi--volume-high] w-2.5 h-2.5 text-gray-900" />
 							<Show when={info().speaking}>
 								<div class="absolute w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
 							</Show>
@@ -80,19 +76,19 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 						<div class="text-xs font-medium text-white truncate">{info().name}</div>
 						<div class="flex items-center gap-1">
 							<Show when={info().audio}>
-								<IconMicrophone class="w-3 h-3 text-green-400" />
+								<span class="icon-[mdi--microphone] w-3 h-3 text-green-400" />
 							</Show>
 							<Show when={info().video}>
-								<IconVideo class="w-3 h-3 text-blue-400" />
+								<span class="icon-[mdi--video] w-3 h-3 text-blue-400" />
 							</Show>
 							<Show when={info().chat}>
-								<IconChat class="w-3 h-3 text-purple-400" />
+								<span class="icon-[mdi--message-text] w-3 h-3 text-purple-400" />
 							</Show>
 							<Show when={info().typing}>
 								<span class="text-xs text-gray-400 italic">typing...</span>
 							</Show>
 							<Show when={info().speaking}>
-								<IconVolumeHigh class="w-3 h-3 text-green-300 animate-pulse" />
+								<span class="icon-[mdi--volume-high] w-3 h-3 text-green-300 animate-pulse" />
 							</Show>
 						</div>
 					</div>
@@ -189,7 +185,7 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 								"opacity-0 scale-0": !info().speaking,
 							}}
 						>
-							<IconVolumeHigh class="w-3 h-3 text-gray-900" />
+							<span class="icon-[mdi--volume-high] w-3 h-3 text-gray-900" />
 							<Show when={info().speaking}>
 								<div class="absolute w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
 							</Show>
@@ -208,7 +204,7 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 								}}
 								title="Voice enabled"
 							>
-								<IconMicrophone class="w-4 h-4 text-green-400" />
+								<span class="icon-[mdi--microphone] w-4 h-4 text-green-400" />
 							</div>
 							<div
 								class="relative transition-all duration-300 ease-in-out"
@@ -218,7 +214,7 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 								}}
 								title="Video enabled"
 							>
-								<IconVideo class="w-4 h-4 text-blue-400" />
+								<span class="icon-[mdi--video] w-4 h-4 text-blue-400" />
 							</div>
 							<div
 								class="relative transition-all duration-300 ease-in-out"
@@ -228,7 +224,7 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 								}}
 								title="Chat active"
 							>
-								<IconChat class="w-4 h-4 text-purple-400" />
+								<span class="icon-[mdi--message-text] w-4 h-4 text-purple-400" />
 							</div>
 							<Show when={info().typing}>
 								<div class="relative transition-all duration-300 ease-in-out" title="Typing">
@@ -240,7 +236,7 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 									class="relative transition-all duration-300 ease-in-out animate-pulse"
 									title="Speaking"
 								>
-									<IconVolumeHigh class="w-4 h-4 text-green-300" />
+									<span class="icon-[mdi--volume-high] w-4 h-4 text-green-300" />
 								</div>
 							</Show>
 						</div>

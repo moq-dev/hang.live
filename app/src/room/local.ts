@@ -73,13 +73,21 @@ export class Local {
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
 				},
+				speaking: {
+					enabled: true,
+				},
 			},
 			location: {
 				enabled: true,
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 			},
 			chat: {
-				enabled: true,
+				markdown: {
+					enabled: true,
+				},
+				typing: {
+					enabled: true,
+				},
 			},
 			preview: {
 				enabled: true,
@@ -188,7 +196,7 @@ export class Local {
 		});
 
 		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.markdown);
+			const message = effect.get(this.camera.chat.markdown.message);
 			this.camera.preview.info.set((prev) => ({
 				...prev,
 				chat: !!message,
@@ -196,12 +204,12 @@ export class Local {
 		});
 
 		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.markdown);
+			const message = effect.get(this.camera.chat.markdown.message);
 			if (!message) return;
 
 			// Clear the message after 10 seconds.
 			effect.timer(() => {
-				this.camera.chat.markdown.set(undefined);
+				this.camera.chat.markdown.message.set(undefined);
 			}, 10000);
 		});
 

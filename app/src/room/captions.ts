@@ -1,6 +1,4 @@
 import { Effect } from "@kixelated/signals";
-import { render } from "solid-js/web";
-import IconCaption from "~icons/mdi/microphone";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
@@ -84,7 +82,10 @@ export class Captions {
 		iconContainer.className = "animate-pulse";
 		wrapper.appendChild(iconContainer);
 
-		render(() => IconCaption({ class: "w-5 h-5 text-link-hue" }), iconContainer);
+		// Create icon element
+		const iconSpan = document.createElement("span");
+		iconSpan.className = "icon-[mdi--microphone] w-5 h-5 text-link-hue";
+		iconContainer.appendChild(iconSpan);
 
 		wrapper.appendChild(node);
 

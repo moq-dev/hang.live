@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
-import Icons from "unplugin-icons/vite";
 import { defineConfig } from "vite";
 import basicSsl from "vite-plugin-mkcert";
 import solid from "vite-plugin-solid";
@@ -9,22 +8,21 @@ import solid from "vite-plugin-solid";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(() => ({
 	build: {
 		target: "esnext",
-		sourcemap: process.env.NODE_ENV === "production" ? false : "inline",
+		sourcemap: process.env.NODE_ENV === "production" ? false : "inline" as const,
 		rollupOptions: {
 			input: "index.html",
 		},
 	},
 
 	worker: {
-		format: "es",
+		format: "es" as const,
 	},
 
 	plugins: [
 		solid(),
-		Icons({ scale: 1, compiler: "solid" }),
 		tailwindcss(),
 		basicSsl({
 			hosts: ["localhost", "hang.dev"],
@@ -42,11 +40,6 @@ export default defineConfig(async () => ({
 		strictPort: true,
 		host: host || "hang.dev",
 		hmr: false,
-		https: true,
-		// Add client-side routing support
-		historyApiFallback: {
-			rewrites: [{ from: /.*/, to: "/index.html" }],
-		},
 		watch: {
 			// 3. tell vite to ignore watching `tauri`
 			ignored: ["**/tauri/**"],

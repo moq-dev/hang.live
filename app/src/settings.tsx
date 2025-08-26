@@ -2,10 +2,6 @@ import * as Api from "@hang/api";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
-import IconCaptions from "~icons/mdi/closed-caption";
-import IconCursorMove from "~icons/mdi/cursor-move";
-import IconHeadphones from "~icons/mdi/headphones";
-import IconTextToSpeech from "~icons/mdi/text-to-speech";
 import { Tab } from "./components/meme-selector";
 
 const Settings = {
@@ -125,13 +121,13 @@ export function Modal(): JSX.Element {
 			<input type="checkbox" checked={headphones()} onChange={() => Settings.headphones.set((p) => !p)} />
 			<span>headphones</span>
 			<span title="You're cool and wear headphones instead of using speakers in public. Disables echo cancellation.">
-				<IconHeadphones />
+				<span class="icon-[mdi--headphones]" />
 			</span>
 
 			<input type="checkbox" checked={draggable()} onChange={() => Settings.draggable.set((p) => !p)} />
 			<span>allow dragging</span>
 			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
-				<IconCursorMove />
+				<span class="icon-[mdi--cursor-move]" />
 			</span>
 
 			<input
@@ -142,13 +138,13 @@ export function Modal(): JSX.Element {
 			/>
 			<span>generate captions</span>
 			<span title="Generate closed captions for your own speech. Requires WebGPU support.">
-				<IconCaptions />
+				<span class="icon-[mdi--closed-caption]" />
 			</span>
 
 			<input type="checkbox" checked={tts()} onChange={() => Settings.tts.set((p) => !p)} />
 			<span>text-to-speech</span>
 			<span title="Enable text-to-speech for announcing members. WebGPU is recommended.">
-				<IconTextToSpeech />
+				<span class="icon-[mdi--text-to-speech]" />
 			</span>
 		</div>
 	);

@@ -63,7 +63,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	captions: Captions;
 
 	// The current chat message, if any.
-	message = new Signal<DocumentFragment | undefined>(undefined);
+	message = new Signal<HTMLElement | undefined>(undefined);
 
 	bounds: Signal<Bounds>; // 0 to canvas
 	scale = 1.0; // 1 is 100%
@@ -247,9 +247,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	}
 
 	async #runChat(effect: Effect) {
-		if (!effect.get(this.source.chat.enabled)) return;
+		if (!effect.get(this.source.chat.markdown.enabled)) return;
 
-		const msg = effect.get(this.source.chat.markdown);
+		const msg = effect.get(this.source.chat.markdown.message);
 		if (!msg) return;
 
 		// First, try to match the message to a known video/sound file.
@@ -278,9 +278,13 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			RETURN_DOM_FRAGMENT: true,
 		});
 
+		// Wrap the fragment in a container element for easier handling
+		const container = document.createElement("span");
+		container.appendChild(sanitized);
+
 		this.audio.sound.notification("chat");
 
-		effect.set(this.message, sanitized);
+		effect.set(this.message, container);
 	}
 
 	// TODO Also make scale a signal
