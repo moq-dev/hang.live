@@ -125,17 +125,9 @@ export class Chat {
 			updatePosition(bounds, viewport);
 		});
 
-		// Icon events
 		effect.effect((effect) => {
 			const typing = effect.get(this.broadcast.source.chat.typing.active);
-			const message = effect.get(this.broadcast.message);
-
-			if (typing || !message) {
-				// Default to the typing icon because it'll be more likely to fade in.
-				DOM.setClass(effect, icon, "icon-[mdi--chat-typing]");
-			} else {
-				DOM.setClass(effect, icon, "icon-[mdi--chat]");
-			}
+			DOM.setClass(effect, icon, typing ? "icon-[mdi--chat-typing]" : "icon-[mdi--chat]");
 		});
 
 		DOM.render(effect, document.body, root);
