@@ -151,8 +151,14 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 						"text-gray-400": !props.api.authenticated(),
 					}}
 				>
-					<Show when={props.api.authenticated()} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}>
-						<Show when={!isFavorite.loading} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5 animate-pulse" />}>
+					<Show
+						when={props.api.authenticated()}
+						fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}
+					>
+						<Show
+							when={!isFavorite.loading}
+							fallback={<span class="icon-[mdi--heart-outline] w-5 h-5 animate-pulse" />}
+						>
 							<Show when={isFavorite()} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}>
 								<span class="icon-[mdi--heart] w-5 h-5 text-red-400" />
 							</Show>

@@ -82,7 +82,7 @@ export class Local {
 				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 			},
 			chat: {
-				markdown: {
+				message: {
 					enabled: true,
 				},
 				typing: {
@@ -196,7 +196,7 @@ export class Local {
 		});
 
 		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.markdown.message);
+			const message = effect.get(this.camera.chat.message.latest);
 			this.camera.preview.info.set((prev) => ({
 				...prev,
 				chat: !!message,
@@ -204,12 +204,12 @@ export class Local {
 		});
 
 		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.markdown.message);
+			const message = effect.get(this.camera.chat.message.latest);
 			if (!message) return;
 
 			// Clear the message after 10 seconds.
 			effect.timer(() => {
-				this.camera.chat.markdown.message.set(undefined);
+				this.camera.chat.message.latest.set(undefined);
 			}, 10000);
 		});
 

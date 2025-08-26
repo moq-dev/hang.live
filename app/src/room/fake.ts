@@ -21,9 +21,9 @@ export class FakeBroadcast {
 	};
 
 	chat = {
-		markdown: {
+		message: {
 			enabled: new Signal(true),
-			message: new Signal<string | undefined>(undefined),
+			latest: new Signal<string | undefined>(undefined),
 		},
 		typing: {
 			enabled: new Signal(true),
@@ -68,10 +68,10 @@ export class FakeBroadcast {
 		this.location.handle.set(Math.random().toString(36).substring(2, 15));
 
 		this.signals.effect((effect) => {
-			const message = effect.get(this.chat.markdown.message);
+			const message = effect.get(this.chat.message.latest);
 			if (!message) return;
 
-			effect.timer(() => this.chat.markdown.message.set(undefined), 10000);
+			effect.timer(() => this.chat.message.latest.set(undefined), 10000);
 		});
 
 		this.signals.effect((effect) => {
@@ -83,7 +83,7 @@ export class FakeBroadcast {
 
 		// A helper to automatically unset the typing indicator when the message is sent.
 		this.signals.effect((effect) => {
-			const message = effect.get(this.chat.markdown.message);
+			const message = effect.get(this.chat.message.latest);
 			if (message) this.chat.typing.active.set(false);
 		});
 	}

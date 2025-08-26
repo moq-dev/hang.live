@@ -84,8 +84,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 
 	const sendMeme = (memeName: string) => {
 		// Send the slash command
-		if (props.broadcast.chat.markdown.enabled.peek()) {
-			props.broadcast.chat.markdown.message.set(() => `/${memeName}`);
+		if (props.broadcast.chat.message.enabled.peek()) {
+			props.broadcast.chat.message.latest.set(() => `/${memeName}`);
 		}
 		props.onClose();
 	};
@@ -284,7 +284,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 											}}
 											title={isPlaying() ? "Stop" : "Preview"}
 										>
-											<Show when={isPlaying()} fallback={<span class="icon-[mdi--play] w-4 h-4 text-white" />}>
+											<Show
+												when={isPlaying()}
+												fallback={<span class="icon-[mdi--play] w-4 h-4 text-white" />}
+											>
 												<span class="icon-[mdi--pause] w-4 h-4 text-white" />
 											</Show>
 										</button>
@@ -343,7 +346,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 											}}
 											title={isPlaying() ? "Stop" : "Preview"}
 										>
-											<Show when={isPlaying()} fallback={<span class="icon-[mdi--play] w-4 h-4 text-white" />}>
+											<Show
+												when={isPlaying()}
+												fallback={<span class="icon-[mdi--play] w-4 h-4 text-white" />}
+											>
 												<span class="icon-[mdi--pause] w-4 h-4 text-white" />
 											</Show>
 										</button>

@@ -86,7 +86,7 @@ export class Room {
 						location: { enabled: true },
 						chat: {
 							// Download the chat of the broadcaster.
-							markdown: { enabled: true },
+							message: { enabled: true },
 							// And download the typing indicator.
 							typing: { enabled: true },
 						},
