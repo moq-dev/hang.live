@@ -64,10 +64,20 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 		return input || placeholder();
 	});
 
+	const roomNameError = createMemo(() => {
+		const name = roomInput().trim();
+		if (!name) return null;
+
+		if (!Api.Room.isValidName(name)) {
+			return Api.Room.ROOM_NAME_ERROR;
+		}
+		return null;
+	});
+
 	const handleCreate = (e: Event) => {
 		e.preventDefault();
 		const name = roomName();
-		if (name) {
+		if (name && Api.Room.isValidName(name)) {
 			// Now actually navigate and add to history
 			navigate(`/@${name}`);
 		}
@@ -165,37 +175,67 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 
 						<form onSubmit={handleCreate} class="space-y-4">
 							<div class="flex gap-3">
-								<input
-									type="text"
-									value={roomInput()}
-									onInput={(e) => setRoomInput(e.currentTarget.value)}
-									placeholder={placeholder()}
-									class="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-xl focus:outline-none focus:border-blue-500 transition-colors text-lg"
-									autocomplete="off"
-									autocorrect="off"
-									autocapitalize="off"
-									spellcheck={false}
-								/>
+								<div
+									class="flex-1 flex items-center bg-gray-900/50 border rounded-xl transition-colors text-lg overflow-hidden"
+									classList={{
+										"border-red-500": !!roomNameError(),
+										"border-gray-600": !roomNameError() && !roomInput(),
+										"focus-within:border-link-hue": !roomNameError() && !!roomInput(),
+										"border-link-hue": !roomNameError() && !!roomInput(),
+									}}
+								>
+									<span class="pl-4 text-gray-500 select-none">@</span>
+									<input
+										type="text"
+										value={roomInput()}
+										onInput={(e) => setRoomInput(e.currentTarget.value)}
+										placeholder={placeholder()}
+										class="flex-1 px-2 py-2 bg-transparent focus:outline-none"
+										autocomplete="off"
+										autocorrect="off"
+										autocapitalize="off"
+										spellcheck={false}
+									/>
+								</div>
 								<button
 									type="submit"
-									class="px-3 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 cursor-pointer"
+									class="px-3 py-2 rounded-xl font-medium transition-colors flex items-center gap-2"
+									classList={{
+										"opacity-50 cursor-not-allowed": !!roomNameError(),
+										"cursor-pointer": !roomNameError(),
+									}}
 									style={{
 										background: Gradient(),
 									}}
+									disabled={!!roomNameError()}
 								>
 									<span class="icon-[mdi--play]" />
 								</button>
 							</div>
 
 							{/* Live URL Preview */}
-							<div class="text-sm text-gray-500">
-								<span>URL: </span>
-								<span class="text-gray-300 font-mono">hang.live/@{roomName()}</span>
+							<div class="text-md">
+								<span class="text-gray-300">URL: </span>
+								<a href={`https://hang.live/@${roomName()}`} target="_blank" rel="noopener noreferrer">
+									hang.live/@{roomName()}
+								</a>
 							</div>
 						</form>
 
+						{/* Validation Error */}
+						<Show when={roomNameError()}>
+							{(error) => (
+								<Dialog
+									icon="icon-[mdi--alert-circle-outline]"
+									title="Invalid room name"
+									description={error()}
+									variant="error"
+								/>
+							)}
+						</Show>
+
 						<Dialog
-							Icon={() => <span class="icon-[mdi--information-outline]" />}
+							icon="icon-[mdi--information-outline]"
 							title="Hangs are public"
 							description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
 						/>
