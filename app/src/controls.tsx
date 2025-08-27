@@ -165,7 +165,7 @@ export function Visualize(props: { audio: Publish.Audio }): JSX.Element {
 	const [speaking, setSpeaking] = createSignal(false);
 
 	const top = createMemo(() => {
-		return `${Math.max(0, 100 - (power() ?? 0) * 100)}%`;
+		return `${Math.round(Math.max(0, 100 - (power() ?? 0) * 100))}%`;
 	});
 
 	const color = createMemo(() => {
