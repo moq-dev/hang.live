@@ -12,7 +12,7 @@ import Settings, { Modal } from "./settings";
 export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	return (
 		<div
-			class="fixed bottom-0 left-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-none z-[10]"
+			class="fixed bottom-0 left-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-none z-[10] leading-none"
 			role="toolbar"
 			aria-label="Media controls"
 		>

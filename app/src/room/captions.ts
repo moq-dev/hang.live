@@ -84,7 +84,7 @@ export class Captions {
 
 		// Create icon element
 		const iconSpan = document.createElement("span");
-		iconSpan.className = "icon-[mdi--microphone] w-5 h-5 text-link-hue";
+		iconSpan.className = "icon-[mdi--microphone] text-link-hue";
 		iconContainer.appendChild(iconSpan);
 
 		wrapper.appendChild(node);

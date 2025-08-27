@@ -83,7 +83,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
-								<span class="icon-[mdi--heart] w-5 h-5 text-red-500" />
+								<span class="icon-[mdi--heart] text-red-500" />
 								<h2 class="text-xl font-semibold">Favorites</h2>
 							</div>
 						</div>
@@ -158,7 +158,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
-								<span class="icon-[mdi--plus-box] w-5 h-5 text-green-500" />
+								<span class="icon-[mdi--plus-box] text-green-500" />
 								<h2 class="text-xl font-semibold">Create</h2>
 							</div>
 						</div>
@@ -183,7 +183,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 										background: Gradient(),
 									}}
 								>
-									<span class="icon-[mdi--play] w-5 h-5" />
+									<span class="icon-[mdi--play]" />
 								</button>
 							</div>
 

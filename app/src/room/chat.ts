@@ -20,11 +20,11 @@ export class Chat {
 	#render(effect: Effect) {
 		const root = DOM.create("div", {
 			className:
-				"flex items-center gap-2 px-3 py-2 backdrop-blur-md rounded-lg transition-all ease-out transform duration-200 shadow-lg bg-black/40 fixed max-w-sm",
+				"flex items-center gap-2 px-3 py-2 backdrop-blur-md rounded-lg transition-all ease-out transform duration-200 shadow-lg bg-black/40 fixed max-w-sm text-xl",
 		});
 
 		const icon = document.createElement("div");
-		icon.className = "w-5 h-5 text-link-hue scale-x-[-1]";
+		icon.className = "text-link-hue scale-x-[-1]";
 		DOM.render(effect, root, icon);
 
 		// Update the position of the message when the broadcast bounds, viewport, or message (width) changes.
@@ -65,7 +65,6 @@ export class Chat {
 
 			root.style.left = `${left}px`;
 			root.style.top = `${top}px`;
-			root.style.fontSize = "18px";
 		};
 
 		// Save the previous message so we can fade-out.
