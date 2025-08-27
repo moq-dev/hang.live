@@ -80,7 +80,7 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 						"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 					}}
 				>
-					<span class="icon-[mdi--play] w-5 h-5 inline mr-2" />
+					<span class="icon-[mdi--play] inline mr-2" />
 					<Switch>
 						<Match when={!info()}>Loading...</Match>
 						<Match when={props.api.authenticated()}>Join</Match>
@@ -208,7 +208,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 							href="/account"
 							class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
 						>
-							<span class="icon-[mdi--account-edit] w-5 h-5" />
+							<span class="icon-[mdi--account-edit]" />
 						</a>
 					</Tooltip>
 				</Show>

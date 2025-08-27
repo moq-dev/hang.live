@@ -219,7 +219,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 						class="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer text-white"
 						aria-label="Close"
 					>
-						<span class="icon-[mdi--close] w-5 h-5" />
+						<span class="icon-[mdi--close]" />
 					</button>
 				</div>
 			</div>

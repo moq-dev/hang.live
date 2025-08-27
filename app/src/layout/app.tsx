@@ -8,7 +8,7 @@ import { Logo } from "./logo";
 export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">
-			<header class="flex items-center justify-between mb-4">
+			<header class="flex items-center justify-between mb-4 leading-none text-xl">
 				<Logo connection={props.connection} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
@@ -20,7 +20,7 @@ export default function App(props: { children: JSX.Element; connection: Connecti
 							target="_blank"
 							class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 						>
-							<span class="icon-[mdi--account] w-5 h-5" />
+							<span class="icon-[mdi--account]" />
 						</a>
 					</Tooltip>
 				</nav>
@@ -53,7 +53,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 					href="/start"
 					class="p-2 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
-					<span class="icon-[mdi--exit-run] w-5 h-5" />
+					<span class="icon-[mdi--exit-run]" />
 				</a>
 			</Tooltip>
 			<FavoriteButton api={props.api} room={props.room} />
@@ -63,7 +63,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 					onClick={share}
 					class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
-					<span class="icon-[mdi--share-variant] w-5 h-5" />
+					<span class="icon-[mdi--share-variant]" />
 				</button>
 			</Tooltip>
 		</>
@@ -151,16 +151,13 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 						"text-gray-400": !props.api.authenticated(),
 					}}
 				>
-					<Show
-						when={props.api.authenticated()}
-						fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}
-					>
+					<Show when={props.api.authenticated()} fallback={<span class="icon-[mdi--heart-outline]" />}>
 						<Show
 							when={!isFavorite.loading}
-							fallback={<span class="icon-[mdi--heart-outline] w-5 h-5 animate-pulse" />}
+							fallback={<span class="icon-[mdi--heart-outline] animate-pulse" />}
 						>
-							<Show when={isFavorite()} fallback={<span class="icon-[mdi--heart-outline] w-5 h-5" />}>
-								<span class="icon-[mdi--heart] w-5 h-5 text-red-400" />
+							<Show when={isFavorite()} fallback={<span class="icon-[mdi--heart-outline]" />}>
+								<span class="icon-[mdi--heart] text-red-400" />
 							</Show>
 						</Show>
 					</Show>

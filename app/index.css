@@ -1,7 +1,10 @@
 @import "@fontsource-variable/montserrat";
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-@plugin "@iconify/tailwind4";
+
+@plugin "@iconify/tailwind4" {
+	scale: 1.25;
+}
 
 @theme {
 	--font-montserrat: "Montserrat Variable", system-ui, sans-serif;
@@ -125,10 +128,6 @@ main {
 	p {
 		@apply m-4;
 	}
-}
-
-footer {
-	@apply text-center text-sm text-gray-500 mt-4;
 }
 
 /* Custom scrollbar for meme selector */

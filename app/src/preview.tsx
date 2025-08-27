@@ -179,13 +179,13 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 							/>
 						</div>
 						<div
-							class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center transition-all duration-300"
+							class="absolute -top-1 -right-1 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center transition-all duration-300"
 							classList={{
 								"opacity-100 scale-100": info().speaking,
 								"opacity-0 scale-0": !info().speaking,
 							}}
 						>
-							<span class="icon-[mdi--volume-high] w-3 h-3 text-gray-900" />
+							<span class="icon-[mdi--volume-high] text-gray-900" />
 							<Show when={info().speaking}>
 								<div class="absolute w-full h-full bg-green-400 rounded-full animate-ping opacity-75" />
 							</Show>

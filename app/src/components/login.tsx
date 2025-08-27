@@ -8,11 +8,11 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
 		switch (provider) {
 			case "apple":
-				return <span class="icon-[mdi--apple] w-5 h-5" />;
+				return <span class="icon-[mdi--apple]" />;
 			case "google":
-				return <span class="icon-[mdi--google] w-5 h-5" />;
+				return <span class="icon-[mdi--google]" />;
 			case "discord":
-				return <span class="icon-[mdi--discord] w-5 h-5" />;
+				return <span class="icon-[mdi--discord]" />;
 			default:
 				unreachable(provider);
 		}
