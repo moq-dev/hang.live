@@ -5,7 +5,15 @@ export type MemeAudio = {
 
 export type MemeVideo = {
 	file: string;
-	fit?: string;
+	// CSS object-fit: how the video fits within its container
+	// - "contain": scales to fit entirely within container (may have letterbox/pillarbox)
+	// - "cover": scales to cover entire container (may crop)
+	// - "fill": stretches to fill container (distorts aspect ratio - rarely used)
+	// - "scale-down": acts like "contain" but never scales up beyond natural size
+	// - "none": no resizing, uses natural size
+	fit?: "contain" | "cover" | "fill" | "scale-down" | "none";
+	// CSS object-position: where the video is positioned within its container
+	// Examples: "center", "bottom", "top left", "50% 75%"
 	position?: string;
 };
 
@@ -48,40 +56,40 @@ export const MEME_AUDIO = {
 } as const satisfies Record<string, MemeAudio>;
 
 export const MEME_VIDEO = {
-	"another-one": { file: "another-one.webm" },
-	"moments-later": { file: "a-few-moments-later.mp4" },
-	brb: { file: "be-right-back.webm", fit: "contain" },
-	"bing-chilling": { file: "bing-chilling.webm", fit: "cover", position: "bottom left" },
-	crying: { file: "crying.webm" },
-	"getting-away-with-it": { file: "getting-away-with-it.webm" },
-	disappointment: { file: "disappointment.webm" },
-	"hello-there": { file: "hello-there.webm" },
-	hackerman: { file: "hackerman.webm", fit: "contain" },
-	"aww-shit": { file: "aww-shit.webm" },
-	error: { file: "error.webm" },
-	huh: { file: "huh.webm" },
-	kek: { file: "kekw.webm" },
-	instagram: { file: "instagram.webm" },
-	maxwell: { file: "maxwell.webm" },
-	nice: { file: "nice.webm" },
-	oiia: { file: "oiia.webm" },
-	"no-god": { file: "no-god-no.webm" },
-	continued: { file: "continued.webm", fit: "contain", position: "bottom left" },
-	reformed: { file: "reformed.webm" },
-	"do-it": { file: "do-it.webm" },
-	thick: { file: "thick.webm" },
-	"yeah-baby": { file: "yeah-baby.webm" },
-	"thug-life": { file: "thug-life.webm" },
-	"giga-chad": { file: "giga-chad.webm" },
-	okay: { file: "okay.webm" },
+	"another-one": { file: "another-one.webm", fit: "cover", position: "bottom" },
+	"moments-later": { file: "a-few-moments-later.mp4", fit: "cover" },
+	brb: { file: "be-right-back.webm", fit: "contain", position: "center" },
+	"bing-chilling": { file: "bing-chilling.webm", fit: "contain", position: "bottom left" },
+	crying: { file: "crying.webm", fit: "cover", position: "center" }, // fit height (top and bottom touching)
+	"getting-away-with-it": { file: "getting-away-with-it.webm", fit: "cover", position: "center" },
+	disappointment: { file: "disappointment.webm", fit: "cover", position: "bottom" },
+	"hello-there": { file: "hello-there.webm", fit: "cover", position: "bottom" },
+	hackerman: { file: "hackerman.webm", fit: "contain", position: "bottom" },
+	"aww-shit": { file: "aww-shit.webm", fit: "cover", position: "bottom" },
+	error: { file: "error.webm", fit: "cover" },
+	huh: { file: "huh.webm", fit: "cover", position: "center" },
+	kek: { file: "kekw.webm", fit: "cover", position: "bottom right" },
+	instagram: { file: "instagram.webm", fit: "contain", position: "bottom" },
+	maxwell: { file: "maxwell.webm", fit: "cover", position: "center" },
+	nice: { file: "nice.webm", fit: "cover", position: "bottom right" },
+	oiia: { file: "oiia.webm", fit: "cover", position: "center" },
+	"no-god": { file: "no-god-no.webm", fit: "cover", position: "bottom left" },
+	continued: { file: "continued.webm", fit: "cover", position: "bottom left" }, // changed to cover since bottom/left must be visible but top/right can crop
+	reformed: { file: "reformed.webm", fit: "cover", position: "bottom" },
+	"do-it": { file: "do-it.webm", fit: "cover", position: "bottom" },
+	thick: { file: "thick.webm", fit: "cover", position: "bottom" },
+	"yeah-baby": { file: "yeah-baby.webm", fit: "cover" }, // fill with all sides potentially clipped
+	"thug-life": { file: "thug-life.webm", fit: "contain", position: "center" },
+	"giga-chad": { file: "giga-chad.webm", fit: "cover" },
+	okay: { file: "okay.webm", fit: "contain", position: "right" }, // cover with right edge visible, left can crop
 	// TODO: It should go over the screenshare, not the webcam, and should be in the top right corner.
 	// "speedrun": { file: "speedrun.webm" },
-	"pizza-time": { file: "pizza-time.webm" },
-	"stop-it": { file: "stop-it.webm" },
-	"you-died": { file: "you-died.webm" },
-	"real-estate": { file: "real-estate.webm" },
-	waw: { file: "waw.webm" },
-	zzz: { file: "zzz.webm" },
+	"pizza-time": { file: "pizza-time.webm", fit: "cover", position: "bottom" }, // cover with bottom visible, top can crop
+	"stop-it": { file: "stop-it.webm", fit: "cover", position: "bottom" },
+	"you-died": { file: "you-died.webm", fit: "cover", position: "center" }, // fill width, top/bottom can crop
+	"real-estate": { file: "real-estate.webm", fit: "cover", position: "center" }, // fit height, left/right can letterbox
+	waw: { file: "waw.webm", fit: "cover", position: "bottom" },
+	zzz: { file: "zzz.webm", fit: "cover", position: "center" },
 } as const satisfies Record<string, MemeVideo>;
 
 export type MemeAudioName = keyof typeof MEME_AUDIO;
