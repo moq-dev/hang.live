@@ -164,7 +164,7 @@ export class Space {
 			return;
 		}
 
-		const scale = e.deltaY * 0.001;
+		const scale = -e.deltaY * 0.001;
 		if (scale < 0) {
 			document.body.style.cursor = "zoom-out";
 		} else if (scale > 0) {
