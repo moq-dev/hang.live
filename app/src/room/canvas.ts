@@ -52,33 +52,56 @@ export class Canvas {
 			const style = window.getComputedStyle(this.#canvas);
 			const isFixed = style.position === "fixed";
 
+			let newWidth: number;
+			let newHeight: number;
+
 			if (isFullscreen || isFixed) {
 				// Use window dimensions for fullscreen or fixed position
-				this.#canvas.width = window.devicePixelRatio * window.innerWidth;
-				this.#canvas.height = window.devicePixelRatio * window.innerHeight;
+				newWidth = window.devicePixelRatio * window.innerWidth;
+				newHeight = window.devicePixelRatio * window.innerHeight;
 			} else {
 				// Use parent container dimensions
 				const parent = this.#canvas.parentElement;
 				if (!parent) return;
 
 				const rect = parent.getBoundingClientRect();
-				this.#canvas.width = window.devicePixelRatio * rect.width;
-				this.#canvas.height = window.devicePixelRatio * rect.height;
+				newWidth = window.devicePixelRatio * rect.width;
+				newHeight = window.devicePixelRatio * rect.height;
 			}
+
+			// Only update canvas if dimensions actually changed
+			// This prevents the canvas from being cleared when layout changes don't affect size
+			if (this.#canvas.width === newWidth && this.#canvas.height === newHeight) {
+				return;
+			}
+
+			this.#canvas.width = newWidth;
+			this.#canvas.height = newHeight;
 
 			// NOTE: devicePixelRatio is transparently handled by the browser.
 			this.viewport.set(Vector.create(this.#canvas.width, this.#canvas.height));
+		};
+
+		let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+
+		const scheduleResize = () => {
+			// Clear any existing timeout
+			if (resizeTimeout) {
+				clearTimeout(resizeTimeout);
+			}
+
+			// Debounce resize to prevent flickering during rapid changes
+			resizeTimeout = setTimeout(() => {
+				resize();
+				resizeTimeout = undefined;
+			}, 50);
 		};
 
 		const visible = () => {
 			this.visible.set(document.visibilityState !== "hidden");
 		};
 
-		resize();
 		visible();
-
-		// Listen for window resize events (for fullscreen/fixed position)
-		this.#signals.eventListener(window, "resize", resize);
 
 		// Set up ResizeObserver for parent when canvas is added to DOM
 		let resizeObserver: ResizeObserver | null = null;
@@ -86,8 +109,9 @@ export class Canvas {
 		const setupParentObserver = () => {
 			const parent = this.#canvas.parentElement;
 			if (parent && !resizeObserver) {
-				resizeObserver = new ResizeObserver(resize);
+				resizeObserver = new ResizeObserver(scheduleResize);
 				resizeObserver.observe(parent);
+				resize();
 			}
 		};
 
@@ -113,6 +137,9 @@ export class Canvas {
 				resizeObserver.disconnect();
 			}
 			mutationObserver.disconnect();
+			if (resizeTimeout) {
+				clearTimeout(resizeTimeout);
+			}
 		});
 
 		// Only render the canvas when it's visible.
