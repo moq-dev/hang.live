@@ -57,7 +57,7 @@ export const MEME_AUDIO = {
 
 export const MEME_VIDEO = {
 	"another-one": { file: "another-one.webm", fit: "cover", position: "bottom" },
-	"moments-later": { file: "a-few-moments-later.mp4", fit: "cover" },
+	"moments-later": { file: "a-few-moments-later.mp4", fit: "cover", position: "center" },
 	brb: { file: "be-right-back.webm", fit: "contain", position: "center" },
 	"bing-chilling": { file: "bing-chilling.webm", fit: "contain", position: "bottom left" },
 	crying: { file: "crying.webm", fit: "cover", position: "center" }, // fit height (top and bottom touching)
@@ -66,7 +66,7 @@ export const MEME_VIDEO = {
 	"hello-there": { file: "hello-there.webm", fit: "cover", position: "bottom" },
 	hackerman: { file: "hackerman.webm", fit: "contain", position: "bottom" },
 	"aww-shit": { file: "aww-shit.webm", fit: "cover", position: "bottom" },
-	error: { file: "error.webm", fit: "cover" },
+	error: { file: "error.webm", fit: "cover", position: "center" },
 	huh: { file: "huh.webm", fit: "cover", position: "center" },
 	kek: { file: "kekw.webm", fit: "cover", position: "bottom right" },
 	instagram: { file: "instagram.webm", fit: "contain", position: "bottom" },
@@ -74,13 +74,13 @@ export const MEME_VIDEO = {
 	nice: { file: "nice.webm", fit: "cover", position: "bottom right" },
 	oiia: { file: "oiia.webm", fit: "cover", position: "center" },
 	"no-god": { file: "no-god-no.webm", fit: "cover", position: "bottom left" },
-	continued: { file: "continued.webm", fit: "cover", position: "bottom left" }, // changed to cover since bottom/left must be visible but top/right can crop
+	continued: { file: "continued.webm", fit: "cover", position: "bottom left" },
 	reformed: { file: "reformed.webm", fit: "cover", position: "bottom" },
 	"do-it": { file: "do-it.webm", fit: "cover", position: "bottom" },
 	thick: { file: "thick.webm", fit: "cover", position: "bottom" },
-	"yeah-baby": { file: "yeah-baby.webm", fit: "cover" }, // fill with all sides potentially clipped
+	"yeah-baby": { file: "yeah-baby.webm", fit: "cover", position: "center" },
 	"thug-life": { file: "thug-life.webm", fit: "contain", position: "center" },
-	"giga-chad": { file: "giga-chad.webm", fit: "cover" },
+	"giga-chad": { file: "giga-chad.webm", fit: "cover", position: "center" },
 	okay: { file: "okay.webm", fit: "contain", position: "right" }, // cover with right edge visible, left can crop
 	// TODO: It should go over the screenshare, not the webcam, and should be in the top right corner.
 	// "speedrun": { file: "speedrun.webm" },

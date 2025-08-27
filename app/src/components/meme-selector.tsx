@@ -326,8 +326,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 												muted
 												class="absolute inset-0 w-full h-full opacity-70"
 												style={{
-													"object-fit": memeData.fit || "contain",
-													"object-position": memeData.position || "center",
+													"object-fit": memeData.fit,
+													"object-position": memeData.position,
 												}}
 											/>
 										</Show>
