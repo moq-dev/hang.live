@@ -149,63 +149,7 @@ main {
 	background: rgba(255, 255, 255, 0.3);
 }
 
-/* Custom styling for range inputs to fix brown appearance on Windows */
+/* Use accent-color to override Windows' brown default */
 input[type="range"] {
-	-webkit-appearance: none;
-	appearance: none;
-	background: transparent;
-}
-
-input[type="range"]::-webkit-slider-track {
-	background: rgba(255, 255, 255, 0.2);
-	border-radius: 4px;
-	height: 4px;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-	-webkit-appearance: none;
-	appearance: none;
-	width: 12px;
-	height: 12px;
-	background: white;
-	border-radius: 50%;
-	cursor: pointer;
-	margin-top: -4px;
-}
-
-input[type="range"]::-moz-range-track {
-	background: rgba(255, 255, 255, 0.2);
-	border-radius: 4px;
-	height: 4px;
-}
-
-input[type="range"]::-moz-range-thumb {
-	width: 12px;
-	height: 12px;
-	background: white;
-	border-radius: 50%;
-	cursor: pointer;
-	border: none;
-}
-
-input[type="range"]::-ms-track {
-	background: transparent;
-	border-color: transparent;
-	color: transparent;
-	height: 4px;
-}
-
-input[type="range"]::-ms-fill-lower,
-input[type="range"]::-ms-fill-upper {
-	background: rgba(255, 255, 255, 0.2);
-	border-radius: 4px;
-}
-
-input[type="range"]::-ms-thumb {
-	width: 12px;
-	height: 12px;
-	background: white;
-	border-radius: 50%;
-	cursor: pointer;
-	margin-top: 0;
+	accent-color: hsl(var(--link-hue), 75%, 50%);
 }
