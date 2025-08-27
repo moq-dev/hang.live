@@ -163,15 +163,15 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	return (
 		<div
 			ref={setModal}
-			class="fixed bottom-20 left-1/2 transform -translate-x-1/2 w-[600px] max-w-[90vw] bg-black/80 border border-white/20 rounded-lg shadow-2xl pointer-events-auto backdrop-blur-lg z-[100]"
+			class="fixed bottom-20 left-4 right-4 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 sm:w-[800px] sm:max-w-[90vw] max-h-[80vh] flex flex-col bg-black/80 border border-white/20 rounded-lg shadow-2xl pointer-events-auto backdrop-blur-lg z-[100]"
 		>
 			{/* Header with tabs */}
-			<div class="flex items-center justify-between border-b border-white/20 p-3">
-				<div class="flex gap-2">
+			<div class="flex items-center justify-between border-b border-white/20 p-2 sm:p-3 shrink-0">
+				<div class="flex gap-1 sm:gap-2">
 					<button
 						type="button"
 						onClick={() => Settings.memeTab.set("emoji")}
-						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
+						class="px-2 sm:px-3 py-1 sm:py-1.5 rounded flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "emoji",
 							"hover:bg-white/10 text-white/60": activeTab() !== "emoji",
@@ -183,7 +183,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					<button
 						type="button"
 						onClick={() => Settings.memeTab.set("audio")}
-						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
+						class="px-2 sm:px-3 py-1 sm:py-1.5 rounded flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "audio",
 							"hover:bg-white/10 text-white/60": activeTab() !== "audio",
@@ -195,7 +195,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					<button
 						type="button"
 						onClick={() => Settings.memeTab.set("video")}
-						class="px-3 py-1.5 rounded flex items-center gap-1.5 text-sm transition-colors cursor-pointer"
+						class="px-2 sm:px-3 py-1 sm:py-1.5 rounded flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "video",
 							"hover:bg-white/10 text-white/60": activeTab() !== "video",
@@ -225,7 +225,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 			</div>
 
 			{/* Content area */}
-			<div class="p-3 max-h-[400px] overflow-y-auto custom-scrollbar" onWheel={(e) => e.stopPropagation()}>
+			<div class="p-2 sm:p-3 overflow-y-auto flex-1 custom-scrollbar" onWheel={(e) => e.stopPropagation()}>
 				{/* Emoji Grid */}
 				<Show when={activeTab() === "emoji"}>
 					<div class="space-y-4">
@@ -233,13 +233,13 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 							{([category, emojis]) => (
 								<div>
 									<div class="text-xs text-white/40 uppercase tracking-wider mb-2">{category}</div>
-									<div class="grid grid-cols-12 gap-0.5">
+									<div class="flex flex-wrap gap-1">
 										<For each={emojis}>
 											{(emoji) => (
 												<button
 													type="button"
 													onClick={() => insertEmoji(emoji)}
-													class="p-1.5 hover:bg-white/10 rounded transition-colors text-xl cursor-pointer"
+													class="w-10 h-10 hover:bg-white/10 rounded transition-colors text-xl cursor-pointer flex items-center justify-center"
 													title={`Insert ${emoji}`}
 												>
 													{emoji}
@@ -255,13 +255,13 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 
 				{/* Audio Memes Grid */}
 				<Show when={activeTab() === "audio"}>
-					<div class="grid grid-cols-3 gap-2">
+					<div class="flex flex-wrap gap-2">
 						<For each={sortedAudioMemes()}>
 							{(meme) => {
 								const memeData = MEME_AUDIO[meme as keyof typeof MEME_AUDIO];
 								const isPlaying = () => playingAudioMeme() === meme;
 								return (
-									<div class="group relative bg-white/10 hover:bg-white/20 rounded p-3 transition-colors cursor-pointer">
+									<div class="group relative bg-white/10 hover:bg-white/20 rounded p-3 transition-colors cursor-pointer basis-34 flex-grow">
 										<button
 											type="button"
 											onClick={() => sendMeme(meme)}
@@ -300,14 +300,14 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 
 				{/* Video Memes Grid */}
 				<Show when={activeTab() === "video"}>
-					<div class="grid grid-cols-3 gap-3">
+					<div class="flex flex-wrap gap-2">
 						<For each={sortedVideoMemes()}>
 							{(meme) => {
 								const memeData = MEME_VIDEO[meme as MemeVideoName];
 								const thumbnailName = memeData.file.replace(/\.(webm|mp4)$/, ".png");
 								const isPlaying = () => playingVideoMeme() === meme;
 								return (
-									<div class="group relative bg-white/10 hover:bg-white/20 rounded overflow-hidden transition-colors cursor-pointer aspect-video">
+									<div class="group relative bg-white/10 hover:bg-white/20 rounded overflow-hidden transition-colors cursor-pointer aspect-video basis-42 flex-grow">
 										{/* Thumbnail background */}
 										<img
 											src={`/meme/${thumbnailName}`}
