@@ -1,4 +1,4 @@
-import { type Publish, Watch } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
@@ -263,11 +263,12 @@ export class Video {
 			);
 			*/
 
-			// Apply horizontal flip if specified in the video config
-			// Both Watch.Video and Publish.Video have a flip signal
+			// Apply horizontal flip only for Publish.Broadcast
+			// Watch.Broadcast already handles flipping internally with WebCodecs
 			const flip = this.broadcast.source.video.flip?.peek();
+			const shouldFlip = flip && this.broadcast.source instanceof Publish.Broadcast;
 
-			if (flip) {
+			if (shouldFlip) {
 				ctx.save();
 				ctx.scale(-1, 1);
 				ctx.translate(-bounds.size.x, 0);
