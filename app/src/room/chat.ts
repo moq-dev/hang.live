@@ -109,7 +109,7 @@ export class Chat {
 		});
 
 		effect.effect((effect) => {
-			const message = effect.get(this.broadcast.source.chat.message.latest);
+			const message = effect.get(this.broadcast.message); // NOT source.chat.message.latest to ignore /slash commands
 			const typing = effect.get(this.broadcast.source.chat.typing.active);
 			if (!message && !typing) {
 				DOM.setClass(effect, root, "opacity-0", "pointer-events-none");

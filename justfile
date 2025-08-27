@@ -36,8 +36,8 @@ fix:
 	# Fix the Rust code
 	just --justfile native/justfile fix
 
-	# Fix the moq submodule
-	cd moq && just fix
+	# We don't fix the moq submodule; you should do that before committing.
+	# cd moq && just fix
 
 # Run any CI tests
 test:
