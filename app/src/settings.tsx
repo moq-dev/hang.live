@@ -8,7 +8,6 @@ const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 	volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.volume") ?? "1")),
 	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
-	headphones: new Signal(localStorage.getItem("settings.headphones") === "true"),
 	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 
 	renderCaptions: new Signal(localStorage.getItem("settings.renderCaptions") !== "false"),
@@ -56,10 +55,6 @@ effect.subscribe(Settings.volume, (volume) => {
 
 effect.subscribe(Settings.muted, (muted) => {
 	localStorage.setItem("settings.muted", muted.toString());
-});
-
-effect.subscribe(Settings.headphones, (headphones) => {
-	localStorage.setItem("settings.headphones", headphones.toString());
 });
 
 effect.subscribe(Settings.microphoneGain, (gain) => {
@@ -111,19 +106,12 @@ document.addEventListener("unload", () => {
 export default Settings;
 
 export function Modal(): JSX.Element {
-	const headphones = solid(Settings.headphones);
 	const draggable = solid(Settings.draggable);
 	const captions = solid(Settings.captureCaptions);
 	const tts = solid(Settings.tts);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-			<input type="checkbox" checked={headphones()} onChange={() => Settings.headphones.set((p) => !p)} />
-			<span>headphones</span>
-			<span title="You're cool and wear headphones instead of using speakers in public. Disables echo cancellation.">
-				<span class="icon-[mdi--headphones]" />
-			</span>
-
 			<input type="checkbox" checked={draggable()} onChange={() => Settings.draggable.set((p) => !p)} />
 			<span>allow dragging</span>
 			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">

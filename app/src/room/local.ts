@@ -72,6 +72,7 @@ export class Local {
 					channelCount: { ideal: 1, max: 2 },
 					autoGainControl: { ideal: true },
 					noiseSuppression: { ideal: true },
+					echoCancellation: { ideal: true },
 				},
 				speaking: {
 					enabled: true,
@@ -137,15 +138,6 @@ export class Local {
 			Settings.cameraEnabled.set(!!videoMedia);
 		});
 
-		// Apply echo cancellation based on the headphones setting
-		this.camera.signals.effect((effect) => {
-			const headphones = effect.get(Settings.headphones);
-			this.camera.audio.constraints.set((prev) => ({
-				...prev,
-				echoCancellation: headphones ? { exact: false } : { ideal: true },
-			}));
-		});
-
 		// Enable transcription when the setting is enabled
 		// TEMPORARILY DISABLED - Caption generation disabled
 		/*
@@ -209,7 +201,7 @@ export class Local {
 
 			// Clear the message after 10 seconds.
 			effect.timer(() => {
-				this.camera.chat.message.latest.set(undefined);
+				this.camera.chat.message.latest.set("");
 			}, 10000);
 		});
 
