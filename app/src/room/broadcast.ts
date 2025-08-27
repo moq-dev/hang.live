@@ -1,8 +1,6 @@
 import * as Api from "@hang/api/client";
 import { type Catalog, Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
-import DOMPurify from "dompurify";
-import { marked } from "marked";
 import { Audio, type AudioProps } from "./audio";
 import { Canvas } from "./canvas";
 import { Captions } from "./captions";
@@ -21,18 +19,6 @@ export type ChatMessage = {
 	received: DOMHighResTimeStamp;
 	expires: DOMHighResTimeStamp;
 };
-
-// Create a markdown renderer that opens links in a new tab.
-const renderer = new marked.Renderer();
-
-renderer.link = ({ href, title, text }) => {
-	const t = title ? ` title="${title}"` : "";
-	const safeHref = href ?? "#";
-	// Important: target="_blank" rel="noopener noreferrer"
-	return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer"${t}>${text}</a>`;
-};
-
-marked.use({ renderer });
 
 export type BroadcastProps = {
 	audio?: AudioProps;
@@ -246,8 +232,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.#locationPeer = peer;
 	}
 
-	async #runChat(effect: Effect) {
-		if (!effect.get(this.source.chat.message.enabled)) return;
+	#runChat(effect: Effect) {
+		const enabled = effect.get(this.source.chat.message.enabled);
+		if (!enabled) return;
 
 		const msg = effect.get(this.source.chat.message.latest);
 		if (!msg) return;
@@ -267,24 +254,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			}
 		}
 
-		// Convert markdown to HTML.
-		// TODO: Run in a web worker to prevent DoS attacks, apparently?
-		const markdown = marked.parse(msg, { async: false });
+		effect.spawn(async (cancel) => {
+			// Parse the markdown into sanitized HTML using a background WebWorker.
+			const parsed = await Promise.race([this.chat.parse(msg), cancel]);
+			if (!parsed) return;
 
-		// Sanitize the resulting HTML.
-		// ChatGPT says that allowing target is ONLY safe with noopener noreferrer,
-		const sanitized = DOMPurify.sanitize(markdown, {
-			ADD_ATTR: ["target", "rel"],
-			RETURN_DOM_FRAGMENT: true,
+			effect.set(this.message, parsed);
+			this.audio.sound.notification("chat");
 		});
-
-		// Wrap the fragment in a container element for easier handling
-		const container = document.createElement("span");
-		container.appendChild(sanitized);
-
-		this.audio.sound.notification("chat");
-
-		effect.set(this.message, container);
 	}
 
 	// TODO Also make scale a signal

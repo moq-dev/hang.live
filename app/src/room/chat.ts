@@ -1,8 +1,14 @@
 import { Effect, Signal } from "@kixelated/signals";
 import * as DOM from "@kixelated/signals/dom";
+import * as Comlink from "comlink";
+import DOMPurify from "dompurify";
 import type { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
+import ChatWorker from "./chat-worker";
 import { Bounds, Vector } from "./geometry";
+
+const worker = new Worker(new URL("./chat-worker.ts", import.meta.url), { type: "module" });
+const parse = Comlink.wrap<typeof ChatWorker>(worker);
 
 export class Chat {
 	canvas: Canvas;
@@ -130,6 +136,26 @@ export class Chat {
 		});
 
 		DOM.render(effect, document.body, root);
+	}
+
+	// Given markdown, returns sanitized HTML.
+	// Markdown parsing runs in a background WebWorker to prevent DoS attacks.
+	async parse(msg: string): Promise<HTMLSpanElement> {
+		// Parse markdown in the worker
+		const html = await parse(msg);
+
+		// Sanitize HTML on the main thread where DOMPurify has DOM access
+		// ChatGPT says that allowing target is ONLY safe with noopener noreferrer
+		const sanitized = DOMPurify.sanitize(html, {
+			ADD_ATTR: ["target", "rel"],
+			RETURN_DOM_FRAGMENT: true,
+		});
+
+		// Wrap the fragment in a container element for easier handling
+		const container = document.createElement("span");
+		container.appendChild(sanitized);
+
+		return container;
 	}
 
 	close() {
