@@ -312,7 +312,11 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 										<img
 											src={`/meme/${thumbnailName}`}
 											alt={meme}
-											class="absolute inset-0 w-full h-full object-cover opacity-30"
+											class="absolute inset-0 w-full h-full opacity-30"
+											style={{
+												"object-fit": memeData.fit || "contain",
+												"object-position": memeData.position || "center",
+											}}
 										/>
 										{/* Video preview when playing */}
 										<Show when={isPlaying()}>
@@ -321,6 +325,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 												autoplay
 												muted
 												class="absolute inset-0 w-full h-full opacity-70"
+												style={{
+													"object-fit": memeData.fit || "contain",
+													"object-position": memeData.position || "center",
+												}}
 											/>
 										</Show>
 										<button
