@@ -132,6 +132,7 @@ export default Settings;
 export function Modal(): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const tts = solid(Settings.tts);
+	const debug = solid(Settings.debug);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -145,6 +146,12 @@ export function Modal(): JSX.Element {
 			<span>text-to-speech</span>
 			<span title="Enable text-to-speech for announcing members. WebGPU is recommended.">
 				<span class="icon-[mdi--text-to-speech]" />
+			</span>
+
+			<input type="checkbox" checked={debug()} onChange={() => Settings.debug.set((p) => !p)} />
+			<span>audio buffer level</span>
+			<span title="Show audio buffer level indicator above each participant.">
+				<span class="icon-[mdi--chart-bar]" />
 			</span>
 		</div>
 	);
