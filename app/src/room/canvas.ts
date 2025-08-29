@@ -130,7 +130,7 @@ export class Canvas {
 			mutationObserver.observe(document.body, { childList: true, subtree: true });
 		}
 
-		this.#signals.eventListener(document, "visibilitychange", visible);
+		this.#signals.event(document, "visibilitychange", visible);
 
 		this.#signals.cleanup(() => {
 			if (resizeObserver) {
