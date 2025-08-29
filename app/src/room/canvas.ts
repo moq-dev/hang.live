@@ -9,6 +9,7 @@ const BEND_AMPLITUDE = 8 * devicePixelRatio;
 const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
+const COLOR_SPEED = 0.01;
 
 export type CanvasProps = {
 	demo?: boolean;
@@ -275,7 +276,7 @@ export class Canvas {
 }
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
-	const hue = (i * 25 + now * 0.1) % 360;
+	const hue = (i * 25 + now * COLOR_SPEED) % 360;
 	return `hsl(${hue}, 75%, 50%)`;
 }
 
