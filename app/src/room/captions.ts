@@ -20,7 +20,7 @@ export class Captions {
 		const root = document.createElement("div");
 
 		this.signals.effect((effect) => {
-			if (!effect.get(Settings.renderCaptions)) return;
+			if (!effect.get(Settings.captions.render)) return;
 
 			const caption = effect.get(this.broadcast.source.audio.captions.text);
 			if (!caption) return;

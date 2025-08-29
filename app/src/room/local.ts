@@ -17,7 +17,11 @@ export class Local {
 	room: string;
 
 	camera: Publish.Broadcast;
-	screen: Publish.Broadcast;
+	microphone: Publish.Source.Microphone;
+	webcam: Publish.Source.Camera;
+
+	share: Publish.Broadcast;
+	screen: Publish.Source.Screen;
 
 	// For notifications, created here just because it's more convenient.
 	sound: Sound;
@@ -48,34 +52,48 @@ export class Local {
 			this.info.set(data.info);
 
 			this.camera.name.set(Path.from(data.info.id, "camera"));
-			this.screen.name.set(Path.from(data.info.id, "screen"));
+			this.share.name.set(Path.from(data.info.id, "screen"));
 		});
+
+		this.webcam = new Publish.Source.Camera({
+			enabled: Settings.camera.enabled,
+			device: Settings.camera.device,
+			constraints: {
+				width: { ideal: 640 },
+				height: { ideal: 640 },
+				frameRate: { ideal: 60 },
+				facingMode: { ideal: "user" },
+				resizeMode: "none",
+			},
+		});
+		this.#signals.cleanup(() => this.webcam.close());
+
+		this.microphone = new Publish.Source.Microphone({
+			enabled: Settings.microphone.enabled,
+			device: Settings.microphone.device,
+			constraints: {
+				channelCount: { ideal: 1, max: 2 },
+				autoGainControl: { ideal: true },
+				noiseSuppression: { ideal: true },
+				echoCancellation: { ideal: true },
+			},
+		});
+		this.#signals.cleanup(() => this.microphone.close());
 
 		// Create the camera broadcast
 		this.camera = new Publish.Broadcast(connection, {
-			enabled: false,
-			device: "camera",
+			enabled: false, // enabled on join
 			video: {
-				enabled: Settings.cameraEnabled.peek(),
-				constraints: {
-					width: { ideal: 640 },
-					height: { ideal: 640 },
-					frameRate: { ideal: 60 },
-					facingMode: { ideal: "user" },
-					resizeMode: "none",
-				},
+				enabled: Settings.camera.enabled,
+				source: this.webcam.stream,
 				flip: true, // TODO setting?
 			},
 			audio: {
-				enabled: Settings.microphoneEnabled.peek(),
-				constraints: {
-					channelCount: { ideal: 1, max: 2 },
-					autoGainControl: { ideal: true },
-					noiseSuppression: { ideal: true },
-					echoCancellation: { ideal: true },
-				},
+				enabled: Settings.microphone.enabled,
+				volume: Settings.microphone.gain,
+				source: this.microphone.stream,
 				speaking: {
-					enabled: true,
+					enabled: Settings.microphone.enabled,
 				},
 			},
 			location: {
@@ -95,28 +113,29 @@ export class Local {
 			},
 		});
 
-		// Create the screen broadcast
-		this.screen = new Publish.Broadcast(connection, {
-			enabled: false,
-			device: "screen",
+		this.screen = new Publish.Source.Screen({
+			video: {
+				frameRate: { ideal: 60 },
+				resizeMode: "none",
+				width: { max: 1920 },
+				height: { max: 1080 },
+			},
 			audio: {
-				enabled: false,
-				constraints: {
-					channelCount: { ideal: 2, max: 2 },
-					// Disable audio processing primarily for music playback.
-					autoGainControl: { ideal: false },
-					echoCancellation: { ideal: false },
-					noiseSuppression: { ideal: false },
-				},
+				channelCount: { ideal: 2, max: 2 },
+				autoGainControl: { ideal: false },
+				echoCancellation: { ideal: false },
+				noiseSuppression: { ideal: false },
+			},
+		});
+		this.#signals.cleanup(() => this.screen.close());
+
+		// Create the screen broadcast
+		this.share = new Publish.Broadcast(connection, {
+			audio: {
+				enabled: this.screen.enabled,
 			},
 			video: {
-				enabled: false,
-				constraints: {
-					frameRate: { ideal: 60 },
-					resizeMode: "none",
-					width: { max: 1920 },
-					height: { max: 1080 },
-				},
+				enabled: this.screen.enabled,
 			},
 			location: {
 				enabled: true,
@@ -127,15 +146,15 @@ export class Local {
 			},
 		});
 
-		// Update settings when media changes
-		this.camera.signals.effect((effect) => {
-			const audioMedia = effect.get(this.camera.audio.media);
-			Settings.microphoneEnabled.set(!!audioMedia);
-		});
+		this.#signals.effect((effect) => {
+			const stream = effect.get(this.screen.stream);
+			if (!stream) return;
 
-		this.camera.signals.effect((effect) => {
-			const videoMedia = effect.get(this.camera.video.media);
-			Settings.cameraEnabled.set(!!videoMedia);
+			console.log("setting share enabled", stream);
+
+			effect.set(this.share.audio.source, stream.audio);
+			effect.set(this.share.video.source, stream.video);
+			effect.set(this.share.enabled, true, false); // only enable once there is a stream
 		});
 
 		// Enable transcription when the setting is enabled
@@ -152,13 +171,14 @@ export class Local {
 		});
 		*/
 
-		// Say hi when the camera is enabled
-		this.camera.signals.effect((effect) => {
-			const enabled = effect.get(this.camera.enabled);
-			if (!enabled) return;
-
+		// Say hi when the user joins
+		this.#signals.effect((effect) => {
 			const name = effect.get(this.info)?.name;
 			if (!name) return;
+
+			// This is enabled on join.
+			const enabled = effect.get(this.camera.enabled);
+			if (!enabled) return;
 
 			// Give the TTS worker a chance to start loading the model.
 			effect.timer(() => {
@@ -171,18 +191,18 @@ export class Local {
 			// Generate a random handle
 			const handle = draggable ? Math.random().toString(36).substring(2, 15) : undefined;
 			this.camera.location.handle.set(handle);
-			this.screen.location.handle.set(handle);
+			this.share.location.handle.set(handle);
 		});
 
 		// Use the provided camera and screen broadcasts
 		this.camera.signals.effect((effect) => {
-			if (effect.get(this.camera.video.media) || effect.get(this.camera.audio.media)) {
+			if (effect.get(this.camera.video.source) || effect.get(this.camera.audio.source)) {
 				this.sound.play("select");
 			}
 		});
 
-		this.screen.signals.effect((effect) => {
-			if (effect.get(this.screen.video.media) || effect.get(this.screen.audio.media)) {
+		this.share.signals.effect((effect) => {
+			if (effect.get(this.share.video.source) || effect.get(this.share.audio.source)) {
 				this.sound.play("select");
 			}
 		});
@@ -222,9 +242,9 @@ export class Local {
 			);
 		});
 
-		this.screen.signals.effect((effect) => {
-			const video = effect.get(this.camera.video.media);
-			const audio = effect.get(this.camera.audio.media);
+		this.share.signals.effect((effect) => {
+			const video = effect.get(this.camera.video.source);
+			const audio = effect.get(this.camera.audio.source);
 
 			this.camera.preview.info.set((prev) => ({
 				...prev,
@@ -233,11 +253,11 @@ export class Local {
 			}));
 		});
 
-		this.screen.signals.effect((effect) => {
-			const video = effect.get(this.screen.video.media);
-			const audio = effect.get(this.screen.audio.media);
+		this.share.signals.effect((effect) => {
+			const video = effect.get(this.share.video.source);
+			const audio = effect.get(this.share.audio.source);
 
-			this.screen.preview.info.set((prev) => ({
+			this.share.preview.info.set((prev) => ({
 				...prev,
 				video: !!video,
 				audio: !!audio,
@@ -251,7 +271,7 @@ export class Local {
 			speaking: false,
 			typing: false,
 		}));
-		this.screen.preview.info.set((prev) => ({
+		this.share.preview.info.set((prev) => ({
 			...prev,
 			chat: false,
 			speaking: false,
@@ -259,12 +279,12 @@ export class Local {
 		}));
 
 		// Enable the screen when a media device is selected.
-		this.screen.signals.effect((effect) => {
-			const active = !!effect.get(this.screen.video.media) || !!effect.get(this.screen.audio.media);
+		this.share.signals.effect((effect) => {
+			const active = !!effect.get(this.share.video.source) || !!effect.get(this.share.audio.source);
 			if (!active) return;
 
-			this.screen.enabled.set(true);
-			effect.cleanup(() => this.screen.enabled.set(false));
+			this.share.enabled.set(true);
+			effect.cleanup(() => this.share.enabled.set(false));
 		});
 
 		this.#signals.effect((effect) => {
@@ -272,9 +292,9 @@ export class Local {
 			if (!info) return;
 
 			effect.set(this.camera.user, info);
-			effect.set(this.screen.user, { ...info, name: `${info.name} (Screen)` });
+			effect.set(this.share.user, { ...info, name: `${info.name} (Screen)` });
 			effect.set(this.camera.preview.info, info);
-			effect.set(this.screen.preview.info, { ...info, name: `${info.name} (Screen)` });
+			effect.set(this.share.preview.info, { ...info, name: `${info.name} (Screen)` });
 		});
 
 		// Save the guest account settings
@@ -318,7 +338,7 @@ export class Local {
 	close() {
 		this.#signals.close();
 		this.camera.close();
-		this.screen.close();
+		this.share.close();
 	}
 }
 

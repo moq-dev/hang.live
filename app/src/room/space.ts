@@ -36,17 +36,17 @@ export class Space {
 		this.sound = sound;
 
 		// Use the new eventListener helper that automatically handles cleanup
-		this.#signals.eventListener(window, "mousedown", this.#onMouseDown.bind(this));
-		this.#signals.eventListener(window, "mousemove", this.#onMouseMove.bind(this));
-		this.#signals.eventListener(window, "mouseup", this.#onMouseUp.bind(this));
-		this.#signals.eventListener(window, "mouseleave", this.#onMouseLeave.bind(this));
-		this.#signals.eventListener(window, "wheel", this.#onMouseWheel.bind(this), { passive: false });
+		this.#signals.event(window, "mousedown", this.#onMouseDown.bind(this));
+		this.#signals.event(window, "mousemove", this.#onMouseMove.bind(this));
+		this.#signals.event(window, "mouseup", this.#onMouseUp.bind(this));
+		this.#signals.event(window, "mouseleave", this.#onMouseLeave.bind(this));
+		this.#signals.event(window, "wheel", this.#onMouseWheel.bind(this), { passive: false });
 
 		// Touch event listeners for mobile
-		this.#signals.eventListener(window, "touchstart", this.#onTouchStart.bind(this), { passive: false });
-		this.#signals.eventListener(window, "touchmove", this.#onTouchMove.bind(this), { passive: false });
-		this.#signals.eventListener(window, "touchend", this.#onTouchEnd.bind(this), { passive: false });
-		this.#signals.eventListener(window, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
+		this.#signals.event(window, "touchstart", this.#onTouchStart.bind(this), { passive: false });
+		this.#signals.event(window, "touchmove", this.#onTouchMove.bind(this), { passive: false });
+		this.#signals.event(window, "touchend", this.#onTouchEnd.bind(this), { passive: false });
+		this.#signals.event(window, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
 
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
@@ -439,7 +439,7 @@ export class Space {
 		broadcast.signals.effect((effect) => {
 			if (broadcast.source instanceof Publish.Broadcast) {
 				if (!effect.get(broadcast.source.enabled)) return;
-				if (!effect.get(broadcast.source.video.media) && !effect.get(broadcast.source.audio.media)) return;
+				if (!effect.get(broadcast.source.video.source) && !effect.get(broadcast.source.audio.source)) return;
 
 				broadcast.targetPosition.set((prev) => ({
 					...prev,

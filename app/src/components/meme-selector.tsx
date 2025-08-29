@@ -17,7 +17,7 @@ export type MemeSelectorProps = {
 
 export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	// Get the initial tab from localStorage, default to "emoji"
-	const activeTab = solid(Settings.memeTab);
+	const activeTab = solid(Settings.meme.tab);
 	const [previewAudio, setPreviewAudio] = createSignal<HTMLAudioElement | null>(null);
 	const [previewVideo, setPreviewVideo] = createSignal<HTMLVideoElement | null>(null);
 	const [playingVideoMeme, setPlayingVideoMeme] = createSignal<string | null>(null);
@@ -170,7 +170,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 				<div class="flex gap-1 sm:gap-2">
 					<button
 						type="button"
-						onClick={() => Settings.memeTab.set("emoji")}
+						onClick={() => Settings.meme.tab.set("emoji")}
 						class="px-2 sm:px-3 py-1 sm:py-1.5 rounded flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "emoji",
@@ -182,7 +182,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					</button>
 					<button
 						type="button"
-						onClick={() => Settings.memeTab.set("audio")}
+						onClick={() => Settings.meme.tab.set("audio")}
 						class="px-2 sm:px-3 py-1 sm:py-1.5 rounded flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "audio",
@@ -194,7 +194,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 					</button>
 					<button
 						type="button"
-						onClick={() => Settings.memeTab.set("video")}
+						onClick={() => Settings.meme.tab.set("video")}
 						class="px-2 sm:px-3 py-1 sm:py-1.5 rounded flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm transition-colors cursor-pointer"
 						classList={{
 							"bg-white/20 text-white": activeTab() === "video",

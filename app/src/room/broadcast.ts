@@ -164,7 +164,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				this.avatar = newAvatar;
 			};
 
-			effect.eventListener(newAvatar, "load", load);
+			effect.event(newAvatar, "load", load);
 		});
 
 		this.signals.effect(this.#runChat.bind(this));

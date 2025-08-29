@@ -1,6 +1,6 @@
 import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { type Accessor, batch, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { type Accessor, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
@@ -18,9 +18,9 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 		>
 			{/* Left group */}
 			<div class="flex gap-4 items-end">
-				<Microphone audio={props.local.camera.audio} volume={true} />
-				<Camera video={props.local.camera.video} room={props.room} />
-				<Screen video={props.local.screen.video} audio={props.local.screen.audio} room={props.room} />
+				<Microphone local={props.local} volume={true} />
+				<Camera local={props.local} room={props.room} />
+				<Screen local={props.local} room={props.room} />
 			</div>
 
 			{/* Center group */}
@@ -39,21 +39,18 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 	);
 }
 
-export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): JSX.Element {
+export function Microphone(props: { local: Local; volume?: boolean }): JSX.Element {
 	const toggle = () => {
-		props.audio.enabled.set((prev: boolean) => !prev);
+		props.local.microphone.enabled.set((prev: boolean) => !prev);
 	};
-	const root = solid(props.audio.root);
+	const root = solid(props.local.camera.audio.root);
 
 	const [hover, setHover] = createSignal(false);
 	const opacity = Opacity(() => {
 		return props.volume ? hover() && !!root() : false;
 	});
 
-	const volume = solid(props.audio.volume);
-	Settings.microphoneGain.subscribe((gain) => {
-		props.audio.volume.set(gain);
-	});
+	const volume = solid(Settings.microphone.gain);
 
 	return (
 		<Tooltip content={root() ? "Disable microphone" : "Enable microphone"} position="top">
@@ -78,7 +75,7 @@ export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): J
 						"text-red-500": root() && volume() === 0,
 					}}
 				>
-					<Visualize audio={props.audio} />
+					<Visualize audio={props.local.camera.audio} />
 					<span class={root() ? "icon-[mdi--microphone]" : "icon-[mdi--microphone-off]"} />
 				</button>
 				<Show when={opacity() > 0}>
@@ -88,7 +85,7 @@ export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): J
 						step="0.01"
 						max="2"
 						value={volume()}
-						onInput={(e) => Settings.microphoneGain.set(Number(e.currentTarget.value))}
+						onInput={(e) => Settings.microphone.gain.set(Number(e.currentTarget.value))}
 						class="cursor-pointer backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none"
 						aria-label="Microphone volume"
 						style={{
@@ -103,11 +100,11 @@ export function Microphone(props: { audio: Publish.Audio; volume?: boolean }): J
 	);
 }
 
-export function Camera(props: { video: Publish.Video; room?: Room }): JSX.Element {
+export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const toggle = () => {
-		props.video.enabled.set((prev: boolean) => !prev);
+		props.local.webcam.enabled.set((prev: boolean) => !prev);
 	};
-	const media = solid(props.video.media);
+	const media = solid(props.local.webcam.stream);
 
 	return (
 		<Tooltip content={media() ? "Disable camera" : "Enable camera"} position="top">
@@ -129,15 +126,11 @@ export function Camera(props: { video: Publish.Video; room?: Room }): JSX.Elemen
 	);
 }
 
-function Screen(props: { video: Publish.Video; audio: Publish.Audio; room: Room }): JSX.Element {
+function Screen(props: { local: Local; room: Room }): JSX.Element {
 	const toggle = () => {
-		// We need to batch otherwise we'll request the device twice.
-		batch(() => {
-			props.video.enabled.set((prev: boolean) => !prev);
-			props.audio.enabled.set((prev: boolean) => !prev);
-		});
+		props.local.screen.enabled.set((prev: boolean) => !prev);
 	};
-	const media = solid(props.video.media);
+	const media = solid(props.local.screen.stream);
 
 	return (
 		<Tooltip content={media() ? "Disable screen sharing" : "Enable screen sharing"} position="top">

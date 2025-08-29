@@ -1,5 +1,6 @@
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Effect } from "@kixelated/signals";
+import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
@@ -59,8 +60,8 @@ export class Room {
 				let local: Publish.Broadcast | undefined;
 				if (update.name === this.local.camera.name.peek()) {
 					local = this.local.camera;
-				} else if (update.name === this.local.screen.name.peek()) {
-					local = this.local.screen;
+				} else if (update.name === this.local.share.name.peek()) {
+					local = this.local.share;
 				}
 
 				if (local) {
@@ -95,6 +96,7 @@ export class Room {
 						audio: {
 							// Download the speaking indicator.
 							speaking: { enabled: true },
+							captions: { enabled: Settings.captions.render },
 						},
 					});
 

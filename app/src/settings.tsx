@@ -10,23 +10,31 @@ const Settings = {
 	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
 	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 
-	renderCaptions: new Signal(localStorage.getItem("settings.renderCaptions") !== "false"),
-	captureCaptions: new Signal(
-		supportsWebGPU() ? localStorage.getItem("settings.captureCaptions") !== "false" : false,
-	),
+	captions: {
+		render: new Signal(localStorage.getItem("settings.captions.render") !== "false"),
+		capture: new Signal(supportsWebGPU() ? localStorage.getItem("settings.captions.capture") !== "false" : false),
+	},
 
-	microphoneGain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
 	tts: new Signal(localStorage.getItem("settings.tts") !== "false"),
 
 	// Device states that persist across sessions
-	microphoneEnabled: new Signal(localStorage.getItem("settings.microphone.enabled") === "true"),
-	cameraEnabled: new Signal(localStorage.getItem("settings.camera.enabled") === "true"),
+	microphone: {
+		enabled: new Signal(localStorage.getItem("settings.microphone.enabled") === "true"),
+		gain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
+		device: new Signal(localStorage.getItem("settings.microphone.device") ?? undefined),
+	},
+	camera: {
+		enabled: new Signal(localStorage.getItem("settings.camera.enabled") === "true"),
+		device: new Signal(localStorage.getItem("settings.camera.device") ?? undefined),
+	},
 
 	// Guest account settings
 	guest: new Signal<Api.Account.Info | undefined>(undefined),
 
 	// Meme selector settings
-	memeTab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
+	meme: {
+		tab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
+	},
 };
 
 const guestRaw = localStorage.getItem("settings.guest");
@@ -57,7 +65,7 @@ effect.subscribe(Settings.muted, (muted) => {
 	localStorage.setItem("settings.muted", muted.toString());
 });
 
-effect.subscribe(Settings.microphoneGain, (gain) => {
+effect.subscribe(Settings.microphone.gain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
@@ -65,16 +73,16 @@ effect.subscribe(Settings.debug, (debug) => {
 	localStorage.setItem("settings.debug", debug.toString());
 });
 
-effect.subscribe(Settings.renderCaptions, (closedCaptions) => {
-	localStorage.setItem("settings.renderCaptions", closedCaptions.toString());
+effect.subscribe(Settings.captions.render, (closedCaptions) => {
+	localStorage.setItem("settings.captions.render", closedCaptions.toString());
 });
 
-effect.subscribe(Settings.captureCaptions, (transcription) => {
+effect.subscribe(Settings.captions.capture, (transcription) => {
 	if (!supportsWebGPU()) {
 		// Don't save this setting if WebGPU is not supported.
-		localStorage.removeItem("settings.captureCaptions");
+		localStorage.removeItem("settings.captions.capture");
 	} else {
-		localStorage.setItem("settings.captureCaptions", transcription.toString());
+		localStorage.setItem("settings.captions.capture", transcription.toString());
 	}
 });
 
@@ -82,11 +90,11 @@ effect.subscribe(Settings.tts, (tts) => {
 	localStorage.setItem("settings.tts", tts.toString());
 });
 
-effect.subscribe(Settings.microphoneEnabled, (enabled) => {
+effect.subscribe(Settings.microphone.enabled, (enabled) => {
 	localStorage.setItem("settings.microphone.enabled", enabled.toString());
 });
 
-effect.subscribe(Settings.cameraEnabled, (enabled) => {
+effect.subscribe(Settings.camera.enabled, (enabled) => {
 	localStorage.setItem("settings.camera.enabled", enabled.toString());
 });
 
@@ -94,8 +102,24 @@ effect.subscribe(Settings.guest, (guest) => {
 	localStorage.setItem("settings.guest", JSON.stringify(guest));
 });
 
-effect.subscribe(Settings.memeTab, (tab) => {
+effect.subscribe(Settings.meme.tab, (tab) => {
 	localStorage.setItem("settings.meme.tab", tab);
+});
+
+effect.subscribe(Settings.microphone.device, (device) => {
+	if (device) {
+		localStorage.setItem("settings.microphone.device", device);
+	} else {
+		localStorage.removeItem("settings.microphone.device");
+	}
+});
+
+effect.subscribe(Settings.camera.device, (device) => {
+	if (device) {
+		localStorage.setItem("settings.camera.device", device);
+	} else {
+		localStorage.removeItem("settings.camera.device");
+	}
 });
 
 // Mostly just to avoid console warnings about signals not being closed
@@ -107,7 +131,6 @@ export default Settings;
 
 export function Modal(): JSX.Element {
 	const draggable = solid(Settings.draggable);
-	const captions = solid(Settings.captureCaptions);
 	const tts = solid(Settings.tts);
 
 	return (
@@ -116,17 +139,6 @@ export function Modal(): JSX.Element {
 			<span>allow dragging</span>
 			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
 				<span class="icon-[mdi--cursor-move]" />
-			</span>
-
-			<input
-				type="checkbox"
-				checked={captions()}
-				disabled={!supportsWebGPU()}
-				onChange={() => Settings.captureCaptions.set((p) => !p)}
-			/>
-			<span>generate captions</span>
-			<span title="Generate closed captions for your own speech. Requires WebGPU support.">
-				<span class="icon-[mdi--closed-caption]" />
 			</span>
 
 			<input type="checkbox" checked={tts()} onChange={() => Settings.tts.set((p) => !p)} />

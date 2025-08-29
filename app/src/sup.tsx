@@ -200,8 +200,8 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 
 			{/* Media Controls */}
 			<div class="flex gap-3 justify-center mb-6">
-				<Microphone audio={props.local.camera.audio} volume={false} />
-				<Camera video={props.local.camera.video} />
+				<Microphone local={props.local} volume={false} />
+				<Camera local={props.local} />
 				<Show when={props.api.authenticated()}>
 					<Tooltip content="Edit your profile" position="top">
 						<a
