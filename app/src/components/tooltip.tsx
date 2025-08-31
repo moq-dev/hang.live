@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { Portal } from "solid-js/web";
 
@@ -6,6 +6,7 @@ export default function Tooltip(props: {
 	content: string;
 	position: "top" | "bottom" | "left" | "right";
 	children: JSX.Element;
+	force?: boolean;
 }) {
 	const [show, setShow] = createSignal(false);
 	const [triggerEl, setTriggerEl] = createSignal<HTMLElement>();
@@ -73,6 +74,17 @@ export default function Tooltip(props: {
 		setArrowPosition({ left: arrowLeft, top: arrowTop });
 	};
 
+	// Handle force
+	createEffect(() => {
+		if (props.force) {
+			setShow(true);
+			requestAnimationFrame(updatePosition);
+		} else if (props.force === false) {
+			// When force becomes false, hide the tooltip
+			setShow(false);
+		}
+	});
+
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: Tooltip wrapper needs to work with arbitrary children
 		<div
@@ -81,19 +93,31 @@ export default function Tooltip(props: {
 			tabIndex={0}
 			ref={setTriggerEl}
 			onMouseEnter={() => {
-				setShow(true);
-				// Use requestAnimationFrame to ensure tooltip is rendered before positioning
-				requestAnimationFrame(updatePosition);
+				if (!props.force) {
+					setShow(true);
+					// Use requestAnimationFrame to ensure tooltip is rendered before positioning
+					requestAnimationFrame(updatePosition);
+				}
 			}}
-			onMouseLeave={() => setShow(false)}
+			onMouseLeave={() => {
+				if (!props.force) {
+					setShow(false);
+				}
+			}}
 			onFocus={() => {
-				setShow(true);
-				requestAnimationFrame(updatePosition);
+				if (!props.force) {
+					setShow(true);
+					requestAnimationFrame(updatePosition);
+				}
 			}}
-			onBlur={() => setShow(false)}
+			onBlur={() => {
+				if (!props.force) {
+					setShow(false);
+				}
+			}}
 		>
 			{props.children}
-			<Show when={show()}>
+			<Show when={show() || props.force}>
 				<Portal>
 					<div
 						ref={setTooltipEl}

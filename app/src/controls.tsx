@@ -1,6 +1,17 @@
 import type { Publish } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { type Accessor, createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import {
+	type Accessor,
+	createEffect,
+	createMemo,
+	createSelector,
+	createSignal,
+	Match,
+	onCleanup,
+	onMount,
+	Show,
+	Switch,
+} from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
@@ -18,7 +29,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 		>
 			{/* Left group */}
 			<div class="flex gap-4 items-end">
-				<Microphone local={props.local} volume={true} />
+				<Microphone local={props.local} />
 				<Camera local={props.local} room={props.room} />
 				<Screen local={props.local} room={props.room} />
 			</div>
@@ -39,29 +50,85 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 	);
 }
 
-export function Microphone(props: { local: Local; volume?: boolean }): JSX.Element {
+export function Microphone(props: { local: Local }): JSX.Element {
 	const toggle = () => {
 		props.local.microphone.enabled.set((prev: boolean) => !prev);
 	};
 	const root = solid(props.local.camera.audio.root);
 
-	const [hover, setHover] = createSignal(false);
-	const opacity = Opacity(() => {
-		return props.volume ? hover() && !!root() : false;
-	});
-
+	const [showMenu, setShowMenu] = createSignal(false);
+	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
+	const [deviceChangeMessage, setDeviceChangeMessage] = createSignal("");
 	const volume = solid(Settings.microphone.gain);
 
+	// Use device signals from the Device API
+	const device = props.local.microphone.device;
+	const enabled = solid(props.local.microphone.enabled);
+	const available = solid(device.available);
+	const requested = createSelector(solid(device.requested));
+	const active = createSelector(solid(device.active));
+
+	// Watch for device changes and trigger indicator
+	let previousDeviceCount = available()?.length ?? 0;
+	createEffect(() => {
+		const currentDevices = available();
+		const currentCount = currentDevices?.length ?? 0;
+		if (currentCount !== previousDeviceCount && previousDeviceCount !== 0) {
+			setDeviceChangeIndicator(true);
+			if (currentCount > previousDeviceCount) {
+				setDeviceChangeMessage("New microphone detected");
+			} else {
+				setDeviceChangeMessage("Microphone disconnected");
+			}
+			setTimeout(() => {
+				setDeviceChangeIndicator(false);
+				setDeviceChangeMessage("");
+			}, 5000);
+		}
+		previousDeviceCount = currentCount;
+	});
+
+	// Close menu when clicking outside
+	let menuRef: HTMLDivElement | undefined;
+	let buttonRef: HTMLButtonElement | undefined;
+
+	onMount(() => {
+		const handleClick = (e: MouseEvent) => {
+			if (
+				showMenu() &&
+				menuRef &&
+				buttonRef &&
+				!menuRef.contains(e.target as Node) &&
+				!buttonRef.contains(e.target as Node)
+			) {
+				setShowMenu(false);
+			}
+		};
+		document.addEventListener("click", handleClick);
+		onCleanup(() => document.removeEventListener("click", handleClick));
+	});
+
+	// Request permissions
+	const requestPermissions = () => {
+		device.requestPermission();
+	};
+
+	// Handle device selection
+	const selectDevice = (deviceId: string) => {
+		if (root() && (deviceId === device.active.peek() || deviceId === device.requested.peek())) {
+			// Same device selected and mic is enabled - disable it
+			props.local.microphone.enabled.set(false);
+			device.preferred.set(undefined);
+		} else {
+			// Different device or mic is disabled - enable it
+			device.preferred.set(deviceId);
+			props.local.microphone.enabled.set(true);
+		}
+	};
+
 	return (
-		<Tooltip content={root() ? "Disable microphone" : "Enable microphone"} position="top">
-			<fieldset
-				class="flex flex-col-reverse pointer-events-auto"
-				aria-label="Microphone controls"
-				onMouseEnter={() => setHover(true)}
-				onMouseLeave={() => setHover(false)}
-				onFocusIn={() => setHover(true)}
-				onFocusOut={() => setHover(false)}
-			>
+		<div class="flex items-start pointer-events-auto relative">
+			<Tooltip content={root() ? "Disable microphone" : "Enable microphone"} position="top">
 				<button
 					type="button"
 					onClick={toggle}
@@ -78,25 +145,118 @@ export function Microphone(props: { local: Local; volume?: boolean }): JSX.Eleme
 					<Visualize audio={props.local.camera.audio} />
 					<span class={root() ? "icon-[mdi--microphone]" : "icon-[mdi--microphone-off]"} />
 				</button>
-				<Show when={opacity() > 0}>
-					<input
-						type="range"
-						min="0"
-						step="0.01"
-						max="2"
-						value={volume()}
-						onInput={(e) => Settings.microphone.gain.set(Number(e.currentTarget.value))}
-						class="cursor-pointer backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none"
-						aria-label="Microphone volume"
-						style={{
-							"writing-mode": "vertical-rl",
-							direction: "rtl",
-							opacity: opacity(),
+			</Tooltip>
+			<Show when={root()}>
+				<Tooltip 
+					content={deviceChangeMessage() || "Microphone settings"} 
+					position="top"
+					force={deviceChangeIndicator()}
+				>
+					<button
+						ref={buttonRef}
+						type="button"
+						onClick={() => setShowMenu(!showMenu())}
+						class="text-xs hover:bg-white/10 transition-all cursor-pointer p-1 backdrop-blur-sm bg-transparent rounded mt-1"
+						aria-label="Microphone settings"
+						aria-expanded={showMenu()}
+						classList={{
+							"animate-pulse": deviceChangeIndicator(),
 						}}
-					/>
-				</Show>
-			</fieldset>
-		</Tooltip>
+					>
+						<span class={showMenu() ? "icon-[mdi--chevron-up]" : "icon-[mdi--chevron-down]"} />
+					</button>
+				</Tooltip>
+			</Show>
+			<Show when={enabled() && showMenu()}>
+				<div
+					ref={menuRef}
+					class="absolute bottom-full mb-2 left-0 max-w-[calc(100vw-2rem)] w-[320px] bg-black/90 backdrop-blur-lg rounded-lg border border-white/30 shadow-2xl p-4 z-50 flex flex-col gap-4"
+				>
+					{/* Volume slider */}
+					<div>
+						<div class="text-sm mb-2 font-medium text-white/60">Volume</div>
+						<div class="flex items-center gap-2">
+							<span class="icon-[mdi--volume-low] text-white/40 text-sm" />
+							<div class="flex-1 relative flex items-center">
+								<input
+									type="range"
+									min="0"
+									step="0.01"
+									max="2"
+									value={volume()}
+									onInput={(e) => Settings.microphone.gain.set(Number(e.currentTarget.value))}
+									class="w-full cursor-pointer h-1 bg-white/20 rounded-full appearance-none relative z-10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20"
+									aria-label="Microphone volume"
+									style={{
+										background: `linear-gradient(to right, hsl(var(--link-hue) 60% 60%) 0%, hsl(var(--link-hue) 60% 60%) ${volume() * 50}%, rgba(255, 255, 255, 0.2) ${volume() * 50}%, rgba(255, 255, 255, 0.2) 100%)`,
+										height: "4px",
+									}}
+								/>
+							</div>
+							<span class="icon-[mdi--volume-high] text-white/40 text-sm" />
+							<span class="text-xs text-white/40 min-w-[2.5rem] text-right">
+								{Math.round(volume() * 100)}%
+							</span>
+						</div>
+					</div>
+
+					<div>
+						<div class="text-sm mt-2 font-medium text-white/60">Device</div>
+						<div class="flex flex-col gap-1">
+							<Switch>
+								<Match when={available() === undefined}>
+									<button
+										type="button"
+										onClick={requestPermissions}
+										class="flex items-center justify-center gap-2 text-sm px-3 py-2.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
+									>
+										<span class="icon-[mdi--shield-check] text-base" />
+										<span>Grant Microphone Permission</span>
+									</button>
+								</Match>
+								<Match when={available()?.length === 0}>
+									<div class="text-sm text-white/40 px-3 py-2">No devices found</div>
+								</Match>
+								<Match when={available()}>
+									{(devices) => (
+										<>
+											{devices().map((dev) => (
+												<button
+													type="button"
+													onClick={() => selectDevice(dev.deviceId)}
+													class="flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+													classList={{
+														"bg-white/5": active(dev.deviceId),
+													}}
+												>
+													<span
+														class="text-base"
+														classList={{
+															"icon-[mdi--check]": active(dev.deviceId),
+															"icon-[mdi--loading] animate-spin":
+																requested(dev.deviceId) && !active(dev.deviceId),
+														}}
+														style={{
+															color:
+																active(dev.deviceId) || requested(dev.deviceId)
+																	? "hsl(var(--link-hue) 60% 60%)"
+																	: "transparent",
+														}}
+													/>
+													<span class="flex-1">
+														{dev.label || `Microphone ${dev.deviceId.slice(0, 8)}`}
+													</span>
+												</button>
+											))}
+										</>
+									)}
+								</Match>
+							</Switch>
+						</div>
+					</div>
+				</div>
+			</Show>
+		</div>
 	);
 }
 
@@ -106,23 +266,174 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	};
 	const media = solid(props.local.webcam.stream);
 
+	const [showMenu, setShowMenu] = createSignal(false);
+	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
+	const [deviceChangeMessage, setDeviceChangeMessage] = createSignal("");
+
+	// Use device signals from the Device API
+	const device = props.local.webcam.device;
+	const available = solid(device.available);
+	const requested = createSelector(solid(device.requested));
+	const active = createSelector(solid(device.active));
+
+	// Watch for device changes and trigger indicator
+	let previousDeviceCount = available()?.length ?? 0;
+	createEffect(() => {
+		const currentDevices = available();
+		const currentCount = currentDevices?.length ?? 0;
+		if (currentCount !== previousDeviceCount && previousDeviceCount !== 0) {
+			setDeviceChangeIndicator(true);
+			if (currentCount > previousDeviceCount) {
+				setDeviceChangeMessage("New camera detected");
+			} else {
+				setDeviceChangeMessage("Camera disconnected");
+			}
+			setTimeout(() => {
+				setDeviceChangeIndicator(false);
+				setDeviceChangeMessage("");
+			}, 5000);
+		}
+		previousDeviceCount = currentCount;
+	});
+
+	// Close menu when clicking outside
+	let menuRef: HTMLDivElement | undefined;
+	let buttonRef: HTMLButtonElement | undefined;
+
+	onMount(() => {
+		const handleClick = (e: MouseEvent) => {
+			if (
+				showMenu() &&
+				menuRef &&
+				buttonRef &&
+				!menuRef.contains(e.target as Node) &&
+				!buttonRef.contains(e.target as Node)
+			) {
+				setShowMenu(false);
+			}
+		};
+
+		document.addEventListener("click", handleClick);
+		onCleanup(() => document.removeEventListener("click", handleClick));
+	});
+
+	// Request permissions
+	const requestPermissions = () => {
+		device.requestPermission();
+	};
+
+	// Handle device selection
+	const selectDevice = (deviceId: string) => {
+		if (media() && (deviceId === device.active.peek() || deviceId === device.requested.peek())) {
+			// Same device selected and camera is enabled - disable it
+			props.local.webcam.enabled.set(false);
+			device.preferred.set(undefined);
+		} else {
+			// Different device or camera is disabled - enable it
+			device.preferred.set(deviceId);
+			props.local.webcam.enabled.set(true);
+		}
+	};
+
 	return (
-		<Tooltip content={media() ? "Disable camera" : "Enable camera"} position="top">
-			<button
-				type="button"
-				onClick={toggle}
-				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-				role="switch"
-				aria-checked={!!media()}
-				aria-label="Toggle camera"
-				classList={{
-					"border-white": !!media(),
-					"border-transparent": !media(),
-				}}
-			>
-				<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
-			</button>
-		</Tooltip>
+		<div class="flex items-start pointer-events-auto relative">
+			<Tooltip content={media() ? "Disable camera" : "Enable camera"} position="top">
+				<button
+					type="button"
+					onClick={toggle}
+					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
+					role="switch"
+					aria-checked={!!media()}
+					aria-label="Toggle camera"
+					classList={{
+						"border-white": !!media(),
+						"border-transparent": !media(),
+					}}
+				>
+					<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
+				</button>
+			</Tooltip>
+			<Show when={(available()?.length ?? 0) > 1}>
+				<Tooltip 
+					content={deviceChangeMessage() || "Camera settings"} 
+					position="top"
+					force={deviceChangeIndicator()}
+				>
+					<button
+						ref={buttonRef}
+						type="button"
+						onClick={() => setShowMenu(!showMenu())}
+						class="text-xs hover:bg-white/10 transition-all cursor-pointer p-1 backdrop-blur-sm bg-transparent rounded mt-1"
+						aria-label="Camera settings"
+						aria-expanded={showMenu()}
+						classList={{
+							"animate-pulse": deviceChangeIndicator(),
+						}}
+					>
+						<span class={showMenu() ? "icon-[mdi--chevron-up]" : "icon-[mdi--chevron-down]"} />
+					</button>
+				</Tooltip>
+			</Show>
+			<Show when={showMenu()}>
+				<div
+					ref={menuRef}
+					class="absolute bottom-full mb-2 left-0 max-w-[calc(100vw-2rem)] w-[320px] bg-black/90 backdrop-blur-lg rounded-lg shadow-2xl border border-white/30 p-4 z-50"
+				>
+					<div class="text-sm text-white/60 mb-2 font-medium">Device</div>
+					<div class="flex flex-col gap-1">
+						<Switch>
+							<Match when={available() === undefined}>
+								<button
+									type="button"
+									onClick={requestPermissions}
+									class="flex items-center justify-center gap-2 text-sm px-3 py-2.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
+								>
+									<span class="icon-[mdi--shield-check] text-base" />
+									<span>Grant Camera Permission</span>
+								</button>
+							</Match>
+							<Match when={available()?.length === 0}>
+								<div class="text-sm text-white/40 px-3 py-2">No devices found</div>
+							</Match>
+							<Match when={available()}>
+								{(devices) => (
+									<>
+										{devices().map((dev) => (
+											<button
+												type="button"
+												onClick={() => selectDevice(dev.deviceId)}
+												class="flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+												classList={{
+													"bg-white/5": active(dev.deviceId),
+												}}
+											>
+												<span
+													class="text-base"
+													classList={{
+														"icon-[mdi--check]": active(dev.deviceId),
+														"icon-[mdi--loading] animate-spin":
+															requested(dev.deviceId) && !active(dev.deviceId),
+													}}
+													style={{
+														color:
+															active(dev.deviceId) || requested(dev.deviceId)
+																? "hsl(var(--link-hue) 60% 60%)"
+																: "transparent",
+													}}
+												/>
+												<span class="flex-1">
+													{dev.label || `Camera ${dev.deviceId.slice(0, 8)}`}
+												</span>
+											</button>
+										))}
+									</>
+								)}
+							</Match>
+						</Switch>
+					</div>
+				</div>
+			</Show>
+		</div>
 	);
 }
 

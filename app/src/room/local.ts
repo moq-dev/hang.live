@@ -57,7 +57,7 @@ export class Local {
 
 		this.webcam = new Publish.Source.Camera({
 			enabled: Settings.camera.enabled,
-			device: Settings.camera.device,
+			device: { preferred: Settings.camera.device },
 			constraints: {
 				width: { ideal: 640 },
 				height: { ideal: 640 },
@@ -70,7 +70,7 @@ export class Local {
 
 		this.microphone = new Publish.Source.Microphone({
 			enabled: Settings.microphone.enabled,
-			device: Settings.microphone.device,
+			device: { preferred: Settings.microphone.device },
 			constraints: {
 				channelCount: { ideal: 1, max: 2 },
 				autoGainControl: { ideal: true },
