@@ -18,7 +18,7 @@ export type MemeVideo = {
 };
 
 export const MEME_AUDIO = {
-	amongus: { file: "among-us.mp3", emoji: "📮" },
+	"among-us": { file: "among-us.mp3", emoji: "📮" },
 	aww: { file: "aww.mp3", emoji: "🥺" },
 	brb: { file: "be-right-back.mp3", emoji: "🚶" },
 	bluetooth: { file: "bluetooth.mp3", emoji: "📶" },
@@ -32,6 +32,7 @@ export const MEME_AUDIO = {
 	error: { file: "error.mp3", emoji: "❌" },
 	fbi: { file: "fbi.mp3", emoji: "👮" },
 	fart: { file: "fart-reverb.mp3", emoji: "💩" },
+	"fitness-gram": { file: "fitness-gram.mp3", emoji: "💪" },
 	"hello-there": { file: "hello-there.mp3", emoji: "👋" },
 	hub: { file: "hub-intro.mp3", emoji: "🍑" },
 	huh: { file: "huh.mp3", emoji: "🤔" },
