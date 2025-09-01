@@ -73,7 +73,7 @@ header {
 	user-select: none;
 
 	a {
-		@apply no-underline;
+		text-decoration: none;
 	}
 }
 

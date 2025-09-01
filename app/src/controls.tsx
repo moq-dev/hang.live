@@ -147,8 +147,8 @@ export function Microphone(props: { local: Local }): JSX.Element {
 				</button>
 			</Tooltip>
 			<Show when={root()}>
-				<Tooltip 
-					content={deviceChangeMessage() || "Microphone settings"} 
+				<Tooltip
+					content={deviceChangeMessage() || "Microphone settings"}
 					position="top"
 					force={deviceChangeIndicator()}
 				>
@@ -354,8 +354,8 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 				</button>
 			</Tooltip>
 			<Show when={(available()?.length ?? 0) > 1}>
-				<Tooltip 
-					content={deviceChangeMessage() || "Camera settings"} 
+				<Tooltip
+					content={deviceChangeMessage() || "Camera settings"}
 					position="top"
 					force={deviceChangeIndicator()}
 				>
