@@ -1,5 +1,4 @@
 import { Publish, Watch } from "@kixelated/hang";
-import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
@@ -41,8 +40,6 @@ export class Video {
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
-	#buffered = 0;
-	#bufferedWhen: DOMHighResTimeStamp = 0;
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
@@ -155,7 +152,7 @@ export class Video {
 
 	// Try to avoid any mutations in this function; do it in tick instead.
 	render(
-		now: DOMHighResTimeStamp,
+		_now: DOMHighResTimeStamp,
 		ctx: CanvasRenderingContext2D,
 		modifiers?: {
 			dragging?: boolean;
@@ -434,19 +431,6 @@ export class Video {
 			}
 		}
 
-		// Draw a crude buffer indicator
-		if (this.broadcast.source instanceof Watch.Broadcast && Settings.debug.peek()) {
-			if (this.broadcast.source.audio.buffered !== this.#buffered || this.#bufferedWhen === 0) {
-				this.#buffered = this.broadcast.source.audio.buffered;
-				this.#bufferedWhen = now;
-			}
-
-			// Apply a discount to the bufffered amount over time.
-			const buffered = Math.max(0, this.#buffered - (now - this.#bufferedWhen));
-			const percent = Math.min(buffered / this.broadcast.source.audio.latency, 1);
-			ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
-			ctx.fillRect(0, 0, percent * bounds.size.x, 10);
-		}
 
 		// Cancel the clip
 		ctx.restore();

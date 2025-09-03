@@ -8,7 +8,6 @@ const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 	volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.volume") ?? "1")),
 	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
-	debug: new Signal(localStorage.getItem("settings.debug") === "true"),
 
 	captions: {
 		render: new Signal(localStorage.getItem("settings.captions.render") !== "false"),
@@ -69,9 +68,6 @@ effect.subscribe(Settings.microphone.gain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
-effect.subscribe(Settings.debug, (debug) => {
-	localStorage.setItem("settings.debug", debug.toString());
-});
 
 effect.subscribe(Settings.captions.render, (closedCaptions) => {
 	localStorage.setItem("settings.captions.render", closedCaptions.toString());
@@ -132,7 +128,6 @@ export default Settings;
 export function Modal(): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const tts = solid(Settings.tts);
-	const debug = solid(Settings.debug);
 
 	return (
 		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -148,11 +143,6 @@ export function Modal(): JSX.Element {
 				<span class="icon-[mdi--text-to-speech]" />
 			</span>
 
-			<input type="checkbox" checked={debug()} onChange={() => Settings.debug.set((p) => !p)} />
-			<span>audio buffer level</span>
-			<span title="Show audio buffer level indicator above each participant.">
-				<span class="icon-[mdi--chart-bar]" />
-			</span>
 		</div>
 	);
 }
