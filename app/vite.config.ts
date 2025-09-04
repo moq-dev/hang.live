@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
-import basicSsl from "vite-plugin-mkcert";
 import solid from "vite-plugin-solid";
 
 const host = process.env.TAURI_DEV_HOST;
@@ -24,9 +23,6 @@ export default defineConfig(() => ({
 	plugins: [
 		solid(),
 		tailwindcss(),
-		basicSsl({
-			hosts: ["localhost", "hang.dev"],
-		}),
 	],
 
 	resolve: {
@@ -38,7 +34,7 @@ export default defineConfig(() => ({
 	server: {
 		port: 1420,
 		strictPort: true,
-		host: host || "hang.dev",
+		host: host || "localhost",
 		hmr: false,
 		watch: {
 			// 3. tell vite to ignore watching `tauri`
