@@ -37,7 +37,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 			const response = await props.api.routes.fave.all.$get();
 			if (response.ok) {
 				const data = await response.json();
-				connection.url.set(new URL(data.token));
+				connection.url.set(new URL(data.url));
 				return data.favorites;
 			}
 		} catch (error) {

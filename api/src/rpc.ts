@@ -40,17 +40,7 @@ export const withCors = createMiddleware<{
 	Bindings: Env;
 }>(async (c, next) => {
 	const corsMiddleware = cors({
-		origin: (origin) => {
-			// Allow localhost and tauri.localhost for development
-			if (origin?.includes("localhost") || origin?.includes("tauri.localhost")) {
-				return origin;
-			}
-			// Allow the configured frontend URL
-			if (origin === c.env.APP_URL) {
-				return origin;
-			}
-			return null;
-		},
+		origin: c.env.APP_URL,
 		allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		credentials: true,

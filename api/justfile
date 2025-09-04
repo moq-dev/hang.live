@@ -10,10 +10,7 @@ dev:
 	pnpm i
 	pnpm wrangler types
 	pnpm wrangler d1 migrations apply DB --local
-	# Generate SSL certificates for API development
-	mkdir -p dev
-	mkcert -cert-file dev/api-cert.pem -key-file dev/api-key.pem localhost api.hang.dev
-	pnpm wrangler dev --var "RELAY_SECRET:$(cat ../moq/rs/dev/root.jwk)" --host api.hang.dev --local-protocol https --https-key-path dev/api-key.pem --https-cert-path dev/api-cert.pem
+	pnpm wrangler dev --var "RELAY_SECRET:$(cat ../moq/rs/dev/root.jwk)"
 
 build:
 	pnpm i

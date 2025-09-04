@@ -7,8 +7,6 @@
 	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 	"workers_dev": false,
 
-	"route": "api.hang.dev:3000",
-
 	// Observability
 	"observability": {
 		"logs": {
@@ -40,8 +38,8 @@
 
 	// Environment variables for development
 	"vars": {
-		"API_URL": "https://api.hang.dev:3000",
-		"APP_URL": "https://hang.dev:1420",
+		"API_URL": "http://localhost:3000",
+		"APP_URL": "http://localhost:1420",
 
 		// "AUTH_SECRET": <stored in .dev.vars>
 
@@ -51,13 +49,13 @@
 		"DISCORD_CLIENT_ID": "1392633766010294494",
 		// "DISCORD_CLIENT_SECRET": <stored in .dev.vars>
 
-		// Apple needs a domain, use /etc/hosts: 127.0.0.1 hang.dev
-		"APPLE_CLIENT_ID": "dev.hang.service",
-		"APPLE_TEAM_ID": "D7D5SDDB5Z",
-		"APPLE_KEY_ID": "964W676BWT",
+		// NOTE: Apple requires HTTPS and a non localhost domain.
+		//"APPLE_CLIENT_ID": "dev.hang.service",
+		//"APPLE_TEAM_ID": "D7D5SDDB5Z",
+		//"APPLE_KEY_ID": "964W676BWT",
 		// "APPLE_PRIVATE_KEY": <stored in .dev.vars>
 
-		"R2_PUBLIC_URL": "https://api.hang.dev:3000/public",
+		"R2_PUBLIC_URL": "http://localhost:3000/public",
 
 		"RELAY_URL": "http://localhost:4443",
 		"RELAY_PREFIX": "demo"
