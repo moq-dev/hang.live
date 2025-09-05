@@ -617,7 +617,8 @@ export class Space {
 		ctx.stroke();
 
 		// Text
-		ctx.font = `${24 * scale}px sans-serif`;
+		const fontSize = Math.round(24 * scale); // round to avoid busting font caches
+		ctx.font = `${fontSize}px sans-serif`;
 		ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
