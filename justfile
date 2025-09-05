@@ -8,7 +8,7 @@ default:
 
 # Run the CI checks
 check:
-	pnpm i
+	pnpm i --frozen-lockfile
 
 	# Make sure Typescript compiles
 	pnpm -r run check
@@ -53,7 +53,7 @@ upgrade:
 
 # Build the packages
 build:
-	pnpm i
+	pnpm i --frozen-lockfile
 	pnpm -r run build
 
 prod: build
