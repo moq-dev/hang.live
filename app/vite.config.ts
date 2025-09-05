@@ -20,10 +20,7 @@ export default defineConfig(() => ({
 		format: "es" as const,
 	},
 
-	plugins: [
-		solid(),
-		tailwindcss(),
-	],
+	plugins: [solid(), tailwindcss()],
 
 	resolve: {
 		dedupe: ["solid-js"],

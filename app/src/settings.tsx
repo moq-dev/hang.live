@@ -68,7 +68,6 @@ effect.subscribe(Settings.microphone.gain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
-
 effect.subscribe(Settings.captions.render, (closedCaptions) => {
 	localStorage.setItem("settings.captions.render", closedCaptions.toString());
 });
@@ -142,7 +141,6 @@ export function Modal(): JSX.Element {
 			<span title="Enable text-to-speech for announcing members. WebGPU is recommended.">
 				<span class="icon-[mdi--text-to-speech]" />
 			</span>
-
 		</div>
 	);
 }

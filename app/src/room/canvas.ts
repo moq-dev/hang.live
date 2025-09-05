@@ -176,8 +176,7 @@ export class Canvas {
 		const width = ctx.canvas.width;
 		const height = ctx.canvas.height;
 
-		const fontSize = 64 * devicePixelRatio;
-
+		const fontSize = Math.round(64 * devicePixelRatio); // round to avoid busting font caches
 		ctx.font = `bold ${fontSize}px sans-serif`;
 		ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
 		ctx.textAlign = "center";

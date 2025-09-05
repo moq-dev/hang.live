@@ -40,7 +40,6 @@ export class Video {
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
-
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 		this.targetSize = Vector.create(128, 128);
@@ -409,10 +408,10 @@ export class Video {
 						}
 					}
 
-					const fontSize = 32 + 32 * scale;
+					const fontSize = Math.round(32 + 32 * scale); // round to avoid busting font caches
 					// Draw the emoji for this audio meme
-					ctx.fillStyle = "white";
 					ctx.font = `bold ${fontSize}px Arial`;
+					ctx.fillStyle = "white";
 					// Render it at the bottom center of the bounds.
 					ctx.fillText(emoji, bounds.size.x / 2 - fontSize / 2, bounds.size.y - fontSize / 2);
 				}
@@ -431,7 +430,6 @@ export class Video {
 			}
 		}
 
-
 		// Cancel the clip
 		ctx.restore();
 
@@ -448,7 +446,7 @@ export class Video {
 		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
-			const fontSize = Math.max(14 * scale * devicePixelRatio, 10 * devicePixelRatio);
+			const fontSize = Math.round(Math.max(14 * scale * devicePixelRatio, 10 * devicePixelRatio));
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;

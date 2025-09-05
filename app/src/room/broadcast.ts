@@ -404,7 +404,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		ctx.fill();
 
 		// Draw "YOU" text
-		ctx.font = `bold ${32 * this.scale}px Arial`;
+		const fontSize = Math.round(32 * this.scale); // round to avoid busting font caches
+		ctx.font = `bold ${fontSize}px Arial`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillStyle = "#FFD700";
