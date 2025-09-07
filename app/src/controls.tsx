@@ -353,7 +353,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 					<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
 				</button>
 			</Tooltip>
-			<Show when={(available()?.length ?? 0) > 1}>
+			<Show when={media()}>
 				<Tooltip
 					content={deviceChangeMessage() || "Camera settings"}
 					position="top"
