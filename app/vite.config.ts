@@ -16,6 +16,10 @@ export default defineConfig(() => ({
 		},
 	},
 
+	optimizeDeps: {
+		exclude: ["@libav.js/variant-opus-af"],
+	},
+
 	worker: {
 		format: "es" as const,
 	},
