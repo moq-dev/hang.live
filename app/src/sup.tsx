@@ -1,9 +1,10 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { createSignal, Match, onCleanup, Show, Switch } from "solid-js";
+import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import AnotherOne from "./components/another-one";
+import { Badge } from "./components/badge";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
 import Tooltip from "./components/tooltip";
@@ -49,6 +50,19 @@ function App(props: {
 
 	const room = new Room(props.connection, props.canvas, props.local);
 	onCleanup(() => room.close());
+
+	// Update badge count based on room participants
+	const participantCount = solid(room.space.ordered);
+	const badge = new Badge();
+
+	// Watch for participant changes and update badge
+	createEffect(() => {
+		const count = Math.max((participantCount()?.length || 0) - 1, 0);
+		badge.set(count);
+	});
+
+	// Clear badge when leaving the room
+	onCleanup(() => badge.close());
 
 	return (
 		<AppLayout connection={room.connection} api={props.api} room={props.room}>

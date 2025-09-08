@@ -2,7 +2,7 @@ import * as Api from "@hang/api/client";
 import { Connection, Preview } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
-import { createEffect, For, onCleanup, Show } from "solid-js";
+import { For, onCleanup, Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
 
@@ -10,7 +10,7 @@ export function PreviewRoomCompact(props: {
 	connection: Connection;
 	path?: string;
 	api: Api.Client;
-	onMemberCountChange?: (count: number) => void;
+	setMemberCount: Setter<number>;
 }): JSX.Element {
 	const room = new Preview.Room(props.connection, {
 		name: props.path ? Path.from(props.path) : undefined,
@@ -21,13 +21,8 @@ export function PreviewRoomCompact(props: {
 	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
 
 	room.onMember((name, member) => {
-		setMembers(name, member ?? undefined);
-	});
-
-	// Track member count changes
-	createEffect(() => {
-		const count = Object.values(members).filter(Boolean).length;
-		props.onMemberCountChange?.(count);
+		setMembers(name, member || undefined);
+		props.setMemberCount((prev) => prev + (member ? 1 : -1));
 	});
 
 	const memberList = () => Object.values(members).filter(Boolean);
@@ -111,7 +106,7 @@ export function PreviewRoom(props: { connection: Connection; path?: string; api:
 	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
 
 	room.onMember((name, member) => {
-		setMembers(name, member ?? undefined);
+		setMembers(name, member);
 	});
 
 	return (

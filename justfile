@@ -63,14 +63,19 @@ deploy env="staging":
 	just --justfile api/justfile deploy "{{env}}"
 	just --justfile app/justfile deploy "{{env}}"
 
-dev:
+dev flags="--open":
 	pnpm i
 
 	# Generate auth tokens if needed
 	@cd moq/rs && just auth-token
 
-	pnpm concurrently --kill-others --names api,app,native,relay --prefix-colors auto \
+	pnpm concurrently --kill-others --names api,app,relay --prefix-colors auto \
 		"just --justfile api/justfile dev" \
-		"just --justfile app/justfile dev" \
-		"just --justfile native/justfile dev" \
+		"just --justfile app/justfile dev {{flags}}" \
 		"just --justfile moq/justfile root"
+
+native:
+	just --justfile native/justfile dev
+
+app:
+	just --justfile app/justfile dev

@@ -416,6 +416,7 @@ export const callbackSchema = z.object({
 	provider: providerIdSchema,
 	code: z.string(),
 	state: z.string(),
+	user: z.optional(z.string()),
 });
 
 export const callbackResponseSchema = z.object({
@@ -464,24 +465,24 @@ export const router = rpc
 			const provider = ctx.oauth.provider(c.req.valid("param").provider);
 
 			// Handle both GET (Google/Discord) and POST (Apple) callbacks
-			let callbackData: { code: string; state: string; user?: string };
+			let callbackData: Callback;
 
 			if (c.req.method === "POST") {
 				// Apple form_post callback
 				const formData = await c.req.formData();
-				callbackData = {
-					code: formData.get("code") as string,
-					state: formData.get("state") as string,
-					user: (formData.get("user") as string) || undefined,
-				};
+				callbackData = callbackSchema.parse({
+					code: formData.get("code"),
+					state: formData.get("state"),
+					user: formData.get("user"),
+				});
 			} else {
 				// Google/Discord query params callback
 				const url = new URL(c.req.url);
-				callbackData = {
-					code: url.searchParams.get("code") as string,
-					state: url.searchParams.get("state") as string,
-					user: (url.searchParams.get("user") as string) || undefined,
-				};
+				callbackData = callbackSchema.parse({
+					code: url.searchParams.get("code"),
+					state: url.searchParams.get("state"),
+					user: url.searchParams.get("user"),
+				});
 			}
 
 			// Validate required fields

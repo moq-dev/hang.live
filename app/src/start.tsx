@@ -1,8 +1,20 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createResource, createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	Match,
+	onCleanup,
+	onMount,
+	Show,
+	Switch,
+} from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import { Badge } from "./components/badge";
 import Dialog from "./components/dialog";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
@@ -29,6 +41,11 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 	// Connection for live previews
 	const connection = new Connection();
 	onCleanup(() => connection.close());
+
+	// Track total member count across all favorites
+	const badge = new Badge();
+	badge.set(0);
+	onCleanup(() => badge.close());
 
 	const [favorites, { refetch }] = createResource(async () => {
 		if (!props.api.authenticated()) return null;
@@ -142,6 +159,7 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 															onRemove={handleRemove}
 															connection={connection}
 															api={props.api}
+															badge={badge}
 														/>
 													)}
 												</For>
@@ -252,9 +270,18 @@ function FavoriteRoom(props: {
 	onRemove: (room: string) => void;
 	connection: Connection;
 	api: Api.Client;
+	badge: Badge;
 }): JSX.Element {
 	const [removing, setRemoving] = createSignal(false);
 	const [memberCount, setMemberCount] = createSignal(0);
+
+	createEffect(() => {
+		const count = memberCount();
+		props.badge.increment(count);
+		return () => {
+			props.badge.decrement(count);
+		};
+	});
 
 	const handleRemove = async (e: MouseEvent) => {
 		e.preventDefault();
@@ -290,7 +317,7 @@ function FavoriteRoom(props: {
 					</button>
 				</div>
 			</div>
-			<PreviewRoomCompact connection={props.connection} api={props.api} onMemberCountChange={setMemberCount} />
+			<PreviewRoomCompact connection={props.connection} api={props.api} setMemberCount={setMemberCount} />
 		</div>
 	);
 }
