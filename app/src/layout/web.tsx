@@ -5,7 +5,7 @@ import { Logo } from "./logo";
 
 export default function Web(props: { children: JSX.Element }) {
 	return (
-		<div class="p-4 mx-auto w-full flex flex-col max-w-[1100px]">
+		<div class="p-4 mx-auto w-full flex flex-col max-w-[1150px]">
 			<header class="flex items-center justify-between mb-4 leading-none text-xl">
 				<Logo />
 				<div id="support" />
