@@ -5,7 +5,8 @@
 	"identifier": "live.hang.app",
 	"build": {
 		"devUrl": "http://localhost:1420",
-		"beforeBuildCommand": "pnpm build",
+		"beforeDevCommand": "just dev \"\"",
+		"beforeBuildCommand": "just build",
 		"frontendDist": "../app/dist"
 	},
 	"app": {

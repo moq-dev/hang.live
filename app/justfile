@@ -58,8 +58,8 @@ deploy env="staging":
 	just build "{{env}}"
 	pnpm wrangler deploy --env "{{env}}"
 
-dev:
+dev flags="--open":
 	pnpm i
 
 	# Run the web development server
-	pnpm vite dev --open
+	pnpm vite dev {{flags}}

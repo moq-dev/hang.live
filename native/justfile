@@ -23,7 +23,7 @@ build:
 
 # Run the native app in development mode
 dev:
-	cargo tauri dev --no-watch --no-dev-server
+	cargo tauri dev
 
 # Install dependencies
 install:
