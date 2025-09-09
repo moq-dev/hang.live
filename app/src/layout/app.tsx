@@ -8,7 +8,7 @@ import { Logo } from "./logo";
 export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">
-			<header class="flex items-center justify-between mb-4 leading-none text-xl">
+			<header class="flex items-center justify-between leading-none text-xl">
 				<Logo connection={props.connection} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">

@@ -55,12 +55,12 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 
 			{/* Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
-				<div class="flex-1 min-w-[300px] grow space-y-6">
+				<div class="flex-1 basis-md grow space-y-6">
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
 								<span class="icon-[mdi--heart] text-red-500" />
-								<h2 class="text-xl font-semibold">Favorites</h2>
+								<h2 class="text-xl font-semibold">Favorite hangs</h2>
 							</div>
 						</div>
 						<Show
@@ -131,12 +131,12 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 						</Show>
 					</div>
 				</div>
-				<div class="flex-1 min-w-[300px] grow space-y-6">
+				<div class="flex-1 basis-sm grow space-y-6">
 					<div class="rounded-2xl border border-gray-800 p-6">
-						<div class="flex items-center justify-between mb-8">
+						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-2">
-								<span class="icon-[mdi--home] text-green-500" />
-								<h2 class="text-xl font-semibold">Home</h2>
+								<span class="icon-[mdi--play] text-green-500" />
+								<span class="text-xl font-semibold">Start a hang</span>
 							</div>
 						</div>
 

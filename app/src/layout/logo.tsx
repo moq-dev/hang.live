@@ -1,34 +1,72 @@
 import { Connection } from "@kixelated/hang";
 import solid from "@kixelated/signals/solid";
-import { createMemo } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
 export function Logo(props: { connection?: Connection }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";
-
-	const color = createMemo(() => {
-		if (status() === "connected") return "hsl(140, 75%, 50%)";
-		if (status() === "connecting") return "hsl(40, 75%, 50%)";
-		return "hsl(0, 75%, 50%)";
-	});
 
 	const text = createMemo(() => {
 		if (status() === "disconnected") return "offline";
 		return "live";
 	});
 
+	const [hover, setHover] = createSignal<boolean>(false);
+
+	const [hang, setHang] = createSignal<string>(`/image/hang/0.svg`);
+	const [live, setLive] = createSignal<string>(`/image/live/0.svg`);
+	const [offline, setOffline] = createSignal<string>(`/image/offline/0.svg`);
+
+	// Helper function to cycle through images
+	const createImageCycler = (folder: string, count: number, setter: (src: string) => void) => {
+		createEffect(() => {
+			if (!hover()) return;
+
+			let active = true;
+			const cycleImage = async () => {
+				while (active && hover()) {
+					const id = Math.floor(Math.random() * count);
+					const img = new Image();
+
+					// Wait for image to load before switching
+					await new Promise<void>((resolve) => {
+						img.onload = () => resolve();
+						img.onerror = () => resolve(); // Continue even if image fails to load
+						img.src = `/image/${folder}/${id}.svg`;
+					});
+
+					if (active && hover()) {
+						setter(img.src);
+						// Wait 150ms before next image
+						await new Promise((resolve) => setTimeout(resolve, 150));
+					}
+				}
+			};
+
+			cycleImage();
+			onCleanup(() => {
+				active = false;
+			});
+		});
+	};
+
+	// Create image cyclers for each type
+	createImageCycler("hang", 10, setHang);
+	createImageCycler("live", 11, setLive);
+	createImageCycler("offline", 6, setOffline);
+
 	return (
 		<a
 			href="/"
-			class="rounded bg-black/80 backdrop-blur-sm px-4 py-2 text-2xl text-white hover:bg-gray-700 hover:text-gray-100 transition-all cursor-pointer"
+			class="rounded bg-black/80 backdrop-blur-sm px-4 py-2 text-2xl text-white hover:bg-gray-700 hover:text-gray-100 transition-all cursor-pointer flex gap-4"
+			onmouseover={() => setHover(true)}
+			onmouseleave={() => setHover(false)}
 		>
-			<span>hang</span>
-			<span
-				id="status"
-				class="text-xs ml-1 transition-colors duration-1000 ease-in-out"
-				style={{ "vertical-align": "-0.2em", color: color() }}
-			>
-				{text()}
-			</span>
+			<img src={hang()} alt="hang" class="w-24" />
+			<img
+				src={status() === "disconnected" ? offline() : live()}
+				alt={text()}
+				class={status() === "disconnected" ? "w-20" : "w-10"}
+			/>
 		</a>
 	);
 }
