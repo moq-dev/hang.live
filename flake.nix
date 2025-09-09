@@ -26,6 +26,9 @@
             typescript
             mkcert
             just
+            # Icon generation tools
+            imagemagick
+            libicns  # provides png2icns
           ];
         };
       }

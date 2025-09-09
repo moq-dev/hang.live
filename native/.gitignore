@@ -7,3 +7,7 @@ gen/schemas
 icons/*.icns
 icons/macos/**
 !icons/macos/*.icns
+
+# Generated icon ZIP files (download from /dev/icons page)
+icons-*.zip
+temp-icons/

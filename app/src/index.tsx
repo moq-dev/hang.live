@@ -29,7 +29,7 @@ export function Hang(): JSX.Element {
 				<Route path="/" component={() => (api.authenticated() ? <Home api={api} /> : <About />)} />
 				<Route path="/about" component={() => <About />} />
 				<Route path="/account" component={() => <Account api={api} />} />
-				<Route path="/icons" component={Icons} />
+				{import.meta.env.DEV && <Route path="/dev/icons" component={Icons} />}
 				<Route path="/home" component={() => <Home api={api} />} />
 				<Route path="*" component={() => <Fallback canvas={canvas} api={api} />} />
 			</Router>

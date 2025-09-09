@@ -83,3 +83,7 @@ native:
 # Used by Tauri to run the app with TAURI environment variables.
 native-app:
 	just --justfile app/justfile dev
+
+# Generate Tauri icons - use just --justfile native/justfile icons instead
+icons:
+	just --justfile native/justfile icons
