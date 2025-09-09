@@ -34,9 +34,9 @@ function drawIcon(ctx: CanvasRenderingContext2D, variant?: "macos") {
 
 	const now = 0;
 
-	// Dock images are actually smaller than the canvas, so shrink the content down 80%.
+	// Dock images are actually smaller than the canvas, so shrink the content down.
 	if (variant === "macos") {
-		const scale = 0.8;
+		const scale = 0.85;
 		const scaledSize = WIDTH * scale;
 		const offset = (WIDTH - scaledSize) / 2;
 		ctx.translate(offset, offset);

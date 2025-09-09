@@ -63,7 +63,7 @@ deploy env="staging":
 	just --justfile api/justfile deploy "{{env}}"
 	just --justfile app/justfile deploy "{{env}}"
 
-dev flags="--open":
+dev:
 	pnpm i
 
 	# Generate auth tokens if needed
@@ -71,11 +71,15 @@ dev flags="--open":
 
 	pnpm concurrently --kill-others --names api,app,moq --prefix-colors auto \
 		"just --justfile api/justfile dev" \
-		"just --justfile app/justfile dev {{flags}}" \
+		"just --justfile app/justfile dev --open" \
 		"just --justfile moq/justfile root"
 
 native:
-	just --justfile native/justfile dev
+	pnpm concurrently --kill-others --names api,app,moq --prefix-colors auto \
+		"just --justfile api/justfile dev" \
+		"just --justfile native/justfile dev" \
+		"just --justfile moq/justfile root"
 
-app:
+# Used by Tauri to run the app with TAURI environment variables.
+native-app:
 	just --justfile app/justfile dev

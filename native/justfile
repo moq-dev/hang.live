@@ -31,5 +31,5 @@ install:
 
 icon:
 	cargo tauri icon --ios-color "#000" ../app/public/image/icon.png
-	# Mac icons need to be 826x826 unfortunately
+	# Mac icons need ~20% transparent padding, so we generate a second set of icons
 	cargo tauri icon --output icons/macos ../app/public/image/icon-macos.png
