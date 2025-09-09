@@ -58,7 +58,7 @@ deploy env="staging":
 	just build "{{env}}"
 	pnpm wrangler deploy --env "{{env}}"
 
-dev flags="--open":
+dev flags="":
 	pnpm i
 
 	# Run the web development server
