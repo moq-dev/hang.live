@@ -19,10 +19,10 @@ const BORDER = 40;
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
 	const hue = (i * 360 + now * 0.03) % 360;
-	return `hsl(${hue}, 70%, 45%)`;
+	return `hsl(${hue}, 70%, 50%)`;
 }
 
-function drawIcon(ctx: CanvasRenderingContext2D, variant?: "macos") {
+function drawIcon(ctx: CanvasRenderingContext2D, variant: "macos" | "default") {
 	const canvas = ctx.canvas;
 	canvas.width = WIDTH;
 	canvas.height = HEIGHT;
@@ -127,23 +127,11 @@ function drawIcon(ctx: CanvasRenderingContext2D, variant?: "macos") {
 
 	// Draw text
 	ctx.globalAlpha = 1;
-	const textX = (3 * WIDTH) / 4 - ROUNDED / 2;
-	const textY = HEIGHT - 128 - ROUNDED / 2;
-	const text = "h";
-	const fontSize = 256;
 
-	ctx.font = `bold ${fontSize}px Monserrat, Helvetica, Arial, sans-serif`;
-	ctx.textAlign = "center";
-	ctx.textBaseline = "middle";
-
-	// Text stroke
-	ctx.strokeStyle = "black";
-	ctx.lineWidth = ROUNDED - BORDER;
-	ctx.strokeText(text, textX, textY);
-
-	// Text fill
-	ctx.fillStyle = "white";
-	ctx.fillText(text, textX, textY);
+	// Draw h from img/hang/h.svg
+	const hang = new Image();
+	hang.src = "/image/hang/h.svg";
+	ctx.drawImage(hang, 0, 0, WIDTH, HEIGHT);
 
 	// Draw border within the clipped area
 	ctx.strokeStyle = "black";
@@ -156,7 +144,7 @@ function drawIcon(ctx: CanvasRenderingContext2D, variant?: "macos") {
 	ctx.restore();
 }
 
-function IconCanvas(props: { variant?: "macos"; name: string }) {
+function IconCanvas(props: { variant: "macos" | "default" }) {
 	const [iconDataUrl, setIconDataUrl] = createSignal<string>("");
 	const sizes = [16, 32, 48, 64, 96, 128, 256];
 
@@ -185,14 +173,14 @@ function IconCanvas(props: { variant?: "macos"; name: string }) {
 
 	const downloadPNG = () => {
 		const link = document.createElement("a");
-		link.download = `icon-${props.name}.png`;
+		link.download = `icon-${props.variant}.png`;
 		link.href = iconDataUrl();
 		link.click();
 	};
 
 	return (
 		<div class="flex flex-col items-center gap-4">
-			<h3 class="text-lg font-bold">{props.name}</h3>
+			<h3 class="text-lg font-bold">{props.variant}</h3>
 			<div class="flex flex-wrap gap-4 items-end">
 				{sizes.map((size) => (
 					<div class="flex flex-col items-center gap-2">
@@ -230,8 +218,8 @@ export function Icons(): JSX.Element {
 	return (
 		<Layout>
 			<div class="flex flex-col gap-8">
-				<IconCanvas name="default" />
-				<IconCanvas variant="macos" name="macos" />
+				<IconCanvas variant="default" />
+				<IconCanvas variant="macos" />
 			</div>
 		</Layout>
 	);

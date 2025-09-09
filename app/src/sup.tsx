@@ -115,14 +115,10 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 					<Show when={info()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
 						<div class="rounded-2xl border border-gray-800 p-6">
 							<PreviewIcon api={props.api} room={props.room} local={props.local} />
-						</div>
-					</Show>
-
-					{/* Login Options - only show for guests */}
-					<Show when={!props.api.authenticated()}>
-						<div class="rounded-2xl border border-gray-800 p-6">
-							<div class="text-center text-gray-400 mb-4">...or login to customize your profile</div>
-							<Login api={props.api} />
+							<Show when={!props.api.authenticated()}>
+								<div class="text-center text-gray-400 mb-4">...or login to customize your profile</div>
+								<Login api={props.api} />
+							</Show>
 						</div>
 					</Show>
 				</div>
