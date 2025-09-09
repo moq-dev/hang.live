@@ -1,42 +1,15 @@
 import * as Api from "@hang/api/client";
 import { Connection } from "@kixelated/hang";
-import { useNavigate } from "@solidjs/router";
-import {
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-	For,
-	Match,
-	onCleanup,
-	onMount,
-	Show,
-	Switch,
-} from "solid-js";
+import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { Badge } from "./components/badge";
-import Dialog from "./components/dialog";
-import Gradient from "./components/gradient";
+import CreateHang from "./components/create";
 import Login from "./components/login";
 import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
-import * as Random from "./util/random";
 
-export function Start(props: { api: Api.Client }): JSX.Element {
-	const navigate = useNavigate();
-	const [roomInput, setRoomInput] = createSignal("");
-	const [placeholder, setPlaceholder] = createSignal(Random.room());
+export function Home(props: { api: Api.Client }): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
-
-	// Regenerate placeholder periodically
-	onMount(() => {
-		const interval = setInterval(() => {
-			if (!roomInput()) {
-				setPlaceholder(Random.room());
-			}
-		}, 5000);
-		return () => clearInterval(interval);
-	});
 
 	// Connection for live previews
 	const connection = new Connection();
@@ -73,30 +46,6 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 			}
 		} catch (error) {
 			console.error("Failed to remove favorite:", error);
-		}
-	};
-
-	const roomName = createMemo(() => {
-		const input = roomInput().trim();
-		return input || placeholder();
-	});
-
-	const roomNameError = createMemo(() => {
-		const name = roomInput().trim();
-		if (!name) return null;
-
-		if (!Api.Room.isValidName(name)) {
-			return Api.Room.ROOM_NAME_ERROR;
-		}
-		return null;
-	});
-
-	const handleCreate = (e: Event) => {
-		e.preventDefault();
-		const name = roomName();
-		if (name && Api.Room.isValidName(name)) {
-			// Now actually navigate and add to history
-			navigate(`/@${name}`);
 		}
 	};
 
@@ -186,77 +135,12 @@ export function Start(props: { api: Api.Client }): JSX.Element {
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
-								<span class="icon-[mdi--plus-box] text-green-500" />
-								<h2 class="text-xl font-semibold">Create</h2>
+								<span class="icon-[mdi--home] text-green-500" />
+								<h2 class="text-xl font-semibold">Home</h2>
 							</div>
 						</div>
 
-						<form onSubmit={handleCreate} class="space-y-4">
-							<div class="flex gap-3">
-								<div
-									class="flex-1 flex items-center bg-gray-900/50 border rounded-xl transition-colors text-lg overflow-hidden"
-									classList={{
-										"border-red-500": !!roomNameError(),
-										"border-gray-600": !roomNameError() && !roomInput(),
-										"focus-within:border-link-hue": !roomNameError() && !!roomInput(),
-										"border-link-hue": !roomNameError() && !!roomInput(),
-									}}
-								>
-									<span class="pl-4 text-gray-500 select-none">@</span>
-									<input
-										type="text"
-										value={roomInput()}
-										onInput={(e) => setRoomInput(e.currentTarget.value)}
-										placeholder={placeholder()}
-										class="flex-1 px-2 py-2 bg-transparent focus:outline-none"
-										autocomplete="off"
-										autocorrect="off"
-										autocapitalize="off"
-										spellcheck={false}
-									/>
-								</div>
-								<button
-									type="submit"
-									class="px-3 py-2 rounded-xl font-medium transition-colors flex items-center gap-2"
-									classList={{
-										"opacity-50 cursor-not-allowed": !!roomNameError(),
-										"cursor-pointer": !roomNameError(),
-									}}
-									style={{
-										background: Gradient(),
-									}}
-									disabled={!!roomNameError()}
-								>
-									<span class="icon-[mdi--play]" />
-								</button>
-							</div>
-
-							{/* Live URL Preview */}
-							<div class="text-md">
-								<span class="text-gray-300">URL: </span>
-								<a href={`https://hang.live/@${roomName()}`} target="_blank" rel="noopener noreferrer">
-									hang.live/@{roomName()}
-								</a>
-							</div>
-						</form>
-
-						{/* Validation Error */}
-						<Show when={roomNameError()}>
-							{(error) => (
-								<Dialog
-									icon="icon-[mdi--alert-circle-outline]"
-									title="Invalid room name"
-									description={error()}
-									variant="error"
-								/>
-							)}
-						</Show>
-
-						<Dialog
-							icon="icon-[mdi--information-outline]"
-							title="Hangs are public"
-							description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
-						/>
+						<CreateHang />
 					</div>
 				</div>
 			</div>

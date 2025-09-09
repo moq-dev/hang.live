@@ -10,7 +10,6 @@ export default function Web(props: { children: JSX.Element }) {
 				<Logo />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
-					<OtherNav />
 					<Tooltip content="Account settings" position="bottom">
 						<a
 							href="/account"
@@ -57,18 +56,5 @@ export default function Web(props: { children: JSX.Element }) {
 				</Tooltip>
 			</footer>
 		</div>
-	);
-}
-
-function OtherNav() {
-	return (
-		<Tooltip content="Join a hang" position="bottom">
-			<a
-				href="/start"
-				class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
-			>
-				<span class="icon-[mdi--play]" />
-			</a>
-		</Tooltip>
 	);
 }
