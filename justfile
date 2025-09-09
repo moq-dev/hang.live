@@ -69,7 +69,7 @@ dev flags="--open":
 	# Generate auth tokens if needed
 	@cd moq/rs && just auth-token
 
-	pnpm concurrently --kill-others --names api,app,relay --prefix-colors auto \
+	pnpm concurrently --kill-others --names api,app,moq --prefix-colors auto \
 		"just --justfile api/justfile dev" \
 		"just --justfile app/justfile dev {{flags}}" \
 		"just --justfile moq/justfile root"
