@@ -1,4 +1,4 @@
-import "tauri-plugin-web-transport";
+//import "tauri-plugin-web-transport";
 
 import "@kixelated/hang/support/element";
 
