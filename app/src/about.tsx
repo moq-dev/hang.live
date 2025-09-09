@@ -1,4 +1,5 @@
 import { createEffect, type JSX, onCleanup } from "solid-js";
+import CreateHang from "./components/create";
 import Layout from "./layout/web";
 import { Canvas } from "./room/canvas";
 import { FakeRoom } from "./room/fake";
@@ -187,7 +188,7 @@ export function About(): JSX.Element {
 		() => one.chat.message.latest.set("there's a lot more, but it's hard to demo"),
 		() => {},
 		() => one.chat.typing.active.set(true),
-		() => one.chat.message.latest.set("[start a hang](https://hang.live/start)"),
+		() => one.chat.message.latest.set("[start a hang](https://hang.live/home)"),
 		() => two.audio.captions.text.set("like automatic captions"),
 		() => one.audio.captions.text.set("(laughing)"),
 		() => two.chat.typing.active.set(true),
@@ -210,15 +211,23 @@ export function About(): JSX.Element {
 
 	return (
 		<Layout>
-			<div class="prose-invert lg:prose-lg">
-				<p class="px-4">
-					I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang out.
-				</p>
-				<p class="px-4">
-					It's fun, free, and a bit cringe. <a href="/start">Start a hang</a> and invite your friends.
-				</p>
-				<div class="p-4 h-128">{canvas}</div>
-				<p class="px-4">
+			<div class="prose-invert lg:prose-lg px-4">
+				<div class="flex flex-wrap gap-4 w-full">
+					<div class="basis-md grow">
+						<p>
+							I built <a href="https://hang.live">hang.live</a> because the internet forgot how to hang
+							out.
+						</p>
+						<p>It's fun, free, and a bit cringe.</p>
+					</div>
+					<div class="bg-gray-900/30 rounded-2xl border border-gray-800 p-6 basis-md grow">
+						<h5 class="text-xl font-semibold mb-6 text-center">start a hang</h5>
+						<CreateHang />
+					</div>
+				</div>
+
+				<div class="my-8 h-128">{canvas}</div>
+				<p>
 					For the nerds in the audience, this site uses bleeding edge web technologies. We're using{" "}
 					<a href="https://moq.dev">Media over QUIC</a>: an{" "}
 					<a href="https://github.com/kixelated/moq">open source</a> WebRTC alternative. This ain't your usual

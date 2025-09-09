@@ -9,10 +9,10 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
+import { Home } from "./home";
 import { Icons } from "./icons";
 import { NotFound } from "./not-found";
 import { Canvas } from "./room/canvas";
-import { Start } from "./start";
 import { Sup } from "./sup";
 
 export function Hang(): JSX.Element {
@@ -26,10 +26,11 @@ export function Hang(): JSX.Element {
 		<>
 			{background}
 			<Router>
-				<Route path="/" component={About} />
+				<Route path="/" component={() => (api.authenticated() ? <Home api={api} /> : <About />)} />
+				<Route path="/about" component={() => <About />} />
 				<Route path="/account" component={() => <Account api={api} />} />
 				<Route path="/icons" component={Icons} />
-				<Route path="/start" component={() => <Start api={api} />} />
+				<Route path="/home" component={() => <Home api={api} />} />
 				<Route path="*" component={() => <Fallback canvas={canvas} api={api} />} />
 			</Router>
 		</>

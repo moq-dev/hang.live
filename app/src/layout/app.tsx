@@ -50,7 +50,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 		<>
 			<Tooltip content="Leave" position="bottom">
 				<a
-					href="/start"
+					href="/home"
 					class="p-2 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
 					<span class="icon-[mdi--exit-run]" />
