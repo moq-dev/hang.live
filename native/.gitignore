@@ -3,3 +3,7 @@ Cargo.lock
 
 target/
 gen/schemas
+
+icons/*.icns
+icons/macos/**
+!icons/macos/*.icns

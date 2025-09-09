@@ -28,3 +28,8 @@ dev:
 # Install dependencies
 install:
 	cargo fetch
+
+icon:
+	cargo tauri icon --ios-color "#000" ../app/public/image/icon.png
+	# Mac icons need to be 826x826 unfortunately
+	cargo tauri icon --output icons/macos ../app/public/image/icon-macos.png

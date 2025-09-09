@@ -1,5 +1,4 @@
-import * as DOM from "@kixelated/signals/dom";
-import { onMount } from "solid-js";
+import { createSignal, onMount } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import Layout from "./layout/web";
 
@@ -20,33 +19,44 @@ const BORDER = 40;
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
 	const hue = (i * 360 + now * 0.03) % 360;
-	return `hsl(${hue}, 75%, 50%)`;
+	return `hsl(${hue}, 70%, 45%)`;
 }
 
-function drawIcon(canvas: HTMLCanvasElement, variant?: "discord" | "apple") {
-	const ctx = canvas.getContext("2d");
-	if (!ctx) return;
+function drawIcon(ctx: CanvasRenderingContext2D, variant?: "macos") {
+	const canvas = ctx.canvas;
+	canvas.width = WIDTH;
+	canvas.height = HEIGHT;
 
 	const DPI_SCALE = 2;
 	canvas.width = WIDTH * DPI_SCALE;
 	canvas.height = HEIGHT * DPI_SCALE;
-
 	ctx.scale(DPI_SCALE, DPI_SCALE);
 
 	const now = 0;
-	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING);
-	const ROUNDED = variant === "discord" ? 128 : 96;
 
-	// Create rounded clipping path
-	if (variant !== "apple") {
-		ctx.save();
-		ctx.beginPath();
-		ctx.roundRect(0, 0, WIDTH, HEIGHT, ROUNDED);
-		ctx.clip();
+	// Dock images are actually smaller than the canvas, so shrink the content down 80%.
+	if (variant === "macos") {
+		const scale = 0.8;
+		const scaledSize = WIDTH * scale;
+		const offset = (WIDTH - scaledSize) / 2;
+		ctx.translate(offset, offset);
+		ctx.scale(scale, scale);
 	}
 
-	// Clear entire canvas first
-	ctx.fillStyle = "black";
+	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING);
+	const ROUNDED = 128;
+
+	// Create rounded clipping path
+	ctx.save();
+	ctx.beginPath();
+	ctx.roundRect(0, 0, WIDTH, HEIGHT, ROUNDED);
+	ctx.clip();
+
+	// Draw gradient background
+	const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+	gradient.addColorStop(0, "#1a1a1a");
+	gradient.addColorStop(1, "#000000");
+	ctx.fillStyle = gradient;
 	ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
 	// Draw shadow lines
@@ -117,10 +127,10 @@ function drawIcon(canvas: HTMLCanvasElement, variant?: "discord" | "apple") {
 
 	// Draw text
 	ctx.globalAlpha = 1;
-	const textX = (3 * WIDTH) / 4 - ROUNDED / 4;
-	const textY = HEIGHT - 128 - ROUNDED / 4;
+	const textX = (3 * WIDTH) / 4 - ROUNDED / 2;
+	const textY = HEIGHT - 128 - ROUNDED / 2;
 	const text = "h";
-	const fontSize = 192;
+	const fontSize = 256;
 
 	ctx.font = `bold ${fontSize}px Monserrat, Helvetica, Arial, sans-serif`;
 	ctx.textAlign = "center";
@@ -128,7 +138,7 @@ function drawIcon(canvas: HTMLCanvasElement, variant?: "discord" | "apple") {
 
 	// Text stroke
 	ctx.strokeStyle = "black";
-	ctx.lineWidth = 60;
+	ctx.lineWidth = ROUNDED - BORDER;
 	ctx.strokeText(text, textX, textY);
 
 	// Text fill
@@ -136,30 +146,47 @@ function drawIcon(canvas: HTMLCanvasElement, variant?: "discord" | "apple") {
 	ctx.fillText(text, textX, textY);
 
 	// Draw border within the clipped area
-	if (variant !== "apple") {
-		ctx.strokeStyle = "black";
-		ctx.lineWidth = BORDER;
-		ctx.beginPath();
-		const borderRadius = ROUNDED - BORDER / 2;
-		ctx.roundRect(BORDER / 2, BORDER / 2, WIDTH - BORDER, HEIGHT - BORDER, borderRadius);
-		ctx.stroke();
-	}
+	ctx.strokeStyle = "black";
+	ctx.lineWidth = BORDER;
+	ctx.beginPath();
+	const borderRadius = ROUNDED - BORDER / 2;
+	ctx.roundRect(BORDER / 2, BORDER / 2, WIDTH - BORDER, HEIGHT - BORDER, borderRadius);
+	ctx.stroke();
 
 	ctx.restore();
 }
 
-function IconCanvas(props: { variant?: "discord" | "apple"; name: string }) {
-	const masterCanvas = DOM.create("canvas");
-	const sizes = [512, 256, 128, 64];
+function IconCanvas(props: { variant?: "macos"; name: string }) {
+	const [iconDataUrl, setIconDataUrl] = createSignal<string>("");
+	const sizes = [16, 32, 48, 64, 96, 128, 256];
+
+	const renderIconToPng = (): string => {
+		// Create invisible canvas
+		const invisibleCanvas = document.createElement("canvas");
+		const ctx = invisibleCanvas.getContext("2d");
+		if (!ctx) return "";
+
+		// Render icon to invisible canvas
+		drawIcon(ctx, props.variant);
+
+		// Convert to PNG data URL
+		return invisibleCanvas.toDataURL("image/png");
+	};
+
+	const update = () => {
+		const dataUrl = renderIconToPng();
+		setIconDataUrl(dataUrl);
+	};
 
 	onMount(() => {
-		drawIcon(masterCanvas, props.variant);
+		update();
+		setInterval(update, 1000 / 60);
 	});
 
 	const downloadPNG = () => {
 		const link = document.createElement("a");
 		link.download = `icon-${props.name}.png`;
-		link.href = masterCanvas.toDataURL("image/png");
+		link.href = iconDataUrl();
 		link.click();
 	};
 
@@ -167,41 +194,33 @@ function IconCanvas(props: { variant?: "discord" | "apple"; name: string }) {
 		<div class="flex flex-col items-center gap-4">
 			<h3 class="text-lg font-bold">{props.name}</h3>
 			<div class="flex flex-wrap gap-4 items-end">
-				{sizes.map((size) => {
-					const previewCanvas = DOM.create("canvas");
-
-					onMount(() => {
-						// Copy the master canvas content to preview canvas at different size
-						const ctx = previewCanvas.getContext("2d");
-						if (ctx) {
-							previewCanvas.width = size * 2; // 2x DPI
-							previewCanvas.height = size * 2;
-							previewCanvas.style.width = `${size}px`;
-							previewCanvas.style.height = `${size}px`;
-							ctx.drawImage(masterCanvas, 0, 0, size * 2, size * 2);
-						}
-					});
-
-					return (
-						<div class="flex flex-col items-center gap-2">
-							<div
+				{sizes.map((size) => (
+					<div class="flex flex-col items-center gap-2">
+						<div
+							style={{
+								background: "repeating-conic-gradient(#808080 0 25%, #0000 0 50%) 50% / 20px 20px",
+							}}
+						>
+							{/** biome-ignore lint/a11y/useAltText: no */}
+							<img
+								src={iconDataUrl()}
+								class="border border-zinc-700"
 								style={{
-									background: "repeating-conic-gradient(#808080 0 25%, #0000 0 50%) 50% / 20px 20px",
+									width: `${size}px`,
+									height: `${size}px`,
 								}}
-							>
-								{previewCanvas}
-							</div>
-							<span class="text-sm text-gray-600">{size}px</span>
+							/>
 						</div>
-					);
-				})}
+						<span class="text-sm text-gray-600">{size}px</span>
+					</div>
+				))}
 			</div>
 			<button
 				onClick={downloadPNG}
 				type="button"
 				class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 			>
-				Download PNG (1024×1024)
+				Download PNG
 			</button>
 		</div>
 	);
@@ -210,10 +229,9 @@ function IconCanvas(props: { variant?: "discord" | "apple"; name: string }) {
 export function Icons(): JSX.Element {
 	return (
 		<Layout>
-			<div class="flex flex-col gap-4">
+			<div class="flex flex-col gap-8">
 				<IconCanvas name="default" />
-				<IconCanvas variant="discord" name="discord" />
-				<IconCanvas variant="apple" name="apple" />
+				<IconCanvas variant="macos" name="macos" />
 			</div>
 		</Layout>
 	);
