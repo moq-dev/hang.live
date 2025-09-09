@@ -6,7 +6,7 @@ import { Logo } from "./logo";
 export default function Web(props: { children: JSX.Element }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col max-w-[1150px]">
-			<header class="flex items-center justify-between mb-4 leading-none text-xl">
+			<header class="flex items-center justify-between leading-none text-xl">
 				<Logo />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
@@ -36,9 +36,9 @@ export default function Web(props: { children: JSX.Element }) {
 						<span class="icon-[mdi--discord]" />
 					</a>
 				</Tooltip>
-				<Tooltip content="Source Code" position="top">
+				<Tooltip content="Open Source" position="top">
 					<a
-						href="https://github.com/kixelated/moq"
+						href="https://moq.dev"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
