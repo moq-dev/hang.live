@@ -1,6 +1,6 @@
 import * as Api from "@hang/api/client";
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, type JSX, Match, onMount, Show, Switch } from "solid-js";
+import { createMemo, createSignal, type JSX, Match, onMount, Switch } from "solid-js";
 import * as Random from "../util/random";
 import Dialog from "./dialog";
 import Gradient from "./gradient";
