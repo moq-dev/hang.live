@@ -94,3 +94,4 @@ Hang-specific server and business logic:
 - **Imports**: Always use ESM, prefer `import * as ` for namespacing.
 - **Async**: Use async/await over promises
 - **TypeScript**: Explicitly type variables to avoid `any` inference
+- Ask me if you want to try any functionality, and please don't run `just dev` unprompted.
