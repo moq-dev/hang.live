@@ -33,3 +33,80 @@ icon:
 	cargo tauri icon --ios-color "#000" ../app/public/image/icon.png
 	# Mac icons need ~20% transparent padding, so we generate a second set of icons
 	cargo tauri icon --output icons/macos ../app/public/image/icon-macos.png
+
+# Generate Tauri icons from browser-generated ZIP files
+# Prerequisites: Download all ZIP files from http://localhost:3000/dev/icons to this directory
+icons:
+	@echo "Generating Tauri icons from ZIP files..."
+	# Check for required tools first
+	@command -v magick >/dev/null 2>&1 || (echo "ERROR: ImageMagick not found. Install with: brew install imagemagick or nix develop" && exit 1)
+	@(command -v png2icns >/dev/null 2>&1 || command -v iconutil >/dev/null 2>&1) || (echo "ERROR: Neither png2icns nor iconutil found. Install with: brew install png2icns or nix develop" && exit 1)
+	
+	# Check for required ZIP files
+	@test -f icons-default.zip || (echo "ERROR: icons-default.zip not found. Download from /dev/icons page" && exit 1)
+	@test -f icons-macos.zip || (echo "ERROR: icons-macos.zip not found. Download from /dev/icons page" && exit 1)
+	@test -f icons-android-launcher.zip || (echo "ERROR: icons-android-launcher.zip not found. Download from /dev/icons page" && exit 1)
+	@test -f icons-android-foreground.zip || (echo "ERROR: icons-android-foreground.zip not found. Download from /dev/icons page" && exit 1)
+	@test -f icons-android-background.zip || (echo "ERROR: icons-android-background.zip not found. Download from /dev/icons page" && exit 1)
+	@test -f icons-android-round.zip || (echo "ERROR: icons-android-round.zip not found. Download from /dev/icons page" && exit 1)
+	@test -f icons-ios.zip || (echo "ERROR: icons-ios.zip not found. Download from /dev/icons page" && exit 1)
+	
+	# Create temporary directory
+	@rm -rf temp-icons && mkdir -p temp-icons
+	
+	# Extract desktop icons for ICO generation
+	@echo "Extracting desktop icons..."
+	@cd temp-icons && unzip -q ../icons-default.zip
+	
+	# Extract macOS icons for ICNS generation  
+	@echo "Extracting macOS icons..."
+	@cd temp-icons && unzip -q ../icons-macos.zip
+	
+	# Generate Windows ICO file
+	@echo "Generating Windows ICO..."
+	@cd temp-icons && magick 16x16.png 24x24.png 32x32.png 48x48.png 64x64.png 256x256.png ../icons/icon.ico
+	
+	# Generate macOS ICNS file
+	@if command -v png2icns >/dev/null 2>&1; then \
+		echo "Generating macOS ICNS with png2icns..."; \
+		cd temp-icons && png2icns ../icons/icon.icns 16x16.png 32x32.png 64x64.png 128x128.png 256x256.png 512x512.png 1024x1024.png; \
+	else \
+		echo "Generating macOS ICNS with iconutil..."; \
+		cd temp-icons && mkdir -p icon.iconset && \
+		cp 16x16.png icon.iconset/icon_16x16.png && \
+		cp 32x32.png icon.iconset/icon_16x16@2x.png && \
+		cp 32x32.png icon.iconset/icon_32x32.png && \
+		cp 64x64.png icon.iconset/icon_32x32@2x.png && \
+		cp 128x128.png icon.iconset/icon_128x128.png && \
+		cp 256x256.png icon.iconset/icon_128x128@2x.png && \
+		cp 256x256.png icon.iconset/icon_256x256.png && \
+		cp 512x512.png icon.iconset/icon_256x256@2x.png && \
+		cp 512x512.png icon.iconset/icon_512x512.png && \
+		cp 1024x1024.png icon.iconset/icon_512x512@2x.png && \
+		iconutil -c icns icon.iconset && \
+		mv icon.icns ../icons/ && \
+		rm -rf icon.iconset; \
+	fi
+	
+	# Extract and organize Android icons
+	@echo "Extracting Android icons..."
+	@rm -rf icons/android && mkdir -p icons/android
+	@cd icons/android && unzip -q ../../icons-android-launcher.zip
+	@cd icons/android && unzip -q ../../icons-android-foreground.zip
+	@cd icons/android && unzip -q ../../icons-android-background.zip
+	@cd icons/android && unzip -q ../../icons-android-round.zip
+	
+	# Extract iOS icons
+	@echo "Extracting iOS icons..."
+	@rm -rf icons/ios && mkdir -p icons/ios
+	@cd icons/ios && unzip -q ../../icons-ios.zip
+	
+	# Clean up temporary directory
+	@rm -rf temp-icons
+	
+	@echo "✅ Icon generation complete!"
+	@echo "Generated files:"
+	@echo "  • icons/icon.ico (Windows)"
+	@echo "  • icons/icon.icns (macOS)"
+	@echo "  • icons/android/ (Android adaptive icons)"
+	@echo "  • icons/ios/ (iOS app icons)"

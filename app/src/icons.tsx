@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import { createSignal, onMount } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import Layout from "./layout/web";
@@ -17,12 +18,56 @@ const SHADOW_Y = 10;
 const SHADOW_OPACITY = 0.3;
 const BORDER = 40;
 
+type IconVariant =
+	| "macos"
+	| "default"
+	| "ios"
+	| "android-launcher"
+	| "android-foreground"
+	| "android-round"
+	| "android-background";
+
+const PLATFORM_SIZES = {
+	desktop: [16, 24, 32, 48, 64, 256], // Windows ICO
+	macOS: [16, 32, 64, 128, 256, 512, 1024], // macOS ICNS
+	iOS: [
+		20,
+		29,
+		40,
+		58,
+		60,
+		76,
+		80,
+		87,
+		114,
+		120,
+		152,
+		167,
+		180,
+		1024, // iOS app icons
+	],
+	android: {
+		"mipmap-mdpi": 48,
+		"mipmap-hdpi": 72,
+		"mipmap-xhdpi": 96,
+		"mipmap-xxhdpi": 144,
+		"mipmap-xxxhdpi": 192,
+	},
+	androidAdaptive: {
+		"mipmap-mdpi": 108,
+		"mipmap-hdpi": 162,
+		"mipmap-xhdpi": 216,
+		"mipmap-xxhdpi": 324,
+		"mipmap-xxxhdpi": 432,
+	},
+};
+
 function lineColor(now: DOMHighResTimeStamp, i: number) {
 	const hue = (i * 360 + now * 0.03) % 360;
-	return `hsl(${hue}, 70%, 50%)`;
+	return `hsl(${hue}, 75%, 50%)`;
 }
 
-function generateSVG(variant: "macos" | "default"): string {
+function generateSVG(variant: IconVariant): string {
 	const now = 0;
 
 	// Dock images are actually smaller than the canvas, so shrink the content down.
@@ -30,49 +75,74 @@ function generateSVG(variant: "macos" | "default"): string {
 	const scaledSize = WIDTH * scale;
 	const offset = variant === "macos" ? (WIDTH - scaledSize) / 2 : 0;
 
+	// iOS and Android background variants should have no border or rounded corners
+	const useRoundedCorners = variant !== "ios" && variant !== "android-background";
+	const useBorder = variant !== "ios" && variant !== "android-foreground" && variant !== "android-background";
+
+	// Android round should be perfectly circular
+	const isAndroidRound = variant === "android-round";
+
+	// Android adaptive icon system
+	const isAndroidForeground = variant === "android-foreground";
+	const isAndroidBackground = variant === "android-background";
+
+	// Android foreground: only show the H logo (scaled like macOS)
+	// Android background: only show animated lines + dark background (no H)
+	// Android launcher/round: complete icon (everything)
+	const showBackground = !isAndroidForeground;
+	const showLines = !isAndroidForeground;
+	const showHLogo = !isAndroidBackground;
+
+	// Scale H logo for android foreground (much smaller) and macOS
+	const hScale = isAndroidForeground ? 0.6 : variant === "macos" ? 0.85 : 1;
+	const hScaledSize = WIDTH * hScale;
+	const hOffset = isAndroidForeground || variant === "macos" ? (WIDTH - hScaledSize) / 2 : 0;
+
 	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING);
-	const ROUNDED = 128;
+	const ROUNDED = useRoundedCorners ? (isAndroidRound ? WIDTH / 2 : 128) : 0;
 
 	const shadows = [];
 	const mainPaths = [];
 
-	for (let i = -LINE_OVERDRAW; i < LINE_COUNT + LINE_OVERDRAW; i++) {
-		const color = lineColor(now, i / LINE_COUNT);
-		const baseY = (i + 0.15) * LINE_SPACING;
-		const wobble = Math.sin(now * WOBBLE_SPEED + i) * WOBBLE_AMPLITUDE;
+	if (showLines) {
+		for (let i = -LINE_OVERDRAW; i < LINE_COUNT + LINE_OVERDRAW; i++) {
+			const color = lineColor(now, i / LINE_COUNT);
+			const baseY = (i + 0.15) * LINE_SPACING;
+			const wobble = Math.sin(now * WOBBLE_SPEED + i) * WOBBLE_AMPLITUDE;
 
-		const shadowCommands = [];
-		const mainCommands = [];
+			const shadowCommands = [];
+			const mainCommands = [];
 
-		for (let s = 0; s <= SEGMENTS; s++) {
-			const t = s / SEGMENTS;
-			const xBase = -100 + t * (WIDTH + 200);
-			const xWobble = Math.sin(now * WOBBLE_SPEED + s + i) * WOBBLE_AMPLITUDE;
-			const x = xBase + xWobble;
+			for (let s = 0; s <= SEGMENTS; s++) {
+				const t = s / SEGMENTS;
+				const xBase = -100 + t * (WIDTH + 200);
+				const xWobble = Math.sin(now * WOBBLE_SPEED + s + i) * WOBBLE_AMPLITUDE;
+				const x = xBase + xWobble;
 
-			const seed = (s * 31 + i * 17) % 100;
-			const bend = seed / 100 < BEND_PROBABILITY ? (seed % 2 === 0 ? 1 : -1) * BEND_AMPLITUDE : 0;
+				const seed = (s * 31 + i * 17) % 100;
+				const bend = seed / 100 < BEND_PROBABILITY ? (seed % 2 === 0 ? 1 : -1) * BEND_AMPLITUDE : 0;
 
-			const y = baseY + wobble + bend + t * 200;
-			const shadowX = x + SHADOW_X;
-			const shadowY = y + SHADOW_Y;
+				const y = baseY + wobble + bend + t * 200;
+				const shadowX = x + SHADOW_X;
+				const shadowY = y + SHADOW_Y;
 
-			const cmd = `${s === 0 ? "M" : "L"} ${x.toFixed(1)},${y.toFixed(1)}`;
-			const shadowCmd = `${s === 0 ? "M" : "L"} ${shadowX.toFixed(1)},${shadowY.toFixed(1)}`;
+				const cmd = `${s === 0 ? "M" : "L"} ${x.toFixed(1)},${y.toFixed(1)}`;
+				const shadowCmd = `${s === 0 ? "M" : "L"} ${shadowX.toFixed(1)},${shadowY.toFixed(1)}`;
 
-			mainCommands.push(cmd);
-			shadowCommands.push(shadowCmd);
+				mainCommands.push(cmd);
+				shadowCommands.push(shadowCmd);
+			}
+
+			const mainD = mainCommands.join(" ");
+			const shadowD = shadowCommands.join(" ");
+
+			shadows.push(
+				`<path stroke="${color}" stroke-width="${LINE_WIDTH}" stroke-linecap="round" fill="none" d="${shadowD}" />`,
+			);
+			mainPaths.push(
+				`<path stroke="${color}" stroke-width="${LINE_WIDTH}" stroke-linecap="round" fill="none" d="${mainD}" />`,
+			);
 		}
-
-		const mainD = mainCommands.join(" ");
-		const shadowD = shadowCommands.join(" ");
-
-		shadows.push(
-			`<path stroke="${color}" stroke-width="${LINE_WIDTH}" stroke-linecap="round" fill="none" d="${shadowD}" />`,
-		);
-		mainPaths.push(
-			`<path stroke="${color}" stroke-width="${LINE_WIDTH}" stroke-linecap="round" fill="none" d="${mainD}" />`,
-		);
 	}
 
 	// Embed the h.svg content - scale to fill the entire icon
@@ -81,9 +151,10 @@ function generateSVG(variant: "macos" | "default"): string {
 	const hOriginalWidth = 201;
 	const hOriginalHeight = 251;
 	const zoom = Math.min(WIDTH / hOriginalWidth, HEIGHT / hOriginalHeight) * 1.3;
-	const hX = (WIDTH - hOriginalWidth * zoom) / 2 + 15 * zoom;
-	const hY = (HEIGHT - hOriginalHeight * zoom) / 2 - 15 * zoom;
-	const hSvgContent = `<g transform="translate(${hX}, ${hY}) scale(${zoom})">
+	const hX = (WIDTH - hOriginalWidth * zoom * hScale) / 2 + 15 * zoom * hScale;
+	const hY = (HEIGHT - hOriginalHeight * zoom * hScale) / 2 - 15 * zoom * hScale;
+	const hSvgContent = showHLogo
+		? `<g transform="translate(${hX}, ${hY}) scale(${zoom * hScale})">
 		<path fill="none" stroke="#000000" stroke-width="20" stroke-linejoin="round" stroke-linecap="round" d="
 			M 80.26 255.00
 			L 78.09 255.00
@@ -146,25 +217,26 @@ function generateSVG(variant: "macos" | "default"): string {
 			C 96.02 246.34 90.03 253.67 80.26 255.00
 			Z"
 		/>
-	</g>`;
+	</g>`
+		: "";
 
 	const gradientBorderRadius = ROUNDED - BORDER / 2;
 
-	return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-		<defs>
-			<clipPath id="rounded-corner-${variant}">
-				<rect x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${ROUNDED}" ry="${ROUNDED}" />
-			</clipPath>
-			<linearGradient id="background-gradient-${variant}" x1="0%" y1="0%" x2="0%" y2="100%">
-				<stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
-				<stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
-			</linearGradient>
-		</defs>
+	let clipPath = "";
+	let backgroundContent = "";
+	let linesContent = "";
+	let borderContent = "";
 
-		<g clip-path="url(#rounded-corner-${variant})" ${variant === "macos" ? `transform="translate(${offset}, ${offset}) scale(${scale})"` : ""}>
-			<!-- Background -->
-			<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#background-gradient-${variant})" />
+	if (useRoundedCorners) {
+		clipPath = `clip-path="url(#rounded-corner-${variant})"`;
+	}
 
+	if (showBackground) {
+		backgroundContent = `<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#background-gradient-${variant})" />`;
+	}
+
+	if (showLines && shadows.length > 0) {
+		linesContent = `
 			<!-- Shadow lines -->
 			<g opacity="${SHADOW_OPACITY}">
 				${shadows.join("\n\t\t\t\t")}
@@ -173,13 +245,38 @@ function generateSVG(variant: "macos" | "default"): string {
 			<!-- Main lines -->
 			<g>
 				${mainPaths.join("\n\t\t\t\t")}
-			</g>
+			</g>`;
+	}
+
+	if (useBorder) {
+		borderContent = `<rect x="${BORDER / 2}" y="${BORDER / 2}" width="${WIDTH - BORDER}" height="${HEIGHT - BORDER}" rx="${gradientBorderRadius}" ry="${gradientBorderRadius}" stroke="black" stroke-width="${BORDER}" fill="none" />`;
+	}
+
+	return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+		<defs>
+			${
+				useRoundedCorners
+					? `<clipPath id="rounded-corner-${variant}">
+				<rect x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${ROUNDED}" ry="${ROUNDED}" />
+			</clipPath>`
+					: ""
+			}
+			<linearGradient id="background-gradient-${variant}" x1="0%" y1="0%" x2="0%" y2="100%">
+				<stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+				<stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+			</linearGradient>
+		</defs>
+
+		<g ${clipPath} ${variant === "macos" ? `transform="translate(${offset}, ${offset}) scale(${scale})"` : ""}>
+			<!-- Background -->
+			${backgroundContent}
+			${linesContent}
 
 			<!-- H SVG -->
 			${hSvgContent}
 
 			<!-- Border -->
-			<rect x="${BORDER / 2}" y="${BORDER / 2}" width="${WIDTH - BORDER}" height="${HEIGHT - BORDER}" rx="${gradientBorderRadius}" ry="${gradientBorderRadius}" stroke="black" stroke-width="${BORDER}" fill="none" />
+			${borderContent}
 		</g>
 	</svg>`;
 }
@@ -208,10 +305,108 @@ async function svgToPng(svgString: string, size: number): Promise<string> {
 	});
 }
 
-function IconCanvas(props: { variant: "macos" | "default" }) {
+function getVariantSizes(variant: IconVariant): number[] {
+	switch (variant) {
+		case "default":
+			return PLATFORM_SIZES.desktop;
+		case "macos":
+			return PLATFORM_SIZES.macOS;
+		case "ios":
+			return PLATFORM_SIZES.iOS;
+		case "android-launcher":
+		case "android-round":
+			return Object.values(PLATFORM_SIZES.android);
+		case "android-foreground":
+		case "android-background":
+			return Object.values(PLATFORM_SIZES.androidAdaptive);
+		default:
+			return [512];
+	}
+}
+
+function getVariantDisplayName(variant: IconVariant): string {
+	switch (variant) {
+		case "default":
+			return "Windows/Linux Desktop";
+		case "macos":
+			return "macOS";
+		case "ios":
+			return "iOS";
+		case "android-launcher":
+			return "Android Launcher";
+		case "android-foreground":
+			return "Android Foreground";
+		case "android-round":
+			return "Android Round";
+		case "android-background":
+			return "Android Background";
+		default:
+			return variant;
+	}
+}
+
+async function generateAndroidFolderStructure(
+	variant: string,
+	svgString: string,
+): Promise<{ [filePath: string]: string }> {
+	const files: { [filePath: string]: string } = {};
+
+	// Use adaptive sizes for foreground/background, regular sizes for launcher/round
+	const sizeMap =
+		variant === "android-foreground" || variant === "android-background"
+			? PLATFORM_SIZES.androidAdaptive
+			: PLATFORM_SIZES.android;
+
+	for (const [folder, size] of Object.entries(sizeMap)) {
+		const iconName =
+			variant === "android-foreground"
+				? "ic_launcher_foreground.png"
+				: variant === "android-background"
+					? "ic_launcher_background.png"
+					: variant === "android-round"
+						? "ic_launcher_round.png"
+						: "ic_launcher.png";
+		const filePath = `${folder}/${iconName}`;
+		const pngDataUrl = await svgToPng(svgString, size);
+		files[filePath] = pngDataUrl;
+	}
+
+	return files;
+}
+
+async function generateiOSFiles(svgString: string): Promise<{ [filePath: string]: string }> {
+	const files: { [filePath: string]: string } = {};
+
+	// iOS specific naming convention
+	const iOSSizes = [
+		{ size: 20, scales: [1, 2, 3] },
+		{ size: 29, scales: [1, 2, 3] },
+		{ size: 40, scales: [1, 2, 3] },
+		{ size: 60, scales: [2, 3] },
+		{ size: 76, scales: [1, 2] },
+		{ size: 83.5, scales: [2] },
+		{ size: 1024, scales: [1] },
+	];
+
+	for (const { size, scales } of iOSSizes) {
+		for (const scale of scales) {
+			const actualSize = Math.round(size * scale);
+			const filename =
+				scale === 1 ? `AppIcon-${size}x${size}@${scale}x.png` : `AppIcon-${size}x${size}@${scale}x.png`;
+			const pngDataUrl = await svgToPng(svgString, actualSize);
+			files[filename] = pngDataUrl;
+		}
+	}
+
+	return files;
+}
+
+function IconCanvas(props: { variant: IconVariant }) {
 	const [iconDataUrl, setIconDataUrl] = createSignal<string>("");
 	const [svgDataUrl, setSvgDataUrl] = createSignal<string>("");
-	const sizes = [256, 128, 64, 32, 16];
+	const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
+
+	const sizes = getVariantSizes(props.variant);
 
 	const renderIconToPng = async (): Promise<string> => {
 		const svgString = generateSVG(props.variant);
@@ -259,79 +454,217 @@ function IconCanvas(props: { variant: "macos" | "default" }) {
 		link.click();
 	};
 
+	const downloadAllAsZip = async () => {
+		setIsGenerating(true);
+		try {
+			const zip = new JSZip();
+			const svgString = generateSVG(props.variant);
+
+			if (props.variant.startsWith("android")) {
+				const files = await generateAndroidFolderStructure(props.variant, svgString);
+				for (const [filePath, dataUrl] of Object.entries(files)) {
+					const base64 = dataUrl.split(",")[1];
+					zip.file(filePath, base64, { base64: true });
+				}
+			} else if (props.variant === "ios") {
+				const files = await generateiOSFiles(svgString);
+				for (const [filename, dataUrl] of Object.entries(files)) {
+					const base64 = dataUrl.split(",")[1];
+					zip.file(filename, base64, { base64: true });
+				}
+			} else {
+				// Regular platform with just different sizes
+				for (const size of sizes) {
+					const pngDataUrl = await svgToPng(svgString, size);
+					const base64 = pngDataUrl.split(",")[1];
+					zip.file(`${size}x${size}.png`, base64, { base64: true });
+				}
+			}
+
+			const zipBlob = await zip.generateAsync({ type: "blob" });
+			const link = document.createElement("a");
+			link.download = `icons-${props.variant}.zip`;
+			link.href = URL.createObjectURL(zipBlob);
+			link.click();
+		} catch (error) {
+			console.error("Failed to generate ZIP:", error);
+		} finally {
+			setIsGenerating(false);
+		}
+	};
+
 	return (
 		<div class="flex flex-col items-center gap-4">
-			<h3 class="text-lg font-bold">{props.variant}</h3>
+			<h3 class="text-lg font-bold">{getVariantDisplayName(props.variant)}</h3>
 
-			{/* PNG Sizes */}
+			{/* Preview and bulk download */}
 			<div class="flex flex-col items-center gap-2">
-				<div class="flex flex-wrap gap-4 items-end">
-					<div class="flex flex-col items-center gap-2">
-						<span class="text-sm text-gray-600">SVG</span>
-						<div
-							style={{
-								background: "repeating-conic-gradient(#808080 0 25%, #0000 0 50%) 50% / 20px 20px",
-							}}
-						>
-							{/** biome-ignore lint/a11y/useAltText: no */}
-							<img
-								src={svgDataUrl()}
-								class="border border-zinc-700"
-								style={{
-									width: "512px",
-									height: "512px",
-								}}
-							/>
-						</div>
-						<button
-							onClick={downloadSVG}
-							type="button"
-							class="px-2 py-1 text-md bg-blue-500 text-white rounded hover:bg-blue-600"
-						>
-							Save
-						</button>
-					</div>
-					{sizes.map((size) => (
-						<div class="flex flex-col items-center gap-2">
-							<span class="text-sm text-gray-600">{size}px</span>
-							<div
-								style={{
-									background: "repeating-conic-gradient(#808080 0 25%, #0000 0 50%) 50% / 20px 20px",
-								}}
-							>
-								{/** biome-ignore lint/a11y/useAltText: no */}
-								<img
-									src={iconDataUrl()}
-									class="border border-zinc-700"
-									style={{
-										width: `${size}px`,
-										height: `${size}px`,
-									}}
-								/>
-							</div>
-							<button
-								onClick={() => downloadPNG(size)}
-								type="button"
-								class="px-2 py-1 text-md bg-blue-500 text-white rounded hover:bg-blue-600"
-							>
-								Export
-							</button>
-						</div>
-					))}
+				<div
+					style={{
+						background: "repeating-conic-gradient(#808080 0 25%, #0000 0 50%) 50% / 20px 20px",
+					}}
+				>
+					{/** biome-ignore lint/a11y/useAltText: no */}
+					<img
+						src={svgDataUrl()}
+						class="border border-zinc-700"
+						style={{
+							width: "256px",
+							height: "256px",
+						}}
+					/>
+				</div>
+				<div class="flex gap-2">
+					<button
+						onClick={downloadSVG}
+						type="button"
+						class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+					>
+						Download SVG
+					</button>
+					<button
+						onClick={downloadAllAsZip}
+						type="button"
+						disabled={isGenerating()}
+						class="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+					>
+						{isGenerating() ? "Generating..." : "Download All (ZIP)"}
+					</button>
 				</div>
 			</div>
 
-			<div class="flex gap-4"></div>
+			{/* Individual PNG Sizes */}
+			<div class="flex flex-wrap gap-2 justify-center">
+				{sizes.map((size) => (
+					<button
+						onClick={() => downloadPNG(size)}
+						type="button"
+						class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+					>
+						{size}px
+					</button>
+				))}
+			</div>
 		</div>
 	);
 }
 
 export function Icons(): JSX.Element {
+	const variants: IconVariant[] = [
+		"default",
+		"macos",
+		"ios",
+		"android-launcher",
+		"android-foreground",
+		"android-background",
+		"android-round",
+	];
+
 	return (
 		<Layout>
 			<div class="flex flex-col gap-8">
-				<IconCanvas variant="default" />
-				<IconCanvas variant="macos" />
+				{variants.map((variant) => (
+					<IconCanvas variant={variant} />
+				))}
+
+				{/* Setup Instructions */}
+				<div class="max-w-4xl mx-auto mt-12 p-6 bg-gray-900 rounded-lg border border-gray-700">
+					<h2 class="text-xl font-bold mb-4 text-white">🚀 Setup Instructions</h2>
+					<div class="space-y-4 text-sm">
+						<div>
+							<h3 class="font-semibold text-gray-200 mb-2">1. Download All ZIP Files</h3>
+							<p class="text-gray-400 mb-2">Click "Download All (ZIP)" for each variant above to get:</p>
+							<ul class="list-disc list-inside ml-4 space-y-1 text-gray-400">
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons-default.zip</code> -
+									Windows/Linux desktop icons
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons-macos.zip</code> - macOS
+									app icons
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons-ios.zip</code> - iOS app
+									icons
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">
+										icons-android-launcher.zip
+									</code>{" "}
+									- Android launcher icons
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">
+										icons-android-foreground.zip
+									</code>{" "}
+									- Android adaptive foreground
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">
+										icons-android-background.zip
+									</code>{" "}
+									- Android adaptive background
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons-android-round.zip</code>{" "}
+									- Android round icons
+								</li>
+							</ul>
+						</div>
+
+						<div>
+							<h3 class="font-semibold text-gray-200 mb-2">2. Move to Native Directory</h3>
+							<p class="text-gray-400 mb-2">Move all downloaded ZIP files to the native directory:</p>
+							<pre class="bg-gray-800 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
+								mv ~/Downloads/icons-*.zip native/
+							</pre>
+						</div>
+
+						<div>
+							<h3 class="font-semibold text-gray-200 mb-2">3. Generate Icons</h3>
+							<p class="text-gray-400 mb-2">Run the icon generation command:</p>
+							<pre class="bg-gray-800 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
+								cd native && just icons
+							</pre>
+							<p class="text-gray-400 mt-2 text-xs">
+								<strong>Note:</strong> Requires ImageMagick and png2icns/iconutil. Install with{" "}
+								<code class="bg-gray-800 px-1 rounded text-green-400">
+									brew install imagemagick png2icns
+								</code>{" "}
+								or use <code class="bg-gray-800 px-1 rounded text-green-400">nix develop</code>
+							</p>
+						</div>
+
+						<div>
+							<h3 class="font-semibold text-gray-200 mb-2">4. What Gets Generated</h3>
+							<ul class="list-disc list-inside ml-4 space-y-1 text-gray-400">
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons/icon.ico</code> -
+									Windows executable icon
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons/icon.icns</code> - macOS
+									app bundle icon
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons/android/</code> -
+									Android adaptive icons in proper folder structure
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons/ios/</code> - iOS app
+									icons with correct naming
+								</li>
+							</ul>
+						</div>
+
+						<div class="bg-blue-900 border border-blue-700 rounded p-3">
+							<p class="text-blue-200 text-xs">
+								💡 <strong>Tip:</strong> The ZIP files are automatically ignored by git. The generated
+								icons will be ready for Tauri to use in your app builds!
+							</p>
+						</div>
+					</div>
+				</div>
 			</div>
 		</Layout>
 	);
