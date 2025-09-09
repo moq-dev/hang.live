@@ -3,7 +3,7 @@ let lock = false;
 import Tauri from "../util/tauri";
 
 async function set(count: number | undefined) {
-	if (Tauri.window) {
+	if (Tauri) {
 		await Tauri.window
 			.getCurrentWindow()
 			.setBadgeCount(count || undefined)
