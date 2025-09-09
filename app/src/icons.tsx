@@ -25,10 +25,11 @@ type IconVariant =
 	| "android-launcher"
 	| "android-foreground"
 	| "android-round"
-	| "android-background";
+	| "android-background"
+	| "windows-store";
 
 const PLATFORM_SIZES = {
-	desktop: [16, 24, 32, 48, 64, 256], // Windows ICO
+	desktop: [16, 24, 32, 48, 64, 256, 512], // Windows ICO
 	macOS: [16, 32, 64, 128, 256, 512, 1024], // macOS ICNS
 	iOS: [
 		20,
@@ -60,6 +61,7 @@ const PLATFORM_SIZES = {
 		"mipmap-xxhdpi": 324,
 		"mipmap-xxxhdpi": 432,
 	},
+	windowsStore: [50, 30, 44, 71, 89, 107, 142, 150, 284, 310], // Windows Store/AppX
 };
 
 function lineColor(now: DOMHighResTimeStamp, i: number) {
@@ -319,6 +321,8 @@ function getVariantSizes(variant: IconVariant): number[] {
 		case "android-foreground":
 		case "android-background":
 			return Object.values(PLATFORM_SIZES.androidAdaptive);
+		case "windows-store":
+			return PLATFORM_SIZES.windowsStore;
 		default:
 			return [512];
 	}
@@ -340,6 +344,8 @@ function getVariantDisplayName(variant: IconVariant): string {
 			return "Android Round";
 		case "android-background":
 			return "Android Background";
+		case "windows-store":
+			return "Windows Store/UWP";
 		default:
 			return variant;
 	}
@@ -396,6 +402,24 @@ async function generateiOSFiles(svgString: string): Promise<{ [filePath: string]
 			const pngDataUrl = await svgToPng(svgString, actualSize);
 			files[filename] = pngDataUrl;
 		}
+	}
+
+	return files;
+}
+
+async function generateWindowsStoreFiles(svgString: string): Promise<{ [filePath: string]: string }> {
+	const files: { [filePath: string]: string } = {};
+
+	// StoreLogo.png (size 50)
+	const storeLogoPngDataUrl = await svgToPng(svgString, 50);
+	files["StoreLogo.png"] = storeLogoPngDataUrl;
+
+	// Square*Logo.png files
+	const squareSizes = [30, 44, 71, 89, 107, 142, 150, 284, 310];
+	for (const size of squareSizes) {
+		const filename = `Square${size}x${size}Logo.png`;
+		const pngDataUrl = await svgToPng(svgString, size);
+		files[filename] = pngDataUrl;
 	}
 
 	return files;
@@ -468,6 +492,12 @@ function IconCanvas(props: { variant: IconVariant }) {
 				}
 			} else if (props.variant === "ios") {
 				const files = await generateiOSFiles(svgString);
+				for (const [filename, dataUrl] of Object.entries(files)) {
+					const base64 = dataUrl.split(",")[1];
+					zip.file(filename, base64, { base64: true });
+				}
+			} else if (props.variant === "windows-store") {
+				const files = await generateWindowsStoreFiles(svgString);
 				for (const [filename, dataUrl] of Object.entries(files)) {
 					const base64 = dataUrl.split(",")[1];
 					zip.file(filename, base64, { base64: true });
@@ -558,6 +588,7 @@ export function Icons(): JSX.Element {
 		"android-foreground",
 		"android-background",
 		"android-round",
+		"windows-store",
 	];
 
 	return (
@@ -608,6 +639,10 @@ export function Icons(): JSX.Element {
 								<li>
 									<code class="bg-gray-800 px-1 rounded text-green-400">icons-android-round.zip</code>{" "}
 									- Android round icons
+								</li>
+								<li>
+									<code class="bg-gray-800 px-1 rounded text-green-400">icons-windows-store.zip</code>{" "}
+									- Windows Store/UWP app icons
 								</li>
 							</ul>
 						</div>
