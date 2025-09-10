@@ -26,7 +26,8 @@ type IconVariant =
 	| "android-foreground"
 	| "android-round"
 	| "android-background"
-	| "windows-store";
+	| "windows-store"
+	| "discord-banner";
 
 const PLATFORM_SIZES = {
 	desktop: [16, 24, 32, 48, 64, 256, 512], // Windows ICO
@@ -72,14 +73,19 @@ function lineColor(now: DOMHighResTimeStamp, i: number) {
 function generateSVG(variant: IconVariant): string {
 	const now = 0;
 
+	// Discord banner dimensions
+	const isDiscordBanner = variant === "discord-banner";
+	const canvasWidth = isDiscordBanner ? 1100 : WIDTH;
+	const canvasHeight = isDiscordBanner ? 440 : HEIGHT;
+
 	// Dock images are actually smaller than the canvas, so shrink the content down.
 	const scale = variant === "macos" ? 0.85 : 1;
 	const scaledSize = WIDTH * scale;
 	const offset = variant === "macos" ? (WIDTH - scaledSize) / 2 : 0;
 
 	// iOS and Android background variants should have no border or rounded corners
-	const useRoundedCorners = variant !== "ios" && variant !== "android-background";
-	const useBorder = variant !== "ios" && variant !== "android-foreground" && variant !== "android-background";
+	const useRoundedCorners = variant !== "ios" && variant !== "android-background" && !isDiscordBanner;
+	const useBorder = variant !== "ios" && variant !== "android-foreground" && variant !== "android-background" && !isDiscordBanner;
 
 	// Android round should be perfectly circular
 	const isAndroidRound = variant === "android-round";
@@ -91,17 +97,13 @@ function generateSVG(variant: IconVariant): string {
 	// Android foreground: only show the H logo (scaled like macOS)
 	// Android background: only show animated lines + dark background (no H)
 	// Android launcher/round: complete icon (everything)
+	// Discord banner: only show animated lines + dark background (no H logo)
 	const showBackground = !isAndroidForeground;
 	const showLines = !isAndroidForeground;
-	const showHLogo = !isAndroidBackground;
+	const showHLogo = !isAndroidBackground && !isDiscordBanner;
 
-	// Scale H logo for android foreground (much smaller) and macOS
-	const hScale = isAndroidForeground ? 0.6 : variant === "macos" ? 0.85 : 1;
-	const hScaledSize = WIDTH * hScale;
-	const hOffset = isAndroidForeground || variant === "macos" ? (WIDTH - hScaledSize) / 2 : 0;
-
-	const LINE_COUNT = Math.ceil(HEIGHT / LINE_SPACING);
-	const ROUNDED = useRoundedCorners ? (isAndroidRound ? WIDTH / 2 : 128) : 0;
+	const LINE_COUNT = Math.ceil(canvasHeight / LINE_SPACING);
+	const ROUNDED = useRoundedCorners ? (isAndroidRound ? WIDTH / 2 : 140) : 0;
 
 	const shadows = [];
 	const mainPaths = [];
@@ -117,7 +119,7 @@ function generateSVG(variant: IconVariant): string {
 
 			for (let s = 0; s <= SEGMENTS; s++) {
 				const t = s / SEGMENTS;
-				const xBase = -100 + t * (WIDTH + 200);
+				const xBase = -100 + t * (canvasWidth + 200);
 				const xWobble = Math.sin(now * WOBBLE_SPEED + s + i) * WOBBLE_AMPLITUDE;
 				const x = xBase + xWobble;
 
@@ -152,9 +154,12 @@ function generateSVG(variant: IconVariant): string {
 	// NOTE: AI generated this, so it's pretty ugly.
 	const hOriginalWidth = 201;
 	const hOriginalHeight = 251;
-	const zoom = Math.min(WIDTH / hOriginalWidth, HEIGHT / hOriginalHeight) * 1.3;
-	const hX = (WIDTH - hOriginalWidth * zoom * hScale) / 2 + 15 * zoom * hScale;
-	const hY = (HEIGHT - hOriginalHeight * zoom * hScale) / 2 - 15 * zoom * hScale;
+
+	// Scale H logo for android foreground (much smaller)
+	const hScale = variant === "android-foreground" || variant === "android-round" ? 0.9 : 1.1;
+	const zoom = Math.min(canvasWidth / hOriginalWidth, canvasHeight / hOriginalHeight) * 1.0;
+	const hX = (canvasWidth - hOriginalWidth * zoom * hScale) / 2 + 15 * zoom * hScale;
+	const hY = (canvasHeight - hOriginalHeight * zoom * hScale) / 2 - 15 * zoom * hScale;
 	const hSvgContent = showHLogo
 		? `<g transform="translate(${hX}, ${hY}) scale(${zoom * hScale})">
 		<path fill="none" stroke="#000000" stroke-width="20" stroke-linejoin="round" stroke-linecap="round" d="
@@ -188,7 +193,7 @@ function generateSVG(variant: IconVariant): string {
 			C 96.02 246.34 90.03 253.67 80.26 255.00
 			Z"
 		/>
-		<path fill="#ffffff" stroke="#000000" stroke-width="8" stroke-linejoin="round" stroke-linecap="round" d="
+		<path fill="#ffffff" stroke="#000000" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" d="
 			M 80.26 255.00
 			L 78.09 255.00
 			Q 67.59 253.67 63.69 245.02
@@ -234,7 +239,7 @@ function generateSVG(variant: IconVariant): string {
 	}
 
 	if (showBackground) {
-		backgroundContent = `<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#background-gradient-${variant})" />`;
+		backgroundContent = `<rect width="${canvasWidth}" height="${canvasHeight}" fill="url(#background-gradient-${variant})" />`;
 	}
 
 	if (showLines && shadows.length > 0) {
@@ -251,15 +256,15 @@ function generateSVG(variant: IconVariant): string {
 	}
 
 	if (useBorder) {
-		borderContent = `<rect x="${BORDER / 2}" y="${BORDER / 2}" width="${WIDTH - BORDER}" height="${HEIGHT - BORDER}" rx="${gradientBorderRadius}" ry="${gradientBorderRadius}" stroke="black" stroke-width="${BORDER}" fill="none" />`;
+		borderContent = `<rect x="${BORDER / 2}" y="${BORDER / 2}" width="${canvasWidth - BORDER}" height="${canvasHeight - BORDER}" rx="${gradientBorderRadius}" ry="${gradientBorderRadius}" stroke="black" stroke-width="${BORDER}" fill="none" />`;
 	}
 
-	return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+	return `<svg width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}" xmlns="http://www.w3.org/2000/svg">
 		<defs>
 			${
 				useRoundedCorners
 					? `<clipPath id="rounded-corner-${variant}">
-				<rect x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${ROUNDED}" ry="${ROUNDED}" />
+				<rect x="0" y="0" width="${canvasWidth}" height="${canvasHeight}" rx="${ROUNDED}" ry="${ROUNDED}" />
 			</clipPath>`
 					: ""
 			}
@@ -283,7 +288,7 @@ function generateSVG(variant: IconVariant): string {
 	</svg>`;
 }
 
-async function svgToPng(svgString: string, size: number): Promise<string> {
+async function svgToPng(svgString: string, size: number, width?: number, height?: number): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const canvas = document.createElement("canvas");
 		const ctx = canvas.getContext("2d");
@@ -292,12 +297,12 @@ async function svgToPng(svgString: string, size: number): Promise<string> {
 			return;
 		}
 
-		canvas.width = size;
-		canvas.height = size;
+		canvas.width = width ?? size;
+		canvas.height = height ?? size;
 
 		const img = new Image();
 		img.onload = () => {
-			ctx.drawImage(img, 0, 0, size, size);
+			ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 			resolve(canvas.toDataURL("image/png"));
 		};
 		img.onerror = () => reject(new Error("Failed to load SVG"));
@@ -323,6 +328,8 @@ function getVariantSizes(variant: IconVariant): number[] {
 			return Object.values(PLATFORM_SIZES.androidAdaptive);
 		case "windows-store":
 			return PLATFORM_SIZES.windowsStore;
+		case "discord-banner":
+			return [1100]; // Only one size for Discord banner
 		default:
 			return [512];
 	}
@@ -346,6 +353,8 @@ function getVariantDisplayName(variant: IconVariant): string {
 			return "Android Background";
 		case "windows-store":
 			return "Windows Store/UWP";
+		case "discord-banner":
+			return "Discord Banner (1100x440)";
 		default:
 			return variant;
 	}
@@ -435,6 +444,9 @@ function IconCanvas(props: { variant: IconVariant }) {
 	const renderIconToPng = async (): Promise<string> => {
 		const svgString = generateSVG(props.variant);
 		try {
+			if (props.variant === "discord-banner") {
+				return await svgToPng(svgString, 1100, 1100, 440);
+			}
 			return await svgToPng(svgString, WIDTH);
 		} catch (error) {
 			console.error("Failed to convert SVG to PNG:", error);
@@ -463,7 +475,16 @@ function IconCanvas(props: { variant: IconVariant }) {
 
 	const downloadPNG = async (size?: number) => {
 		const svgString = generateSVG(props.variant);
-		const pngDataUrl = size ? await svgToPng(svgString, size) : iconDataUrl();
+		let pngDataUrl: string;
+		
+		if (size && props.variant === "discord-banner") {
+			// For discord banner, use the 1100x440 dimensions
+			pngDataUrl = await svgToPng(svgString, size, 1100, 440);
+		} else if (size) {
+			pngDataUrl = await svgToPng(svgString, size);
+		} else {
+			pngDataUrl = iconDataUrl();
+		}
 
 		const link = document.createElement("a");
 		link.download = `icon-${props.variant}${size ? `-${size}px` : ""}.png`;
@@ -502,6 +523,13 @@ function IconCanvas(props: { variant: IconVariant }) {
 					const base64 = dataUrl.split(",")[1];
 					zip.file(filename, base64, { base64: true });
 				}
+			} else if (props.variant === "discord-banner") {
+				// Discord banner with 1100x440 dimensions
+				for (const size of sizes) {
+					const pngDataUrl = await svgToPng(svgString, size, 1100, 440);
+					const base64 = pngDataUrl.split(",")[1];
+					zip.file(`discord-banner-${size}x440.png`, base64, { base64: true });
+				}
 			} else {
 				// Regular platform with just different sizes
 				for (const size of sizes) {
@@ -539,8 +567,8 @@ function IconCanvas(props: { variant: IconVariant }) {
 						src={svgDataUrl()}
 						class="border border-zinc-700"
 						style={{
-							width: "256px",
-							height: "256px",
+							width: props.variant === "discord-banner" ? "512px" : "256px",
+							height: props.variant === "discord-banner" ? "205px" : "256px",
 						}}
 					/>
 				</div>
@@ -589,6 +617,7 @@ export function Icons(): JSX.Element {
 		"android-background",
 		"android-round",
 		"windows-store",
+		"discord-banner",
 	];
 
 	return (
