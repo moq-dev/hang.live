@@ -65,6 +65,4 @@ icons:
 	@mkdir -p icons/ios/
 	@cd icons/ios && unzip -q ../../icons-ios.zip
 
-	# No temp directory cleanup needed - extracted directly to final locations
-
 	@echo "✅ Icon generation complete!"

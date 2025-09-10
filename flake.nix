@@ -21,6 +21,9 @@
             pkg-config
             cargo
             cargo-tauri
+            cargo-sort
+            cargo-shear
+            cargo-edit
             nodejs
             pnpm
             typescript
