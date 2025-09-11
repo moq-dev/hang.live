@@ -219,31 +219,42 @@ export function About(): JSX.Element {
 							to be <b>weird</b>.
 						</p>
 						<p>
-							<a href="/">hang.live</a> is a fun (and free) place to hang out with friends. Spend your
-							free time with <i>real people</i>, not feeds of AI slop.
+							It's just a fun (and free) place to hang out with friends. Spend your free time with{" "}
+							<i>real people</i>, not feeds of AI slop.
 						</p>
 					</div>
-					{/*
-					<div class="bg-gray-900/30 rounded-2xl border border-gray-800 p-6 basis-md grow">
-						<h5 class="text-xl font-semibold mb-6 text-center">start a hang</h5>
-						<CreateHang />
-					</div>
-					*/}
 					<div class="flex-1 basis-sm grow space-y-6">
 						<div class="rounded-2xl border border-gray-800 p-6">
 							<div class="flex items-center justify-between mb-4">
 								<div class="flex items-center gap-2">
 									<span class="icon-[mdi--play] text-green-500" />
-									<span class="text-xl font-semibold">Start a hang</span>
+									<span class="text-xl font-semibold underline decoration-green-500/80 underline-offset-2">
+										Start a hang
+									</span>
 								</div>
 							</div>
 
 							<CreateHang />
 						</div>
+
+						<div class="rounded-2xl border border-gray-800 p-6">
+							<div class="flex items-center justify-between mb-4">
+								<div class="flex items-center gap-2">
+									<span class="icon-[mdi--heart] text-red-500" />
+									<span class="text-xl font-semibold underline decoration-red-500/80 underline-offset-2">
+										Join a hang
+									</span>
+								</div>
+							</div>
+
+							<div class="text-md text-center font-semibold">Hangs are invite only.</div>
+							<div class="text-gray-400 text-sm text-center">so ask a friend for a link lul</div>
+						</div>
 					</div>
 				</div>
 
 				<div class="my-8 h-128">{canvas}</div>
+
 				<div class="flex justify-center my-18">
 					<img src="/image/we-are/5.svg" alt="we are live" class="max-w-120" />
 				</div>

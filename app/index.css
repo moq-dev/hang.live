@@ -47,6 +47,10 @@ a {
 	border-color: hsl(var(--link-hue), 75%, 50%);
 }
 
+.decoration-link-hue {
+	text-decoration-color: hsl(var(--link-hue), 75%, 50%);
+}
+
 /*
 a:hover {
 	text-decoration-color: gold;

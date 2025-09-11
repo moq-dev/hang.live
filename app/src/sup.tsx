@@ -116,7 +116,9 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 						<div class="rounded-2xl border border-gray-800 p-6">
 							<PreviewIcon api={props.api} room={props.room} local={props.local} />
 							<Show when={!props.api.authenticated()}>
-								<div class="text-center text-gray-400 mb-4">...or login to customize your profile</div>
+								<div class="text-center text-gray-400 mb-4">
+									...or sign in to customize your profile
+								</div>
 								<Login api={props.api} />
 							</Show>
 						</div>
@@ -169,7 +171,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 
 	return (
 		<>
-			<h3 class="text-xl font-semibold mb-4">
+			<h3 class="text-xl font-semibold mb-4 underline decoration-blue-500/80 underline-offset-2">
 				Your Profile <Show when={!props.api.authenticated()}>(guest)</Show>
 			</h3>
 

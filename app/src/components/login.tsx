@@ -42,7 +42,7 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 	};
 
 	return (
-		<div class="space-y-3 max-w-xs mx-auto text-center">
+		<div class="flex flex-col flex-wrap gap-3 max-w-xs mx-auto text-center">
 			{/* Error message */}
 			<Show when={props.error}>
 				<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-4 text-red-300 text-center">
@@ -56,7 +56,7 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 						type="button"
 						onClick={() => handleProviderLogin(provider)}
 						disabled={loading()}
-						class="w-full flex items-center justify-center gap-3 px-8 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+						class="flex items-center justify-center gap-3 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 						classList={{
 							[getProviderColor(provider)]: true,
 						}}

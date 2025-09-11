@@ -1,4 +1,4 @@
-import { JSX } from "solid-js";
+import { JSX, Show } from "solid-js";
 import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
 import { Logo } from "./logo";
@@ -10,6 +10,16 @@ export default function Web(props: { children: JSX.Element }) {
 				<Logo />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
+					<Show when={!window.__TAURI__}>
+						<Tooltip content="Download app" position="bottom">
+							<a
+								href="/download"
+								class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+							>
+								<span class="icon-[mdi--download]" />
+							</a>
+						</Tooltip>
+					</Show>
 					<Tooltip content="Account settings" position="bottom">
 						<a
 							href="/account"
