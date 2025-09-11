@@ -32,18 +32,16 @@ export default function App(props: { children: JSX.Element; connection: Connecti
 }
 
 function RoomNav(props: { api: Api.Client; room: string }) {
+	const [showCopiedNotification, setShowCopiedNotification] = createSignal(false);
+
 	const share = async () => {
 		const url = window.location.href;
-
-		if (navigator.share) {
-			await navigator.share({
-				title: "hang.live",
-				text: "hang with us!",
-				url,
-			});
-		} else {
-			await navigator.clipboard.writeText(url);
-		}
+		await navigator.clipboard.writeText(url);
+		
+		setShowCopiedNotification(true);
+		setTimeout(() => {
+			setShowCopiedNotification(false);
+		}, 3000);
 	};
 
 	return (
@@ -57,11 +55,18 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 				</a>
 			</Tooltip>
 			<FavoriteButton api={props.api} room={props.room} />
-			<Tooltip content="Share link" position="bottom">
+			<Tooltip
+				content={showCopiedNotification() ? "Copied to clipboard" : "Copy link"}
+				position="bottom"
+				force={showCopiedNotification()}
+			>
 				<button
 					type="button"
 					onClick={share}
 					class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					classList={{
+						"animate-pulse": showCopiedNotification(),
+					}}
 				>
 					<span class="icon-[mdi--share-variant]" />
 				</button>
@@ -132,7 +137,7 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 			<Tooltip
 				content={
 					!props.api.authenticated()
-						? "Login to favorite hangs"
+						? "Sign in to favorite hangs"
 						: isFavorite.loading
 							? "Loading..."
 							: isFavorite()
@@ -178,7 +183,7 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 						onKeyDown={(e) => e.stopPropagation()}
 						role="document"
 					>
-						<div class="text-center text-lg font-semibold mb-4">Login to favorite hangs</div>
+						<div class="text-center text-lg font-semibold mb-4">Sign in to favorite hangs</div>
 						<Login api={props.api} />
 						<button
 							type="button"

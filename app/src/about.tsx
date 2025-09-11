@@ -230,7 +230,7 @@ export function About(): JSX.Element {
 							to be <b>weird</b>.
 						</p>
 						<p>
-							It's just a fun (and free) place to hang out with friends. Spend your free time with{" "}
+							So here's a fun (and free) place to hang out with friends. Spend your free time with{" "}
 							<i>real people</i>, not feeds of AI slop.
 						</p>
 					</div>

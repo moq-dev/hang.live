@@ -78,7 +78,7 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 		<WebLayout>
 			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
-			<hang-support class="text-2xl" prop:show="partial" />
+			<hang-support class="text-2xl" prop:show="none" />
 
 			{/* Join Button */}
 			<div class="mb-12 flex justify-center">
