@@ -20,4 +20,4 @@ tauri-build = { version = "2", features = ["config-json5"] }
 [dependencies]
 tauri = { version = "2", features = ["config-json5"] }
 tauri-plugin-opener = "2"
-tauri-plugin-web-transport = "0.1.0"
+# tauri-plugin-web-transport = "0.1.0"

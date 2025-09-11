@@ -314,7 +314,7 @@ export function generateSvg() {
 		paths.push(`<path stroke="${color}" d="${d}" />`);
 	}
 
-	return `<!-- Generated via pnpm tsx src/background.ts -->
+	return `<!-- Generated via bun tsx src/background.ts -->
 	<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
 		<rect width="100%" height="100%" fill="black" />
 		<g stroke-linecap="round" stroke-width="${LINE_WIDTH}" fill="none" stroke-opacity="0.25">
