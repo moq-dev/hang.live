@@ -15,7 +15,7 @@ export interface VideoSource {
 }
 	*/
 
-export type VideoSource = Watch.Video | Publish.Video;
+export type VideoSource = Watch.Video.Source | Publish.Video.Encoder;
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.

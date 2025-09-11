@@ -79,13 +79,14 @@ function generateSVG(variant: IconVariant): string {
 	const canvasHeight = isDiscordBanner ? 440 : HEIGHT;
 
 	// Dock images are actually smaller than the canvas, so shrink the content down.
-	const scale = variant === "macos" ? 0.85 : 1;
+	const scale = variant === "macos" ? 0.85 : 1.0;
 	const scaledSize = WIDTH * scale;
-	const offset = variant === "macos" ? (WIDTH - scaledSize) / 2 : 0;
+	const offset = (WIDTH - scaledSize) / 2;
 
 	// iOS and Android background variants should have no border or rounded corners
 	const useRoundedCorners = variant !== "ios" && variant !== "android-background" && !isDiscordBanner;
-	const useBorder = variant !== "ios" && variant !== "android-foreground" && variant !== "android-background" && !isDiscordBanner;
+	const useBorder =
+		variant !== "ios" && variant !== "android-foreground" && variant !== "android-background" && !isDiscordBanner;
 
 	// Android round should be perfectly circular
 	const isAndroidRound = variant === "android-round";
@@ -156,7 +157,7 @@ function generateSVG(variant: IconVariant): string {
 	const hOriginalHeight = 251;
 
 	// Scale H logo for android foreground (much smaller)
-	const hScale = variant === "android-foreground" || variant === "android-round" ? 0.9 : 1.1;
+	const hScale = variant === "android-foreground" || variant === "android-round" ? 0.85 : 1.0;
 	const zoom = Math.min(canvasWidth / hOriginalWidth, canvasHeight / hOriginalHeight) * 1.0;
 	const hX = (canvasWidth - hOriginalWidth * zoom * hScale) / 2 + 15 * zoom * hScale;
 	const hY = (canvasHeight - hOriginalHeight * zoom * hScale) / 2 - 15 * zoom * hScale;
@@ -274,16 +275,18 @@ function generateSVG(variant: IconVariant): string {
 			</linearGradient>
 		</defs>
 
-		<g ${clipPath} ${variant === "macos" ? `transform="translate(${offset}, ${offset}) scale(${scale})"` : ""}>
+		<g ${clipPath} transform="translate(${offset}, ${offset}) scale(${scale})">
 			<!-- Background -->
 			${backgroundContent}
 			${linesContent}
 
-			<!-- H SVG -->
-			${hSvgContent}
-
 			<!-- Border -->
 			${borderContent}
+		</g>
+
+		<!-- H SVG -->
+		<g transform="translate(${offset}, ${offset}) scale(${scale})">
+			${hSvgContent}
 		</g>
 	</svg>`;
 }
@@ -460,23 +463,18 @@ function IconCanvas(props: { variant: IconVariant }) {
 		return URL.createObjectURL(blob);
 	};
 
-	const update = async () => {
+	onMount(async () => {
 		const svgDataUrl = renderIconToSvg();
 		setSvgDataUrl(svgDataUrl);
 
 		const pngDataUrl = await renderIconToPng();
 		setIconDataUrl(pngDataUrl);
-	};
-
-	onMount(() => {
-		update();
-		setInterval(update, 1000 / 60);
 	});
 
 	const downloadPNG = async (size?: number) => {
 		const svgString = generateSVG(props.variant);
 		let pngDataUrl: string;
-		
+
 		if (size && props.variant === "discord-banner") {
 			// For discord banner, use the 1100x440 dimensions
 			pngDataUrl = await svgToPng(svgString, size, 1100, 440);

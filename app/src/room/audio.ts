@@ -12,7 +12,7 @@ export type AudioProps = {
 	pan?: number;
 };
 
-export type AudioSource = Watch.Audio | Publish.Audio;
+export type AudioSource = Watch.Audio.Source | Publish.Audio.Encoder;
 
 export class Audio {
 	broadcast: Broadcast;

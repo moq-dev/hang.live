@@ -7,15 +7,18 @@ default:
   just --list
 
 dev:
-	pnpm i
 	pnpm wrangler types
 	pnpm wrangler d1 migrations apply DB --local
 	pnpm wrangler dev --var "RELAY_SECRET:$(cat ../moq/rs/dev/root.jwk)"
 
 build:
-	pnpm i
 	pnpm wrangler types
 	pnpm run build
+
+check:
+	pnpm exec biome check
+	pnpm tsc --noEmit
+	#pnpm exec madge --circular --extensions ts,tsx src
 
 deploy env="staging": build
 	pnpm wrangler d1 migrations apply DB --env "{{env}}" --remote

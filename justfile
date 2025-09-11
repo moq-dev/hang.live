@@ -8,41 +8,20 @@ default:
 
 # Run the CI checks
 check:
-	pnpm i --frozen-lockfile
-
-	# Make sure Typescript compiles
+	pnpm install --frozen-lockfile
 	pnpm -r run check
 
-	# Lint the JS packages
-	pnpm -r exec biome check
-
-	# Check the Rust code
-	just --justfile native/justfile check
-
-	# Check the moq submodule
+	cd native && just check
 	cd moq && just check
-
-	# TODO: Check for unused imports (fix the false positives)
-	# pnpm -r exec knip --no-exit-code
 
 # Automatically fix some issues.
 fix:
-	# Fix the JS packages
-	pnpm i
+	pnpm install
+	pnpm dedupe
+	pnpm -r run fix
 
-	# Format and lint
-	pnpm -r exec biome check --fix
-
-	# Fix the Rust code
-	just --justfile native/justfile fix
-
-	# We don't fix the moq submodule; you should do that before committing.
-	# cd moq && just fix
-
-# Run any CI tests
-test:
-	# Run the JS tests via node.
-	pnpm -r test
+	cd native && just fix
+	cd moq && just fix
 
 # Upgrade any tooling
 upgrade:
@@ -53,37 +32,28 @@ upgrade:
 
 # Build the packages
 build:
-	pnpm i --frozen-lockfile
+	pnpm install --frozen-lockfile
 	pnpm -r run build
 
 prod: build
 	pnpm -r run prod
 
 deploy env="staging":
-	just --justfile api/justfile deploy "{{env}}"
-	just --justfile app/justfile deploy "{{env}}"
+	cd api && just deploy "{{env}}"
+	cd app && just deploy "{{env}}"
 
 dev:
-	pnpm i
-
-	# Generate auth tokens if needed
+	pnpm install
 	@cd moq/rs && just auth-token
-
 	pnpm concurrently --kill-others --names api,app,moq --prefix-colors auto \
-		"just --justfile api/justfile dev" \
-		"just --justfile app/justfile dev --open" \
-		"just --justfile moq/justfile root"
+		"cd api && just dev" \
+		"cd app && just dev --open" \
+		"cd moq && just root"
 
 native:
+	pnpm install
+	@cd moq/rs && just auth-token
 	pnpm concurrently --kill-others --names api,app,moq --prefix-colors auto \
-		"just --justfile api/justfile dev" \
-		"just --justfile native/justfile dev" \
-		"just --justfile moq/justfile root"
-
-# Used by Tauri to run the app with TAURI environment variables.
-native-app:
-	just --justfile app/justfile dev
-
-# Generate Tauri icons - use just --justfile native/justfile icons instead
-icons:
-	just --justfile native/justfile icons
+		"cd api && just dev" \
+		"cd native && just dev" \
+		"cd moq && just root"
