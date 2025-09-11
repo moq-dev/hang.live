@@ -119,7 +119,7 @@ export function PreviewRoom(props: { connection: Connection; path?: string; api:
 				when={Object.values(members).length > 0}
 				fallback={
 					<div class="text-center py-12">
-						<h3 class="text-lg font-semibold mb-4">No one's here yet!</h3>
+						<h3 class="text-lg font-semibold mb-4">No one is here yet.</h3>
 						<p class="text-gray-500 text-sm">be the first, you trailblazer</p>
 					</div>
 				}

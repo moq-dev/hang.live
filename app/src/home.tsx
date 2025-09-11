@@ -51,8 +51,6 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 
 	return (
 		<Layout>
-			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
-
 			{/* Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
 				<div class="flex-1 basis-md grow space-y-6">
@@ -60,7 +58,9 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 						<div class="flex items-center justify-between mb-8">
 							<div class="flex items-center gap-2">
 								<span class="icon-[mdi--heart] text-red-500" />
-								<h2 class="text-xl font-semibold">Favorite hangs</h2>
+								<h2 class="text-xl font-semibold underline decoration-red-500/60 underline-offset-2">
+									Join a hang
+								</h2>
 							</div>
 						</div>
 						<Show
@@ -68,7 +68,10 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 							fallback={
 								<div class="text-center">
 									<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />
-									<h3 class="text-lg font-semibold mb-8">Sign in to favorite hangs</h3>
+									<h3 class="text-lg font-semibold">Sign in to favorite hangs</h3>
+									<div class="text-gray-400 text-sm leading-relaxed mb-8">
+										then you can see when your friends are online and eager
+									</div>
 									<Login api={props.api} />
 								</div>
 							}
@@ -136,7 +139,9 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-2">
 								<span class="icon-[mdi--play] text-green-500" />
-								<span class="text-xl font-semibold">Start a hang</span>
+								<span class="text-xl font-semibold underline decoration-green-500/80 underline-offset-2">
+									Start a hang
+								</span>
 							</div>
 						</div>
 

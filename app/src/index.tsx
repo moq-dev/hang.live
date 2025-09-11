@@ -9,6 +9,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
+import { Download } from "./download";
 import { Home } from "./home";
 import { Icons } from "./icons";
 import { NotFound } from "./not-found";
@@ -29,8 +30,9 @@ export function Hang(): JSX.Element {
 				<Route path="/" component={() => (api.authenticated() ? <Home api={api} /> : <About />)} />
 				<Route path="/about" component={() => <About />} />
 				<Route path="/account" component={() => <Account api={api} />} />
-				{import.meta.env.DEV && <Route path="/dev/icons" component={Icons} />}
+				<Route path="/download" component={() => <Download />} />
 				<Route path="/home" component={() => <Home api={api} />} />
+				{import.meta.env.DEV && <Route path="/dev/icons" component={Icons} />}
 				<Route path="*" component={() => <Fallback canvas={canvas} api={api} />} />
 			</Router>
 		</>

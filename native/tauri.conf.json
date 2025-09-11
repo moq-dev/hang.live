@@ -5,8 +5,16 @@
 	"identifier": "live.hang.app",
 	"build": {
 		"devUrl": "http://localhost:1420",
-		"beforeDevCommand": "cd ../app && just dev",
-		"beforeBuildCommand": "cd ../app && just build live",
+		"beforeDevCommand": {
+			"cwd": "../app",
+			"script": "just dev",
+			"wait": false
+		},
+		"beforeBuildCommand": {
+			"cwd": "../app",
+			"script": "just build live",
+			"wait": true
+		},
 		"frontendDist": "../app/dist"
 	},
 	"app": {
