@@ -1,9 +1,8 @@
 {
+  # TODO: Add Android build support https://nixos.wiki/wiki/Android
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-
-    native.url = "./native";
   };
 
   outputs =
@@ -11,7 +10,6 @@
       self,
       nixpkgs,
       flake-utils,
-      native,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -19,23 +17,21 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       {
-        devShell = pkgs.mkShell {
-          inputsFrom = [
-            native.devShells.${system}.default
-          ];
+        devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
+            # Build tools
+            cmake
             pkg-config
-            cargo
-            cargo-sort
-            cargo-shear
-            cargo-edit
-            nodejs
-            bun
-            just
-            # Icon generation tools
-            imagemagick
-            libicns  # provides png2icns
+			#android-tools
+
+            # Native app tooling
+            cargo-tauri
+
+            # Additional build dependencies that might be needed
+            gcc
+            binutils
           ];
+
         };
       }
     );

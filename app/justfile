@@ -9,18 +9,17 @@ default:
 
 # Upgrade any tooling
 upgrade:
-	pnpm self-update
-	pnpm update
-	pnpm outdated
+	bun update
+	bun outdated
 
 # Build the packages
 build env="dev":
-	pnpm vite build --mode "{{env}}"
+	bun vite build --mode "{{env}}"
 
 # Deploy the site to Cloudflare Pages
 deploy env="staging":
 	just build "{{env}}"
-	pnpm wrangler deploy --env "{{env}}"
+	bun wrangler deploy --env "{{env}}"
 
 dev flags="":
-	pnpm vite dev {{flags}}
+	bun vite dev {{flags}}

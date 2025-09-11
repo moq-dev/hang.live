@@ -395,25 +395,32 @@ async function generateAndroidFolderStructure(
 async function generateiOSFiles(svgString: string): Promise<{ [filePath: string]: string }> {
 	const files: { [filePath: string]: string } = {};
 
-	// iOS specific naming convention
+	// iOS specific naming convention - matching the actual file names in gen/apple
 	const iOSSizes = [
-		{ size: 20, scales: [1, 2, 3] },
-		{ size: 29, scales: [1, 2, 3] },
-		{ size: 40, scales: [1, 2, 3] },
-		{ size: 60, scales: [2, 3] },
-		{ size: 76, scales: [1, 2] },
-		{ size: 83.5, scales: [2] },
-		{ size: 1024, scales: [1] },
+		{ size: 20, scale: 1, name: "AppIcon-20x20@1x.png" },
+		{ size: 20, scale: 2, name: "AppIcon-20x20@2x.png" },
+		{ size: 20, scale: 2, name: "AppIcon-20x20@2x-1.png" }, // Same size for iPad
+		{ size: 20, scale: 3, name: "AppIcon-20x20@3x.png" },
+		{ size: 29, scale: 1, name: "AppIcon-29x29@1x.png" },
+		{ size: 29, scale: 2, name: "AppIcon-29x29@2x.png" },
+		{ size: 29, scale: 2, name: "AppIcon-29x29@2x-1.png" }, // Same size for iPad
+		{ size: 29, scale: 3, name: "AppIcon-29x29@3x.png" },
+		{ size: 40, scale: 1, name: "AppIcon-40x40@1x.png" },
+		{ size: 40, scale: 2, name: "AppIcon-40x40@2x.png" },
+		{ size: 40, scale: 2, name: "AppIcon-40x40@2x-1.png" }, // Same size for iPad
+		{ size: 40, scale: 3, name: "AppIcon-40x40@3x.png" },
+		{ size: 60, scale: 2, name: "AppIcon-60x60@2x.png" },
+		{ size: 60, scale: 3, name: "AppIcon-60x60@3x.png" },
+		{ size: 76, scale: 1, name: "AppIcon-76x76@1x.png" },
+		{ size: 76, scale: 2, name: "AppIcon-76x76@2x.png" },
+		{ size: 83.5, scale: 2, name: "AppIcon-83.5x83.5@2x.png" },
+		{ size: 512, scale: 2, name: "AppIcon-512@2x.png" }, // 1024x1024
 	];
 
-	for (const { size, scales } of iOSSizes) {
-		for (const scale of scales) {
-			const actualSize = Math.round(size * scale);
-			const filename =
-				scale === 1 ? `AppIcon-${size}x${size}@${scale}x.png` : `AppIcon-${size}x${size}@${scale}x.png`;
-			const pngDataUrl = await svgToPng(svgString, actualSize);
-			files[filename] = pngDataUrl;
-		}
+	for (const { size, scale, name } of iOSSizes) {
+		const actualSize = Math.round(size * scale);
+		const pngDataUrl = await svgToPng(svgString, actualSize);
+		files[name] = pngDataUrl;
 	}
 
 	return files;

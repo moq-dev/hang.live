@@ -25,9 +25,11 @@ build:
 dev:
 	cargo tauri dev
 
-# Install dependencies
-install:
-	cargo fetch
+android:
+	cargo tauri android build
+
+ios:
+	cargo tauri ios build
 
 # Generate Tauri icons from browser-generated ZIP files
 # Prerequisites: Download all ZIP files from http://localhost:1420/dev/icons to this directory
@@ -52,17 +54,14 @@ icons:
 	@echo "Generating macOS ICNS with png2icns..."; \
 	cd icons/macos && png2icns icon.icns 16x16.png 32x32.png 64x64.png 128x128.png 256x256.png 512x512.png 1024x1024.png; \
 
-	# Extract and organize Android icons
+	# Extract and organize Android icons to gen/android folders
 	@echo "Extracting Android icons..."
-	@mkdir -p icons/android
-	@cd icons/android&& unzip -q ../../icons-android-launcher.zip
-	@cd icons/android && unzip -q ../../icons-android-foreground.zip
-	@cd icons/android && unzip -q ../../icons-android-background.zip
-	@cd icons/android && unzip -q ../../icons-android-round.zip
+	@unzip -o -q icons-android-launcher.zip -d gen/android/app/src/main/res
+	@unzip -o -q icons-android-foreground.zip -d gen/android/app/src/main/res
+	@unzip -o -q icons-android-round.zip -d gen/android/app/src/main/res
 
-	# Extract iOS icons
+	# Extract iOS icons to gen/apple folders
 	@echo "Extracting iOS icons..."
-	@mkdir -p icons/ios/
-	@cd icons/ios && unzip -q ../../icons-ios.zip
+	@unzip -o -q icons-ios.zip -d gen/apple/Assets.xcassets/AppIcon.appiconset
 
 	@echo "✅ Icon generation complete!"
