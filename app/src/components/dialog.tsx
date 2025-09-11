@@ -42,7 +42,7 @@ export default function Dialog(props: {
 				"transition-property": "max-height, opacity, margin-top, padding, background-color, border-color",
 			}}
 		>
-			<div class="grid gap-3 grid-cols-[auto_1fr] justify-center items-center transition-colors duration-300">
+			<div class="grid gap-2 grid-cols-[auto_1fr] justify-center items-center transition-colors duration-300">
 				<span class={`${props.icon} w-4 h-4 inline-block ${style.icon} transition-colors duration-300`} />
 				<span class={`${style.title} font-medium transition-colors duration-300`}>{props.title}</span>
 				<span class="text-gray-400 text-sm col-start-2">{props.description}</span>

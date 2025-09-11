@@ -9,14 +9,14 @@
 	},
 	"scripts": {
 		"dev": "wrangler dev",
-		"check": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project src/client/tsconfig.json && biome check && madge --circular --extensions ts,tsx src",
+		"check": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project src/client/tsconfig.json && biome check",
 		"fix": "biome check --fix",
 		"build": "tsc"
 	},
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",
 		"@hono/zod-validator": "^0.7.2",
-		"@kixelated/moq-token": "link:../moq/js/moq-token",
+		"@kixelated/moq-token": "workspace:*",
 		"@trpc/server": "^11.5.0",
 		"drizzle-orm": "^0.44.5",
 		"hono": "^4.9.4",

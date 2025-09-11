@@ -1,4 +1,4 @@
-import { createEffect, type JSX, onCleanup } from "solid-js";
+import { createEffect, createSignal, type JSX, onCleanup } from "solid-js";
 import CreateHang from "./components/create";
 import Layout from "./layout/web";
 import { Canvas } from "./room/canvas";
@@ -9,6 +9,17 @@ export function About(): JSX.Element {
 
 	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement, { demo: true }));
 	onCleanup(() => room.close());
+
+	const services = ["Meet", "Zoom", "Teams", "Discord", "Skype", "WebEx", "FaceTime", "WhatsApp"];
+	const [currentService, setCurrentService] = createSignal(0);
+
+	createEffect(() => {
+		const interval = setInterval(() => {
+			setCurrentService((prev) => (prev + 1) % services.length);
+		}, 5000);
+
+		onCleanup(() => clearInterval(interval));
+	});
 
 	const random = () => (Math.random() > 0.5 ? -0.5 : 0.5) * (Math.random() * Math.random());
 	const randomLocation = () => ({ x: random(), y: random() });
@@ -236,24 +247,17 @@ export function About(): JSX.Element {
 
 							<CreateHang />
 						</div>
-
-						<div class="rounded-2xl border border-gray-800 p-6">
-							<div class="flex items-center justify-between mb-4">
-								<div class="flex items-center gap-2">
-									<span class="icon-[mdi--heart] text-red-500" />
-									<span class="text-xl font-semibold underline decoration-red-500/80 underline-offset-2">
-										Join a hang
-									</span>
-								</div>
-							</div>
-
-							<div class="text-md text-center font-semibold">Hangs are invite only.</div>
-							<div class="text-gray-400 text-sm text-center">so ask a friend for a link lul</div>
-						</div>
 					</div>
 				</div>
 
 				<div class="my-8 h-128">{canvas}</div>
+
+				<p>
+					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
+					<a href="https://moq.dev">MoQ</a>.
+					There's more to live than another {services[currentService()]} clone.{" "}
+					<i>Crazy</i>, I know.
+				</p>
 
 				<div class="flex justify-center my-18">
 					<img src="/image/we-are/5.svg" alt="we are live" class="max-w-120" />

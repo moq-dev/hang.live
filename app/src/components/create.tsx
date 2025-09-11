@@ -86,7 +86,7 @@ export default function Create(): JSX.Element {
 				</div>
 			</form>
 
-			<Switch>
+			<Switch fallback={<div class="text-gray-400 text-sm text-center">choose a name for the hang, or use a random one</div>}>
 				<Match when={roomNameError()}>
 					{(error) => (
 						<Dialog
@@ -101,7 +101,7 @@ export default function Create(): JSX.Element {
 					<Dialog
 						icon="icon-[mdi--information-outline]"
 						title="Hangs are public"
-						description="Anybody with this URL can join. Choose something unique if you want to keep strangers out."
+						description="Anybody with this URL can join. Use something cool and unique if you want to keep strangers out."
 					/>
 				</Match>
 			</Switch>
