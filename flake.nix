@@ -26,8 +26,6 @@
             cargo-edit
             nodejs
             pnpm
-            typescript
-            mkcert
             just
             # Icon generation tools
             imagemagick

@@ -12,6 +12,7 @@ onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - better-sqlite3
   - esbuild
+  - oxc-resolver
   - protobufjs
   - sharp
   - workerd

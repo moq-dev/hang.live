@@ -464,7 +464,7 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 }
 
 // Renders a volume meter in the background of an element.
-export function Visualize(props: { audio: Publish.Audio }): JSX.Element {
+export function Visualize(props: { audio: Publish.Audio.Encoder }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 	const [speaking, setSpeaking] = createSignal(false);
 

@@ -4,6 +4,6 @@
 		"outDir": "./dist",
 		"types": ["./worker-configuration.d.ts"]
 	},
-	"include": ["src/*.ts", "src/**/*.ts"],
-	"exclude": ["dist", "node_modules", "src/client/**/*"]
+	"include": ["src"],
+	"exclude": ["src/client"]
 }
