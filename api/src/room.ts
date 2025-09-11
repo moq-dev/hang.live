@@ -9,7 +9,7 @@ import { randomAvatar, randomName } from "./shared";
 // Room name validation - only allows URL-safe characters
 // Alphanumeric, hyphens, underscores, and dots
 export const ROOM_NAME_REGEX = /^[a-zA-Z0-9._-]+$/;
-export const ROOM_NAME_ERROR = "Room names can only contain letters, numbers, hyphens, underscores, and dots";
+export const ROOM_NAME_ERROR = "Hang names can only contain letters, numbers, hyphens, underscores, and periods.";
 
 export const isValidName = (name: string): boolean => {
 	return ROOM_NAME_REGEX.test(name);

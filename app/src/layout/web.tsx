@@ -1,6 +1,7 @@
-import { JSX, Show } from "solid-js";
+import { type JSX, Show } from "solid-js";
 import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
+import Tauri from "../util/tauri";
 import { Logo } from "./logo";
 
 export default function Web(props: { children: JSX.Element }) {
@@ -10,7 +11,7 @@ export default function Web(props: { children: JSX.Element }) {
 				<Logo />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
-					<Show when={!window.__TAURI__}>
+					<Show when={!Tauri}>
 						<Tooltip content="Download app" position="bottom">
 							<a
 								href="/download"

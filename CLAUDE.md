@@ -9,7 +9,7 @@ Hang is a real-time communication platform that combines **closed-source applica
 - **Frontend**: SolidJS + Vite + Tailwind CSS v4 + Tauri (desktop)
 - **Backend**: Cloudflare Workers + Hono + tRPC + Drizzle ORM
 - **Real-time**: WebTransport + MOQ (Media over QUIC)
-- **Package Manager**: pnpm with workspaces
+- **Package Manager**: bun with workspaces
 
 ### Open Source vs Closed Source
 
@@ -68,7 +68,7 @@ Hang-specific server and business logic:
 2. **WebTransport Rooms**: Real-time media streaming via MOQ protocol
 3. **OAuth Flow**: Authentication with Google/Discord through popup windows
 4. **Edge-first**: All backend services run on Cloudflare's edge network
-5. **Submodule Linking**: MOQ libraries linked via git submodule and pnpm workspaces
+5. **Submodule Linking**: MOQ libraries linked via git submodule and bun workspaces
 
 ## Development Tips
 
@@ -80,7 +80,7 @@ Hang-specific server and business logic:
 ### Working with the MOQ Submodule
 - **Location**: `./moq/` (git submodule)
 - **Branch**: `moq-preview`
-- **Dependencies**: Automatically linked via pnpm workspace overrides
+- **Dependencies**: Automatically linked via bun workspace configuration
 - **Updates**: Use `git submodule update --remote` to sync with upstream
 
 ### Working with Media over QUIC

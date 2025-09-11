@@ -25,7 +25,7 @@
             cargo-shear
             cargo-edit
             nodejs
-            pnpm
+            bun
             just
             # Icon generation tools
             imagemagick

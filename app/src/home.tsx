@@ -70,7 +70,7 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 									<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />
 									<h3 class="text-lg font-semibold">Sign in to favorite hangs</h3>
 									<div class="text-gray-400 text-sm leading-relaxed mb-8">
-										then you can see when your friends are online and eager
+										so you can see when your friends are online and eager
 									</div>
 									<Login api={props.api} />
 								</div>
