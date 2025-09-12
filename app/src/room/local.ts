@@ -180,10 +180,7 @@ export class Local {
 			const enabled = effect.get(this.camera.enabled);
 			if (!enabled) return;
 
-			// Give the TTS worker a chance to start loading the model.
-			effect.timer(() => {
-				this.sound.joined(name);
-			}, 100);
+			this.sound.joined(name);
 		});
 
 		// Update draggable settings

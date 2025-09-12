@@ -128,11 +128,16 @@ const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
 export type SoundProps = {
-	enabled?: boolean;
+	enabled?: boolean | Signal<boolean>;
+
+	// When true, the TTS worker will be loaded.
+	tts?: boolean | Signal<boolean>;
 };
 
 export class Sound {
 	enabled: Signal<boolean>;
+	tts: Signal<boolean>;
+
 	context: AudioContext;
 	gain: GainNode;
 
@@ -148,7 +153,8 @@ export class Sound {
 		this.context = new AudioContext({
 			latencyHint: "playback",
 		});
-		this.enabled = new Signal(props?.enabled ?? false);
+		this.enabled = Signal.from(props?.enabled ?? false);
+		this.tts = Signal.from(props?.tts ?? false);
 
 		if (!this.enabled.peek()) {
 			this.context.suspend();
@@ -189,18 +195,27 @@ export class Sound {
 		});
 
 		this.#signals.effect((effect) => {
-			if (!effect.get(Settings.tts)) return;
-
 			// Only start loading the TTS model when sound is enabled.
 			if (effect.get(this.suspended)) return;
 
-			const worker = new Worker(new URL("./tts", import.meta.url), { type: "module" });
-			effect.cleanup(() => worker.terminate());
+			// This boolean is here mostly so we don't announce everybody at once on join.
+			// TODO Maybe we want to start loading the model immediately? But it's already super laggy then.
+			if (!effect.get(this.tts)) return;
 
-			this.#tts = Comlink.wrap<TTS>(worker);
+			const worker = new Worker(new URL("./tts", import.meta.url), { type: "module" });
 			effect.cleanup(() => {
+				worker.terminate();
 				this.#tts = undefined;
 			});
+
+			const tts = Comlink.wrap<TTS>(worker);
+
+			effect.effect((effect) => {
+				const quality = effect.get(Settings.tts);
+				tts.setQuality(quality);
+			});
+
+			this.#tts = tts;
 		});
 
 		this.#sounds = sounds;
@@ -245,7 +260,7 @@ export class Sound {
 
 		// Give the worker at most 2s to load the model before timing out.
 		const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
-		const ready = await Promise.race([this.#tts.ready(), timeout]);
+		const ready = await Promise.race([this.#tts.loaded(), timeout]);
 
 		if (!ready) {
 			console.warn("TTS worker timed out");
@@ -253,6 +268,7 @@ export class Sound {
 		}
 
 		const audioUrl = await this.#tts.generate(text);
+		if (!audioUrl) return;
 
 		// Fetch the audio from the object URL
 		const response = await fetch(audioUrl);

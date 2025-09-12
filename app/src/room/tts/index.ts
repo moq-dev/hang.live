@@ -2,40 +2,60 @@ import * as Comlink from "comlink";
 import * as Kitten from "./kitten";
 import * as Kokoro from "./kokoro";
 
-// Disabled for now - uncomment when re-enabling Kokoro TTS
-// async function detectWebGPU() {
-// 	try {
-// 		// @ts-expect-error - navigator.gpu is not typed yet
-// 		const adapter = await navigator.gpu.requestAdapter();
-// 		return !!adapter;
-// 	} catch {
-// 		return false;
-// 	}
-// }
+export type Quality = "none" | "low" | "high";
+
+async function detectWebGPU() {
+	try {
+		// @ts-expect-error - navigator.gpu is not typed yet
+		const adapter = await navigator.gpu.requestAdapter();
+		return !!adapter;
+	} catch {
+		return false;
+	}
+}
+const supportsWebGPU = detectWebGPU();
 
 export class TTS {
-	#cpu: Promise<Kitten.TTS>;
-	#gpu: Promise<Kokoro.TTS | undefined>;
+	#model: Promise<Kitten.TTS | Kokoro.TTS | undefined>;
+	#quality: Quality;
 
-	constructor() {
-		this.#cpu = Kitten.TTS.load();
-		// Only start loading the GPU model after the CPU model is loaded, and if it's supported.
-		// Temporary disabled Kokoro TTS because it's huge/expensive.
-		//this.#gpu = this.#cpu.then(() => detectWebGPU()).then((webgpu) => (webgpu ? Kokoro.TTS.load() : undefined));
-		this.#gpu = Promise.resolve(undefined);
+	constructor(quality: Quality) {
+		this.#quality = quality;
+		this.#model = this.#init();
 	}
 
-	async ready(): Promise<boolean> {
-		await Promise.race([this.#cpu, this.#gpu]);
-		return true;
+	async #init(): Promise<Kitten.TTS | Kokoro.TTS | undefined> {
+		if (this.#quality === "none") return undefined;
+
+		if (this.#quality === "high"){
+			if (await TTS.supportsHigh()) {
+				return Kokoro.TTS.load();
+			} else {
+				console.warn("WebGPU not available, falling back to low quality TTS");
+			}
+		}
+
+		return Kitten.TTS.load();
 	}
 
-	async generate(text: string): Promise<string> {
-		let tts = await Promise.any([this.#gpu, this.#cpu]);
-		if (!tts) tts = await this.#cpu;
-		return tts.generate(text);
+	setQuality(quality: Quality) {
+		this.#quality = quality;
+		this.#model = this.#init();
+	}
+
+	async loaded(): Promise<boolean> {
+		return !!(await this.#model);
+	}
+
+	async generate(text: string): Promise<string | undefined> {
+		const model = await this.#model;
+		return model?.generate(text);
+	}
+
+	static supportsHigh(): Promise<boolean> {
+		return supportsWebGPU;
 	}
 }
 
 // Expose the worker API via Comlink
-Comlink.expose(new TTS());
+Comlink.expose(new TTS("none"));

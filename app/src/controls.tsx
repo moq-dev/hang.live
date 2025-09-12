@@ -170,7 +170,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 			<Show when={enabled() && showMenu()}>
 				<div
 					ref={menuRef}
-					class="absolute bottom-full mb-2 left-0 max-w-[calc(100vw-2rem)] w-[320px] bg-black/90 backdrop-blur-lg rounded-lg border border-white/30 shadow-2xl p-4 z-50 flex flex-col gap-4"
+					class="absolute bottom-full mb-2 left-0 bg-black/90 backdrop-blur-lg rounded-lg border border-white/30 shadow-2xl p-4 z-50 flex flex-col gap-4"
 				>
 					{/* Volume slider */}
 					<div>
@@ -377,7 +377,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 			<Show when={showMenu()}>
 				<div
 					ref={menuRef}
-					class="absolute bottom-full mb-2 left-0 max-w-[calc(100vw-2rem)] w-[320px] bg-black/90 backdrop-blur-lg rounded-lg shadow-2xl border border-white/30 p-4 z-50"
+					class="absolute bottom-full mb-2 left-0 bg-black/90 backdrop-blur-lg rounded-lg shadow-2xl border border-white/30 p-4 z-50"
 				>
 					<div class="text-sm text-white/60 mb-2 font-medium">Device</div>
 					<div class="flex flex-col gap-1">
@@ -643,8 +643,8 @@ function Volume(props: { room: Room }): JSX.Element {
 	const toggle = () => {
 		// If we were just suspended due to autoplay policies, then don't toggle mute.
 		// This seems racey but maybe it works.
-		if (props.room.sound.suspended.peek()) {
-			props.room.sound.suspended.set(false);
+		if (props.room.space.sound.suspended.peek()) {
+			props.room.space.sound.suspended.set(false);
 
 			// If we unmuted but appeared to be muted, then don't toggle mute.
 			if (!Settings.muted.peek()) {
@@ -658,7 +658,7 @@ function Volume(props: { room: Room }): JSX.Element {
 	const muted = solid(Settings.muted);
 	const volume = solid(Settings.volume);
 	const opacity = Opacity(() => showSlider());
-	const suspended = solid(props.room.sound.suspended);
+	const suspended = solid(props.room.space.sound.suspended);
 
 	const setVolume = (v: number) => {
 		if (v === 0) {
@@ -781,9 +781,11 @@ function Advanced(): JSX.Element {
 			<Show when={showSettings()}>
 				<div
 					ref={setModal}
-					class="fixed z-[999] p-4 rounded-lg backdrop-blur-sm right-0 bottom-[42px] text-sm pointer-events-auto"
+					class="fixed z-[999] right-4 bottom-16 pointer-events-auto"
 				>
-					<Modal />
+					<div class="bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5">
+						<Modal />
+					</div>
 				</div>
 			</Show>
 		</>
