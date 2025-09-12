@@ -2,6 +2,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -15,14 +16,26 @@ export default defineConfig(() => ({
 		},
 	},
 	optimizeDeps: {
-		exclude: ["@libav.js/variant-opus-af"],
+		exclude: ["@libav.js/variant-opus-af", "onnxruntime-web"],
 	},
 
 	worker: {
 		format: "es" as const,
 	},
 
-	plugins: [solid(), tailwindcss()],
+	plugins: [
+		solid(),
+		tailwindcss(),
+		viteStaticCopy({
+			// We copy onnxruntime-web locally so it gets bundled with the app, not downloaded at runtime.
+			targets: [
+				{
+					src: "../node_modules/onnxruntime-web/dist/*",
+					dest: "models/onnxruntime-web",
+				},
+			],
+		}),
+	],
 
 	resolve: {
 		dedupe: ["solid-js"],
@@ -40,6 +53,8 @@ export default defineConfig(() => ({
 				".",
 				// Allow access to parent node_modules for workspace dependencies
 				path.resolve("../node_modules"),
+				// Allow fetching MoQ workers and worklets
+				path.resolve("../moq"),
 			],
 		},
 	},

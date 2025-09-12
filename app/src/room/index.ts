@@ -1,3 +1,4 @@
+import { env } from "@huggingface/transformers";
 import { Connection, type Moq, Publish, Watch } from "@kixelated/hang";
 import { Effect } from "@kixelated/signals";
 import Settings from "../settings";
@@ -5,6 +6,11 @@ import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
 import { Space } from "./space";
+
+// Use our own ONNX instead of downloading it at runtime
+if (env.backends.onnx?.wasm) {
+	env.backends.onnx.wasm.wasmPaths = "/models/onnxruntime-web/";
+}
 
 export class Room {
 	// The connection to the server.
@@ -37,7 +43,7 @@ export class Room {
 
 		// After 1 second, start announcing new members.
 		this.#signals.timer(() => {
-			this.space.sound.tts.set(true);
+			this.space.sound.tts.enabled.set(true);
 		}, 1000);
 	}
 

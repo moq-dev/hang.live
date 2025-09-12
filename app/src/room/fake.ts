@@ -136,7 +136,7 @@ export class FakeRoom {
 	sound: Sound;
 
 	constructor(canvas: Canvas) {
-		this.sound = new Sound({ tts: true });
+		this.sound = new Sound({ tts: { enabled: true } });
 		this.space = new Space(canvas, this.sound);
 	}
 

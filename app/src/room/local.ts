@@ -150,8 +150,6 @@ export class Local {
 			const stream = effect.get(this.screen.stream);
 			if (!stream) return;
 
-			console.log("setting share enabled", stream);
-
 			effect.set(this.share.audio.source, stream.audio);
 			effect.set(this.share.video.source, stream.video);
 			effect.set(this.share.enabled, true, false); // only enable once there is a stream
@@ -180,7 +178,7 @@ export class Local {
 			const enabled = effect.get(this.camera.enabled);
 			if (!enabled) return;
 
-			this.sound.joined(name);
+			this.sound.tts.joined(name);
 		});
 
 		// Update draggable settings

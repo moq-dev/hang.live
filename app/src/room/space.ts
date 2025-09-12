@@ -464,7 +464,7 @@ export class Space {
 			const name = effect.get(broadcast.name);
 			if (!name) return;
 
-			this.sound.joined(name);
+			this.sound.tts.joined(name);
 		});
 
 		broadcast.signals.effect((effect) => {
@@ -473,7 +473,7 @@ export class Space {
 			const name = effect.get(broadcast.name);
 			if (!name) return;
 
-			this.sound.left(name);
+			this.sound.tts.left(name);
 		});
 	}
 
