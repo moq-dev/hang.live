@@ -2,7 +2,12 @@ import * as Api from "@hang/api";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import type { JSX } from "solid-js/jsx-runtime";
+import { z } from "zod";
 import { Tab } from "./components/meme-selector";
+import { createSelector } from "solid-js";
+
+const ttsSchema = z.enum(["none", "low", "high"]);
+type TTS = z.infer<typeof ttsSchema>;
 
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
@@ -14,7 +19,7 @@ const Settings = {
 		capture: new Signal(supportsWebGPU() ? localStorage.getItem("settings.captions.capture") !== "false" : false),
 	},
 
-	tts: new Signal(localStorage.getItem("settings.tts") !== "false"),
+	tts: new Signal<TTS>("low"),
 
 	// Device states that persist across sessions
 	microphone: {
@@ -42,6 +47,15 @@ if (guestRaw) {
 		Settings.guest.set(Api.Account.infoSchema.safeParse(JSON.parse(guestRaw)).data);
 	} catch (error) {
 		console.error("Failed to parse guest settings", error);
+	}
+}
+
+// Load and validate announcements setting
+const ttsRaw = localStorage.getItem("settings.tts");
+if (ttsRaw) {
+	const parsed = ttsSchema.safeParse(ttsRaw);
+	if (parsed.success) {
+		Settings.tts.set(parsed.data);
 	}
 }
 
@@ -82,7 +96,7 @@ effect.subscribe(Settings.captions.capture, (transcription) => {
 });
 
 effect.subscribe(Settings.tts, (tts) => {
-	localStorage.setItem("settings.tts", tts.toString());
+	localStorage.setItem("settings.tts", tts);
 });
 
 effect.subscribe(Settings.microphone.enabled, (enabled) => {
@@ -126,21 +140,84 @@ export default Settings;
 
 export function Modal(): JSX.Element {
 	const draggable = solid(Settings.draggable);
-	const tts = solid(Settings.tts);
+	const tts = createSelector(solid(Settings.tts));
+	const webGPUSupported = supportsWebGPU();
 
 	return (
-		<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-			<input type="checkbox" checked={draggable()} onChange={() => Settings.draggable.set((p) => !p)} />
-			<span>allow dragging</span>
-			<span title="Allow other users to move your camera/screen. You can still move yourself by dragging or using the arrow keys.">
-				<span class="icon-[mdi--cursor-move]" />
-			</span>
+		<div class="flex flex-col gap-5">
+			{/* Title */}
+			<h3 class="text-white font-semibold mb-1 text-xl underline decoration-link-hue">Advanced Settings</h3>
 
-			<input type="checkbox" checked={tts()} onChange={() => Settings.tts.set((p) => !p)} />
-			<span>text-to-speech</span>
-			<span title="Enable text-to-speech for announcing members. WebGPU is recommended.">
-				<span class="icon-[mdi--text-to-speech]" />
-			</span>
+			{/* Announcements */}
+			<div class="flex flex-wrap gap-4">
+				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
+					<span class="icon-[mdi--text-to-speech] text-lg text-white/70" />
+				</div>
+				<div class="flex flex-col gap-0.5">
+					<span class="text-white/90 font-medium">Announce Join/Leave</span>
+					<span class="text-xs text-white/50">
+						{tts("none") && "No voice announcements"}
+						{tts("low") && <>Low quality TTS with <a href="https://github.com/KittenML/KittenTTS" target="_blank" rel="noopener noreferrer" class="decoration-yellow-500">Kitten</a>.</>}
+						{tts("high") && <>High quality TTS with <a href="https://github.com/hexgrad/kokoro" target="_blank" rel="noopener noreferrer" class="decoration-green-500">Kokoro</a>.</>}
+					</span>
+				</div>
+					<div class="inline-flex rounded-lg bg-white/8 p-1 flex-grow">
+						<button
+							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+							classList={{
+								"bg-gray-500 text-white shadow-sm": tts("none"),
+								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("none"),
+							}}
+							onClick={() => Settings.tts.set("none")}
+						>
+							None
+						</button>
+						<button
+							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+							classList={{
+								"bg-yellow-500 text-white shadow-sm": tts("low"),
+								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("low"),
+							}}
+							onClick={() => Settings.tts.set("low")}
+						>
+							Low
+						</button>
+						<button
+							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+							classList={{
+								"bg-green-500 text-white shadow-sm": tts("high"),
+								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("high"),
+								"opacity-40 cursor-not-allowed": !webGPUSupported,
+							}}
+							onClick={() => webGPUSupported && Settings.tts.set("high")}
+							disabled={!webGPUSupported}
+							title={!webGPUSupported ? "WebGPU required" : ""}
+						>
+							High{!webGPUSupported ? "*" : ""}
+						</button>
+				</div>
+			</div>
+
+			{/* Divider */}
+			<div class="h-px bg-white/10" />
+
+			{/* Allow dragging */}
+			<div class="flex flex-wrap gap-4">
+				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
+					<span class="icon-[mdi--cursor-move] text-lg text-white/70" />
+				</div>
+				<div class="flex flex-col gap-0.5">
+					<span class="text-white/90 font-medium">Remote Control</span>
+					<span class="text-xs text-white/50">Allow others to drag/resize your camera</span>
+				</div>
+				<input
+					type="checkbox"
+					checked={draggable()}
+					onChange={() => Settings.draggable.set((p) => !p)}
+					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors flex-grow"
+				/>
+			</div>
+
 		</div>
 	);
 }

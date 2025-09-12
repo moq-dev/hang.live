@@ -4,7 +4,6 @@ import Settings from "../settings";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
-import { Sound } from "./sound";
 import { Space } from "./space";
 
 export class Room {
@@ -16,22 +15,15 @@ export class Room {
 	// The camera/avatar is always published while the screen share is conditionally published.
 	local: Local;
 
-	// Notifications use a shared AudioContext.
-	sound: Sound;
-
 	// The physics space for the room.
 	space: Space;
-
-	// For the first second after joining, don't announce new members.
-	#tts = false;
 
 	#signals = new Effect();
 
 	constructor(connection: Connection, canvas: Canvas, local: Local) {
 		this.connection = connection;
 		this.local = local;
-		this.space = new Space(canvas);
-		this.sound = local.sound;
+		this.space = new Space(canvas, local.sound);
 
 		this.#signals.effect((effect) => {
 			const connection = effect.get(this.connection.established);
@@ -45,7 +37,7 @@ export class Room {
 
 		// After 1 second, start announcing new members.
 		this.#signals.timer(() => {
-			this.#tts = true;
+			this.space.sound.tts.set(true);
 		}, 1000);
 	}
 
@@ -66,7 +58,7 @@ export class Room {
 
 				if (local) {
 					if (update.active) {
-						const broadcast = new Broadcast(local, this.space.canvas, this.sound, {
+						const broadcast = new Broadcast(local, this.space.canvas, this.space.sound, {
 							// Wait until we get an announcement before rendering ourselves as online.
 							visible: false,
 						});
@@ -115,41 +107,20 @@ export class Room {
 					});
 
 					// Download audio when the AudioContext is not suspended.
-					watch.signals.subscribe(this.sound.suspended, (suspended) => {
+					watch.signals.subscribe(this.space.sound.suspended, (suspended) => {
 						watch.audio.enabled.set(!suspended);
 					});
 
-					const broadcast = new Broadcast(watch, this.space.canvas, this.sound, {
+					const broadcast = new Broadcast(watch, this.space.canvas, this.space.sound, {
 						camera: this.local.camera,
 						audio: {
-							sound: this.sound,
+							sound: this.space.sound,
 						},
 						visible: true,
 					});
 
 					this.space.add(update.name, broadcast);
 
-					broadcast.signals.effect((effect) => {
-						if (!effect.get(broadcast.visible)) return;
-
-						const name = effect.get(broadcast.name);
-						if (!name) return;
-
-						if (this.#tts) {
-							this.sound.joined(name);
-						}
-					});
-
-					broadcast.signals.effect((effect) => {
-						if (effect.get(broadcast.visible)) return;
-
-						const name = effect.get(broadcast.name);
-						if (!name) return;
-
-						if (this.#tts) {
-							this.sound.left(name);
-						}
-					});
 				} else {
 					this.space.remove(update.name);
 				}

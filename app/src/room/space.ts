@@ -16,7 +16,7 @@ export class Space {
 	#rip: Broadcast[] = [];
 
 	canvas: Canvas;
-	sound?: Sound;
+	sound: Sound;
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
@@ -31,7 +31,7 @@ export class Space {
 
 	#signals = new Effect();
 
-	constructor(canvas: Canvas, sound?: Sound) {
+	constructor(canvas: Canvas, sound: Sound) {
 		this.canvas = canvas;
 		this.sound = sound;
 
@@ -61,7 +61,7 @@ export class Space {
 
 		// Try enabling sound if we clicked the canvas.
 		if (mouse.x > 0 && mouse.x < viewport.x && mouse.y > 0 && mouse.y < viewport.y) {
-			this.sound?.enabled.set(() => true);
+			this.sound.enabled.set(() => true);
 		}
 
 		this.#dragging = undefined;
@@ -457,6 +457,24 @@ export class Space {
 				z: ++this.#maxZ,
 			}));
 		});
+
+		broadcast.signals.effect((effect) => {
+			if (!effect.get(broadcast.visible)) return;
+
+			const name = effect.get(broadcast.name);
+			if (!name) return;
+
+			this.sound.joined(name);
+		});
+
+		broadcast.signals.effect((effect) => {
+			if (effect.get(broadcast.visible)) return;
+
+			const name = effect.get(broadcast.name);
+			if (!name) return;
+
+			this.sound.left(name);
+		});
 	}
 
 	remove(name: string) {
@@ -549,7 +567,7 @@ export class Space {
 
 	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		// Render the audio click prompt if audio is suspended
-		if (this.sound?.suspended.peek()) {
+		if (this.sound.suspended.peek()) {
 			this.#renderAudioPrompt(ctx);
 		}
 
