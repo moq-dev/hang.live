@@ -52,21 +52,15 @@ export class Chat {
 
 			// Position message below the broadcast
 			const messageTop = pageBounds.y + pageBounds.height;
-			const top = Math.round(
-				(window.devicePixelRatio *
-					Math.min(canvasRect.top + canvasRect.height - root.clientHeight - 40, messageTop)) /
-					window.devicePixelRatio,
-			);
+			const top = Math.round(Math.min(canvasRect.top + canvasRect.height - root.clientHeight - 40, messageTop));
 
 			// Center message horizontally on broadcast
 			const messageCenterX = pageBounds.x + pageBounds.width / 2;
 			const left = Math.round(
-				(window.devicePixelRatio *
-					Math.min(
-						Math.max(canvasRect.left, messageCenterX - root.clientWidth / 2),
-						canvasRect.left + canvasRect.width - root.clientWidth,
-					)) /
-					window.devicePixelRatio,
+				Math.min(
+					Math.max(canvasRect.left, messageCenterX - root.clientWidth / 2),
+					canvasRect.left + canvasRect.width - root.clientWidth,
+				),
 			);
 
 			root.style.left = `${left}px`;
@@ -125,8 +119,8 @@ export class Chat {
 
 		// Move the chat around to the correct position while there's a message or typing.
 		effect.effect((effect) => {
-			const bounds = effect.get(this.broadcast.bounds).div(window.devicePixelRatio);
-			const viewport = effect.get(this.broadcast.canvas.viewport).div(window.devicePixelRatio);
+			const bounds = effect.get(this.broadcast.bounds);
+			const viewport = effect.get(this.broadcast.canvas.viewport);
 			updatePosition(bounds, viewport);
 		});
 

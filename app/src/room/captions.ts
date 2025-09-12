@@ -39,8 +39,8 @@ export class Captions {
 		root.appendChild(wrapper);
 
 		effect.effect((effect) => {
-			const bounds = effect.get(this.broadcast.bounds).div(window.devicePixelRatio);
-			const viewport = effect.get(this.broadcast.canvas.viewport).div(window.devicePixelRatio);
+			const bounds = effect.get(this.broadcast.bounds);
+			const viewport = effect.get(this.broadcast.canvas.viewport);
 
 			// Get the canvas element's position on the page
 			const canvasRect = this.canvas.element.getBoundingClientRect();

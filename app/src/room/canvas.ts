@@ -1,11 +1,11 @@
 import { Effect, Signal } from "@kixelated/signals";
 import { Vector } from "./geometry";
 
-const LINE_SPACING = 32 * devicePixelRatio;
-const LINE_WIDTH = 5 * devicePixelRatio;
+const LINE_SPACING = 32;
+const LINE_WIDTH = 5;
 const SEGMENTS = 16;
-const WOBBLE_AMPLITUDE = 5 * devicePixelRatio;
-const BEND_AMPLITUDE = 8 * devicePixelRatio;
+const WOBBLE_AMPLITUDE = 5;
+const BEND_AMPLITUDE = 8;
 const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
 const LINE_OVERDRAW = 2;
@@ -58,17 +58,20 @@ export class Canvas {
 
 			if (isFullscreen || isFixed) {
 				// Use window dimensions for fullscreen or fixed position
-				newWidth = window.devicePixelRatio * window.innerWidth;
-				newHeight = window.devicePixelRatio * window.innerHeight;
+				newWidth = window.innerWidth;
+				newHeight = window.innerHeight;
 			} else {
 				// Use parent container dimensions
 				const parent = this.#canvas.parentElement;
 				if (!parent) return;
 
 				const rect = parent.getBoundingClientRect();
-				newWidth = window.devicePixelRatio * rect.width;
-				newHeight = window.devicePixelRatio * rect.height;
+				newWidth = rect.width;
+				newHeight = rect.height;
 			}
+
+			newWidth *= window.devicePixelRatio;
+			newHeight *= window.devicePixelRatio;
 
 			// Only update canvas if dimensions actually changed
 			// This prevents the canvas from being cleared when layout changes don't affect size
@@ -79,8 +82,13 @@ export class Canvas {
 			this.#canvas.width = newWidth;
 			this.#canvas.height = newHeight;
 
-			// NOTE: devicePixelRatio is transparently handled by the browser.
-			this.viewport.set(Vector.create(this.#canvas.width, this.#canvas.height));
+			// The internal logic ignores devicePixelRatio because we automatically scale when rendering.
+			this.viewport.set(
+				Vector.create(
+					this.#canvas.width / window.devicePixelRatio,
+					this.#canvas.height / window.devicePixelRatio,
+				),
+			);
 		};
 
 		let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -158,6 +166,11 @@ export class Canvas {
 		ctx.imageSmoothingEnabled = true;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+		// Apply devicePixelRatio scaling once at the start
+		// This allows all drawing operations to use logical pixels (CSS pixels)
+		ctx.save();
+		ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
 		this.#renderBackground(this.#context, now);
 
 		if (this.demo.peek()) {
@@ -167,16 +180,21 @@ export class Canvas {
 		if (this.onRender) {
 			this.onRender(this.#context, now);
 		}
+
+		// Restore the context to remove the scaling
+		ctx.restore();
+
 		this.#animate = requestAnimationFrame(this.#render.bind(this));
 	}
 
 	#renderDemo(ctx: CanvasRenderingContext2D) {
 		ctx.save();
 
-		const width = ctx.canvas.width;
-		const height = ctx.canvas.height;
+		// Use logical dimensions (CSS pixels)
+		const width = ctx.canvas.width / window.devicePixelRatio;
+		const height = ctx.canvas.height / window.devicePixelRatio;
 
-		const fontSize = Math.round(64 * devicePixelRatio); // round to avoid busting font caches
+		const fontSize = Math.round(64); // round to avoid busting font caches
 		ctx.font = `bold ${fontSize}px sans-serif`;
 		ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
 		ctx.textAlign = "center";
@@ -204,8 +222,9 @@ export class Canvas {
 	#renderBackground(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		ctx.save();
 
-		const width = ctx.canvas.width;
-		const height = ctx.canvas.height;
+		// Use logical dimensions (CSS pixels)
+		const width = ctx.canvas.width / window.devicePixelRatio;
+		const height = ctx.canvas.height / window.devicePixelRatio;
 
 		const LINE_COUNT = Math.ceil(height / LINE_SPACING) + LINE_OVERDRAW * 2;
 
