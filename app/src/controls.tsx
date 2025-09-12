@@ -18,6 +18,7 @@ import Tooltip from "./components/tooltip";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
+import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 
 export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
@@ -43,7 +44,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 			<div class="flex items-end gap-4">
 				<Volume room={props.room} />
 				{/* <ClosedCaptions /> */}
-				<Advanced />
+				<Advanced sound={props.room.space.sound} />
 				<Fullscreen canvas={props.canvas} />
 			</div>
 		</div>
@@ -743,7 +744,7 @@ function Volume(props: { room: Room }): JSX.Element {
 // 	);
 // }
 
-function Advanced(): JSX.Element {
+function Advanced(props: { sound: Sound }): JSX.Element {
 	const [showSettings, setShowSettings] = createSignal(false);
 	const [button, setButton] = createSignal<HTMLButtonElement | undefined>(undefined);
 	const [modal, setModal] = createSignal<HTMLDivElement | undefined>(undefined);
@@ -787,7 +788,7 @@ function Advanced(): JSX.Element {
 			<Show when={showSettings()}>
 				<div ref={setModal} class="fixed z-[999] right-4 bottom-16 pointer-events-auto">
 					<div class="bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5">
-						<Modal />
+						<Modal sound={props.sound} />
 					</div>
 				</div>
 			</Show>

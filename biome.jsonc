@@ -1,7 +1,7 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
 	"files": {
-		"includes": ["**", "!**/worker-configuration.d.ts"]
+		"includes": ["**", "!**/worker-configuration.d.ts", "!**/models/tts/**"]
 	},
 	"vcs": {
 		"enabled": true,

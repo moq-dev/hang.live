@@ -6,6 +6,7 @@ import {
 	Tensor,
 } from "@huggingface/transformers";
 import { phonemize } from "./phonemize";
+import { Progress } from "./progress";
 
 /*
 const VOICES = [
@@ -24,48 +25,57 @@ export type Voice = (typeof VOICES)[number];
 
 const DEFAULT_VOICE = "expr-voice-5-f";
 
-const voicesURL = "https://huggingface.co/onnx-community/kitten-tts-nano-0.1-ONNX/resolve/main/voices";
-const modelName = "onnx-community/kitten-tts-nano-0.1-ONNX";
+const modelName = "kitten-tts-0.2";
+const voicesURL = `/models/${modelName}/voices`;
 
 export class TTS {
-	#model: StyleTextToSpeech2Model;
-	#tokenizer: PreTrainedTokenizer;
-	#voice: Float32Array;
+	#model: Promise<StyleTextToSpeech2Model>;
+	#tokenizer: Promise<PreTrainedTokenizer>;
+	#voice: Promise<Float32Array>;
+	#progress: Progress;
 
-	constructor(model: StyleTextToSpeech2Model, tokenizer: PreTrainedTokenizer, voice: Float32Array) {
-		this.#model = model;
-		this.#tokenizer = tokenizer;
-		this.#voice = voice;
-	}
+	constructor() {
+		this.#progress = new Progress();
 
-	static async load(): Promise<TTS> {
-		const model = StyleTextToSpeech2Model.from_pretrained(modelName, {
+		this.#model = StyleTextToSpeech2Model.from_pretrained(modelName, {
 			dtype: "q8",
+			progress_callback: this.#progress.update.bind(this.#progress),
 		});
-		const tokenizer = AutoTokenizer.from_pretrained(modelName);
-		const voice = fetch(`${voicesURL}/${DEFAULT_VOICE}.bin`)
+		this.#tokenizer = AutoTokenizer.from_pretrained(modelName);
+		this.#voice = fetch(`${voicesURL}/${DEFAULT_VOICE}.bin`)
 			.then((response) => response.arrayBuffer())
 			.then((arrayBuffer) => new Float32Array(arrayBuffer));
-
-		return new TTS(await model, await tokenizer, await voice);
 	}
 
-	async generate(text: string, speed = 1.1): Promise<string> {
+	async ready(): Promise<boolean> {
+		return !!(await this.#model);
+	}
+
+	async progress(): Promise<number> {
+		return this.#progress.next();
+	}
+
+	async generate(text: string, speed = 1.2): Promise<string> {
 		const phonemes = await phonemize(text);
 
-		const { input_ids } = await this.#tokenizer(phonemes, {
+		const tokenizer = await this.#tokenizer;
+		const { input_ids } = await tokenizer(phonemes, {
 			truncation: true,
 		});
+
+		const voice = await this.#voice;
 
 		// Prepare model inputs
 		const inputs = {
 			input_ids,
-			style: new Tensor("float32", this.#voice, [1, this.#voice.length]),
+			style: new Tensor("float32", voice, [1, voice.length]),
 			speed: new Tensor("float32", [speed], [1]),
 		};
 
+		const model = await this.#model;
+
 		// Generate audio
-		const { waveform } = await this.#model(inputs);
+		const { waveform } = await model(inputs);
 		const wav = new RawAudio(waveform.data, 24000);
 
 		return URL.createObjectURL(wav.toBlob());

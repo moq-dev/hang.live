@@ -1,10 +1,11 @@
 import * as Api from "@hang/api";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
-import { createSelector } from "solid-js";
+import { createSelector, createSignal, Match, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
 import { Tab } from "./components/meme-selector";
+import { Sound } from "./room/sound";
 
 const ttsSchema = z.enum(["none", "low", "high"]);
 type TTS = z.infer<typeof ttsSchema>;
@@ -138,10 +139,24 @@ document.addEventListener("unload", () => {
 
 export default Settings;
 
-export function Modal(): JSX.Element {
+export function Modal(props: { sound: Sound }): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const tts = createSelector(solid(Settings.tts));
 	const webGPUSupported = supportsWebGPU();
+
+	const progress = solid(props.sound.tts.progress);
+	const [isGenerating, setIsGenerating] = createSignal(false);
+
+	const load = (quality: "high" | "low" | "none") => {
+		Settings.tts.set(quality);
+	};
+
+	const testPhrases = [
+		"My mom bought me this new laptop and it gets really hot when the chat is being spammed.",
+		"Now my leg is starting to hurt because it is getting so hot.",
+		"Please, if you don't want me to get burned, then dont spam the chat.",
+	];
+	let phraseNum = 0;
 
 	return (
 		<div class="flex flex-col gap-5">
@@ -149,7 +164,6 @@ export function Modal(): JSX.Element {
 			<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">
 				Advanced Settings
 			</h3>
-
 			{/* Announcements */}
 			<div class="flex flex-wrap gap-4">
 				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
@@ -197,7 +211,7 @@ export function Modal(): JSX.Element {
 							"bg-gray-500 text-white shadow-sm": tts("none"),
 							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("none"),
 						}}
-						onClick={() => Settings.tts.set("none")}
+						onClick={() => load("none")}
 					>
 						None
 					</button>
@@ -208,7 +222,7 @@ export function Modal(): JSX.Element {
 							"bg-yellow-500 text-white shadow-sm": tts("low"),
 							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("low"),
 						}}
-						onClick={() => Settings.tts.set("low")}
+						onClick={() => load("low")}
 					>
 						Low
 					</button>
@@ -220,7 +234,7 @@ export function Modal(): JSX.Element {
 							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("high"),
 							"opacity-40 cursor-not-allowed": !webGPUSupported,
 						}}
-						onClick={() => webGPUSupported && Settings.tts.set("high")}
+						onClick={() => webGPUSupported && load("high")}
 						disabled={!webGPUSupported}
 						title={!webGPUSupported ? "WebGPU required" : ""}
 					>
@@ -228,11 +242,43 @@ export function Modal(): JSX.Element {
 					</button>
 				</div>
 			</div>
+			{/* Progress bar */}
+			<button
+				type="button"
+				class="relative w-full bg-white/10 rounded-full overflow-hidden transition-all hover:brightness-110 cursor-pointer"
+				classList={{
+					"h-8": !tts("none"),
+					"h-0": !!tts("none"),
+				}}
+				onClick={async (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					if (isGenerating() || progress() !== 1) return;
 
-			{/* Divider */}
+					setIsGenerating(true);
+
+					const phrase = testPhrases[phraseNum];
+					phraseNum = (phraseNum + 1) % testPhrases.length;
+
+					await props.sound.tts.say(phrase);
+					setIsGenerating(false);
+				}}
+				disabled={isGenerating() || progress() !== 1}
+			>
+				<div
+					class="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-300"
+					style={{ width: `${(progress() ?? 0) * 100}%` }}
+				/>
+				<div class="absolute inset-0 flex items-center justify-center">
+					<span class="text-sm text-white/80 font-medium">
+						<Switch fallback="Test">
+							<Match when={(progress() ?? 0) < 1}>Loading</Match>
+							<Match when={isGenerating()}>Generating</Match>
+						</Switch>
+					</span>
+				</div>
+			</button>
 			<div class="h-px bg-white/10" />
-
-			{/* Allow dragging */}
 			<div class="flex flex-wrap gap-4">
 				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
 					<span class="icon-[mdi--cursor-move] text-lg text-white/70" />
