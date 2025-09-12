@@ -3,9 +3,7 @@ import * as JWT from "jose";
 import { z } from "zod";
 import { Account } from ".";
 import RootContext from "./context";
-
-export const accountIdSchema = z.string().brand("AccountId");
-export type AccountId = z.infer<typeof accountIdSchema>;
+import { accountIdSchema } from "./shared";
 
 // Use ZOD to validate the payload
 const tokenSchema = z.object({

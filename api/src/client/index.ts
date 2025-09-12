@@ -2,7 +2,6 @@ import { hc } from "hono/client";
 import type * as Api from "..";
 
 export type * from "..";
-export * as Room from "../room";
 
 import { oauthStateSchema } from "../shared";
 

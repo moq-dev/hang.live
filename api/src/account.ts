@@ -7,14 +7,15 @@ import * as Avatar from "./avatar";
 import * as Database from "./database";
 import * as OAuth from "./oauth";
 import * as rpc from "./rpc";
+import { AccountId, accountIdSchema } from "./shared";
 import * as Storage from "./storage";
 
-// Account schemas
-export const idSchema = Auth.accountIdSchema;
-export type Id = Auth.AccountId;
+export type Id = AccountId;
+export const idSchema = accountIdSchema;
 
+// Account schemas
 export const infoSchema = z.object({
-	id: idSchema,
+	id: accountIdSchema,
 	name: z.string().check(z.minLength(4), z.maxLength(100)),
 	avatar: z.string(),
 });

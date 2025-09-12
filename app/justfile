@@ -23,3 +23,7 @@ deploy env="staging":
 
 dev flags="":
 	bun vite dev {{flags}}
+
+# Amazing tool to visualize the app bundle size
+bundle:
+	npx vite-bundle-visualizer

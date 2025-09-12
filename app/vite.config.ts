@@ -11,12 +11,12 @@ export default defineConfig(() => ({
 		sourcemap: process.env.NODE_ENV === "production" ? false : ("inline" as const),
 		rollupOptions: {
 			input: "index.html",
-			// Optional: In web builds, mark Tauri packages as external so we won't accidentally bundle them
+			// Optional: Make sure we never bundle Tauri packages just in case tree-shaking doesn't work.
 			external: process.env.TAURI_ENV_PLATFORM ? [] : [/^@tauri-apps\//],
 		},
 	},
 	optimizeDeps: {
-		exclude: ["@libav.js/variant-opus-af", "onnxruntime-web"],
+		exclude: ["@libav.js/variant-opus-af"],
 	},
 
 	worker: {
