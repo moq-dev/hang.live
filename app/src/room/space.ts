@@ -614,14 +614,14 @@ export class Space {
 	#renderAudioPrompt(ctx: CanvasRenderingContext2D) {
 		ctx.save();
 
-		const width = ctx.canvas.width;
-		const scale = window.devicePixelRatio;
-		const padding = 30 * scale;
-		const boxWidth = 400 * scale;
-		const height = 80 * scale;
-		const y = ctx.canvas.height - height - padding;
+		// Use logical dimensions (CSS pixels)
+		const width = ctx.canvas.width / window.devicePixelRatio;
+		const padding = 30;
+		const boxWidth = 400;
+		const height = 80;
+		const y = ctx.canvas.height / window.devicePixelRatio - height - padding;
 		const x = (width - boxWidth) / 2;
-		const borderRadius = 16 * scale;
+		const borderRadius = 16;
 
 		// Rounded rectangle with thick black border
 		ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
@@ -631,11 +631,11 @@ export class Space {
 
 		// Thick border
 		ctx.strokeStyle = "rgba(0, 0, 0, 1)";
-		ctx.lineWidth = 6 * scale;
+		ctx.lineWidth = 6;
 		ctx.stroke();
 
 		// Text
-		const fontSize = Math.round(24 * scale); // round to avoid busting font caches
+		const fontSize = Math.round(24); // round to avoid busting font caches
 		ctx.font = `${fontSize}px sans-serif`;
 		ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
 		ctx.textAlign = "center";
@@ -662,7 +662,7 @@ export class Space {
 		const fillRatio = broadcastArea / canvasArea;
 		const targetFill = 0.25;
 
-		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), window.devicePixelRatio);
+		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 1);
 	}
 
 	close() {

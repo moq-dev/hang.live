@@ -284,7 +284,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const force = target.sub(middle);
 		this.velocity = this.velocity.add(force);
 
-		const PADDING = 32 * devicePixelRatio;
+		const PADDING = 32;
 
 		const top = PADDING - bounds.position.y;
 		const down = bounds.position.y + bounds.size.y - viewport.y + PADDING;
@@ -378,9 +378,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		ctx.globalAlpha *= alpha;
 
 		// Calculate arrow position and animation
-		const arrowSize = 12 * this.scale * devicePixelRatio;
+		const arrowSize = 12 * this.scale;
 		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * this.scale * devicePixelRatio;
+		const offset = 10 * this.scale;
 
 		const gap = 2 * (arrowSize + offset);
 

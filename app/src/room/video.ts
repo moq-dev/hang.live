@@ -176,7 +176,7 @@ export class Video {
 		ctx.shadowOffsetY = 4 * scale;
 
 		// Create a rounded rectangle path
-		const radius = 12 * scale * devicePixelRatio;
+		const radius = 12 * scale;
 		const w = bounds.size.x;
 		const h = bounds.size.y;
 
@@ -446,14 +446,14 @@ export class Video {
 		const name = this.broadcast.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
-			const fontSize = Math.round(Math.max(14 * scale * devicePixelRatio, 10 * devicePixelRatio));
+			const fontSize = Math.round(Math.max(14 * scale, 10));
 			ctx.save();
 			ctx.globalAlpha *= this.#nameOpacity;
 			ctx.font = `bold ${fontSize}px Arial`;
 			ctx.fillStyle = "white";
 			ctx.strokeStyle = "black";
-			ctx.lineWidth = 2 * scale * devicePixelRatio;
-			const offset = 12 * scale * devicePixelRatio;
+			ctx.lineWidth = 2 * scale;
+			const offset = 12 * scale;
 			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();
