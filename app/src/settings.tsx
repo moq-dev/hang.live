@@ -1,4 +1,4 @@
-import * as Api from "@hang/api";
+import * as Api from "@hang/api/client";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import { createSelector, createSignal, Match, Switch } from "solid-js";
@@ -45,7 +45,7 @@ const Settings = {
 const guestRaw = localStorage.getItem("settings.guest");
 if (guestRaw) {
 	try {
-		Settings.guest.set(Api.Account.infoSchema.safeParse(JSON.parse(guestRaw)).data);
+		Settings.guest.set(Api.AccountInfoSchema.safeParse(JSON.parse(guestRaw)).data);
 	} catch (error) {
 		console.error("Failed to parse guest settings", error);
 	}

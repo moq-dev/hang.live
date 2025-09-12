@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { createSignal, onMount } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import Layout from "./layout/web";
@@ -507,6 +506,7 @@ function IconCanvas(props: { variant: IconVariant }) {
 	const downloadAllAsZip = async () => {
 		setIsGenerating(true);
 		try {
+			const JSZip = (await import("jszip")).default;
 			const zip = new JSZip();
 			const svgString = generateSVG(props.variant);
 

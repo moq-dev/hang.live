@@ -29,8 +29,8 @@ export default function Create(): JSX.Element {
 		const name = roomInput().trim();
 		if (!name) return null;
 
-		if (!Api.Room.isValidName(name)) {
-			return Api.Room.ROOM_NAME_ERROR;
+		if (!Api.isValidRoom(name)) {
+			return Api.ROOM_NAME_ERROR;
 		}
 		return null;
 	});
@@ -38,7 +38,7 @@ export default function Create(): JSX.Element {
 	const handleCreate = (e: Event) => {
 		e.preventDefault();
 		const name = roomName();
-		if (name && Api.Room.isValidName(name)) {
+		if (name && Api.isValidRoom(name)) {
 			navigate(`/@${name}`);
 		}
 	};
