@@ -173,87 +173,87 @@ export function Microphone(props: { local: Local }): JSX.Element {
 					class="absolute bottom-full mb-2 left-0 min-w-80 max-w-[calc(100vw-2rem)] bg-black/90 backdrop-blur-lg rounded-lg border border-white/30 shadow-2xl p-4 z-50 flex flex-col gap-4"
 				>
 					{/* Title */}
-					<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">Microphone Settings</h3>
+					<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">
+						Microphone Settings
+					</h3>
 
 					{/* Volume slider */}
-						<div class="flex items-center gap-2 flex-grow">
-							<span class="icon-[mdi--volume-low] text-white/80 text-sm" />
-							<div class="flex-1 relative flex items-center">
-								<input
-									type="range"
-									min="0"
-									step="0.01"
-									max="2"
-									value={volume()}
-									onInput={(e) => Settings.microphone.gain.set(Number(e.currentTarget.value))}
-									class="w-full cursor-pointer h-1 bg-white/20 rounded-full appearance-none relative z-10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20"
-									aria-label="Microphone volume"
-									style={{
-										background: `linear-gradient(to right, hsl(var(--link-hue) 60% 60%) 0%, hsl(var(--link-hue) 60% 60%) ${volume() * 50}%, rgba(255, 255, 255, 0.2) ${volume() * 50}%, rgba(255, 255, 255, 0.2) 100%)`,
-										height: "4px",
-									}}
-								/>
-							</div>
-							<span class="icon-[mdi--volume-high] text-white/88 text-sm" />
-							<span class="text-xs text-white/80 min-w-[2.5rem] text-right">
-								{Math.round(volume() * 100)}%
-							</span>
+					<div class="flex items-center gap-2 flex-grow">
+						<span class="icon-[mdi--volume-low] text-white/80 text-sm" />
+						<div class="flex-1 relative flex items-center">
+							<input
+								type="range"
+								min="0"
+								step="0.01"
+								max="2"
+								value={volume()}
+								onInput={(e) => Settings.microphone.gain.set(Number(e.currentTarget.value))}
+								class="w-full cursor-pointer h-1 bg-white/20 rounded-full appearance-none relative z-10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20"
+								aria-label="Microphone volume"
+								style={{
+									background: `linear-gradient(to right, hsl(var(--link-hue) 60% 60%) 0%, hsl(var(--link-hue) 60% 60%) ${volume() * 50}%, rgba(255, 255, 255, 0.2) ${volume() * 50}%, rgba(255, 255, 255, 0.2) 100%)`,
+									height: "4px",
+								}}
+							/>
 						</div>
+						<span class="icon-[mdi--volume-high] text-white/88 text-sm" />
+						<span class="text-xs text-white/80 min-w-[2.5rem] text-right">
+							{Math.round(volume() * 100)}%
+						</span>
+					</div>
 
 					{/* Divider */}
 					<div class="h-px bg-white/10" />
 
 					{/* Device selection */}
-						<div class="flex flex-col gap-1 w-full">
-							<Switch>
-								<Match when={available() === undefined}>
-									<button
-										type="button"
-										onClick={requestPermissions}
-										class="flex items-center justify-center gap-2 text-sm px-3 py-2.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-									>
-										<span class="icon-[mdi--shield-check] text-base" />
-										<span>Grant Microphone Permission</span>
-									</button>
-								</Match>
-								<Match when={available()?.length === 0}>
-									<div class="text-sm text-white/40 px-3 py-2">No devices found</div>
-								</Match>
-								<Match when={available()}>
-									{(devices) => (
-										<>
-											{devices().map((dev) => (
-												<button
-													type="button"
-													onClick={() => selectDevice(dev.deviceId)}
-													class="flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+					<div class="flex flex-col gap-1 w-full">
+						<Switch>
+							<Match when={available() === undefined}>
+								<button
+									type="button"
+									onClick={requestPermissions}
+									class="flex items-center justify-center gap-2 text-sm px-3 py-2.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
+								>
+									<span class="icon-[mdi--shield-check] text-base" />
+									<span>Grant Microphone Permission</span>
+								</button>
+							</Match>
+							<Match when={available()?.length === 0}>
+								<div class="text-sm text-white/40 px-3 py-2">No devices found</div>
+							</Match>
+							<Match when={available()}>
+								{(devices) => (
+									<>
+										{devices().map((dev) => (
+											<button
+												type="button"
+												onClick={() => selectDevice(dev.deviceId)}
+												class="flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+												classList={{
+													"bg-white/5": active(dev.deviceId),
+												}}
+											>
+												<span
+													class="text-base"
 													classList={{
-														"bg-white/5": active(dev.deviceId),
+														"icon-[mdi--check]": active(dev.deviceId),
+														"icon-[mdi--loading] animate-spin":
+															requested(dev.deviceId) && !active(dev.deviceId),
 													}}
-												>
-													<span
-														class="text-base"
-														classList={{
-															"icon-[mdi--check]": active(dev.deviceId),
-															"icon-[mdi--loading] animate-spin":
-																requested(dev.deviceId) && !active(dev.deviceId),
-														}}
-														style={{
-															color:
-																active(dev.deviceId) || requested(dev.deviceId)
-																	? "hsl(var(--link-hue) 60% 60%)"
-																	: "transparent",
-														}}
-													/>
-													<span>
-														{dev.label || `Microphone ${dev.deviceId.slice(0, 8)}`}
-													</span>
-												</button>
-											))}
-										</>
-									)}
-								</Match>
-							</Switch>
+													style={{
+														color:
+															active(dev.deviceId) || requested(dev.deviceId)
+																? "hsl(var(--link-hue) 60% 60%)"
+																: "transparent",
+													}}
+												/>
+												<span>{dev.label || `Microphone ${dev.deviceId.slice(0, 8)}`}</span>
+											</button>
+										))}
+									</>
+								)}
+							</Match>
+						</Switch>
 					</div>
 				</div>
 			</Show>
@@ -381,60 +381,60 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 					class="absolute bottom-full mb-2 left-0 min-w-80 max-w-[calc(100vw-2rem)] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5 z-50"
 				>
 					{/* Title */}
-					<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">Camera Settings</h3>
+					<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">
+						Camera Settings
+					</h3>
 
 					{/* Device selection */}
 					<div class="flex flex-wrap gap-4">
 						<div class="flex flex-col gap-1 w-full">
-						<Switch>
-							<Match when={available() === undefined}>
-								<button
-									type="button"
-									onClick={requestPermissions}
-									class="flex items-center justify-center gap-2 text-sm px-3 py-2.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-								>
-									<span class="icon-[mdi--shield-check] text-base" />
-									<span>Grant Camera Permission</span>
-								</button>
-							</Match>
-							<Match when={available()?.length === 0}>
-								<div class="text-sm text-white/40 px-3 py-2">No devices found</div>
-							</Match>
-							<Match when={available()}>
-								{(devices) => (
-									<>
-										{devices().map((dev) => (
-											<button
-												type="button"
-												onClick={() => selectDevice(dev.deviceId)}
-												class="flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
-												classList={{
-													"bg-white/5": active(dev.deviceId),
-												}}
-											>
-												<span
-													class="text-base"
+							<Switch>
+								<Match when={available() === undefined}>
+									<button
+										type="button"
+										onClick={requestPermissions}
+										class="flex items-center justify-center gap-2 text-sm px-3 py-2.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
+									>
+										<span class="icon-[mdi--shield-check] text-base" />
+										<span>Grant Camera Permission</span>
+									</button>
+								</Match>
+								<Match when={available()?.length === 0}>
+									<div class="text-sm text-white/40 px-3 py-2">No devices found</div>
+								</Match>
+								<Match when={available()}>
+									{(devices) => (
+										<>
+											{devices().map((dev) => (
+												<button
+													type="button"
+													onClick={() => selectDevice(dev.deviceId)}
+													class="flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
 													classList={{
-														"icon-[mdi--check]": active(dev.deviceId),
-														"icon-[mdi--loading] animate-spin":
-															requested(dev.deviceId) && !active(dev.deviceId),
+														"bg-white/5": active(dev.deviceId),
 													}}
-													style={{
-														color:
-															active(dev.deviceId) || requested(dev.deviceId)
-																? "hsl(var(--link-hue) 60% 60%)"
-																: "transparent",
-													}}
-												/>
-												<span>
-													{dev.label || `Camera ${dev.deviceId.slice(0, 8)}`}
-												</span>
-											</button>
-										))}
-									</>
-								)}
-							</Match>
-						</Switch>
+												>
+													<span
+														class="text-base"
+														classList={{
+															"icon-[mdi--check]": active(dev.deviceId),
+															"icon-[mdi--loading] animate-spin":
+																requested(dev.deviceId) && !active(dev.deviceId),
+														}}
+														style={{
+															color:
+																active(dev.deviceId) || requested(dev.deviceId)
+																	? "hsl(var(--link-hue) 60% 60%)"
+																	: "transparent",
+														}}
+													/>
+													<span>{dev.label || `Camera ${dev.deviceId.slice(0, 8)}`}</span>
+												</button>
+											))}
+										</>
+									)}
+								</Match>
+							</Switch>
 						</div>
 					</div>
 				</div>
@@ -785,10 +785,7 @@ function Advanced(): JSX.Element {
 			</Tooltip>
 
 			<Show when={showSettings()}>
-				<div
-					ref={setModal}
-					class="fixed z-[999] right-4 bottom-16 pointer-events-auto"
-				>
+				<div ref={setModal} class="fixed z-[999] right-4 bottom-16 pointer-events-auto">
 					<div class="bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5">
 						<Modal />
 					</div>

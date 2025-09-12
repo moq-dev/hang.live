@@ -9,13 +9,13 @@ default:
 # Run the CI checks
 check:
 	bun install --frozen-lockfile
-	bun run --filter='*' check
+	bun run --filter='*' --elide-lines=0 check
 	cd native && just check
 
 # Automatically fix some issues.
 fix:
 	bun install
-	bun run --filter='*' fix
+	bun run --filter='*' --elide-lines=0 fix
 	cd native && just fix
 
 # Upgrade any tooling
@@ -27,10 +27,10 @@ upgrade:
 # Build the packages
 build:
 	bun install --frozen-lockfile
-	bun run --filter='*' build
+	bun run --filter='*' --elide-lines=0 build
 
 prod: build
-	bun run --filter='*' prod
+	bun run --filter='*' --elide-lines=0 prod
 
 deploy env="staging":
 	cd api && just deploy "{{env}}"

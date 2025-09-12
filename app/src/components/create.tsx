@@ -86,7 +86,11 @@ export default function Create(): JSX.Element {
 				</div>
 			</form>
 
-			<Switch fallback={<div class="text-gray-400 text-sm text-center">choose a name for the hang, or use a random one</div>}>
+			<Switch
+				fallback={
+					<div class="text-gray-400 text-sm text-center">choose a name for the hang, or use a random one</div>
+				}
+			>
 				<Match when={roomNameError()}>
 					{(error) => (
 						<Dialog

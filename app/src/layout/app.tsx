@@ -37,7 +37,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 	const share = async () => {
 		const url = window.location.href;
 		await navigator.clipboard.writeText(url);
-		
+
 		setShowCopiedNotification(true);
 		setTimeout(() => {
 			setShowCopiedNotification(false);
