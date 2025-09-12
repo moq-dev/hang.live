@@ -170,13 +170,14 @@ export function Microphone(props: { local: Local }): JSX.Element {
 			<Show when={enabled() && showMenu()}>
 				<div
 					ref={menuRef}
-					class="absolute bottom-full mb-2 left-0 bg-black/90 backdrop-blur-lg rounded-lg border border-white/30 shadow-2xl p-4 z-50 flex flex-col gap-4"
+					class="absolute bottom-full mb-2 left-0 min-w-80 max-w-[calc(100vw-2rem)] bg-black/90 backdrop-blur-lg rounded-lg border border-white/30 shadow-2xl p-4 z-50 flex flex-col gap-4"
 				>
+					{/* Title */}
+					<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">Microphone Settings</h3>
+
 					{/* Volume slider */}
-					<div>
-						<div class="text-sm mb-2 font-medium text-white/60">Volume</div>
-						<div class="flex items-center gap-2">
-							<span class="icon-[mdi--volume-low] text-white/40 text-sm" />
+						<div class="flex items-center gap-2 flex-grow">
+							<span class="icon-[mdi--volume-low] text-white/80 text-sm" />
 							<div class="flex-1 relative flex items-center">
 								<input
 									type="range"
@@ -193,16 +194,17 @@ export function Microphone(props: { local: Local }): JSX.Element {
 									}}
 								/>
 							</div>
-							<span class="icon-[mdi--volume-high] text-white/40 text-sm" />
-							<span class="text-xs text-white/40 min-w-[2.5rem] text-right">
+							<span class="icon-[mdi--volume-high] text-white/88 text-sm" />
+							<span class="text-xs text-white/80 min-w-[2.5rem] text-right">
 								{Math.round(volume() * 100)}%
 							</span>
 						</div>
-					</div>
 
-					<div>
-						<div class="text-sm mt-2 font-medium text-white/60">Device</div>
-						<div class="flex flex-col gap-1">
+					{/* Divider */}
+					<div class="h-px bg-white/10" />
+
+					{/* Device selection */}
+						<div class="flex flex-col gap-1 w-full">
 							<Switch>
 								<Match when={available() === undefined}>
 									<button
@@ -243,7 +245,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 																	: "transparent",
 														}}
 													/>
-													<span class="flex-1">
+													<span>
 														{dev.label || `Microphone ${dev.deviceId.slice(0, 8)}`}
 													</span>
 												</button>
@@ -252,7 +254,6 @@ export function Microphone(props: { local: Local }): JSX.Element {
 									)}
 								</Match>
 							</Switch>
-						</div>
 					</div>
 				</div>
 			</Show>
@@ -353,7 +354,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 					<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
 				</button>
 			</Tooltip>
-			<Show when={media()}>
+			<Show when={media() && (available()?.length ?? 0) > 1}>
 				<Tooltip
 					content={deviceChangeMessage() || "Camera settings"}
 					position="top"
@@ -377,10 +378,14 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 			<Show when={showMenu()}>
 				<div
 					ref={menuRef}
-					class="absolute bottom-full mb-2 left-0 bg-black/90 backdrop-blur-lg rounded-lg shadow-2xl border border-white/30 p-4 z-50"
+					class="absolute bottom-full mb-2 left-0 min-w-80 max-w-[calc(100vw-2rem)] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5 z-50"
 				>
-					<div class="text-sm text-white/60 mb-2 font-medium">Device</div>
-					<div class="flex flex-col gap-1">
+					{/* Title */}
+					<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">Camera Settings</h3>
+
+					{/* Device selection */}
+					<div class="flex flex-wrap gap-4">
+						<div class="flex flex-col gap-1 w-full">
 						<Switch>
 							<Match when={available() === undefined}>
 								<button
@@ -421,7 +426,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 																: "transparent",
 													}}
 												/>
-												<span class="flex-1">
+												<span>
 													{dev.label || `Camera ${dev.deviceId.slice(0, 8)}`}
 												</span>
 											</button>
@@ -430,6 +435,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 								)}
 							</Match>
 						</Switch>
+						</div>
 					</div>
 				</div>
 			</Show>

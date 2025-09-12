@@ -146,7 +146,7 @@ export function Modal(): JSX.Element {
 	return (
 		<div class="flex flex-col gap-5">
 			{/* Title */}
-			<h3 class="text-white font-semibold mb-1 text-xl underline decoration-link-hue">Advanced Settings</h3>
+			<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">Advanced Settings</h3>
 
 			{/* Announcements */}
 			<div class="flex flex-wrap gap-4">
