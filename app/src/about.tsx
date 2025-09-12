@@ -254,9 +254,8 @@ export function About(): JSX.Element {
 
 				<p>
 					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
-					<a href="https://moq.dev">MoQ</a>.
-					There's more to live than another {services[currentService()]} clone.{" "}
-					<i>Crazy</i>, I know.
+					<a href="https://moq.dev">MoQ</a>. There's more to live than another {services[currentService()]}{" "}
+					clone. <i>Crazy</i>, I know.
 				</p>
 
 				<div class="flex justify-center my-18">

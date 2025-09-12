@@ -1,10 +1,10 @@
 import * as Api from "@hang/api";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
+import { createSelector } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
 import { Tab } from "./components/meme-selector";
-import { createSelector } from "solid-js";
 
 const ttsSchema = z.enum(["none", "low", "high"]);
 type TTS = z.infer<typeof ttsSchema>;
@@ -146,7 +146,9 @@ export function Modal(): JSX.Element {
 	return (
 		<div class="flex flex-col gap-5">
 			{/* Title */}
-			<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">Advanced Settings</h3>
+			<h3 class="text-white font-semibold mb-1 text-2xl underline decoration-link-hue underline-offset-2">
+				Advanced Settings
+			</h3>
 
 			{/* Announcements */}
 			<div class="flex flex-wrap gap-4">
@@ -157,44 +159,73 @@ export function Modal(): JSX.Element {
 					<span class="text-white/90 font-medium">Announce Join/Leave</span>
 					<span class="text-xs text-white/50">
 						{tts("none") && "No voice announcements"}
-						{tts("low") && <>Low quality TTS with <a href="https://github.com/KittenML/KittenTTS" target="_blank" rel="noopener noreferrer" class="decoration-yellow-500">Kitten</a>.</>}
-						{tts("high") && <>High quality TTS with <a href="https://github.com/hexgrad/kokoro" target="_blank" rel="noopener noreferrer" class="decoration-green-500">Kokoro</a>.</>}
+						{tts("low") && (
+							<>
+								Low quality TTS with{" "}
+								<a
+									href="https://github.com/KittenML/KittenTTS"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="decoration-yellow-500"
+								>
+									Kitten
+								</a>
+								.
+							</>
+						)}
+						{tts("high") && (
+							<>
+								High quality TTS with{" "}
+								<a
+									href="https://github.com/hexgrad/kokoro"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="decoration-green-500"
+								>
+									Kokoro
+								</a>
+								.
+							</>
+						)}
 					</span>
 				</div>
-					<div class="inline-flex rounded-lg bg-white/8 p-1 flex-grow">
-						<button
-							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
-							classList={{
-								"bg-gray-500 text-white shadow-sm": tts("none"),
-								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("none"),
-							}}
-							onClick={() => Settings.tts.set("none")}
-						>
-							None
-						</button>
-						<button
-							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
-							classList={{
-								"bg-yellow-500 text-white shadow-sm": tts("low"),
-								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("low"),
-							}}
-							onClick={() => Settings.tts.set("low")}
-						>
-							Low
-						</button>
-						<button
-							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
-							classList={{
-								"bg-green-500 text-white shadow-sm": tts("high"),
-								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("high"),
-								"opacity-40 cursor-not-allowed": !webGPUSupported,
-							}}
-							onClick={() => webGPUSupported && Settings.tts.set("high")}
-							disabled={!webGPUSupported}
-							title={!webGPUSupported ? "WebGPU required" : ""}
-						>
-							High{!webGPUSupported ? "*" : ""}
-						</button>
+				<div class="inline-flex rounded-lg bg-white/8 p-1 flex-grow">
+					<button
+						type="button"
+						class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+						classList={{
+							"bg-gray-500 text-white shadow-sm": tts("none"),
+							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("none"),
+						}}
+						onClick={() => Settings.tts.set("none")}
+					>
+						None
+					</button>
+					<button
+						type="button"
+						class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+						classList={{
+							"bg-yellow-500 text-white shadow-sm": tts("low"),
+							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("low"),
+						}}
+						onClick={() => Settings.tts.set("low")}
+					>
+						Low
+					</button>
+					<button
+						type="button"
+						class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+						classList={{
+							"bg-green-500 text-white shadow-sm": tts("high"),
+							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("high"),
+							"opacity-40 cursor-not-allowed": !webGPUSupported,
+						}}
+						onClick={() => webGPUSupported && Settings.tts.set("high")}
+						disabled={!webGPUSupported}
+						title={!webGPUSupported ? "WebGPU required" : ""}
+					>
+						High{!webGPUSupported ? "*" : ""}
+					</button>
 				</div>
 			</div>
 
@@ -217,7 +248,6 @@ export function Modal(): JSX.Element {
 					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors flex-grow"
 				/>
 			</div>
-
 		</div>
 	);
 }

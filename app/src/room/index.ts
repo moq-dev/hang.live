@@ -120,7 +120,6 @@ export class Room {
 					});
 
 					this.space.add(update.name, broadcast);
-
 				} else {
 					this.space.remove(update.name);
 				}

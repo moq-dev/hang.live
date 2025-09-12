@@ -27,7 +27,7 @@ export class TTS {
 	async #init(): Promise<Kitten.TTS | Kokoro.TTS | undefined> {
 		if (this.#quality === "none") return undefined;
 
-		if (this.#quality === "high"){
+		if (this.#quality === "high") {
 			if (await TTS.supportsHigh()) {
 				return Kokoro.TTS.load();
 			} else {
