@@ -1,32 +1,29 @@
 {
-	"name": "@hang/api",
+	"name": "@hang/native",
 	"version": "0.0.1",
-	"description": "TypeScript backend server for Hang using tRPC, Drizzle, and Cloudflare Workers",
-	"private": true,
+	"description": "",
 	"type": "module",
+	"private": true,
 	"exports": {
-		".": "./src/index.ts",
-		"./client": "./src/client/index.ts"
+		".": "./src/index.ts"
 	},
 	"scripts": {
 		"dev": "wrangler dev",
-		"check": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project src/client/tsconfig.json && biome check",
+		"check": "tsc --noEmit --project tsconfig.json && biome check",
 		"fix": "biome check --fix",
 		"build": "tsc"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.7.2",
-		"@kixelated/moq-token": "workspace:*",
-		"drizzle-orm": "^0.44.5",
 		"hono": "^4.9.4",
 		"jose": "^6.0.13",
-		"unique-names-generator": "^4.7.1",
 		"uuid": "^11.1.0",
 		"zod": "^4.1.3"
 	},
 	"devDependencies": {
 		"@types/uuid": "^10.0.0",
 		"typescript": "^5.9.2",
+		"wrangler": "^4.33.0",
 		"@biomejs/biome": "^2.2.2",
 		"madge": "^8.0.0"
 	},

@@ -231,7 +231,7 @@ export function About(): JSX.Element {
 						</p>
 						<p>
 							So here's a fun (and free) place to hang out with friends. Spend your free time with{" "}
-							<i>real people</i>, not feeds of AI slop.
+							<i>real people</i>, not doomscrolling feeds of AI slop. Unless you're into that.
 						</p>
 					</div>
 					<div class="flex-1 basis-sm grow space-y-6">

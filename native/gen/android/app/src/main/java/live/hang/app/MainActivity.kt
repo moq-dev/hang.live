@@ -1,3 +1,3 @@
-package live.hang.app
+package live.hang
 
 class MainActivity : TauriActivity()

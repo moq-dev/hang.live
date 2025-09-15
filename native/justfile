@@ -17,19 +17,47 @@ fix:
 	cargo fmt
 	cargo clippy --fix --allow-dirty --allow-staged
 
-# Build the native app
+# Build the native app for the current platform
 build:
-	cargo tauri build
+	bun tauri build --no-bundle
+
+# Deploy the native app for the target platform
+# Load secrets from 1password, signs for the target platform, and uploads the result.
+deploy target:
+	#!/usr/bin/env bash
+	VERSION=$(cargo pkgid | cut -d'@' -f2)
+
+	# Build but don't sign the app yet, just to minimize secrets exposure
+	bun tauri build --no-bundle --target "{{target}}"
+
+	# Sign the app using secrets from 1password
+	op run --env-file=".env" -- ./bin/tauri-bundle --target "{{target}}"
+
+	DMG=$(basename target/{{target}}/release/bundle/dmg/hang_${VERSION}_*.dmg)
+	SIGNATURE=$(cat "target/{{target}}/release/bundle/macos/hang.app.tar.gz.sig")
+
+	# Upload the artifacts to R2
+	echo "Uploading artifacts to R2..."
+	bun wrangler r2 object put "download-hang-live/{{target}}/$VERSION/hang.tar.gz" --remote --file "target/{{target}}/release/bundle/macos/hang.app.tar.gz"
+	bun wrangler r2 object put "download-hang-live/{{target}}/$VERSION/hang.tar.gz.sig" --remote --file "target/{{target}}/release/bundle/macos/hang.app.tar.gz.sig"
+	bun wrangler r2 object put "download-hang-live/{{target}}/$VERSION/hang.dmg" --remote --file "target/{{target}}/release/bundle/dmg/$DMG"
+	echo '{"version":"'$VERSION'","platforms":{"{{target}}":{"signature":"'$SIGNATURE'","url":"https://download.hang.live/{{target}}/'$VERSION'/hang.tar.gz"}}}' | bun wrangler r2 object put "download-hang-live/{{target}}/latest.json" --remote --pipe
+
+# Build, sign, and upload all the platform variants for the Mac app
+deploy-mac:
+	just deploy "x86_64-apple-darwin"
+	just deploy "aarch64-apple-darwin"
+	#just deploy "universal-apple-darwin"
 
 # Run the native app in development mode
 dev:
-	cargo tauri dev
+	bun tauri dev
 
 android:
-	cargo tauri android build
+	bun tauri android build
 
 ios:
-	cargo tauri ios build
+	bun tauri ios build
 
 # Generate Tauri icons from browser-generated ZIP files
 # Prerequisites: Download all ZIP files from http://localhost:1420/dev/icons to this directory

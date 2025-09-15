@@ -1,7 +1,7 @@
 {
-	"$schema": "../gen/schemas/desktop-schema.json",
+	"$schema": "../gen/schemas/capabilities-schema.json",
 	"identifier": "default",
 	"description": "Capability for the main window",
 	"windows": ["main"],
-	"permissions": ["core:default", "opener:default", "core:window:allow-set-badge-count"]
+	"permissions": ["core:default", "opener:default", "core:window:allow-set-badge-count", "process:default"]
 }

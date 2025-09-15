@@ -1,7 +1,7 @@
 import { type JSX, Show } from "solid-js";
 import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
-import Tauri from "../util/tauri";
+import Tauri from "../tauri/api";
 import { Logo } from "./logo";
 
 export default function Web(props: { children: JSX.Element }) {

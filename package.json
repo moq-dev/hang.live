@@ -5,6 +5,7 @@
 	"workspaces": [
 		"app",
 		"api",
+		"native",
 		"moq/js/moq",
 		"moq/js/hang",
 		"moq/js/moq-token",
@@ -17,7 +18,8 @@
 		"deploy": "bun --filter '*' run deploy"
 	},
 	"devDependencies": {
-		"concurrently": "^9.2.1"
+		"concurrently": "^9.2.1",
+		"wrangler": "^4.33.0"
 	},
 	"packageManager": "bun@1.1.38"
 }
