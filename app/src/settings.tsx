@@ -279,6 +279,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				</div>
 			</button>
 			<div class="h-px bg-white/10" />
+			<div class="h-px bg-white/10" />
 			<div class="flex flex-wrap gap-4">
 				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
 					<span class="icon-[mdi--cursor-move] text-lg text-white/70" />

@@ -1,6 +1,6 @@
 let lock = false;
 
-import Tauri from "../util/tauri";
+import Tauri from "../tauri/api";
 
 async function set(count: number | undefined) {
 	if (Tauri) {

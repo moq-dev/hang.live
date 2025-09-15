@@ -11,3 +11,14 @@ icons/macos/**
 # Generated icon ZIP files (download from /dev/icons page)
 icons-*.zip
 temp-icons/
+
+# Wrangler local development files
+.wrangler/
+dev/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Node modules
+node_modules/

@@ -1,9 +1,10 @@
 [package]
 name = "hang"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.0.1"
+description = "hang.live"
+authors = ["Luke Curley <kixelated@gmail.com>"]
 edition = "2021"
+homepage = "https://hang.live"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,4 +21,10 @@ tauri-build = { version = "2", features = ["config-json5"] }
 [dependencies]
 tauri = { version = "2", features = ["config-json5"] }
 tauri-plugin-opener = "2"
+tauri-plugin-process = "2.3.0"
 # tauri-plugin-web-transport = "0.1.0"
+
+serde_json = "1"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"

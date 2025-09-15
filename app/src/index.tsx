@@ -1,6 +1,6 @@
 //import "tauri-plugin-web-transport";
-
 import "@kixelated/hang/support/element";
+import "./tauri/update";
 
 import * as Api from "@hang/api/client";
 import { Route, Router, useLocation } from "@solidjs/router";

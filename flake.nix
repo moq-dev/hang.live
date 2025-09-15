@@ -2,8 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-
-    native.url = "./native";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
   outputs =
@@ -11,32 +10,35 @@
       self,
       nixpkgs,
       flake-utils,
-      native,
+      rust-overlay,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ rust-overlay.overlays.default ];
+        };
       in
       {
-        devShell = pkgs.mkShell {
-          inputsFrom = [
-            native.devShells.${system}.default
-          ];
+        devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
-            pkg-config
-            cargo
             cargo-sort
             cargo-shear
             cargo-edit
+			cargo-tauri
             nodejs
             bun
             just
+
             # Icon generation tools
             imagemagick
             libicns  # provides png2icns
           ];
         };
+
+		# Keep the old attribute for backwards compatibility
+        devShell = self.devShells.${system}.default;
       }
     );
 }
