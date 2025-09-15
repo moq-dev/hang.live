@@ -1,7 +1,11 @@
 import * as Process from "@tauri-apps/plugin-process";
 import * as Updater from "@tauri-apps/plugin-updater";
 
-if (__TAURI__) {
+if (
+	import.meta.env.TAURI_ENV_PLATFORM === "windows" ||
+	import.meta.env.TAURI_ENV_PLATFORM === "darwin" ||
+	import.meta.env.TAURI_ENV_PLATFORM === "linux"
+) {
 	const check = async () => {
 		const update = await Updater.check();
 		if (update) {

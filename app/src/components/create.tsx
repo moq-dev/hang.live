@@ -46,7 +46,7 @@ export default function Create(): JSX.Element {
 	return (
 		<div class="space-y-4">
 			<form onSubmit={handleCreate} class="space-y-4">
-				<div class="flex gap-3">
+				<div class="flex flex-wrap gap-3">
 					<div
 						class="flex-1 flex items-center bg-gray-900/50 border rounded-xl transition-colors text-lg overflow-hidden"
 						classList={{

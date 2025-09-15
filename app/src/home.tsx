@@ -134,7 +134,7 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 						</Show>
 					</div>
 				</div>
-				<div class="flex-1 basis-sm grow space-y-6">
+				<div class="grow basis-sm space-y-6">
 					<div class="rounded-2xl border border-gray-800 p-6">
 						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-2">

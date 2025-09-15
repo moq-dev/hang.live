@@ -21,8 +21,9 @@ deploy env="staging":
 	just build "{{env}}"
 	bun wrangler deploy --env "{{env}}"
 
-dev flags="":
-	bun vite dev {{flags}}
+# Run the app in development mode
+dev env="dev":
+	bun vite dev --mode "{{env}}"
 
 # Amazing tool to visualize the app bundle size
 bundle:

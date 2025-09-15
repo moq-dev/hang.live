@@ -24,7 +24,6 @@
 		"isolatedModules": true,
 		"noEmit": true
 	},
-	// Include something just so TS doesn't complain about no matching files.
-	"include": ["app/vite.config.ts"],
+	"include": [],
 	"exclude": ["**/node_modules", "**/dist", "**/target"]
 }

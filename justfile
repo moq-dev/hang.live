@@ -36,18 +36,20 @@ deploy env="staging":
 	cd api && just deploy "{{env}}"
 	cd app && just deploy "{{env}}"
 
-dev:
+dev mode="dev":
 	bun install
 	@cd moq/rs && just auth-token
 	bun concurrently --kill-others --names api,app,moq --prefix-colors auto \
 		"cd api && just dev" \
-		"cd app && just dev --open" \
+		"cd app && just dev {{mode}}" \
 		"cd moq && just root"
 
 native:
-	bun install
-	@cd moq/rs && just auth-token
-	bun concurrently --kill-others --names api,app,moq --prefix-colors auto \
-		"cd api && just dev" \
-		"cd native && just dev" \
-		"cd moq && just root"
+	cd native && just dev
+
+# Run the emulator, or use --open for Android Studio
+android flags="":
+	cd native && just android {{flags}}
+
+ios:
+	cd native && just ios

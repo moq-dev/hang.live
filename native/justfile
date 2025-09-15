@@ -53,8 +53,8 @@ deploy-mac:
 dev:
 	bun tauri dev
 
-android:
-	bun tauri android dev
+android flags="":
+	bun tauri android dev {{flags}}
 
 ios:
 	bun tauri ios dev
@@ -86,6 +86,7 @@ icons:
 	@echo "Extracting Android icons..."
 	@unzip -o -q icons-android-launcher.zip -d gen/android/app/src/main/res
 	@unzip -o -q icons-android-foreground.zip -d gen/android/app/src/main/res
+	@unzip -o -q icons-android-background.zip -d gen/android/app/src/main/res
 	@unzip -o -q icons-android-round.zip -d gen/android/app/src/main/res
 
 	# Extract iOS icons to gen/apple folders
