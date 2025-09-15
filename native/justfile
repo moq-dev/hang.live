@@ -21,7 +21,7 @@ fix:
 build:
 	bun tauri build --no-bundle
 
-# Deploy the native app for the target platform
+# Deploy the desktop app for the target platform
 # Load secrets from 1password, signs for the target platform, and uploads the result.
 deploy target:
 	#!/usr/bin/env bash
@@ -54,10 +54,10 @@ dev:
 	bun tauri dev
 
 android:
-	bun tauri android build
+	bun tauri android dev
 
 ios:
-	bun tauri ios build
+	bun tauri ios dev
 
 # Generate Tauri icons from browser-generated ZIP files
 # Prerequisites: Download all ZIP files from http://localhost:1420/dev/icons to this directory
