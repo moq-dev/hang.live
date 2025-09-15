@@ -36,17 +36,16 @@ export class Space {
 		this.sound = sound;
 
 		// Use the new eventListener helper that automatically handles cleanup
-		this.#signals.event(window, "mousedown", this.#onMouseDown.bind(this));
-		this.#signals.event(window, "mousemove", this.#onMouseMove.bind(this));
-		this.#signals.event(window, "mouseup", this.#onMouseUp.bind(this));
-		this.#signals.event(window, "mouseleave", this.#onMouseLeave.bind(this));
-		this.#signals.event(window, "wheel", this.#onMouseWheel.bind(this), { passive: false });
+		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
+		this.#signals.event(canvas.element, "mousemove", this.#onMouseMove.bind(this));
+		this.#signals.event(canvas.element, "mouseup", this.#onMouseUp.bind(this));
+		this.#signals.event(canvas.element, "mouseleave", this.#onMouseLeave.bind(this));
+		this.#signals.event(canvas.element, "wheel", this.#onMouseWheel.bind(this), { passive: false });
 
-		// Touch event listeners for mobile
-		this.#signals.event(window, "touchstart", this.#onTouchStart.bind(this), { passive: false });
-		this.#signals.event(window, "touchmove", this.#onTouchMove.bind(this), { passive: false });
-		this.#signals.event(window, "touchend", this.#onTouchEnd.bind(this), { passive: false });
-		this.#signals.event(window, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
+		this.#signals.event(canvas.element, "touchstart", this.#onTouchStart.bind(this), { passive: false });
+		this.#signals.event(canvas.element, "touchmove", this.#onTouchMove.bind(this), { passive: false });
+		this.#signals.event(canvas.element, "touchend", this.#onTouchEnd.bind(this), { passive: false });
+		this.#signals.event(canvas.element, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
 
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
@@ -60,10 +59,7 @@ export class Space {
 		const viewport = this.canvas.viewport.peek();
 
 		// Try enabling sound if we clicked the canvas.
-		if (mouse.x > 0 && mouse.x < viewport.x && mouse.y > 0 && mouse.y < viewport.y) {
-			this.sound.enabled.set(() => true);
-		}
-
+		this.sound.enabled.set(() => true);
 		this.#dragging = undefined;
 
 		const broadcast = this.#at(mouse);
@@ -134,21 +130,16 @@ export class Space {
 	}
 
 	#onMouseWheel(e: WheelEvent) {
-		// Check if the mouse is actually over the canvas element before preventing default.
-		const rect = this.canvas.element.getBoundingClientRect();
-		const isOverCanvas =
-			e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-
-		if (!isOverCanvas) return;
-
-		e.preventDefault();
-
 		let broadcast = this.#dragging;
 		if (!broadcast) {
 			const mouse = this.canvas.relative(e.clientX, e.clientY);
 
 			broadcast = this.#at(mouse);
-			if (!broadcast) return;
+			if (!broadcast) {
+				// Not over a broadcast, so don't do anything.
+				// TODO prevent default when not on the demo.
+				return;
+			}
 
 			this.#hovering = broadcast;
 
@@ -158,6 +149,8 @@ export class Space {
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
 		}
+
+		e.preventDefault();
 
 		if (broadcast.locked()) {
 			document.body.style.cursor = "not-allowed";
@@ -181,23 +174,15 @@ export class Space {
 	}
 
 	#onTouchStart(e: TouchEvent) {
-		const rect = this.canvas.element.getBoundingClientRect();
-
 		// Store all active touches
 		this.#touches.clear();
 		for (const touch of e.touches) {
-			const isOverCanvas =
-				touch.clientX >= rect.left &&
-				touch.clientX <= rect.right &&
-				touch.clientY >= rect.top &&
-				touch.clientY <= rect.bottom;
-
-			if (isOverCanvas) {
-				this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-			}
+			this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
 		}
 
-		if (this.#touches.size === 0) return;
+		if (this.#touches.size === 0) {
+			return;
+		}
 
 		e.preventDefault();
 
@@ -262,20 +247,10 @@ export class Space {
 	#onTouchMove(e: TouchEvent) {
 		if (this.#touches.size === 0) return;
 
-		const rect = this.canvas.element.getBoundingClientRect();
-
 		// Update touch positions
 		for (const touch of e.touches) {
 			if (this.#touches.has(touch.identifier)) {
-				const isOverCanvas =
-					touch.clientX >= rect.left &&
-					touch.clientX <= rect.right &&
-					touch.clientY >= rect.top &&
-					touch.clientY <= rect.bottom;
-
-				if (isOverCanvas) {
-					this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-				}
+				this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
 			}
 		}
 

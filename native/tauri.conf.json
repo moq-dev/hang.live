@@ -6,7 +6,7 @@
 	"build": {
 		"devUrl": "http://localhost:1420",
 		"beforeDevCommand": {
-			"cwd": "../app",
+			"cwd": "..",
 			"script": "just dev",
 			"wait": false
 		},

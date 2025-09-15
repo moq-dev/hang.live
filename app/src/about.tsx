@@ -222,35 +222,33 @@ export function About(): JSX.Element {
 
 	return (
 		<Layout>
-			<div class="prose-invert lg:prose-lg px-4">
-				<div class="flex flex-wrap gap-4 w-full">
-					<div class="basis-md grow">
-						<p>
-							I built <a href="/">hang.live</a> because the internet forgot how to hang out. We forgot how
-							to be <b>weird</b>.
-						</p>
-						<p>
-							So here's a fun (and free) place to hang out with friends. Spend your free time with{" "}
-							<i>real people</i>, not doomscrolling feeds of AI slop. Unless you're into that.
-						</p>
-					</div>
-					<div class="flex-1 basis-sm grow space-y-6">
-						<div class="rounded-2xl border border-gray-800 p-6">
-							<div class="flex items-center justify-between mb-4">
-								<div class="flex items-center gap-2">
-									<span class="icon-[mdi--play] text-green-500" />
-									<span class="text-xl font-semibold underline decoration-green-500/80 underline-offset-2">
-										Start a hang
-									</span>
-								</div>
+			<div class="flex flex-wrap gap-4 w-full prose-invert lg:prose-lg justify-center">
+				<div class="basis-md grow">
+					<p>
+						I built <a href="/">hang.live</a> because the internet forgot how to hang out. We forgot how to
+						be <b>weird</b>.
+					</p>
+					<p>
+						So here's a fun (and free) place to hang out with friends. Spend your free time with{" "}
+						<i>real people</i>, not doomscrolling feeds of AI slop. Unless you're into that.
+					</p>
+				</div>
+				<div class="grow basis-sm">
+					<div class="rounded-2xl border border-gray-800 p-6">
+						<div class="flex items-center justify-between mb-4">
+							<div class="flex items-center gap-2">
+								<span class="icon-[mdi--play] text-green-500" />
+								<span class="text-xl font-semibold underline decoration-green-500/80 underline-offset-2">
+									Start a hang
+								</span>
 							</div>
-
-							<CreateHang />
 						</div>
+
+						<CreateHang />
 					</div>
 				</div>
 
-				<div class="my-8 h-128">{canvas}</div>
+				<div class="sm:m-8 m-4 h-128 w-full">{canvas}</div>
 
 				<p>
 					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
@@ -258,8 +256,8 @@ export function About(): JSX.Element {
 					clone. <i>Crazy</i>, I know.
 				</p>
 
-				<div class="flex justify-center my-18">
-					<img src="/image/we-are/5.svg" alt="we are live" class="max-w-120" />
+				<div class="flex my-18">
+					<img src="/image/we-are/5.svg" alt="we are live" class="max-w-120 w-full" />
 				</div>
 			</div>
 		</Layout>

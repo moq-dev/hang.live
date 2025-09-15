@@ -51,7 +51,7 @@ export function Download(): JSX.Element {
 		<Layout>
 			<div class="px-4 max-w-4xl mx-auto">
 				{/* Header with icon on left, text on right */}
-				<div class="flex items-center gap-8 mb-12">
+				<div class="flex items-center gap-4 sm:gap-8 mb-4 sm:mb-12">
 					<img src="/image/icon.svg" alt="Hang app icon" class="w-28 h-28 flex-shrink-0" />
 					<div>
 						<p class="text-4xl font-bold">

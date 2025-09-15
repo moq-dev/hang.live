@@ -5,7 +5,7 @@ import solid from "vite-plugin-solid";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
 	build: {
 		target: "esnext",
 		sourcemap: process.env.NODE_ENV === "production" ? false : ("inline" as const),
@@ -45,6 +45,7 @@ export default defineConfig(() => ({
 	clearScreen: false,
 	server: {
 		port: 1420,
+		open: mode === "development",
 		strictPort: true,
 		host: process.env.TAURI_DEV_HOST || false,
 		hmr: false,
@@ -59,11 +60,8 @@ export default defineConfig(() => ({
 		},
 	},
 	// Env variables starting with the item of `envPrefix` will be exposed in tauri's source code through `import.meta.env`.
-	envPrefix: ["VITE_", "TAURI_ENV_*"],
-
+	envPrefix: ["VITE_", "TAURI_ENV_"],
 	define: {
-		// Detect whether we're in a Tauri environment at build time.
-		// This gives vite enough information to tree-shake non-relevant code.
-		__TAURI__: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM),
+		TAURI: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM),
 	},
 }));

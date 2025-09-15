@@ -34,9 +34,11 @@ export default function Web(props: { children: JSX.Element }) {
 
 			<Divider />
 
-			<main class="flex flex-col relative p-8 w-full bg-black text-white rounded-lg">{props.children}</main>
+			<main class="flex flex-col relative p-4 sm:p-8 w-full bg-black text-white rounded-lg">
+				{props.children}
+			</main>
 
-			<footer class="flex justify-center items-center gap-4 mt-4 pt-4 leading-none text-xl text-center text-gray-500">
+			<footer class="flex justify-center items-center gap-4 mt-4 sm:mt-8 leading-none text-xl text-center text-gray-500">
 				<Tooltip content="Join Discord" position="top">
 					<a
 						href="https://discord.gg/SRG9gu6BdE"
