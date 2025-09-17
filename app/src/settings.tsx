@@ -291,7 +291,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				<input
 					type="checkbox"
 					checked={draggable()}
-					onChange={() => Settings.draggable.set((p) => !p)}
+					onChange={() => Settings.draggable.update((p) => !p)}
 					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors flex-grow"
 				/>
 			</div>

@@ -118,7 +118,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.effect((effect) => {
 			if (!effect.get(this.visible)) {
 				// Change the target position to somewhere outside the screen.
-				this.targetPosition.set((prev) => {
+				this.targetPosition.update((prev) => {
 					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
 					return { ...prev, x: offscreen.x, y: offscreen.y };
 				});
@@ -130,7 +130,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const location = effect.get(this.source.location.current);
 			if (!location) return;
 
-			this.targetPosition.set((prev) => {
+			this.targetPosition.update((prev) => {
 				return {
 					...prev,
 					x: location.x ?? prev.x,
@@ -195,7 +195,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			if (!position) return;
 
 			// Merge in the new position, keeping existing values when undefined.
-			camera.location.current.set((prev) => ({ ...prev, ...position }));
+			camera.location.current.update((prev) => ({ ...prev, ...position }));
 		});
 
 		if (screen) {
@@ -210,7 +210,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 				if (!position) return;
 
 				// Merge in the new position, keeping existing values when undefined.
-				screen.location.current.set((prev) => ({ ...prev, ...position }));
+				screen.location.current.update((prev) => ({ ...prev, ...position }));
 			});
 		}
 
@@ -244,7 +244,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const memeName = msg.slice(1);
 			const meme = this.audio.sound.meme(memeName);
 			if (meme) {
-				this.meme.set((prev) => {
+				this.meme.update((prev) => {
 					prev?.pause();
 					return meme;
 				});
@@ -254,9 +254,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			}
 		}
 
-		effect.spawn(async (cancel) => {
+		effect.spawn(async () => {
 			// Parse the markdown into sanitized HTML using a background WebWorker.
-			const parsed = await Promise.race([this.chat.parse(msg), cancel]);
+			const parsed = await this.chat.parse(msg);
 			if (!parsed) return;
 
 			effect.set(this.message, parsed);
@@ -347,7 +347,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const position = this.targetPosition.peek();
 
 		if (this.source instanceof Publish.Broadcast) {
-			this.source.location.current.set((old) => ({ ...old, ...position }));
+			this.source.location.current.update((old) => ({ ...old, ...position }));
 		} else if (this.#locationPeer) {
 			this.#locationPeer.producer.peek()?.writeJson(position);
 		}

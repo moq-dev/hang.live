@@ -120,7 +120,7 @@ export class FakeBroadcast {
 		this.video.active.set(false);
 		this.video.frame.set(undefined);
 
-		this.audio.root.set((prev) => {
+		this.audio.root.update((prev) => {
 			prev?.disconnect();
 			return undefined;
 		});

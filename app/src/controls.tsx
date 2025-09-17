@@ -53,7 +53,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 export function Microphone(props: { local: Local }): JSX.Element {
 	const toggle = () => {
-		props.local.microphone.enabled.set((prev: boolean) => !prev);
+		props.local.microphone.enabled.update((prev: boolean) => !prev);
 	};
 	const root = solid(props.local.camera.audio.root);
 
@@ -264,7 +264,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.webcam.enabled.set((prev: boolean) => !prev);
+		props.local.webcam.enabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.webcam.stream);
 
@@ -446,7 +446,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 function Screen(props: { local: Local; room: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.screen.enabled.set((prev: boolean) => !prev);
+		props.local.screen.enabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.screen.stream);
 
@@ -555,7 +555,7 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 	// Update typing status in preview
 	createEffect(() => {
 		const hasText = message().length > 0;
-		props.broadcast.preview.info.set((prev) => ({
+		props.broadcast.preview.info.update((prev) => ({
 			...prev,
 			typing: hasText,
 		}));
@@ -600,7 +600,7 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 		if (!props.broadcast.chat.message.enabled.peek()) return;
 
 		// Use a function to avoid the dequal check.
-		props.broadcast.chat.message.latest.set(() => m);
+		props.broadcast.chat.message.latest.update(() => m);
 
 		setMessage("");
 	};
@@ -659,7 +659,7 @@ function Volume(props: { room: Room }): JSX.Element {
 			}
 		}
 
-		Settings.muted.set((prev) => !prev);
+		Settings.muted.update((prev) => !prev);
 	};
 
 	const muted = solid(Settings.muted);
@@ -723,7 +723,7 @@ function Volume(props: { room: Room }): JSX.Element {
 // Temporarily disabled - Caption generation disabled
 // function ClosedCaptions(): JSX.Element {
 // 	const toggle = () => {
-// 		Settings.renderCaptions.set((prev) => !prev);
+// 		Settings.renderCaptions.update((prev) => !prev);
 // 	};
 
 // 	const enabled = solid(Settings.renderCaptions);
