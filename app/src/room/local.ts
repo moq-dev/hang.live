@@ -3,6 +3,7 @@ import { Connection, Publish } from "@kixelated/hang";
 import { Path } from "@kixelated/moq";
 import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
+import * as Tauri from "../tauri";
 import { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
 import { Sound } from "./sound";
@@ -47,7 +48,14 @@ export class Local {
 			}
 
 			const data = await response.json();
-			connection.url.set(new URL(data.url));
+
+			let url = data.url;
+			if (import.meta.env.TAURI_ENV_DEBUG && import.meta.env.TAURI_ENV_PLATFORM === "android") {
+				// Android emulators use 10.0.2.2 as the localhost address.
+				url = url.replace("localhost", "10.0.2.2");
+			}
+
+			connection.url.set(new URL(url));
 
 			this.info.set(data.info);
 
@@ -93,7 +101,8 @@ export class Local {
 				volume: Settings.microphone.gain,
 				source: this.microphone.stream,
 				speaking: {
-					enabled: Settings.microphone.enabled,
+					// TODO Figure out an efficient way to run models on mobile.
+					enabled: !Tauri.MOBILE ? Settings.microphone.enabled : undefined,
 				},
 			},
 			location: {
@@ -204,7 +213,7 @@ export class Local {
 
 		this.camera.signals.effect((effect) => {
 			const message = effect.get(this.camera.chat.message.latest);
-			this.camera.preview.info.set((prev) => ({
+			this.camera.preview.info.update((prev) => ({
 				...prev,
 				chat: !!message,
 			}));
@@ -228,7 +237,7 @@ export class Local {
 			// NOTE: The timer will get cleared when the effect is run again.
 			effect.timer(
 				() => {
-					this.camera.preview.info.set((prev) => ({
+					this.camera.preview.info.update((prev) => ({
 						...prev,
 						speaking,
 					}));
@@ -241,7 +250,7 @@ export class Local {
 			const video = effect.get(this.camera.video.source);
 			const audio = effect.get(this.camera.audio.source);
 
-			this.camera.preview.info.set((prev) => ({
+			this.camera.preview.info.update((prev) => ({
 				...prev,
 				video: !!video,
 				audio: !!audio,
@@ -252,7 +261,7 @@ export class Local {
 			const video = effect.get(this.share.video.source);
 			const audio = effect.get(this.share.audio.source);
 
-			this.share.preview.info.set((prev) => ({
+			this.share.preview.info.update((prev) => ({
 				...prev,
 				video: !!video,
 				audio: !!audio,
@@ -260,13 +269,13 @@ export class Local {
 		});
 
 		// Initialize chat status as false
-		this.camera.preview.info.set((prev) => ({
+		this.camera.preview.info.update((prev) => ({
 			...prev,
 			chat: false,
 			speaking: false,
 			typing: false,
 		}));
-		this.share.preview.info.set((prev) => ({
+		this.share.preview.info.update((prev) => ({
 			...prev,
 			chat: false,
 			speaking: false,
@@ -314,9 +323,9 @@ export class Local {
 			const announced = connection.announced();
 			effect.cleanup(() => announced.close());
 
-			effect.spawn(async (cancel) => {
+			effect.spawn(async () => {
 				for (;;) {
-					const next = await Promise.race([announced.next(), cancel]);
+					const next = await announced.next();
 					if (!next) break;
 
 					// If our ID is announced and active, join the room immediately.

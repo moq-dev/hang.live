@@ -21,7 +21,14 @@ export function Hang(): JSX.Element {
 	const canvas = new Canvas(background);
 	onCleanup(() => canvas.close());
 
-	const api = new Api.Client(new URL(import.meta.env.VITE_API_URL));
+	let url = import.meta.env.VITE_API_URL;
+	console.log(import.meta.env.TAURI_ENV_DEBUG, import.meta.env.TAURI_ENV_PLATFORM, url);
+	if (import.meta.env.TAURI_ENV_DEBUG && import.meta.env.TAURI_ENV_PLATFORM === "android") {
+		// Android emulators use 10.0.2.2 as the localhost address.
+		url = url.replace("localhost", "10.0.2.2");
+	}
+
+	const api = new Api.Client(new URL(url));
 
 	return (
 		<>

@@ -59,7 +59,7 @@ export class Space {
 		const viewport = this.canvas.viewport.peek();
 
 		// Try enabling sound if we clicked the canvas.
-		this.sound.enabled.set(() => true);
+		this.sound.enabled.update(() => true);
 		this.#dragging = undefined;
 
 		const broadcast = this.#at(mouse);
@@ -71,7 +71,7 @@ export class Space {
 		}
 
 		// Bump the z-index unless we're already at the top.
-		broadcast.targetPosition.set((prev) => ({
+		broadcast.targetPosition.update((prev) => ({
 			...prev,
 			x: mouse.x / viewport.x - 0.5,
 			y: mouse.y / viewport.y - 0.5,
@@ -98,7 +98,7 @@ export class Space {
 
 		if (this.#dragging) {
 			// Update the position but don't publish it yet.
-			this.#dragging.targetPosition.set((prev) => ({
+			this.#dragging.targetPosition.update((prev) => ({
 				...prev,
 				x: mouse.x / viewport.x - 0.5,
 				y: mouse.y / viewport.y - 0.5,
@@ -144,7 +144,7 @@ export class Space {
 			this.#hovering = broadcast;
 
 			// Bump the z-index unless we're already at the top.
-			broadcast.targetPosition.set((prev) => ({
+			broadcast.targetPosition.update((prev) => ({
 				...prev,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
@@ -165,7 +165,7 @@ export class Space {
 		}
 
 		// Update the scale, publishing it.
-		broadcast.targetPosition.set((prev) => ({
+		broadcast.targetPosition.update((prev) => ({
 			...prev,
 			scale: Math.max(Math.min((prev.scale ?? 1) + scale, 4), 0.25),
 		}));
@@ -201,7 +201,7 @@ export class Space {
 			const viewport = this.canvas.viewport.peek();
 
 			// Bump the z-index unless we're already at the top.
-			broadcast.targetPosition.set((prev) => ({
+			broadcast.targetPosition.update((prev) => ({
 				...prev,
 				x: mouse.x / viewport.x - 0.5,
 				y: mouse.y / viewport.y - 0.5,
@@ -237,7 +237,7 @@ export class Space {
 			this.#dragging = broadcast;
 
 			// Bump the z-index
-			broadcast.targetPosition.set((prev) => ({
+			broadcast.targetPosition.update((prev) => ({
 				...prev,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
@@ -263,7 +263,7 @@ export class Space {
 			const viewport = this.canvas.viewport.peek();
 
 			// Update the position but don't publish it yet.
-			this.#dragging.targetPosition.set((prev) => ({
+			this.#dragging.targetPosition.update((prev) => ({
 				...prev,
 				x: mouse.x / viewport.x - 0.5,
 				y: mouse.y / viewport.y - 0.5,
@@ -286,7 +286,7 @@ export class Space {
 				const newScale = this.#pinchStartScale * scaleFactor;
 
 				// Update the scale
-				this.#dragging.targetPosition.set((prev) => ({
+				this.#dragging.targetPosition.update((prev) => ({
 					...prev,
 					scale: Math.max(Math.min(newScale, 4), 0.25),
 				}));
@@ -298,7 +298,7 @@ export class Space {
 			const center = this.canvas.relative(centerX, centerY);
 			const viewport = this.canvas.viewport.peek();
 
-			this.#dragging.targetPosition.set((prev) => ({
+			this.#dragging.targetPosition.update((prev) => ({
 				...prev,
 				x: center.x / viewport.x - 0.5,
 				y: center.y / viewport.y - 0.5,
@@ -377,7 +377,7 @@ export class Space {
 	add(id: string, broadcast: Broadcast) {
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.
-		broadcast.targetPosition.set((prev) => ({
+		broadcast.targetPosition.update((prev) => ({
 			...prev,
 			z: ++this.#maxZ,
 		}));
@@ -389,7 +389,7 @@ export class Space {
 		this.lookup.set(id, broadcast);
 
 		// Insert the broadcast into the room based on it's z-index.
-		this.ordered.set((prev) => [...prev, broadcast]);
+		this.ordered.update((prev) => [...prev, broadcast]);
 
 		broadcast.visible.set(true);
 
@@ -402,7 +402,7 @@ export class Space {
 				this.#maxZ = z;
 			}
 
-			this.ordered.set((prev) =>
+			this.ordered.update((prev) =>
 				prev.sort(
 					// Peek at the other broadcasts' z-index to avoid re-sorting every time.
 					(a, b) => a.targetPosition.peek().z - b.targetPosition.peek().z,
@@ -416,7 +416,7 @@ export class Space {
 				if (!effect.get(broadcast.source.enabled)) return;
 				if (!effect.get(broadcast.source.video.source) && !effect.get(broadcast.source.audio.source)) return;
 
-				broadcast.targetPosition.set((prev) => ({
+				broadcast.targetPosition.update((prev) => ({
 					...prev,
 					z: ++this.#maxZ,
 				}));
@@ -427,7 +427,7 @@ export class Space {
 			const message = effect.get(broadcast.source.chat.message.latest);
 			if (!message) return;
 
-			broadcast.targetPosition.set((prev) => ({
+			broadcast.targetPosition.update((prev) => ({
 				...prev,
 				z: ++this.#maxZ,
 			}));
@@ -461,7 +461,7 @@ export class Space {
 		this.lookup.delete(name);
 
 		// Move it from the main list to the rip list.
-		this.ordered.set((prev) => prev.filter((b) => b !== broadcast));
+		this.ordered.update((prev) => prev.filter((b) => b !== broadcast));
 		this.#rip.push(broadcast);
 
 		// Slowly fade out the offline broadcast.

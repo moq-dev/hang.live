@@ -144,11 +144,11 @@ export class TTS {
 			effect.effect((effect) => {
 				const quality = effect.get(Settings.tts);
 
-				effect.spawn(async (cancel) => {
+				effect.spawn(async () => {
 					await tts.setQuality(quality);
 
 					for (;;) {
-						const progress = await Promise.race([tts.progress(), cancel]);
+						const progress = await Promise.race([tts.progress(), effect.cancel]);
 						if (progress === undefined) break;
 
 						this.progress.set(progress);

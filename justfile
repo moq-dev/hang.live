@@ -36,12 +36,12 @@ deploy env="staging":
 	cd api && just deploy "{{env}}"
 	cd app && just deploy "{{env}}"
 
-dev mode="dev":
+dev:
 	bun install
 	@cd moq/rs && just auth-token
 	bun concurrently --kill-others --names api,app,moq --prefix-colors auto \
 		"cd api && just dev" \
-		"cd app && just dev {{mode}}" \
+		"cd app && just dev" \
 		"cd moq && just root"
 
 native:

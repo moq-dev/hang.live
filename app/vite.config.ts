@@ -45,7 +45,8 @@ export default defineConfig(({ mode }) => ({
 	clearScreen: false,
 	server: {
 		port: 1420,
-		open: mode === "development",
+		// Open the web browser if we're not using Tauri.
+		open: !process.env.TAURI_ENV_PLATFORM,
 		strictPort: true,
 		host: process.env.TAURI_DEV_HOST || false,
 		hmr: false,
