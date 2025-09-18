@@ -1,6 +1,7 @@
 import * as Api from "@hang/api/client";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Match, onMount, Switch } from "solid-js";
+import { Local } from "../room/local";
 import * as Random from "../util/random";
 import Dialog from "./dialog";
 import Gradient from "./gradient";
@@ -37,8 +38,10 @@ export default function Create(): JSX.Element {
 
 	const handleCreate = (e: Event) => {
 		e.preventDefault();
+
 		const name = roomName();
 		if (name && Api.isValidRoom(name)) {
+			Local.join.set(true);
 			navigate(`/@${name}`);
 		}
 	};

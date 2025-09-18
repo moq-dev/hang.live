@@ -180,7 +180,7 @@ function FavoriteButton(props: { room: string }) {
 						role="document"
 					>
 						<div class="text-center text-lg font-semibold mb-4">Sign in to favorite hangs</div>
-						<Login />
+						<Login small />
 						<button
 							type="button"
 							onClick={() => setShowLoginPrompt(false)}

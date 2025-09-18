@@ -57,12 +57,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	visible: Signal<boolean>;
 
-	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
-	transition = 0;
-
-	avatar = new Image();
-	name = new Signal<string | undefined>(undefined);
-
 	// The target position of the broadcast, while bounds contains the actual position.
 	// This is separate from the source.location.current so we can temporarily use our own value.
 	// After we learn the real position over the network, we'll replace it.
@@ -133,32 +127,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 					s: location.s ?? prev.s,
 				};
 			});
-		});
-
-		// Set a random default avatar while the user details are loading.
-		// TODO Only start a broadcast after receiving the catalog to avoid this.
-		this.avatar.src = Api.randomAvatar();
-
-		// A separate signal to deduplicate name updates.
-		this.signals.effect((effect) => {
-			const user = effect.get(this.source.user);
-			this.name.set(user?.name);
-		});
-
-		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
-		this.signals.effect((effect) => {
-			const user = effect.get(this.source.user);
-			if (!user?.avatar) return; // don't unset
-
-			// TODO only set the avatar if it successfully loads
-			const newAvatar = new Image();
-			newAvatar.src = user.avatar;
-
-			const load = () => {
-				this.avatar = newAvatar;
-			};
-
-			effect.event(newAvatar, "load", load);
 		});
 
 		this.signals.effect(this.#runChat.bind(this));

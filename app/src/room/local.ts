@@ -1,17 +1,21 @@
 import { Publish } from "@kixelated/hang";
+import type * as Moq from "@kixelated/moq";
 import { Effect, Signal } from "@kixelated/signals";
 import * as Api from "../api";
 import Settings from "../settings";
 import * as Tauri from "../tauri";
-import { Broadcast } from "./broadcast";
-import { Canvas } from "./canvas";
 import { Sound } from "./sound";
 
+export interface LocalProps {
+	connection?: Signal<Moq.Connection.Established | undefined> | Moq.Connection.Established;
+}
 /**
  * LocalBroadcasts manages the local camera and screen broadcasts.
  * It creates them early (before joining) and can optionally render a preview.
  */
 export class Local {
+	connection: Signal<Moq.Connection.Established | undefined>;
+
 	camera: Publish.Broadcast;
 	microphone: Publish.Source.Microphone;
 	webcam: Publish.Source.Camera;
@@ -22,17 +26,14 @@ export class Local {
 	// For notifications, created here just because it's more convenient.
 	sound: Sound;
 
-	// The local user info.
-	info = new Signal<Api.Account.Info | undefined>(undefined);
-
-	// True when we're joining the room, not just previewing.
-	// TODO Move this to the room.
-	join = new Signal<boolean>(false);
+	// Set to true to join the room immediately.
+	// This is static because I'm lazy.
+	static join = new Signal<boolean>(false);
 
 	#signals = new Effect();
 
-	// TODO Move the room stuff out of here.
-	constructor() {
+	constructor(props?: LocalProps) {
+		this.connection = Signal.from(props?.connection);
 		this.sound = new Sound();
 
 		if (Api.client.authenticated()) {
@@ -43,7 +44,8 @@ export class Local {
 				}
 
 				const info = await response.json();
-				this.info.set(info);
+				Settings.account.name.set(info.name);
+				Settings.account.avatar.set(info.avatar);
 			});
 		}
 
@@ -74,8 +76,13 @@ export class Local {
 
 		// Create the camera broadcast
 		this.camera = new Publish.Broadcast({
-			// NOTE: No connection, depends on the context.
-			enabled: this.join,
+			connection: this.connection,
+			enabled: Local.join,
+			user: {
+				enabled: true,
+				name: Settings.account.name,
+				avatar: Settings.account.avatar,
+			},
 			video: {
 				enabled: Settings.camera.enabled,
 				source: this.webcam.stream,
@@ -130,6 +137,7 @@ export class Local {
 
 		// Create the screen broadcast
 		this.share = new Publish.Broadcast({
+			connection: this.connection,
 			audio: {
 				enabled: this.screen.enabled,
 			},
@@ -176,7 +184,7 @@ export class Local {
 
 		// Say hi when the user joins
 		this.#signals.effect((effect) => {
-			const name = effect.get(this.info)?.name;
+			const name = effect.get(Settings.account.name);
 			if (!name) return;
 
 			// This is enabled on join.
@@ -272,7 +280,7 @@ export class Local {
 
 		// Enable the screen when a media device is selected.
 		this.share.signals.effect((effect) => {
-			const join = effect.get(this.join);
+			const join = effect.get(Local.join);
 			if (!join) return;
 
 			const active = !!effect.get(this.share.video.source) || !!effect.get(this.share.audio.source);
@@ -283,23 +291,14 @@ export class Local {
 		});
 
 		this.#signals.effect((effect) => {
-			const info = effect.get(this.info);
-			if (!info) return;
-
-			effect.set(this.camera.user, info);
-			effect.set(this.share.user, { ...info, name: `${info.name} (Screen)` });
-			effect.set(this.camera.preview.info, info);
-			effect.set(this.share.preview.info, { ...info, name: `${info.name} (Screen)` });
+			const name = effect.get(Settings.account.name);
+			this.share.user.name.set(`${name} (Screen)`);
 		});
 
-		// Save the guest account settings
 		this.#signals.effect((effect) => {
-			const info = effect.get(this.info);
-			if (!info) return;
-
-			Settings.account.id.set(info.id);
-			Settings.account.name.set(info.name);
-			Settings.account.avatar.set(info.avatar);
+			const name = effect.get(Settings.account.name);
+			this.camera.preview.info.update((prev) => ({ ...prev, name }));
+			this.share.preview.info.update((prev) => ({ ...prev, name }));
 		});
 	}
 
@@ -307,60 +306,5 @@ export class Local {
 		this.#signals.close();
 		this.camera.close();
 		this.share.close();
-	}
-}
-
-/**
- * LocalPreview manages a small canvas preview of the local camera broadcast
- * before joining a room. It creates a minimal broadcast instance and renders
- * it continuously to a canvas element.
- */
-export class LocalPreview {
-	canvas: Canvas;
-	broadcast: Broadcast<Publish.Broadcast>;
-	sound: Sound;
-
-	constructor(element: HTMLCanvasElement, camera: Publish.Broadcast) {
-		// Create a minimal canvas without the background effects
-		this.canvas = new Canvas(element, { demo: false });
-
-		// Create a minimal sound context (muted for preview)
-		this.sound = new Sound();
-		this.sound.suspended.set(true); // Keep suspended for preview
-
-		// Create a broadcast wrapper for rendering
-		this.broadcast = new Broadcast(camera, this.canvas, this.sound, {
-			visible: true,
-		});
-
-		this.canvas.onRender = this.#render.bind(this);
-	}
-
-	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
-		// HACK: We shouldn't do this every frame.
-		this.broadcast.position.set({
-			x: 0,
-			y: 0,
-			z: 0,
-			s: 1,
-		});
-
-		const viewport = this.canvas.viewport.peek();
-		const targetSize = this.broadcast.video.targetSize;
-
-		const scale = Math.min(viewport.x / targetSize.x, viewport.y / targetSize.y) * 0.8;
-
-		// Update broadcast physics (simplified for preview)
-		this.broadcast.tick(scale);
-
-		this.broadcast.audio.renderBackground(ctx);
-		this.broadcast.audio.render(ctx);
-		this.broadcast.video.render(now, ctx, { hovering: true });
-	}
-
-	close() {
-		this.canvas.close();
-		this.sound.close();
-		this.broadcast.close(); // NOTE: Doesn't close the source broadcast.
 	}
 }

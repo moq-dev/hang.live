@@ -3,6 +3,7 @@ import solid from "@kixelated/signals/solid";
 import { createSelector, createSignal, Match, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
+import * as Api from "./api";
 import { Tab } from "./components/meme-selector";
 import { Sound } from "./room/sound";
 
@@ -34,9 +35,10 @@ const Settings = {
 
 	// Cached account ID stuff; not validated.
 	account: {
-		id: new Signal<string | undefined>(localStorage.getItem("settings.account.id") ?? undefined),
-		name: new Signal<string | undefined>(localStorage.getItem("settings.account.name") ?? undefined),
-		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? undefined),
+		// A random ID starting with "guest/" that is used to identify ourselves on reload.
+		guest: new Signal<string | undefined>(localStorage.getItem("settings.account.guest") ?? undefined),
+		name: new Signal<string | undefined>(localStorage.getItem("settings.account.name") ?? Api.randomName()),
+		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? Api.randomAvatar()),
 	},
 
 	// Meme selector settings
@@ -102,11 +104,11 @@ effect.subscribe(Settings.camera.enabled, (enabled) => {
 	localStorage.setItem("settings.camera.enabled", enabled.toString());
 });
 
-effect.subscribe(Settings.account.id, (id) => {
+effect.subscribe(Settings.account.guest, (id) => {
 	if (id) {
-		localStorage.setItem("settings.account.id", id);
+		localStorage.setItem("settings.account.guest", id);
 	} else {
-		localStorage.removeItem("settings.account.id");
+		localStorage.removeItem("settings.account.guest");
 	}
 });
 

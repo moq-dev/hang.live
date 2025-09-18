@@ -2,7 +2,7 @@ import * as Moq from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
-export function Logo(props: { connection?: Moq.Connection.Reload }) {
+export function Logo(props: { connection?: Moq.Connection.Reload; link?: string }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";
 
 	const text = createMemo(() => {
@@ -56,7 +56,7 @@ export function Logo(props: { connection?: Moq.Connection.Reload }) {
 
 	return (
 		<a
-			href="/home"
+			href={props.link || "/home"}
 			class="rounded bg-black/80 backdrop-blur-sm px-4 py-2 text-2xl text-white hover:bg-gray-700 hover:text-gray-100 transition-all cursor-pointer flex gap-4"
 			onmouseover={() => setHover(true)}
 			onmouseleave={() => setHover(false)}

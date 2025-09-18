@@ -10,7 +10,6 @@ import { Space } from "./space";
 export interface RoomProps {
 	connection: Moq.Connection.Reload;
 	canvas: Canvas;
-	name: string;
 	local: Local;
 }
 
@@ -26,22 +25,18 @@ export class Room {
 	// The physics space for the room.
 	space: Space;
 
-	// The name of the room.
-	name: string;
-
 	#signals = new Effect();
 
 	constructor(props: RoomProps) {
 		this.connection = props.connection;
 		this.local = props.local;
-		this.name = props.name;
 		this.space = new Space(props.canvas, props.local.sound);
 
 		this.#signals.effect((effect) => {
 			const connection = effect.get(this.connection.established);
 			if (!connection) return;
 
-			const announced = connection.announced(Moq.Path.from(this.name));
+			const announced = connection.announced();
 			effect.cleanup(() => announced.close());
 
 			effect.spawn(this.#run.bind(this, announced));
@@ -96,46 +91,30 @@ export class Room {
 			reload: false,
 			// Download the location of the broadcaster.
 			location: {
-				window: { enabled: this.local.join },
-				peers: { enabled: this.local.join },
+				window: { enabled: true },
+				peers: { enabled: true },
 			},
 			chat: {
 				// Download the chat of the broadcaster.
-				message: { enabled: this.local.join },
+				message: { enabled: true },
 				// And download the typing indicator.
-				typing: { enabled: this.local.join },
+				typing: { enabled: true },
 			},
 			// Download the preview track to receive high-level information about the broadcaster.
 			preview: { enabled: true },
 			audio: {
-				// enabled: Toggled below.
+				enabled: this.space.sound.suspended,
 				// Download the speaking indicator.
-				speaking: { enabled: this.local.join },
+				speaking: { enabled: true },
 				captions: { enabled: Settings.captions.render },
 			},
-			video: {
-				// enabled: Toggled below.
+			// Download the user information.
+			user: {
+				enabled: true,
 			},
-		});
-
-		watch.signals.effect((effect) => {
-			const join = effect.get(this.local.join);
-			if (!join) return;
-
-			const suspended = effect.get(this.space.sound.suspended);
-			if (!suspended) return;
-
-			effect.set(watch.audio.enabled, true, false);
-		});
-
-		watch.signals.effect((effect) => {
-			const join = effect.get(this.local.join);
-			if (!join) return;
-
-			const visible = effect.get(this.space.canvas.visible);
-			if (!visible) return;
-
-			effect.set(watch.video.enabled, true, false);
+			video: {
+				enabled: this.space.canvas.visible,
+			},
 		});
 
 		const broadcast = new Broadcast(watch, this.space.canvas, this.space.sound, {
