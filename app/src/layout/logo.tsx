@@ -1,8 +1,8 @@
-import { Connection } from "@kixelated/hang";
+import * as Moq from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
-export function Logo(props: { connection?: Connection }) {
+export function Logo(props: { connection?: Moq.Connection.Reload }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";
 
 	const text = createMemo(() => {

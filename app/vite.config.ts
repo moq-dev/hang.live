@@ -5,7 +5,7 @@ import solid from "vite-plugin-solid";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
 	build: {
 		target: "esnext",
 		sourcemap: process.env.NODE_ENV === "production" ? false : ("inline" as const),
@@ -65,4 +65,4 @@ export default defineConfig(({ mode }) => ({
 	define: {
 		TAURI: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM),
 	},
-}));
+});

@@ -8,8 +8,13 @@ default:
 
 # Run the CI checks
 check:
+	#!/usr/bin/env bash
 	bun install --frozen-lockfile
-	bun run --filter='*' --elide-lines=0 check
+	if tty -s; then
+		bun run --filter='*' --elide-lines=0 check
+	else
+		bun run --filter='*' check
+	fi
 	cd native && just check
 
 # Automatically fix some issues.

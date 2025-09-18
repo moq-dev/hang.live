@@ -1,18 +1,18 @@
-import * as Api from "@hang/api/client";
-import { Connection } from "@kixelated/hang";
-import { createMemo, createResource, createSignal, JSX, Show } from "solid-js";
+import * as Moq from "@kixelated/moq";
+import { createResource, createSignal, JSX, Show } from "solid-js";
+import * as Api from "../api";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";
 import { Logo } from "./logo";
 
-export default function App(props: { children: JSX.Element; connection: Connection; api: Api.Client; room: string }) {
+export default function App(props: { children: JSX.Element; connection: Moq.Connection.Reload; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">
 			<header class="flex items-center justify-between leading-none text-xl">
 				<Logo connection={props.connection} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
-					<RoomNav api={props.api} room={props.room} />
+					<RoomNav room={props.room} />
 					<Tooltip content="Account settings" position="bottom">
 						<a
 							href="/account"
@@ -31,7 +31,7 @@ export default function App(props: { children: JSX.Element; connection: Connecti
 	);
 }
 
-function RoomNav(props: { api: Api.Client; room: string }) {
+function RoomNav(props: { room: string }) {
 	const [showCopiedNotification, setShowCopiedNotification] = createSignal(false);
 
 	const share = async () => {
@@ -54,7 +54,7 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 					<span class="icon-[mdi--exit-run]" />
 				</a>
 			</Tooltip>
-			<FavoriteButton api={props.api} room={props.room} />
+			<FavoriteButton room={props.room} />
 			<Tooltip
 				content={showCopiedNotification() ? "Copied to clipboard" : "Copy link"}
 				position="bottom"
@@ -75,20 +75,16 @@ function RoomNav(props: { api: Api.Client; room: string }) {
 	);
 }
 
-function FavoriteButton(props: { api: Api.Client; room: string }) {
+function FavoriteButton(props: { room: string }) {
 	const [isToggling, setIsToggling] = createSignal(false);
 	const [showLoginPrompt, setShowLoginPrompt] = createSignal(false);
 
-	const showFavorite = createMemo(() => {
-		return props.api.authenticated();
-	});
-
 	const [isFavorite, { refetch }] = createResource(
-		() => (showFavorite() ? props.room : null),
+		() => (Api.client.authenticated() ? props.room : null),
 		async (room) => {
 			if (!room) return false;
 			try {
-				const response = await props.api.routes.fave[":room"].$get({
+				const response = await Api.client.routes.fave[":room"].$get({
 					param: { room },
 				});
 				if (response.ok) {
@@ -105,7 +101,7 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 	const toggleFavorite = async () => {
 		if (!props.room || isToggling()) return;
 
-		if (!props.api.authenticated()) {
+		if (!Api.client.authenticated()) {
 			setShowLoginPrompt(true);
 			return;
 		}
@@ -114,11 +110,11 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 		try {
 			let response: Response;
 			if (isFavorite()) {
-				response = await props.api.routes.fave[":room"].remove.$post({
+				response = await Api.client.routes.fave[":room"].remove.$post({
 					param: { room: props.room },
 				});
 			} else {
-				response = await props.api.routes.fave[":room"].add.$post({
+				response = await Api.client.routes.fave[":room"].add.$post({
 					param: { room: props.room },
 				});
 			}
@@ -136,7 +132,7 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 		<>
 			<Tooltip
 				content={
-					!props.api.authenticated()
+					!Api.client.authenticated()
 						? "Sign in to favorite hangs"
 						: isFavorite.loading
 							? "Loading..."
@@ -152,11 +148,11 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 					disabled={isFavorite.loading || isToggling()}
 					class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					classList={{
-						"text-yellow-400": props.api.authenticated() && isFavorite() && !isFavorite.loading,
-						"text-gray-400": !props.api.authenticated(),
+						"text-yellow-400": Api.client.authenticated() && isFavorite() && !isFavorite.loading,
+						"text-gray-400": !Api.client.authenticated(),
 					}}
 				>
-					<Show when={props.api.authenticated()} fallback={<span class="icon-[mdi--heart-outline]" />}>
+					<Show when={Api.client.authenticated()} fallback={<span class="icon-[mdi--heart-outline]" />}>
 						<Show
 							when={!isFavorite.loading}
 							fallback={<span class="icon-[mdi--heart-outline] animate-pulse" />}
@@ -184,7 +180,7 @@ function FavoriteButton(props: { api: Api.Client; room: string }) {
 						role="document"
 					>
 						<div class="text-center text-lg font-semibold mb-4">Sign in to favorite hangs</div>
-						<Login api={props.api} />
+						<Login />
 						<button
 							type="button"
 							onClick={() => setShowLoginPrompt(false)}

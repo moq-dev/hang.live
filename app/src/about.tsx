@@ -26,37 +26,37 @@ export function About(): JSX.Element {
 	const randomLeft = () => ({ x: -0.5 * Math.random() * Math.random(), y: random() });
 
 	const one = room.create({
-		location: randomLocation(),
+		position: randomLocation(),
 		user: { name: "kixelated", avatar: "/avatar/kixel.svg" },
 	});
 
 	const two = room.create({
-		location: randomLocation(),
+		position: randomLocation(),
 		user: { name: "homie", avatar: "/avatar/43.svg" },
 	});
 
 	const three = room.create({
-		location: randomLocation(),
+		position: randomLocation(),
 		user: { name: "Chad", avatar: "/avatar/42.svg" },
 	});
 
 	const four = room.create({
-		location: randomLeft(),
+		position: randomLeft(),
 		user: { name: "Gargoyle Boy", avatar: "/avatar/41.svg" },
 	});
 
 	const five = room.create({
-		location: randomLeft(),
+		position: randomLeft(),
 		user: { name: "The Black Dot", avatar: "/avatar/40.svg" },
 	});
 
 	const six = room.create({
-		location: randomLeft(),
+		position: randomLeft(),
 		user: { name: "Oaf", avatar: "/avatar/39.svg" },
 	});
 
 	const seven = room.create({
-		location: { x: 0.25, y: 0, scale: 1.5 },
+		position: { x: 0.25, y: 0, s: 1.5 },
 	});
 
 	// Every 2 seconds, perform the next action in the timeline.
@@ -76,22 +76,22 @@ export function About(): JSX.Element {
 		() => {},
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("okay I guess"),
-		() => two.location.current.update((prev) => ({ ...prev, scale: 1.5 })),
+		() => two.location.window.position.update((prev) => ({ ...prev, s: 1.5 })),
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("mouse wheel or pinch to zoom"),
-		() => two.location.current.update((prev) => ({ ...prev, scale: 0.75 })),
-		() => two.location.current.update((prev) => ({ ...prev, scale: 1 })),
+		() => two.location.window.position.update((prev) => ({ ...prev, s: 0.75 })),
+		() => two.location.window.position.update((prev) => ({ ...prev, s: 1 })),
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("drag to move"),
-		() => two.location.current.set(randomLocation()),
+		() => two.location.window.position.set(randomLocation()),
 		() => {
-			two.location.current.set(randomLocation());
+			two.location.window.position.set(randomLocation());
 			one.chat.typing.active.set(true);
 			one.chat.message.latest.set("try it!");
 		},
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("you can even drag others"),
-		() => one.location.current.set(randomLocation()),
+		() => one.location.window.position.set(randomLocation()),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("sick"),
 		() => room.add("3", three),
@@ -114,7 +114,7 @@ export function About(): JSX.Element {
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
-		() => three.location.current.set(randomLocation()),
+		() => three.location.window.position.set(randomLocation()),
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("omg"),
 		() => {},
@@ -134,10 +134,10 @@ export function About(): JSX.Element {
 		() => {},
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("/huh"),
-		() => two.location.current.set({ x: -0.5, y: 0 }),
+		() => two.location.window.position.set({ x: -0.5, y: 0 }),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("that's right, I added dumb memes"),
-		() => two.location.current.set({ x: 0.5, y: 0 }),
+		() => two.location.window.position.set({ x: 0.5, y: 0 }),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("and audio panning"),
 		() => two.chat.typing.active.set(true),
@@ -148,7 +148,7 @@ export function About(): JSX.Element {
 		() => {
 			two.chat.typing.active.set(true);
 			two.chat.message.latest.set("oh no");
-			two.location.current.set(randomLocation());
+			two.location.window.position.set(randomLocation());
 		},
 		() => room.add("4", four),
 		() => room.add("5", five),
@@ -172,17 +172,17 @@ export function About(): JSX.Element {
 			seven.play(new URL("/meme/bing-chilling.webm", import.meta.url));
 		},
 		() => {
-			one.location.current.set(randomLeft());
-			four.location.current.set(randomLeft());
-			six.location.current.set(randomLeft());
+			one.location.window.position.set(randomLeft());
+			four.location.window.position.set(randomLeft());
+			six.location.window.position.set(randomLeft());
 		},
 		() => {
-			five.location.current.set(randomLeft());
-			three.location.current.set(randomLeft());
+			five.location.window.position.set(randomLeft());
+			three.location.window.position.set(randomLeft());
 			two.chat.typing.active.set(true);
 			two.chat.message.latest.set("this shit again");
 		},
-		() => two.location.current.set(randomLeft()),
+		() => two.location.window.position.set(randomLeft()),
 		() => {},
 		() => {},
 		() => {},

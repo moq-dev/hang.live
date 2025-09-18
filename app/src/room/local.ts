@@ -1,7 +1,6 @@
-import * as Api from "@hang/api/client";
-import { Connection, Publish } from "@kixelated/hang";
-import { Path } from "@kixelated/moq";
+import { Publish } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
+import * as Api from "../api";
 import Settings from "../settings";
 import * as Tauri from "../tauri";
 import { Broadcast } from "./broadcast";
@@ -13,10 +12,6 @@ import { Sound } from "./sound";
  * It creates them early (before joining) and can optionally render a preview.
  */
 export class Local {
-	connection: Connection;
-	api: Api.Client;
-	room: string;
-
 	camera: Publish.Broadcast;
 	microphone: Publish.Source.Microphone;
 	webcam: Publish.Source.Camera;
@@ -30,38 +25,27 @@ export class Local {
 	// The local user info.
 	info = new Signal<Api.Account.Info | undefined>(undefined);
 
+	// True when we're joining the room, not just previewing.
+	// TODO Move this to the room.
+	join = new Signal<boolean>(false);
+
 	#signals = new Effect();
 
-	constructor(connection: Connection, api: Api.Client, room: string) {
-		this.connection = connection;
-		this.api = api;
-		this.room = room;
-
+	// TODO Move the room stuff out of here.
+	constructor() {
 		this.sound = new Sound();
 
-		this.#signals.spawn(async () => {
-			const guest = Settings.guest.peek();
+		if (Api.client.authenticated()) {
+			this.#signals.spawn(async () => {
+				const response = await Api.client.routes.account.info.$get();
+				if (!response.ok) {
+					throw new Error(`Failed to get info: ${response.statusText}`);
+				}
 
-			const response = await api.routes.room[":room"].join.$post({ param: { room }, json: { guest } });
-			if (!response.ok) {
-				throw new Error(`Failed to join room: ${response.statusText}`);
-			}
-
-			const data = await response.json();
-
-			let url = data.url;
-			if (import.meta.env.TAURI_ENV_DEBUG && import.meta.env.TAURI_ENV_PLATFORM === "android") {
-				// Android emulators use 10.0.2.2 as the localhost address.
-				url = url.replace("localhost", "10.0.2.2");
-			}
-
-			connection.url.set(new URL(url));
-
-			this.info.set(data.info);
-
-			this.camera.name.set(Path.from(data.info.id, "camera"));
-			this.share.name.set(Path.from(data.info.id, "screen"));
-		});
+				const info = await response.json();
+				this.info.set(info);
+			});
+		}
 
 		this.webcam = new Publish.Source.Camera({
 			enabled: Settings.camera.enabled,
@@ -89,8 +73,9 @@ export class Local {
 		this.#signals.cleanup(() => this.microphone.close());
 
 		// Create the camera broadcast
-		this.camera = new Publish.Broadcast(connection, {
-			enabled: false, // enabled on join
+		this.camera = new Publish.Broadcast({
+			// NOTE: No connection, depends on the context.
+			enabled: this.join,
 			video: {
 				enabled: Settings.camera.enabled,
 				source: this.webcam.stream,
@@ -106,8 +91,13 @@ export class Local {
 				},
 			},
 			location: {
-				enabled: true,
-				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				window: {
+					enabled: true,
+					position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				},
+				peers: {
+					enabled: true,
+				},
 			},
 			chat: {
 				message: {
@@ -139,7 +129,7 @@ export class Local {
 		this.#signals.cleanup(() => this.screen.close());
 
 		// Create the screen broadcast
-		this.share = new Publish.Broadcast(connection, {
+		this.share = new Publish.Broadcast({
 			audio: {
 				enabled: this.screen.enabled,
 			},
@@ -147,8 +137,14 @@ export class Local {
 				enabled: this.screen.enabled,
 			},
 			location: {
-				enabled: true,
-				current: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				window: {
+					enabled: true,
+					handle: Math.random().toString(36).substring(2, 15),
+					position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+				},
+				peers: {
+					enabled: Settings.draggable,
+				},
 			},
 			preview: {
 				enabled: true,
@@ -188,14 +184,6 @@ export class Local {
 			if (!enabled) return;
 
 			this.sound.tts.joined(name);
-		});
-
-		// Update draggable settings
-		this.#signals.subscribe(Settings.draggable, (draggable) => {
-			// Generate a random handle
-			const handle = draggable ? Math.random().toString(36).substring(2, 15) : undefined;
-			this.camera.location.handle.set(handle);
-			this.share.location.handle.set(handle);
 		});
 
 		// Use the provided camera and screen broadcasts
@@ -284,10 +272,13 @@ export class Local {
 
 		// Enable the screen when a media device is selected.
 		this.share.signals.effect((effect) => {
+			const join = effect.get(this.join);
+			if (!join) return;
+
 			const active = !!effect.get(this.share.video.source) || !!effect.get(this.share.audio.source);
 			if (!active) return;
 
-			this.share.enabled.set(true);
+			effect.set(this.share.enabled, true, false);
 			effect.cleanup(() => this.share.enabled.set(false));
 		});
 
@@ -306,36 +297,9 @@ export class Local {
 			const info = effect.get(this.info);
 			if (!info) return;
 
-			Settings.guest.set(info);
-		});
-
-		// Auto-join if our ID is already published.
-		this.#signals.effect((effect) => {
-			const enabled = effect.get(this.camera.enabled);
-			if (enabled) return;
-
-			const id = effect.get(this.camera.name);
-			if (!id) return;
-
-			const connection = effect.get(this.connection.established);
-			if (!connection) return;
-
-			const announced = connection.announced();
-			effect.cleanup(() => announced.close());
-
-			effect.spawn(async () => {
-				for (;;) {
-					const next = await announced.next();
-					if (!next) break;
-
-					// If our ID is announced and active, join the room immediately.
-					// This makes refreshing much easier; you don't need to click rejoin.
-					if (next.name === id && next.active) {
-						this.camera.enabled.set(true);
-						break;
-					}
-				}
-			});
+			Settings.account.id.set(info.id);
+			Settings.account.name.set(info.name);
+			Settings.account.avatar.set(info.avatar);
 		});
 	}
 
@@ -374,11 +338,11 @@ export class LocalPreview {
 
 	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		// HACK: We shouldn't do this every frame.
-		this.broadcast.targetPosition.set({
+		this.broadcast.position.set({
 			x: 0,
 			y: 0,
 			z: 0,
-			scale: 1,
+			s: 1,
 		});
 
 		const viewport = this.canvas.viewport.peek();

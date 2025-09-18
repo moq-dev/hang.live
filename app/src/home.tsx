@@ -1,18 +1,18 @@
-import * as Api from "@hang/api/client";
-import { Connection } from "@kixelated/hang";
+import * as Moq from "@kixelated/moq";
 import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import * as Api from "./api";
 import { Badge } from "./components/badge";
 import CreateHang from "./components/create";
 import Login from "./components/login";
 import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
 
-export function Home(props: { api: Api.Client }): JSX.Element {
+export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
 
 	// Connection for live previews
-	const connection = new Connection();
+	const connection = new Moq.Connection.Reload({ enabled: true });
 	onCleanup(() => connection.close());
 
 	// Track total member count across all favorites
@@ -21,24 +21,19 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 	onCleanup(() => badge.close());
 
 	const [favorites, { refetch }] = createResource(async () => {
-		if (!props.api.authenticated()) return null;
+		if (!Api.client.authenticated()) return null;
 
-		try {
-			const response = await props.api.routes.fave.all.$get();
-			if (response.ok) {
-				const data = await response.json();
-				connection.url.set(new URL(data.url));
-				return data.favorites;
-			}
-		} catch (error) {
-			console.error("Failed to fetch favorites:", error);
-		}
-		return null;
+		const response = await Api.client.routes.fave.all.$get();
+		if (!response.ok) throw new Error(`Failed to fetch favorites: ${response.statusText}`);
+
+		const data = await response.json();
+		connection.url.set(new URL(data.url));
+		return data.favorites;
 	});
 
 	const handleRemove = async (room: string) => {
 		try {
-			const response = await props.api.routes.fave[":room"].remove.$post({
+			const response = await Api.client.routes.fave[":room"].remove.$post({
 				param: { room },
 			});
 			if (response.ok) {
@@ -64,7 +59,7 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 							</div>
 						</div>
 						<Show
-							when={props.api.authenticated()}
+							when={Api.client.authenticated()}
 							fallback={
 								<div class="text-center">
 									<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />
@@ -72,7 +67,7 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 									<div class="text-gray-400 text-sm leading-relaxed mb-8">
 										so you can see when your friends are online and eager
 									</div>
-									<Login api={props.api} />
+									<Login />
 								</div>
 							}
 						>
@@ -110,7 +105,6 @@ export function Home(props: { api: Api.Client }): JSX.Element {
 															createdAt={favorite.created_at}
 															onRemove={handleRemove}
 															connection={connection}
-															api={props.api}
 															badge={badge}
 														/>
 													)}
@@ -157,8 +151,7 @@ function FavoriteRoom(props: {
 	room: string;
 	createdAt: number;
 	onRemove: (room: string) => void;
-	connection: Connection;
-	api: Api.Client;
+	connection: Moq.Connection.Reload;
 	badge: Badge;
 }): JSX.Element {
 	const [removing, setRemoving] = createSignal(false);
@@ -206,7 +199,7 @@ function FavoriteRoom(props: {
 					</button>
 				</div>
 			</div>
-			<PreviewRoomCompact connection={props.connection} api={props.api} setMemberCount={setMemberCount} />
+			<PreviewRoomCompact connection={props.connection} setMemberCount={setMemberCount} />
 		</div>
 	);
 }

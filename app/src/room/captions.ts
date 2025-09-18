@@ -74,7 +74,7 @@ export class Captions {
 		});
 
 		effect.effect((effect) => {
-			const z = effect.get(this.broadcast.targetPosition).z;
+			const z = effect.get(this.broadcast.position).z;
 			wrapper.style.zIndex = `${100 + z}`;
 		});
 

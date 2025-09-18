@@ -71,7 +71,7 @@ export class Space {
 		}
 
 		// Bump the z-index unless we're already at the top.
-		broadcast.targetPosition.update((prev) => ({
+		broadcast.position.update((prev) => ({
 			...prev,
 			x: mouse.x / viewport.x - 0.5,
 			y: mouse.y / viewport.y - 0.5,
@@ -98,7 +98,7 @@ export class Space {
 
 		if (this.#dragging) {
 			// Update the position but don't publish it yet.
-			this.#dragging.targetPosition.update((prev) => ({
+			this.#dragging.position.update((prev) => ({
 				...prev,
 				x: mouse.x / viewport.x - 0.5,
 				y: mouse.y / viewport.y - 0.5,
@@ -144,7 +144,7 @@ export class Space {
 			this.#hovering = broadcast;
 
 			// Bump the z-index unless we're already at the top.
-			broadcast.targetPosition.update((prev) => ({
+			broadcast.position.update((prev) => ({
 				...prev,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
@@ -165,9 +165,9 @@ export class Space {
 		}
 
 		// Update the scale, publishing it.
-		broadcast.targetPosition.update((prev) => ({
+		broadcast.position.update((prev) => ({
 			...prev,
-			scale: Math.max(Math.min((prev.scale ?? 1) + scale, 4), 0.25),
+			s: Math.max(Math.min((prev.s ?? 1) + scale, 4), 0.25),
 		}));
 
 		broadcast.publishPosition();
@@ -201,7 +201,7 @@ export class Space {
 			const viewport = this.canvas.viewport.peek();
 
 			// Bump the z-index unless we're already at the top.
-			broadcast.targetPosition.update((prev) => ({
+			broadcast.position.update((prev) => ({
 				...prev,
 				x: mouse.x / viewport.x - 0.5,
 				y: mouse.y / viewport.y - 0.5,
@@ -231,13 +231,13 @@ export class Space {
 			const dx = touch2.clientX - touch1.clientX;
 			const dy = touch2.clientY - touch1.clientY;
 			this.#pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
-			this.#pinchStartScale = broadcast.targetPosition.peek().scale ?? 1;
+			this.#pinchStartScale = broadcast.position.peek().s ?? 1;
 
 			// Set as dragging to track which broadcast we're zooming
 			this.#dragging = broadcast;
 
 			// Bump the z-index
-			broadcast.targetPosition.update((prev) => ({
+			broadcast.position.update((prev) => ({
 				...prev,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
@@ -263,7 +263,7 @@ export class Space {
 			const viewport = this.canvas.viewport.peek();
 
 			// Update the position but don't publish it yet.
-			this.#dragging.targetPosition.update((prev) => ({
+			this.#dragging.position.update((prev) => ({
 				...prev,
 				x: mouse.x / viewport.x - 0.5,
 				y: mouse.y / viewport.y - 0.5,
@@ -286,9 +286,9 @@ export class Space {
 				const newScale = this.#pinchStartScale * scaleFactor;
 
 				// Update the scale
-				this.#dragging.targetPosition.update((prev) => ({
+				this.#dragging.position.update((prev) => ({
 					...prev,
-					scale: Math.max(Math.min(newScale, 4), 0.25),
+					s: Math.max(Math.min(newScale, 4), 0.25),
 				}));
 			}
 
@@ -298,7 +298,7 @@ export class Space {
 			const center = this.canvas.relative(centerX, centerY);
 			const viewport = this.canvas.viewport.peek();
 
-			this.#dragging.targetPosition.update((prev) => ({
+			this.#dragging.position.update((prev) => ({
 				...prev,
 				x: center.x / viewport.x - 0.5,
 				y: center.y / viewport.y - 0.5,
@@ -377,7 +377,7 @@ export class Space {
 	add(id: string, broadcast: Broadcast) {
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.
-		broadcast.targetPosition.update((prev) => ({
+		broadcast.position.update((prev) => ({
 			...prev,
 			z: ++this.#maxZ,
 		}));
@@ -396,7 +396,7 @@ export class Space {
 		// Resort the broadcasts when the z-index changes.
 		broadcast.signals.effect((effect) => {
 			// Get our z-index so we resort when it changes.
-			const z = effect.get(broadcast.targetPosition).z;
+			const z = effect.get(broadcast.position).z;
 			if (z > this.#maxZ) {
 				// Save the higher z-index so we can use it for new broadcasts.
 				this.#maxZ = z;
@@ -405,7 +405,7 @@ export class Space {
 			this.ordered.update((prev) =>
 				prev.sort(
 					// Peek at the other broadcasts' z-index to avoid re-sorting every time.
-					(a, b) => a.targetPosition.peek().z - b.targetPosition.peek().z,
+					(a, b) => a.position.peek().z - b.position.peek().z,
 				),
 			);
 		});
@@ -416,7 +416,7 @@ export class Space {
 				if (!effect.get(broadcast.source.enabled)) return;
 				if (!effect.get(broadcast.source.video.source) && !effect.get(broadcast.source.audio.source)) return;
 
-				broadcast.targetPosition.update((prev) => ({
+				broadcast.position.update((prev) => ({
 					...prev,
 					z: ++this.#maxZ,
 				}));
@@ -427,7 +427,7 @@ export class Space {
 			const message = effect.get(broadcast.source.chat.message.latest);
 			if (!message) return;
 
-			broadcast.targetPosition.update((prev) => ({
+			broadcast.position.update((prev) => ({
 				...prev,
 				z: ++this.#maxZ,
 			}));

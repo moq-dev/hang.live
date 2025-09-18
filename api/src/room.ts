@@ -1,10 +1,9 @@
 import * as Token from "@kixelated/moq-token";
 import * as Uuid from "uuid";
 import { z } from "zod";
-import * as Account from "./account";
 import * as Auth from "./auth";
 import * as rpc from "./rpc";
-import { isValidRoom, ROOM_NAME_ERROR, randomAvatar, randomName } from "./shared";
+import { isValidRoom, ROOM_NAME_ERROR } from "./shared";
 
 export const nameSchema = z.string().check(z.minLength(1), z.maxLength(100)).refine(isValidRoom, ROOM_NAME_ERROR);
 export type Name = z.infer<typeof nameSchema>;
@@ -19,7 +18,6 @@ export class Context {
 		this.#key = Token.load(env.RELAY_SECRET);
 		this.#env = env;
 	}
-
 	// Returns the URL to join the room
 	async sign(room: Name, account: string): Promise<URL> {
 		const root = `${this.#env.RELAY_PREFIX}/${room}`;
@@ -49,39 +47,13 @@ export const router = rpc
 	.post(
 		"/:room/join",
 		rpc.withParam(z.object({ room: nameSchema })),
-		rpc.withJson(z.object({ guest: z.lazy(() => Account.infoSchema).optional() })),
+		rpc.withJson(z.object({ guest: z.string().startsWith("guest/").optional() })),
 		Auth.optional,
 		async (c) => {
 			const ctx = c.var.ctx;
 			const room = c.req.valid("param").room;
-
-			let info: Account.Info;
-			if (c.var.account_id) {
-				const row = await ctx.account.get(c.var.account_id);
-				if (!row) {
-					throw new Error("Account not found");
-				}
-
-				info = {
-					id: c.var.account_id,
-					name: row.name,
-					avatar: row.avatar,
-				};
-			} else {
-				// Let the client provide it's own info but only if the ID starts with "guest/"
-				const guest = c.req.valid("json").guest;
-				if (guest?.id.startsWith("guest/")) {
-					info = guest;
-				} else {
-					info = {
-						id: Account.idSchema.parse(`guest/${Uuid.v4()}`),
-						name: randomName(),
-						avatar: randomAvatar(),
-					};
-				}
-			}
-
-			const url = await ctx.room.sign(room, info.id);
-			return c.json({ url, info });
+			const path = c.var.account_id ?? c.req.valid("json").guest ?? `guest/${Uuid.v4()}`;
+			const url = await ctx.room.sign(room, path);
+			return c.json({ url, path });
 		},
 	);
