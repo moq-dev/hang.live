@@ -4,11 +4,11 @@ import Tooltip from "../components/tooltip";
 import Tauri from "../tauri/api";
 import { Logo } from "./logo";
 
-export default function Web(props: { children: JSX.Element }) {
+export default function Web(props: { children: JSX.Element; link?: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col max-w-[1150px]">
 			<header class="flex items-center justify-between leading-none text-xl">
-				<Logo />
+				<Logo link={props.link} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
 					<Show when={!Tauri}>

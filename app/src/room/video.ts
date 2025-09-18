@@ -1,4 +1,6 @@
 import { Publish, Watch } from "@kixelated/hang";
+import { Effect } from "@kixelated/signals";
+import * as Api from "../api";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
@@ -10,8 +12,11 @@ export class Video {
 	// So we use the Video class directly to get individual frames.
 	broadcast: Broadcast;
 
+	// The avatar image.
+	avatar = new Image();
+
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
-	transition = 0;
+	avatarTransition = 0;
 
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
@@ -25,13 +30,33 @@ export class Video {
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 		this.targetSize = Vector.create(128, 128);
+
+		// Set a random default avatar while the user details are loading.
+		// TODO Only start a broadcast after receiving the catalog to avoid this.
+		this.avatar.src = Api.randomAvatar();
+
+		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
+		this.broadcast.signals.effect((effect) => {
+			const avatar = effect.get(this.broadcast.source.user.avatar);
+			if (!avatar) return; // don't unset
+
+			// TODO only set the avatar if it successfully loads
+			const newAvatar = new Image();
+			newAvatar.src = avatar;
+
+			const load = () => {
+				this.avatar = newAvatar;
+			};
+
+			effect.event(newAvatar, "load", load);
+		});
 	}
 
 	tick() {
 		const next = this.broadcast.source.video.frame.peek();
 
 		if (next) {
-			this.transition = Math.min(this.transition + 0.05, 1);
+			this.avatarTransition = Math.min(this.avatarTransition + 0.05, 1);
 
 			let width: number;
 			let height: number;
@@ -46,10 +71,10 @@ export class Video {
 
 			this.targetSize = Vector.create(width, height);
 		} else {
-			this.transition = Math.max(this.transition - 0.05, 0);
+			this.avatarTransition = Math.max(this.avatarTransition - 0.05, 0);
 			// TODO do this once, not on every frame.
-			if (this.broadcast.avatar.complete) {
-				this.targetSize = Vector.create(this.broadcast.avatar.width, this.broadcast.avatar.height);
+			if (this.avatar.complete) {
+				this.targetSize = Vector.create(this.avatar.width, this.avatar.height);
 
 				// If the avatar is larger than 256x256, then shrink it to match the target area.
 				const ratio = Math.sqrt(this.targetSize.x * this.targetSize.y) / 256;
@@ -129,9 +154,9 @@ export class Video {
 
 		const next = this.broadcast.source.video.frame.peek();
 
-		if (next && this.transition > 0) {
+		if (next && this.avatarTransition > 0) {
 			ctx.save();
-			ctx.globalAlpha *= this.transition;
+			ctx.globalAlpha *= this.avatarTransition;
 
 			// Apply horizontal flip only for Publish.Broadcast
 			// Watch.Broadcast already handles flipping internally with WebCodecs
@@ -150,12 +175,12 @@ export class Video {
 			ctx.restore();
 		}
 
-		if (this.transition < 1) {
+		if (this.avatarTransition < 1) {
 			ctx.save();
-			ctx.globalAlpha *= 1 - this.transition;
+			ctx.globalAlpha *= 1 - this.avatarTransition;
 
-			if (this.broadcast.avatar) {
-				ctx.drawImage(this.broadcast.avatar, 0, 0, bounds.size.x, bounds.size.y);
+			if (this.avatar.complete) {
+				ctx.drawImage(this.avatar, 0, 0, bounds.size.x, bounds.size.y);
 			} else {
 				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y);
 			}
@@ -290,7 +315,7 @@ export class Video {
 		const targetOpacity = modifiers?.hovering ? 1 : 0;
 		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
 
-		const name = this.broadcast.name.peek();
+		const name = this.broadcast.source.user.name.peek();
 
 		if (this.#nameOpacity > 0 && name) {
 			const fontSize = Math.round(Math.max(14 * scale, 10));

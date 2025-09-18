@@ -107,10 +107,13 @@ export function About(): JSX.Element {
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("try turning your webcam on"),
 		() => {},
-		() => two.user.set({ name: "omni-chan", avatar: "/avatar/omni.jpg" }),
+		() => {
+			two.user.name.set("omni-chan");
+			two.user.avatar.set("/avatar/omni.jpg");
+		},
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("oops wrong button"),
-		() => two.user.set({ name: "omni-chan", avatar: "/avatar/43.svg" }),
+		() => two.user.avatar.set("/avatar/43.svg"),
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),

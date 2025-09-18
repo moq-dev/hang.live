@@ -54,6 +54,6 @@ export const router = rpc
 			const room = c.req.valid("param").room;
 			const path = c.var.account_id ?? c.req.valid("json").guest ?? `guest/${Uuid.v4()}`;
 			const url = await ctx.room.sign(room, path);
-			return c.json({ url, path });
+			return c.json({ url, path, guest: !c.var.account_id ? path : undefined });
 		},
 	);

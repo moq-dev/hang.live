@@ -33,7 +33,12 @@ export class FakeBroadcast {
 		},
 	};
 
-	user = new Signal<Catalog.User | undefined>(undefined);
+	user = {
+		id: new Signal<string | undefined>(undefined),
+		name: new Signal<string | undefined>(undefined),
+		avatar: new Signal<string | undefined>(undefined),
+		color: new Signal<string | undefined>(undefined),
+	};
 
 	audio = {
 		root: new Signal<AudioNode | undefined>(undefined),
@@ -64,7 +69,11 @@ export class FakeBroadcast {
 	constructor(sound: Sound, props?: FakeBroadcastProps) {
 		this.sound = sound;
 
-		this.user.set(props?.user);
+		this.user.id.set(props?.user?.id);
+		this.user.name.set(props?.user?.name);
+		this.user.avatar.set(props?.user?.avatar);
+		this.user.color.set(props?.user?.color);
+
 		this.location.window.position.set(props?.position);
 		this.location.window.handle.set(Math.random().toString(36).substring(2, 15));
 

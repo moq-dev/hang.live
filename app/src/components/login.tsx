@@ -1,18 +1,19 @@
-import * as Api from "../api";
 import { createSignal, For, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import * as Api from "../api";
 import { unreachable } from "../util/unreachable";
 
-export default function Login(props: { error?: string }): JSX.Element {
+export default function Login(props: { error?: string; small?: boolean }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
+
 	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
 		switch (provider) {
 			case "apple":
-				return <span class="icon-[mdi--apple]" />;
+				return "icon-[mdi--apple]";
 			case "google":
-				return <span class="icon-[mdi--google]" />;
+				return "icon-[mdi--google]";
 			case "discord":
-				return <span class="icon-[mdi--discord]" />;
+				return "icon-[mdi--discord]";
 			default:
 				unreachable(provider);
 		}
@@ -42,7 +43,10 @@ export default function Login(props: { error?: string }): JSX.Element {
 	};
 
 	return (
-		<div class="flex flex-col flex-wrap gap-3 max-w-xs mx-auto text-center">
+		<div
+			class="flex flex-wrap gap-3 max-w-xs text-center justify-center mx-auto"
+			classList={{ "flex-col": !props.small }}
+		>
 			{/* Error message */}
 			<Show when={props.error}>
 				<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-4 text-red-300 text-center">
@@ -56,15 +60,18 @@ export default function Login(props: { error?: string }): JSX.Element {
 						type="button"
 						onClick={() => handleProviderLogin(provider)}
 						disabled={loading()}
-						class="flex items-center justify-center gap-3 px-4 py-3 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+						class="flex items-center justify-center gap-3 p-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer leading-none"
 						classList={{
 							[getProviderColor(provider)]: true,
 						}}
 					>
-						<div style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}>
-							{getProviderIcon(provider)}
-						</div>
-						<span>Sign in with {provider.charAt(0).toUpperCase() + provider.slice(1)}</span>
+						<div
+							style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.8))" }}
+							class={getProviderIcon(provider)}
+						/>
+						<Show when={!props.small}>
+							<span>{provider.charAt(0).toUpperCase() + provider.slice(1)}</span>
+						</Show>
 					</button>
 				)}
 			</For>

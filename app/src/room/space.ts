@@ -436,7 +436,7 @@ export class Space {
 		broadcast.signals.effect((effect) => {
 			if (!effect.get(broadcast.visible)) return;
 
-			const name = effect.get(broadcast.name);
+			const name = effect.get(broadcast.source.user.name);
 			if (!name) return;
 
 			this.sound.tts.joined(name);
@@ -445,7 +445,7 @@ export class Space {
 		broadcast.signals.effect((effect) => {
 			if (effect.get(broadcast.visible)) return;
 
-			const name = effect.get(broadcast.name);
+			const name = effect.get(broadcast.source.user.name);
 			if (!name) return;
 
 			this.sound.tts.left(name);

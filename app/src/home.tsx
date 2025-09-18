@@ -5,8 +5,10 @@ import * as Api from "./api";
 import { Badge } from "./components/badge";
 import CreateHang from "./components/create";
 import Login from "./components/login";
+import Profile from "./components/profile";
 import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
+import { Local } from "./room/local";
 
 export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
@@ -19,6 +21,8 @@ export function Home(): JSX.Element {
 	const badge = new Badge();
 	badge.set(0);
 	onCleanup(() => badge.close());
+
+	const local = new Local();
 
 	const [favorites, { refetch }] = createResource(async () => {
 		if (!Api.client.authenticated()) return null;
@@ -45,7 +49,7 @@ export function Home(): JSX.Element {
 	};
 
 	return (
-		<Layout>
+		<Layout link="/about">
 			{/* Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
 				<div class="flex-1 basis-md grow space-y-6">
@@ -67,7 +71,7 @@ export function Home(): JSX.Element {
 									<div class="text-gray-400 text-sm leading-relaxed mb-8">
 										so you can see when your friends are online and eager
 									</div>
-									<Login />
+									<Login small />
 								</div>
 							}
 						>
@@ -140,6 +144,9 @@ export function Home(): JSX.Element {
 						</div>
 
 						<CreateHang />
+					</div>
+					<div class="rounded-2xl border border-gray-800 p-6">
+						<Profile local={local} />
 					</div>
 				</div>
 			</div>
