@@ -127,7 +127,7 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
 				{/* Left Column: Participants List */}
 				<div class="flex-1 min-w-[300px] grow space-y-6">
-					<PreviewRoom connection={props.connection} name={props.room} />
+					<PreviewRoom connection={props.connection} />
 				</div>
 
 				{/* Right Column: Avatar/Name Preview */}

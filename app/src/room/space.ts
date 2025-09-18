@@ -1,4 +1,4 @@
-import { Publish } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
@@ -84,7 +84,7 @@ export class Space {
 
 	#onMouseUp(_: MouseEvent) {
 		if (this.#dragging) {
-			this.#dragging.publishPosition();
+			this.#publishPosition(this.#dragging);
 
 			this.#dragging = undefined;
 			this.#hovering = undefined;
@@ -98,11 +98,10 @@ export class Space {
 
 		if (this.#dragging) {
 			// Update the position but don't publish it yet.
-			this.#dragging.position.update((prev) => ({
-				...prev,
-				x: mouse.x / viewport.x - 0.5,
-				y: mouse.y / viewport.y - 0.5,
-			}));
+			this.#dragging.position.mutate((position) => {
+				position.x = mouse.x / viewport.x - 0.5;
+				position.y = mouse.y / viewport.y - 0.5;
+			});
 			return;
 		}
 
@@ -121,7 +120,7 @@ export class Space {
 
 	#onMouseLeave() {
 		if (this.#dragging) {
-			this.#dragging.publishPosition();
+			this.#publishPosition(this.#dragging);
 
 			this.#dragging = undefined;
 			this.#hovering = undefined;
@@ -170,7 +169,7 @@ export class Space {
 			s: Math.max(Math.min((prev.s ?? 1) + scale, 4), 0.25),
 		}));
 
-		broadcast.publishPosition();
+		this.#publishPosition(broadcast);
 	}
 
 	#onTouchStart(e: TouchEvent) {
@@ -314,7 +313,7 @@ export class Space {
 
 		// If all touches ended, publish the final position
 		if (this.#touches.size === 0 && this.#dragging) {
-			this.#dragging.publishPosition();
+			this.#publishPosition(this.#dragging);
 			this.#dragging = undefined;
 			this.#hovering = undefined;
 			this.#pinchStartDistance = 0;
@@ -334,7 +333,7 @@ export class Space {
 			if (broadcast && !broadcast.locked()) {
 				if (this.#dragging && this.#dragging !== broadcast) {
 					// Publish the old broadcast's position
-					this.#dragging.publishPosition();
+					this.#publishPosition(this.#dragging);
 				}
 				this.#dragging = broadcast;
 			}
@@ -350,7 +349,7 @@ export class Space {
 		this.#touches.clear();
 
 		if (this.#dragging) {
-			this.#dragging.publishPosition();
+			this.#publishPosition(this.#dragging);
 			this.#dragging = undefined;
 			this.#hovering = undefined;
 			this.#pinchStartDistance = 0;
@@ -656,5 +655,30 @@ export class Space {
 		this.#rip = [];
 		this.ordered.set([]);
 		this.lookup.clear();
+	}
+
+	// Publish the current position to the network.
+	#publishPosition(broadcast: Broadcast) {
+		const position = broadcast.position.peek();
+
+		if (broadcast.source instanceof Publish.Broadcast) {
+			broadcast.source.location.window.position.update((old) => ({ ...old, ...position }));
+			return;
+		}
+
+		if (broadcast.source instanceof Watch.Broadcast) {
+			const handle = broadcast.source.location.window.handle.peek();
+			if (!handle) return;
+
+			// TODO optimize this by storing local handles separately.
+			for (const broadcast of this.ordered.peek()) {
+				if (broadcast.source instanceof Publish.Broadcast && broadcast.source.location.peers.enabled.peek()) {
+					broadcast.source.location.peers.positions.set({ [handle]: position });
+					return;
+				}
+			}
+
+			console.warn("no local peers found");
+		}
 	}
 }

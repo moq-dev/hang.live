@@ -126,7 +126,7 @@ export class Room {
 
 		// Request the position we should use from this remote broadcast.
 		broadcast.signals.effect((effect) => {
-			const positions = effect.get(this.local.camera.location.peers.positions);
+			const positions = effect.get(broadcast.source.location.peers.positions);
 			if (!positions) return;
 
 			// Check if our local handles are in the positions.

@@ -12,6 +12,8 @@ export class Member {
 	enabled: Signal<boolean>;
 	info: Signal<Hang.Catalog.Preview | undefined>;
 
+	active = new Signal<boolean>(false);
+
 	signals = new Effect();
 
 	constructor(broadcast: Moq.Broadcast, props?: MemberProps) {
@@ -38,6 +40,11 @@ export class Member {
 					this.info.set(undefined);
 				}
 			});
+		});
+
+		this.signals.effect((effect) => {
+			const info = effect.get(this.info);
+			this.active.set(!!info);
 		});
 	}
 
