@@ -1,24 +1,24 @@
 import * as Api from "@hang/api/client";
-import { Connection, Preview } from "@kixelated/hang";
-import { Path } from "@kixelated/moq";
+import * as Moq from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
 import { For, onCleanup, Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
+import * as Preview from "./room/preview";
 
 export function PreviewRoomCompact(props: {
-	connection: Connection;
+	connection: Moq.Connection.Reload;
 	path?: string;
-	api: Api.Client;
 	setMemberCount: Setter<number>;
 }): JSX.Element {
-	const room = new Preview.Room(props.connection, {
-		name: props.path ? Path.from(props.path) : undefined,
+	const room = new Preview.Room({
+		connection: props.connection.established,
+		name: props.path ? Moq.Path.from(props.path) : undefined,
 		enabled: true,
 	});
 	onCleanup(() => room.close());
 
-	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
+	const [members, setMembers] = createStore<{ [name: Moq.Path.Valid]: Preview.Member | undefined }>({});
 
 	room.onMember((name, member) => {
 		setMembers(name, member || undefined);
@@ -96,14 +96,15 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 	);
 }
 
-export function PreviewRoom(props: { connection: Connection; path?: string; api: Api.Client }): JSX.Element {
-	const room = new Preview.Room(props.connection, {
-		name: props.path ? Path.from(props.path) : undefined,
+export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: string }): JSX.Element {
+	const room = new Preview.Room({
+		connection: props.connection.established,
+		name: props.name ? Moq.Path.from(props.name) : undefined,
 		enabled: true,
 	});
 	onCleanup(() => room.close());
 
-	const [members, setMembers] = createStore<{ [name: Path.Valid]: Preview.Member | undefined }>({});
+	const [members, setMembers] = createStore<{ [name: Moq.Path.Valid]: Preview.Member | undefined }>({});
 
 	room.onMember((name, member) => {
 		setMembers(name, member);

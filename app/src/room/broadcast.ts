@@ -22,11 +22,7 @@ export type ChatMessage = {
 
 export type BroadcastProps = {
 	audio?: AudioProps;
-
 	position?: Catalog.Position;
-	camera?: Publish.Broadcast;
-	screen?: Publish.Broadcast;
-
 	visible?: boolean;
 };
 
@@ -35,7 +31,7 @@ type Position = {
 	x: number;
 	y: number;
 	z: number;
-	scale: number;
+	s: number;
 };
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
@@ -70,13 +66,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// The target position of the broadcast, while bounds contains the actual position.
 	// This is separate from the source.location.current so we can temporarily use our own value.
 	// After we learn the real position over the network, we'll replace it.
-	targetPosition: Signal<Position>;
+	position: Signal<Position>;
 
 	// The meme video/audio we're rendering, if any.
 	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
 	memeName = new Signal<string | undefined>(undefined);
-
-	#locationPeer?: Publish.LocationPeer;
 
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
@@ -95,10 +89,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			x: props?.position?.x ?? start(),
 			y: props?.position?.y ?? start(),
 			z: props?.position?.z ?? 0,
-			scale: props?.position?.scale ?? 1,
+			s: props?.position?.s ?? 1,
 		};
 
-		this.targetPosition = new Signal(position);
+		this.position = new Signal(position);
 
 		this.video = new Video(this);
 		this.audio = new Audio(this, sound, props?.audio);
@@ -118,7 +112,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.signals.effect((effect) => {
 			if (!effect.get(this.visible)) {
 				// Change the target position to somewhere outside the screen.
-				this.targetPosition.update((prev) => {
+				this.position.update((prev) => {
 					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
 					return { ...prev, x: offscreen.x, y: offscreen.y };
 				});
@@ -127,16 +121,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			}
 
 			// Update the target position from the network.
-			const location = effect.get(this.source.location.current);
+			const location = effect.get(this.source.location.window.position);
 			if (!location) return;
 
-			this.targetPosition.update((prev) => {
+			this.position.update((prev) => {
 				return {
 					...prev,
 					x: location.x ?? prev.x,
 					y: location.y ?? prev.y,
 					z: location.z ?? prev.z,
-					scale: location.scale ?? prev.scale,
+					s: location.s ?? prev.s,
 				};
 			});
 		});
@@ -168,68 +162,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 
 		this.signals.effect(this.#runChat.bind(this));
-
-		// If this is a remote broadcast, we need to reflect position updates via local broadcasts.
-		if (props?.camera && this.source instanceof Watch.Broadcast) {
-			this.#initRemote(this.source, props.camera, props.screen);
-		}
-	}
-
-	// Special logic for only remote broadcasts.
-	#initRemote(remote: Watch.Broadcast, camera: Publish.Broadcast, screen?: Publish.Broadcast) {
-		const cameraUpdates = remote.location.peer();
-		this.signals.cleanup(() => cameraUpdates.close());
-
-		const screenUpdates = remote.location.peer();
-		this.signals.cleanup(() => screenUpdates.close());
-
-		// Update the handle when our path changes.
-		this.signals.subscribe(camera.name, (name) => cameraUpdates.handle.set(name));
-
-		// Request the position we should use from this remote broadcast.
-		this.signals.effect((effect) => {
-			// Only update the camera position if the local broadcast allows it.
-			if (!effect.get(camera.location.handle)) return;
-
-			const position = effect.get(cameraUpdates.location);
-			if (!position) return;
-
-			// Merge in the new position, keeping existing values when undefined.
-			camera.location.current.update((prev) => ({ ...prev, ...position }));
-		});
-
-		if (screen) {
-			// Update the handle when our name changes.
-			this.signals.subscribe(screen.name, (name) => screenUpdates.handle.set(name));
-
-			this.signals.effect((effect) => {
-				// Only update the screen position if the local broadcast allows it.
-				if (!effect.get(screen.location.handle)) return;
-
-				const position = effect.get(screenUpdates.location);
-				if (!position) return;
-
-				// Merge in the new position, keeping existing values when undefined.
-				screen.location.current.update((prev) => ({ ...prev, ...position }));
-			});
-		}
-
-		// Create a new peer handle so we can publish updates if allowed.
-		const peer = camera.location.peer();
-		this.signals.cleanup(() => peer.close());
-
-		this.signals.effect((effect) => {
-			// Make sure we're actually publishing.
-			if (!effect.get(camera.published)) return;
-
-			// Only set the handle if the broadcast allows peering.
-			const handle = effect.get(this.source.location.handle);
-			if (!handle) return;
-
-			effect.set(peer.handle, handle);
-		});
-
-		this.#locationPeer = peer;
 	}
 
 	#runChat(effect: Effect) {
@@ -271,7 +203,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const bounds = this.bounds.peek().clone(); //  clone is needed so SolidJS can track changes
 		const viewport = this.canvas.viewport.peek();
 
-		const targetPosition = this.targetPosition.peek();
+		const targetPosition = this.position.peek();
 
 		// Guide the body towards the target position with a bit of force.
 		const target = Vector.create((targetPosition.x + 0.5) * viewport.x, (targetPosition.y + 0.5) * viewport.y);
@@ -313,7 +245,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Apply everything now.
 		const targetSize = this.video.targetSize.mult(this.scale * scale);
-		this.scale += (targetPosition.scale - this.scale) * 0.1;
+		this.scale += (targetPosition.s - this.scale) * 0.1;
 
 		// Apply the velocity.
 		bounds.position = bounds.position.add(this.velocity.div(50));
@@ -336,7 +268,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Returns true if the broadcaster is locked to a position.
 	locked(): boolean {
 		if (this.source instanceof Watch.Broadcast) {
-			return !this.source.location.handle.peek();
+			return !this.source.location.window.handle.peek();
 		}
 
 		return false;
@@ -344,12 +276,15 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 	// Publish our current position to the network.
 	publishPosition() {
-		const position = this.targetPosition.peek();
+		const position = this.position.peek();
 
 		if (this.source instanceof Publish.Broadcast) {
-			this.source.location.current.update((old) => ({ ...old, ...position }));
-		} else if (this.#locationPeer) {
-			this.#locationPeer.producer.peek()?.writeJson(position);
+			this.source.location.window.position.update((old) => ({ ...old, ...position }));
+		} else if (this.source instanceof Watch.Broadcast) {
+			const handle = this.source.location.window.handle.peek();
+			if (!handle) return;
+
+			this.source.location.peers.positions.set({ [handle]: position });
 		}
 	}
 

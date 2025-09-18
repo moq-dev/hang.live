@@ -113,7 +113,7 @@ export class Chat {
 		});
 
 		effect.effect((effect) => {
-			const z = effect.get(this.broadcast.targetPosition).z;
+			const z = effect.get(this.broadcast.position).z;
 			root.style.zIndex = `${100 + z}`;
 		});
 

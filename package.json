@@ -5,7 +5,6 @@
 	"workspaces": [
 		"app",
 		"api",
-		"native",
 		"moq/js/moq",
 		"moq/js/hang",
 		"moq/js/moq-token",

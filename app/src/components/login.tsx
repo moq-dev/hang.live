@@ -1,9 +1,9 @@
-import * as Api from "@hang/api/client";
+import * as Api from "../api";
 import { createSignal, For, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { unreachable } from "../util/unreachable";
 
-export default function Login(props: { api: Api.Client; error?: string }): JSX.Element {
+export default function Login(props: { error?: string }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
 	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
 		switch (provider) {
@@ -34,7 +34,7 @@ export default function Login(props: { api: Api.Client; error?: string }): JSX.E
 	const handleProviderLogin = async (provider: Api.OAuth.ProviderId) => {
 		setLoading(true);
 		try {
-			await props.api.login(provider);
+			await Api.client.login(provider);
 		} catch (error) {
 			console.error("Login failed:", error);
 			setLoading(false);

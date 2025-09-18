@@ -6,7 +6,7 @@ import { Sound } from "./sound";
 import { Space } from "./space";
 
 export type FakeBroadcastProps = {
-	location?: Catalog.Position;
+	position?: Catalog.Position;
 	user?: Catalog.User;
 };
 
@@ -16,8 +16,10 @@ export class FakeBroadcast {
 	enabled = new Signal(false);
 
 	location = {
-		current: new Signal<Catalog.Position | undefined>(undefined),
-		handle: new Signal<string | undefined>(undefined),
+		window: {
+			position: new Signal<Catalog.Position | undefined>(undefined),
+			handle: new Signal<string | undefined>(undefined),
+		},
 	};
 
 	chat = {
@@ -47,7 +49,6 @@ export class FakeBroadcast {
 
 	video = {
 		media: new Signal<MediaStream | undefined>(undefined),
-		active: new Signal(false),
 		frame: new Signal<HTMLVideoElement | undefined>(undefined),
 		flip: new Signal<boolean | undefined>(undefined),
 		detection: {
@@ -64,8 +65,8 @@ export class FakeBroadcast {
 		this.sound = sound;
 
 		this.user.set(props?.user);
-		this.location.current.set(props?.location);
-		this.location.handle.set(Math.random().toString(36).substring(2, 15));
+		this.location.window.position.set(props?.position);
+		this.location.window.handle.set(Math.random().toString(36).substring(2, 15));
 
 		this.signals.effect((effect) => {
 			const message = effect.get(this.chat.message.latest);
@@ -106,7 +107,6 @@ export class FakeBroadcast {
 		video.play();
 
 		this.#video = video;
-		this.video.active.set(true);
 		this.video.frame.set(video);
 
 		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });
@@ -117,7 +117,6 @@ export class FakeBroadcast {
 		this.#video?.pause();
 		this.#video = undefined;
 
-		this.video.active.set(false);
 		this.video.frame.set(undefined);
 
 		this.audio.root.update((prev) => {

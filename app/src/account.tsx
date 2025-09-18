@@ -1,32 +1,32 @@
-import * as Api from "@hang/api/client";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import * as Api from "./api";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
 import Layout from "./layout/web";
 
-export function Account(props: { api: Api.Client }): JSX.Element {
+export function Account(): JSX.Element {
 	return (
 		<Layout>
-			<Show when={props.api.authenticated()} fallback={<LoginPage api={props.api} />}>
-				<SettingsLoad api={props.api} />
+			<Show when={Api.client.authenticated()} fallback={<LoginPage />}>
+				<SettingsLoad />
 			</Show>
 		</Layout>
 	);
 }
 
-function SettingsLoad(props: { api: Api.Client }): JSX.Element {
+function SettingsLoad(): JSX.Element {
 	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
 
 	const handleLogout = () => {
-		props.api.logout();
+		Api.client.logout();
 	};
 
 	onMount(async () => {
 		try {
-			const info = await props.api.routes.account.info.$get();
+			const info = await Api.client.routes.account.info.$get();
 			if (info.ok) {
 				setInfo(await info.json());
 			} else {
@@ -45,7 +45,7 @@ function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 						Error: {error()}
 					</div>
 				</Match>
-				<Match when={info()}>{(info) => <Settings api={props.api} info={info()} />}</Match>
+				<Match when={info()}>{(info) => <Settings info={info()} />}</Match>
 				<Match when={true}>
 					<div>Loading...</div>
 				</Match>
@@ -77,7 +77,7 @@ function SettingsLoad(props: { api: Api.Client }): JSX.Element {
 	);
 }
 
-function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Element {
+function Settings(props: { info: Api.Account.Info }): JSX.Element {
 	const [info, setInfo] = createSignal(props.info);
 	const [name, setName] = createSignal<string | undefined>(props.info.name);
 	const [avatar, setAvatar] = createSignal<File | string | undefined>(props.info.avatar);
@@ -151,7 +151,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 
 		try {
 			// Make single request to the unified endpoint
-			const response = await props.api.routes.account.info.$put({
+			const response = await Api.client.routes.account.info.$put({
 				form: {
 					name: name(),
 					avatar: avatarChanged() ? avatar() : undefined,
@@ -381,7 +381,7 @@ function Settings(props: { api: Api.Client; info: Api.Account.Info }): JSX.Eleme
 	);
 }
 
-export function LoginPage(props: { api: Api.Client }): JSX.Element {
+export function LoginPage(): JSX.Element {
 	return (
 		<main class="flex items-center justify-center">
 			<div class="w-full max-w-md">
@@ -391,7 +391,7 @@ export function LoginPage(props: { api: Api.Client }): JSX.Element {
 				</div>
 
 				{/* Login buttons */}
-				<Login api={props.api} />
+				<Login />
 			</div>
 		</main>
 	);

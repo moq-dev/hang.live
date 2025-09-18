@@ -1,8 +1,8 @@
-import * as Api from "@hang/api/client";
-import { Connection } from "@kixelated/hang";
+import * as Moq from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
-import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
+import { createEffect, createSelector, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import * as Api from "./api";
 import AnotherOne from "./components/another-one";
 import { Badge } from "./components/badge";
 import Gradient from "./components/gradient";
@@ -15,41 +15,58 @@ import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 import { Canvas } from "./room/canvas";
 import { Local, LocalPreview } from "./room/local";
+import * as Url from "./util/url";
 
 import "@kixelated/hang/support/element";
+import Settings from "./settings";
 
-export function Sup(props: { canvas: Canvas; api: Api.Client; room: string }): JSX.Element {
-	const connection = new Connection();
+export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
+	const connection = new Moq.Connection.Reload({ enabled: true });
 	onCleanup(() => connection.close());
 
 	// Create the local broadcasts (camera and screen)
-	const local = new Local(connection, props.api, props.room);
+	const local = new Local();
 	onCleanup(() => local.close());
+
+	createEffect(async () => {
+		const id = Settings.account.id.peek();
+		const guest = id?.startsWith("guest/") ? id : undefined;
+
+		const response = await Api.client.routes.room[":room"].join.$post({
+			param: { room: props.room },
+			json: { guest },
+		});
+		if (!response.ok) {
+			throw new Error(`Failed to join room: ${response.statusText}`);
+		}
+
+		const data = await response.json();
+
+		connection.url.set(Url.rewrite(data.url));
+		local.camera.name.set(Moq.Path.from(data.path, "camera"));
+		local.share.name.set(Moq.Path.from(data.path, "screen"));
+	});
 
 	const publish = solid(local.camera.enabled);
 
 	return (
-		<Show
-			when={publish()}
-			fallback={<Preview connection={connection} api={props.api} room={props.room} local={local} />}
-		>
-			<App connection={connection} canvas={props.canvas} api={props.api} room={props.room} local={local} />
+		<Show when={publish()} fallback={<Preview room={props.room} local={local} connection={connection} />}>
+			<App connection={connection} canvas={props.canvas} room={props.room} local={local} />
 		</Show>
 	);
 }
 
-function App(props: {
-	connection: Connection;
-	canvas: Canvas;
-	room: string;
-	api: Api.Client;
-	local: Local;
-}): JSX.Element {
+function App(props: { connection: Moq.Connection.Reload; canvas: Canvas; room: string; local: Local }): JSX.Element {
+	const room = new Room({
+		canvas: props.canvas,
+		name: props.room,
+		local: props.local,
+		connection: props.connection,
+	});
+	onCleanup(() => room.close());
+
 	// Try to start the sound immediately on click.
 	props.local.sound.enabled.set(true);
-
-	const room = new Room(props.connection, props.canvas, props.local);
-	onCleanup(() => room.close());
 
 	// Update badge count based on room participants
 	const participantCount = solid(room.space.ordered);
@@ -65,14 +82,14 @@ function App(props: {
 	onCleanup(() => badge.close());
 
 	return (
-		<AppLayout connection={room.connection} api={props.api} room={props.room}>
+		<AppLayout connection={room.connection} room={props.room}>
 			<Controls room={room} local={props.local} canvas={props.canvas} />
 		</AppLayout>
 	);
 }
 
-function Preview(props: { connection: Connection; api: Api.Client; room: string; local: Local }): JSX.Element {
-	const info = solid(props.local.info);
+function Preview(props: { room: string; local: Local; connection: Moq.Connection.Reload }): JSX.Element {
+	const status = createSelector(solid(props.connection.status));
 
 	return (
 		<WebLayout>
@@ -86,9 +103,9 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 					type="button"
 					class="min-w-64 px-6 py-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer text-lg"
 					classList={{
-						"opacity-50 cursor-not-allowed": !info(),
+						"opacity-50 cursor-not-allowed": status("connected"),
 					}}
-					onClick={() => props.local.camera.enabled.set(true)}
+					onClick={() => props.local.join.set(true)}
 					style={{
 						background: Gradient(),
 						"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
@@ -96,9 +113,10 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 				>
 					<span class="icon-[mdi--play] inline mr-2" />
 					<Switch>
-						<Match when={!info()}>Loading...</Match>
-						<Match when={props.api.authenticated()}>Join</Match>
-						<Match when={!props.api.authenticated()}>Join as Guest</Match>
+						<Match when={status("connecting")}>Connecting...</Match>
+						<Match when={status("disconnected")}>Disconnected</Match>
+						<Match when={Api.client.authenticated()}>Join</Match>
+						<Match when={!Api.client.authenticated()}>Join as Guest</Match>
 					</Switch>
 				</button>
 			</div>
@@ -107,19 +125,19 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
 				{/* Left Column: Participants List */}
 				<div class="flex-1 min-w-[300px] grow space-y-6">
-					<PreviewRoom connection={props.connection} api={props.api} />
+					<PreviewRoom connection={props.connection} name={props.room} />
 				</div>
 
 				{/* Right Column: Avatar/Name Preview */}
 				<div class="flex-1 min-w-[300px] grow space-y-6">
-					<Show when={info()} fallback={<div class="text-center text-gray-400">Loading...</div>}>
+					<Show when={status("connected")} fallback={<div class="text-center text-gray-400">Loading...</div>}>
 						<div class="rounded-2xl border border-gray-800 p-6">
-							<PreviewIcon api={props.api} room={props.room} local={props.local} />
-							<Show when={!props.api.authenticated()}>
+							<PreviewIcon room={props.room} local={props.local} />
+							<Show when={!Api.client.authenticated()}>
 								<div class="text-center text-gray-400 mb-4">
 									...or sign in to customize your profile
 								</div>
-								<Login api={props.api} />
+								<Login />
 							</Show>
 						</div>
 					</Show>
@@ -129,7 +147,7 @@ function Preview(props: { connection: Connection; api: Api.Client; room: string;
 	);
 }
 
-function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JSX.Element {
+function PreviewIcon(props: { room: string; local: Local }): JSX.Element {
 	const info = solid(props.local.info);
 
 	const [avatarClicks, setAvatarClicks] = createSignal(0);
@@ -172,12 +190,12 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 	return (
 		<>
 			<h3 class="text-xl font-semibold mb-4 underline decoration-blue-500/80 underline-offset-2">
-				Your Profile <Show when={!props.api.authenticated()}>(guest)</Show>
+				Your Profile <Show when={!Api.client.authenticated()}>(guest)</Show>
 			</h3>
 
 			{/* Avatar/Video Preview */}
 			<div class="flex flex-col items-center mb-4 space-y-4">
-				<Show when={!props.api.authenticated()}>
+				<Show when={!Api.client.authenticated()}>
 					<div class="flex gap-3">
 						<div class="relative">
 							<button
@@ -214,7 +232,7 @@ function PreviewIcon(props: { api: Api.Client; room: string; local: Local }): JS
 			<div class="flex gap-3 justify-center mb-6">
 				<Microphone local={props.local} />
 				<Camera local={props.local} />
-				<Show when={props.api.authenticated()}>
+				<Show when={Api.client.authenticated()}>
 					<Tooltip content="Edit your profile" position="top">
 						<a
 							href="/account"

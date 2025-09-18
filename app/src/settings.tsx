@@ -1,4 +1,3 @@
-import * as Api from "@hang/api/client";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import { createSelector, createSignal, Match, Switch } from "solid-js";
@@ -33,23 +32,18 @@ const Settings = {
 		device: new Signal(localStorage.getItem("settings.camera.device") ?? undefined),
 	},
 
-	// Guest account settings
-	guest: new Signal<Api.Account.Info | undefined>(undefined),
+	// Cached account ID stuff; not validated.
+	account: {
+		id: new Signal<string | undefined>(localStorage.getItem("settings.account.id") ?? undefined),
+		name: new Signal<string | undefined>(localStorage.getItem("settings.account.name") ?? undefined),
+		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? undefined),
+	},
 
 	// Meme selector settings
 	meme: {
 		tab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
 	},
 };
-
-const guestRaw = localStorage.getItem("settings.guest");
-if (guestRaw) {
-	try {
-		Settings.guest.set(Api.AccountInfoSchema.safeParse(JSON.parse(guestRaw)).data);
-	} catch (error) {
-		console.error("Failed to parse guest settings", error);
-	}
-}
 
 // Load and validate announcements setting
 const ttsRaw = localStorage.getItem("settings.tts");
@@ -108,8 +102,28 @@ effect.subscribe(Settings.camera.enabled, (enabled) => {
 	localStorage.setItem("settings.camera.enabled", enabled.toString());
 });
 
-effect.subscribe(Settings.guest, (guest) => {
-	localStorage.setItem("settings.guest", JSON.stringify(guest));
+effect.subscribe(Settings.account.id, (id) => {
+	if (id) {
+		localStorage.setItem("settings.account.id", id);
+	} else {
+		localStorage.removeItem("settings.account.id");
+	}
+});
+
+effect.subscribe(Settings.account.name, (name) => {
+	if (name) {
+		localStorage.setItem("settings.account.name", name);
+	} else {
+		localStorage.removeItem("settings.account.name");
+	}
+});
+
+effect.subscribe(Settings.account.avatar, (avatar) => {
+	if (avatar) {
+		localStorage.setItem("settings.account.avatar", avatar);
+	} else {
+		localStorage.removeItem("settings.account.avatar");
+	}
 });
 
 effect.subscribe(Settings.meme.tab, (tab) => {

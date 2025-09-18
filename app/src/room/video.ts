@@ -3,18 +3,6 @@ import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
 import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
 
-// Local or remote (Hang.Watch.Video) video source.
-/*
-export interface VideoSource {
-	active: Memo<boolean>;
-	frame: (now: DOMHighResTimeStamp) => { frame: VideoFrame; lag: DOMHighResTimeStamp } | undefined;
-	close: () => void;
-
-	// Called to stop downloading when minimized, but obviously we don't want to stop publishing so it's optional.
-	enabled?: Signal<boolean>;
-}
-	*/
-
 export type VideoSource = Watch.Video.Source | Publish.Video.Encoder;
 
 export class Video {
@@ -31,84 +19,18 @@ export class Video {
 	// The opacity from 0 to 1, where 0 is offline and 1 is online.
 	online = 0;
 
-	// Slowly zoom into the focus point, if present.
-	/*
-	#zoom: Bounds;
-	#zoomTarget: Bounds;
-	*/
-
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 		this.targetSize = Vector.create(128, 128);
-
-		/* Disabled for now because the user experience is eh.
-		this.#zoom = Bounds.create(Vector.create(0, 0), Vector.create(1, 1));
-		this.#zoomTarget = Bounds.create(Vector.create(0, 0), Vector.create(1, 1));
-
-		this.#signals.effect((effect) => {
-			const objects = effect.get(this.broadcast.source.video.detection.objects);
-
-			// Create a bounding box for all objects that match a zoom target.
-			let bounding: Bounds | undefined;
-
-			for (const object of objects || []) {
-				const label = object.label as ZoomTarget;
-				if (!ZOOM_TARGETS.includes(label)) {
-					console.log("not a zoom target", object.label);
-					continue;
-				}
-
-				if (!bounding) {
-					bounding = Bounds.create(Vector.create(object.x, object.y), Vector.create(object.w, object.h));
-				} else {
-					bounding.position.x = Math.min(bounding.position.x, object.x);
-					bounding.position.y = Math.min(bounding.position.y, object.y);
-					bounding.size.x = Math.max(bounding.size.x, object.x + object.w);
-					bounding.size.y = Math.max(bounding.size.y, object.y + object.h);
-				}
-			}
-
-			if (!bounding) {
-				// Unzoom
-				this.#zoomTarget = Bounds.create(Vector.create(0, 0), Vector.create(1, 1));
-				return;
-			}
-
-			const ZOOM_MAX = 0.5; // Don't zoom in more than 2x
-			const ZOOM_PADDING = 0.1; // Add 10% padding to the zoom target
-
-			let left = Math.max(0, bounding.position.x - (bounding.size.x * ZOOM_PADDING) / 2);
-			let right = Math.min(1, bounding.position.x + bounding.size.x + (bounding.size.x * ZOOM_PADDING) / 2);
-			let top = Math.max(0, bounding.position.y - (bounding.size.y * ZOOM_PADDING) / 2);
-			let bottom = Math.min(1, bounding.position.y + bounding.size.y + (bounding.size.y * ZOOM_PADDING) / 2);
-
-			const width = right - left;
-			const height = bottom - top;
-
-			if (width < ZOOM_MAX) {
-				left = Math.max(0, left - (ZOOM_MAX - width) / 2);
-				right = Math.min(1, right + (ZOOM_MAX - width) / 2);
-			}
-
-			if (height < ZOOM_MAX) {
-				top = Math.max(0, top - (ZOOM_MAX - height) / 2);
-				bottom = Math.min(1, bottom + (ZOOM_MAX - height) / 2);
-			}
-
-			this.#zoomTarget = Bounds.create(Vector.create(left, top), Vector.create(right - left, bottom - top));
-
-		});
-		*/
 	}
 
 	tick() {
-		const active = this.broadcast.source.video.active.peek();
 		const next = this.broadcast.source.video.frame.peek();
 
-		if (active && next) {
+		if (next) {
 			this.transition = Math.min(this.transition + 0.05, 1);
 
 			let width: number;
@@ -211,54 +133,6 @@ export class Video {
 			ctx.save();
 			ctx.globalAlpha *= this.transition;
 
-			// Compute grayscale level based on how late the frame is.
-			/*
-			const spinner = Math.min(Math.max((lag ?? 0 - 2000) / (5000 - 2000), 0), 1)
-			if (spinner > 0) {
-				ctx.filter = `grayscale(${spinner})`
-			}
-				*/
-
-			/*
-			const size =
-				next instanceof HTMLVideoElement
-					? Vector.create(next.videoWidth, next.videoHeight)
-					: Vector.create(next.codedWidth, next.codedHeight);
-
-			// Calculate source rectangle (which part of the video to show)
-			const source = Bounds.create(
-				Vector.create(this.#zoom.position.x * size.x, this.#zoom.position.y * size.y),
-				Vector.create(this.#zoom.size.x * size.x, this.#zoom.size.y * size.y),
-			);
-
-			// Calculate destination rectangle to maintain aspect ratio
-			const sourceAspect = source.size.x / source.size.y;
-			const destAspect = bounds.size.x / bounds.size.y;
-
-			const dst = Bounds.create(Vector.create(0, 0), bounds.size);
-			if (sourceAspect > destAspect) {
-				// Source is wider - letterbox top/bottom
-				dst.size.y = bounds.size.x / sourceAspect;
-				dst.position.y = (bounds.size.y - dst.size.y) / 2;
-			} else if (sourceAspect < destAspect) {
-				// Source is taller - letterbox left/right
-				dst.size.x = bounds.size.y * sourceAspect;
-				dst.position.x = (bounds.size.x - dst.size.x) / 2;
-			}
-
-			ctx.drawImage(
-				next,
-				source.position.x,
-				source.position.y,
-				source.size.x,
-				source.size.y,
-				dst.position.x,
-				dst.position.y,
-				dst.size.x,
-				dst.size.y,
-			);
-			*/
-
 			// Apply horizontal flip only for Publish.Broadcast
 			// Watch.Broadcast already handles flipping internally with WebCodecs
 			const flip = this.broadcast.source.video.flip?.peek();
@@ -274,27 +148,6 @@ export class Video {
 				ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
 			}
 			ctx.restore();
-
-			/*
-			if (spinner > 0) {
-				const spinnerSize = 32 * this.scale
-				const spinnerX = bounds.size.x / 2 - spinnerSize / 2
-				const spinnerY = bounds.size.y / 2 - spinnerSize / 2
-				const angle = ((now % 1000) / 1000) * 2 * Math.PI
-
-				ctx.save()
-				ctx.translate(spinnerX + spinnerSize / 2, spinnerY + spinnerSize / 2)
-				ctx.rotate(angle)
-
-				ctx.beginPath()
-				ctx.arc(0, 0, spinnerSize / 2 - 2, 0, Math.PI * 1.5) // crude 3/4 arc
-				ctx.lineWidth = 4 * this.scale
-				ctx.strokeStyle = `hsla(290, 80%, 40%, ${spinner})`
-				ctx.stroke()
-
-				ctx.restore()
-			}
-				*/
 		}
 
 		if (this.transition < 1) {
@@ -433,12 +286,6 @@ export class Video {
 		// Cancel the clip
 		ctx.restore();
 
-		//if (modifiers.hovering) {
-		//ctx.lineWidth = 2 * this.scale;
-		//ctx.strokeStyle = "white";
-		//ctx.strokeRect(0, 0, bounds.size.x, bounds.size.y);
-		//}
-
 		// Render the display name when hovering.
 		const targetOpacity = modifiers?.hovering ? 1 : 0;
 		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
@@ -458,20 +305,6 @@ export class Video {
 			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
 			ctx.restore();
 		}
-
-		// Draw target for debugging
-		/*
-		ctx.beginPath();
-		ctx.arc(
-			this.targetPosition.x * ctx.canvas.width,
-			this.targetPosition.y * ctx.canvas.height,
-			4 * this.scale,
-			0,
-			2 * Math.PI,
-		);
-		ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-		ctx.fill();
-		*/
 
 		ctx.restore();
 	}
