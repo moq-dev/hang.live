@@ -1,4 +1,3 @@
-import * as Api from "@hang/api/client";
 import { type Catalog, Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import { Audio, type AudioProps } from "./audio";
@@ -240,20 +239,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 
 		return false;
-	}
-
-	// Publish our current position to the network.
-	publishPosition() {
-		const position = this.position.peek();
-
-		if (this.source instanceof Publish.Broadcast) {
-			this.source.location.window.position.update((old) => ({ ...old, ...position }));
-		} else if (this.source instanceof Watch.Broadcast) {
-			const handle = this.source.location.window.handle.peek();
-			if (!handle) return;
-
-			this.source.location.peers.positions.set({ [handle]: position });
-		}
 	}
 
 	// Render a locator arrow for our local broadcasts on join

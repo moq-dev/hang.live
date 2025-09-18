@@ -1,8 +1,7 @@
 import * as Moq from "@kixelated/moq";
 import solid from "@kixelated/signals/solid";
-import { For, onCleanup, Setter, Show } from "solid-js";
+import { createEffect, For, onCleanup, Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import { createStore } from "solid-js/store";
 import * as Preview from "./room/preview";
 
 export function PreviewRoomCompact(props: {
@@ -12,25 +11,22 @@ export function PreviewRoomCompact(props: {
 }): JSX.Element {
 	const room = new Preview.Room({
 		connection: props.connection.established,
-		name: props.path ? Moq.Path.from(props.path) : undefined,
+		path: props.path ? Moq.Path.from(props.path) : undefined,
 		enabled: true,
 	});
 	onCleanup(() => room.close());
 
-	const [members, setMembers] = createStore<{ [name: Moq.Path.Valid]: Preview.Member | undefined }>({});
-
-	room.onMember((name, member) => {
-		setMembers(name, member || undefined);
-		props.setMemberCount((prev) => prev + (member ? 1 : -1));
+	const members = solid(room.members);
+	createEffect(() => {
+		console.log("members", members().size);
+		props.setMemberCount(members().size);
 	});
-
-	const memberList = () => Object.values(members).filter(Boolean);
 
 	// Only show if there are members
 	return (
-		<Show when={memberList().length > 0}>
+		<Show when={members().size > 0}>
 			<div class="flex flex-wrap gap-2">
-				<For each={memberList()}>
+				<For each={members().values().toArray()}>
 					{(member) => <Show when={member}>{(member) => <PreviewMemberCompact member={member()} />}</Show>}
 				</For>
 			</div>
@@ -40,6 +36,7 @@ export function PreviewRoomCompact(props: {
 
 function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 	const info = solid(props.member.info);
+
 	return (
 		<Show when={info()}>
 			{(info) => (
@@ -98,25 +95,29 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: string }): JSX.Element {
 	const room = new Preview.Room({
 		connection: props.connection.established,
-		name: props.name ? Moq.Path.from(props.name) : undefined,
+		path: props.name ? Moq.Path.from(props.name) : undefined,
 		enabled: true,
 	});
 	onCleanup(() => room.close());
 
-	const [members, setMembers] = createStore<{ [name: Moq.Path.Valid]: Preview.Member | undefined }>({});
+	const members = solid(room.members);
+	console.log("members0", members().size);
+	createEffect(() => {
+		console.log("members1", members().size);
+	});
 
-	room.onMember((name, member) => {
-		setMembers(name, member);
+	room.members.subscribe((members) => {
+		console.log("members2", members.size);
 	});
 
 	return (
 		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
 			<div class="mb-4">
-				<h3 class="text-xl font-semibold">Hanging Now ({Object.values(members).length})</h3>
+				<h3 class="text-xl font-semibold">Hanging Now ({members().size})</h3>
 			</div>
 
 			<Show
-				when={Object.values(members).length > 0}
+				when={members().size > 0}
 				fallback={
 					<div class="text-center py-12">
 						<h3 class="text-lg font-semibold mb-4">No one is here yet.</h3>
@@ -125,7 +126,7 @@ export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: s
 				}
 			>
 				<div class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500">
-					<For each={Object.values(members)}>
+					<For each={members().values().toArray()}>
 						{(member) => <Show when={member}>{(member) => <PreviewMember member={member()} />}</Show>}
 					</For>
 				</div>
@@ -170,11 +171,13 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 								"ring-2 ring-gray-600 group-hover:ring-gray-500": !info().video,
 							}}
 						>
-							<img
-								src={info().avatar}
-								alt={info().name}
-								class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-							/>
+							<Show when={info().avatar} fallback={<div class="w-full h-full bg-gray-500 rounded-lg" />}>
+								<img
+									src={info().avatar}
+									alt={info().name}
+									class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+								/>
+							</Show>
 						</div>
 						<div
 							class="absolute -top-1 -right-1 bg-gradient-to-r from-green-400 to-green-300 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center transition-all duration-300"
@@ -236,6 +239,11 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 									title="Speaking"
 								>
 									<span class="icon-[mdi--volume-high] w-4 h-4 text-green-300" />
+								</div>
+							</Show>
+							<Show when={info().screen}>
+								<div class="relative transition-all duration-300 ease-in-out" title="Screen sharing">
+									<span class="icon-[mdi--monitor] w-4 h-4 text-yellow-400" />
 								</div>
 							</Show>
 						</div>

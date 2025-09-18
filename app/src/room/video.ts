@@ -1,5 +1,4 @@
 import { Publish, Watch } from "@kixelated/hang";
-import { Effect } from "@kixelated/signals";
 import * as Api from "../api";
 import type { Broadcast } from "./broadcast";
 import { Vector } from "./geometry";
@@ -17,6 +16,9 @@ export class Video {
 
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	avatarTransition = 0;
+
+	// The current video frame, for transitioning back to the avatar.
+	frame?: VideoFrame | HTMLVideoElement;
 
 	// The desired size of the video in pixels.
 	targetSize: Vector; // in pixels
@@ -54,7 +56,6 @@ export class Video {
 
 	tick() {
 		const next = this.broadcast.source.video.frame.peek();
-
 		if (next) {
 			this.avatarTransition = Math.min(this.avatarTransition + 0.05, 1);
 
@@ -70,6 +71,9 @@ export class Video {
 			}
 
 			this.targetSize = Vector.create(width, height);
+
+			if (this.frame instanceof VideoFrame) this.frame.close();
+			this.frame = next instanceof HTMLVideoElement ? next : next.clone();
 		} else {
 			this.avatarTransition = Math.max(this.avatarTransition - 0.05, 0);
 			// TODO do this once, not on every frame.
@@ -81,6 +85,12 @@ export class Video {
 				if (ratio > 1) {
 					this.targetSize = this.targetSize.div(ratio);
 				}
+			}
+
+			// Deallocate the frame once we're done with it.
+			if (this.avatarTransition === 0 && this.frame instanceof VideoFrame) {
+				this.frame.close();
+				this.frame = undefined;
 			}
 		}
 
@@ -152,9 +162,7 @@ export class Video {
 			ctx.globalAlpha *= 0.7;
 		}
 
-		const next = this.broadcast.source.video.frame.peek();
-
-		if (next && this.avatarTransition > 0) {
+		if (this.frame && this.avatarTransition > 0) {
 			ctx.save();
 			ctx.globalAlpha *= this.avatarTransition;
 
@@ -167,10 +175,10 @@ export class Video {
 				ctx.save();
 				ctx.scale(-1, 1);
 				ctx.translate(-bounds.size.x, 0);
-				ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
+				ctx.drawImage(this.frame, 0, 0, bounds.size.x, bounds.size.y);
 				ctx.restore();
 			} else {
-				ctx.drawImage(next, 0, 0, bounds.size.x, bounds.size.y);
+				ctx.drawImage(this.frame, 0, 0, bounds.size.x, bounds.size.y);
 			}
 			ctx.restore();
 		}

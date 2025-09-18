@@ -101,6 +101,7 @@ export class Local {
 				window: {
 					enabled: true,
 					position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+					handle: Math.random().toString(36).substring(2, 15),
 				},
 				peers: {
 					enabled: true,
@@ -116,6 +117,12 @@ export class Local {
 			},
 			preview: {
 				enabled: true,
+				info: {
+					chat: false,
+					speaking: false,
+					typing: false,
+					screen: false,
+				},
 			},
 		});
 
@@ -147,15 +154,12 @@ export class Local {
 			location: {
 				window: {
 					enabled: true,
-					handle: Math.random().toString(36).substring(2, 15),
 					position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+					handle: Math.random().toString(36).substring(2, 15),
 				},
 				peers: {
 					enabled: Settings.draggable,
 				},
-			},
-			preview: {
-				enabled: true,
 			},
 		});
 
@@ -242,7 +246,7 @@ export class Local {
 			);
 		});
 
-		this.share.signals.effect((effect) => {
+		this.camera.signals.effect((effect) => {
 			const video = effect.get(this.camera.video.source);
 			const audio = effect.get(this.camera.audio.source);
 
@@ -253,30 +257,16 @@ export class Local {
 			}));
 		});
 
+		// Update the screen sharing status
 		this.share.signals.effect((effect) => {
 			const video = effect.get(this.share.video.source);
 			const audio = effect.get(this.share.audio.source);
 
-			this.share.preview.info.update((prev) => ({
+			this.camera.preview.info.update((prev) => ({
 				...prev,
-				video: !!video,
-				audio: !!audio,
+				screen: !!video || !!audio,
 			}));
 		});
-
-		// Initialize chat status as false
-		this.camera.preview.info.update((prev) => ({
-			...prev,
-			chat: false,
-			speaking: false,
-			typing: false,
-		}));
-		this.share.preview.info.update((prev) => ({
-			...prev,
-			chat: false,
-			speaking: false,
-			typing: false,
-		}));
 
 		// Enable the screen when a media device is selected.
 		this.share.signals.effect((effect) => {
@@ -292,13 +282,23 @@ export class Local {
 
 		this.#signals.effect((effect) => {
 			const name = effect.get(Settings.account.name);
-			this.share.user.name.set(`${name} (Screen)`);
+			if (!name) return;
+
+			if (name.endsWith("s")) {
+				this.share.user.name.set(`${name}' Screen`);
+			} else {
+				this.share.user.name.set(`${name}'s Screen`);
+			}
 		});
 
 		this.#signals.effect((effect) => {
 			const name = effect.get(Settings.account.name);
 			this.camera.preview.info.update((prev) => ({ ...prev, name }));
-			this.share.preview.info.update((prev) => ({ ...prev, name }));
+		});
+
+		this.#signals.effect((effect) => {
+			const avatar = effect.get(Settings.account.avatar);
+			this.camera.preview.info.update((prev) => ({ ...prev, avatar }));
 		});
 	}
 
