@@ -63,9 +63,9 @@ export class Room {
 			if (!update) break;
 
 			let local: Publish.Broadcast | undefined;
-			if (update.name === this.local.camera.name.peek()) {
+			if (update.path === this.local.camera.path.peek()) {
 				local = this.local.camera;
-			} else if (update.name === this.local.share.name.peek()) {
+			} else if (update.path === this.local.share.path.peek()) {
 				local = this.local.share;
 			}
 
@@ -76,9 +76,9 @@ export class Room {
 						visible: false,
 					});
 
-					this.space.add(update.name, broadcast);
+					this.space.add(update.path, broadcast);
 				} else {
-					this.space.remove(update.name).then((broadcast) => {
+					this.space.remove(update.path).then((broadcast) => {
 						broadcast.close();
 						// We don't close local sources so we can toggle them.
 					});
@@ -87,9 +87,9 @@ export class Room {
 			}
 
 			if (update.active) {
-				this.#addRemote(update.name);
+				this.#addRemote(update.path);
 			} else {
-				this.space.remove(update.name).then((broadcast) => {
+				this.space.remove(update.path).then((broadcast) => {
 					broadcast.close();
 					broadcast.source.close();
 				});
@@ -97,11 +97,11 @@ export class Room {
 		}
 	}
 
-	#addRemote(name: Moq.Path.Valid) {
+	#addRemote(path: Moq.Path.Valid) {
 		const watch = new Watch.Broadcast({
 			connection: this.connection.established,
 			enabled: true,
-			name: name,
+			path,
 			reload: false,
 			// Download the location of the broadcaster.
 			location: {
@@ -157,7 +157,7 @@ export class Room {
 			}
 		});
 
-		this.space.add(name, broadcast);
+		this.space.add(path, broadcast);
 	}
 
 	close() {
