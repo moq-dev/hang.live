@@ -152,12 +152,12 @@ export class FakeRoom {
 		return new FakeBroadcast(this.sound, props);
 	}
 
-	add(name: string, broadcast: FakeBroadcast) {
-		this.space.add(name, new Broadcast(broadcast, this.space.canvas, this.sound));
+	add(path: string, broadcast: FakeBroadcast) {
+		this.space.add(path, new Broadcast(broadcast, this.space.canvas, this.sound));
 	}
 
-	remove(name: string) {
-		this.space.remove(name).then((broadcast) => {
+	remove(path: string) {
+		this.space.remove(path).then((broadcast) => {
 			broadcast.close();
 			broadcast.source.close();
 		});

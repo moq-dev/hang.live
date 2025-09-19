@@ -45,8 +45,8 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 		connection.url.set(Url.rewrite(data.url));
 
-		local.camera.name.set(Moq.Path.from(data.path, "camera"));
-		local.share.name.set(Moq.Path.from(data.path, "screen"));
+		local.camera.path.set(Moq.Path.from(data.path, "camera"));
+		local.share.path.set(Moq.Path.from(data.path, "screen"));
 
 		// Save the guest account settings
 		Settings.account.guest.set(data.guest);

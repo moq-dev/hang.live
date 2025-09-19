@@ -13,7 +13,7 @@ export class Space {
 	// All of the broadcasts stored in z-index order.
 	ordered = new Signal<Broadcast[]>([]);
 
-	// A lookup of broadcasts by name.
+	// A lookup of broadcasts by path.
 	lookup = new Map<string, Broadcast>();
 
 	// The broadcasts that have been closed and are fading away.
@@ -457,13 +457,13 @@ export class Space {
 		});
 	}
 
-	async remove(name: string): Promise<Broadcast> {
-		const broadcast = this.lookup.get(name);
+	async remove(path: string): Promise<Broadcast> {
+		const broadcast = this.lookup.get(path);
 		if (!broadcast) {
-			throw new Error(`broadcast not found: ${name}`);
+			throw new Error(`broadcast not found: ${path}`);
 		}
 
-		this.lookup.delete(name);
+		this.lookup.delete(path);
 
 		// Move it from the main list to the rip list.
 		this.ordered.update((prev) => prev.filter((b) => b !== broadcast));

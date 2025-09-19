@@ -43,11 +43,11 @@ export class Room {
 
 				if (!update.active) {
 					// Close the member when they're not active.
-					this.#members.mutate((members) => members.get(update.name)?.close());
+					this.#members.mutate((members) => members.get(update.path)?.close());
 					continue;
 				}
 
-				const broadcast = conn.consume(update.name);
+				const broadcast = conn.consume(update.path);
 
 				const member = new Member(broadcast, { enabled: this.enabled });
 				effect.cleanup(() => member.close());
@@ -57,9 +57,9 @@ export class Room {
 					const active = effect.get(member.active);
 					if (!active) return;
 
-					this.#members.mutate((members) => members.set(update.name, member));
+					this.#members.mutate((members) => members.set(update.path, member));
 					effect.cleanup(() => {
-						this.#members.mutate((members) => members.delete(update.name));
+						this.#members.mutate((members) => members.delete(update.path));
 					});
 				});
 			}
