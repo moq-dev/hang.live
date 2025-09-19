@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+VERSION=$(cargo pkgid | cut -d'@' -f2)
+
+# Build but don't sign the app yet, just to minimize secrets exposure
+bun tauri build --no-bundle --target "$TARGET"
+
+# Sign the app using secrets from 1password
+op run --env-file=".env" -- ./bin/tauri-bundle --target "$TARGET"
+
+DMG=$(basename target/$TARGET/release/bundle/dmg/hang_${VERSION}_*.dmg)
+SIGNATURE=$(cat "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig")
+
+# Upload the artifacts to R2
+echo "Uploading artifacts to R2..."
+bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz"
+bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig"
+bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.dmg" --remote --file "target/$TARGET/release/bundle/dmg/$DMG"
+
+# Update (but don't deploy) the version.json file
+# You'll need to deploy the app when everything looks gud.
+cat > "../app/public/version/$TARGET.json" << EOF
+{
+	"version": "$VERSION",
+	"url": "https://download.hang.live/$TARGET/$VERSION/hang.dmg",
+	"platforms": {
+		"$TARGET": {
+			"signature": "$SIGNATURE",
+			"url": "https://download.hang.live/$TARGET/$VERSION/hang.tar.gz"
+		}
+	}
+}
+EOF
