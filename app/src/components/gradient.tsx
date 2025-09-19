@@ -1,21 +1,19 @@
 import { createSignal } from "solid-js";
 
-const offset = Math.round(Math.random() * 360);
-const SPEED = 1;
+let offset = Math.round(Math.random() * 360);
 
 // Shared animated hue state
 const [hue, setHue] = createSignal(offset);
 
 const updateHue = () => {
-	const color = Math.round((offset + performance.now() / 1000) * SPEED) % 360;
-	setHue(color);
+	offset = (offset + 1) % 360;
+	setHue(offset);
 	// Update CSS custom property for link underlines
-	document.documentElement.style.setProperty("--link-hue", color.toString());
-	requestAnimationFrame(updateHue);
+	document.documentElement.style.setProperty("--link-hue", offset.toString());
+	setTimeout(updateHue, 1000);
 };
 
-// Always animate the gradient
-requestAnimationFrame(updateHue);
+updateHue();
 
 export default function Gradient() {
 	const SATURATION = "75%";
