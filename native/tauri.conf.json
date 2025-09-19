@@ -1,6 +1,6 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "hang",
+	"productName": "hang.live",
 	"version": "0.0.1",
 	"identifier": "live.hang",
 	"build": {

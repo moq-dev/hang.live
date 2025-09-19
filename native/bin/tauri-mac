@@ -3,10 +3,11 @@ set -euo pipefail
 VERSION=$(cargo pkgid | cut -d'@' -f2)
 
 # Build but don't sign the app yet, just to minimize secrets exposure
-bun tauri build --no-bundle --target "$TARGET"
+# TODO Remove the --debug flag when it looks gud.
+bun tauri build --debug --no-bundle --target "$TARGET"
 
 # Sign the app using secrets from 1password
-op run --env-file=".env" -- ./bin/tauri-bundle --target "$TARGET"
+op run --env-file=".env" -- ./bin/tauri-bundle --debug --target "$TARGET"
 
 DMG=$(basename target/$TARGET/release/bundle/dmg/hang_${VERSION}_*.dmg)
 SIGNATURE=$(cat "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig")

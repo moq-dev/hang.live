@@ -19,7 +19,13 @@ fix:
 
 # Build the native app for the current platform
 build:
-	bun tauri build --no-bundle
+	bun tauri build --debug --no-bundle
+	op run --env-file=".env" -- ./bin/tauri-bundle --debug
+
+# Build a staging version of the app
+staging:
+	bun tauri build --debug --no-bundle --config tauri.staging.json
+	op run --env-file=".env" -- ./bin/tauri-bundle --debug --config tauri.staging.json
 
 # Build, sign, and upload all the platform variants for the Mac app
 deploy-mac:
