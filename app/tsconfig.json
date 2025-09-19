@@ -12,6 +12,7 @@
 		"noPropertyAccessFromIndexSignature": false,
 		"noUncheckedIndexedAccess": false,
 		"erasableSyntaxOnly": true,
+		"resolveJsonModule": true,
 		"types": ["vite/client", "../api/worker-configuration.d.ts"]
 	},
 	"include": ["src"]

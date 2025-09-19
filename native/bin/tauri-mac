@@ -19,7 +19,7 @@ bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.dmg" --remo
 
 # Update (but don't deploy) the version.json file
 # You'll need to deploy the app when everything looks gud.
-cat > "../app/public/version/$TARGET.json" << EOF
+cat > "../app/src/version/$TARGET.json" << EOF
 {
 	"version": "$VERSION",
 	"url": "https://download.hang.live/$TARGET/$VERSION/hang.dmg",

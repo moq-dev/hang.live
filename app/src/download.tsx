@@ -1,18 +1,14 @@
 import { createSignal, type JSX, onMount } from "solid-js";
-import aarch64AppleDarwin from "../public/version/aarch64-apple-darwin.json";
-import x86_64AppleDarwin from "../public/version/x86_64-apple-darwin.json";
 import Layout from "./layout/web";
+
+import aarch64AppleDarwin from "./version/aarch64-apple-darwin.json";
+import x86_64AppleDarwin from "./version/x86_64-apple-darwin.json";
 
 interface PlatformInfo {
 	name: string;
 	icon: string;
-	platformKey: string;
+	download?: string;
 	archLabel?: string;
-}
-
-interface VersionFile {
-	version: string;
-	url: string;
 }
 
 interface NavigatorUAData {
@@ -20,11 +16,6 @@ interface NavigatorUAData {
 	mobile: boolean;
 	platform: string;
 }
-
-const versionFiles: Record<string, VersionFile> = {
-	"aarch64-apple-darwin": aarch64AppleDarwin,
-	"x86_64-apple-darwin": x86_64AppleDarwin,
-};
 
 function detectPlatform(): string {
 	const userAgent = navigator.userAgent.toLowerCase();
@@ -64,16 +55,9 @@ async function detectMacArch(): Promise<"aarch64" | "x86_64" | "unknown"> {
 	return "unknown";
 }
 
-function getDownloadUrl(platformKey: string): string | null {
-	const versionFile = versionFiles[platformKey];
-	if (!versionFile) return null;
-	return versionFile.url;
-}
-
 function DownloadButton(props: { platform: PlatformInfo; isPrimary?: boolean; isDetectedArch?: boolean }) {
-	const downloadUrl = getDownloadUrl(props.platform.platformKey);
-	const href = downloadUrl || "#coming-soon";
-	const isAvailable = !!downloadUrl;
+	const href = props.platform.download || "#coming-soon";
+	const isAvailable = !!props.platform.download;
 
 	return (
 		<a
@@ -110,24 +94,22 @@ export function Download(): JSX.Element {
 		{
 			name: "macOS",
 			icon: "icon-[mdi--apple]",
-			platformKey: "aarch64-apple-darwin",
+			download: aarch64AppleDarwin.url,
 			archLabel: "Apple Silicon",
 		},
 		{
 			name: "macOS",
 			icon: "icon-[mdi--apple]",
-			platformKey: "x86_64-apple-darwin",
+			download: x86_64AppleDarwin.url,
 			archLabel: "Intel",
 		},
 		{
 			name: "Windows",
 			icon: "icon-[mdi--microsoft-windows]",
-			platformKey: "x86_64-pc-windows-msvc",
 		},
 		{
 			name: "Linux",
 			icon: "icon-[mdi--linux]",
-			platformKey: "x86_64-unknown-linux-gnu",
 		},
 	];
 
@@ -135,12 +117,10 @@ export function Download(): JSX.Element {
 		{
 			name: "iOS",
 			icon: "icon-[mdi--apple]",
-			platformKey: "ios",
 		},
 		{
 			name: "Android",
 			icon: "icon-[mdi--android]",
-			platformKey: "android",
 		},
 	];
 
@@ -148,10 +128,7 @@ export function Download(): JSX.Element {
 	let other: PlatformInfo[] = [];
 
 	if (currentPlatform === "macOS") {
-		// Always show ARM first, then Intel for Mac users
-		primary = allPlatforms
-			.filter((p) => p.name === "macOS")
-			.sort((a) => (a.platformKey.includes("aarch64") ? -1 : 1));
+		primary = allPlatforms.filter((p) => p.name === "macOS");
 		other = allPlatforms.filter((p) => p.name !== "macOS");
 	} else if (currentPlatform === "Windows") {
 		primary = allPlatforms.filter((p) => p.name === "Windows");
@@ -186,8 +163,8 @@ export function Download(): JSX.Element {
 						{primary.map((platform) => {
 							const isDetected =
 								currentPlatform === "macOS" &&
-								((detectedArch() === "aarch64" && platform.platformKey.includes("aarch64")) ||
-									(detectedArch() === "x86_64" && platform.platformKey.includes("x86_64")));
+								((detectedArch() === "aarch64" && platform.archLabel?.includes("aarch64")) ||
+									(detectedArch() === "x86_64" && platform.archLabel?.includes("x86_64")));
 
 							return (
 								<DownloadButton

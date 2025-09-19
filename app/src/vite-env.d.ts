@@ -15,9 +15,6 @@ interface ImportMetaEnv {
 	readonly TAURI_ENV_DEBUG: boolean | undefined;
 }
 
-// True if we're in a Tauri environment
-declare const TAURI: boolean;
-
 interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }

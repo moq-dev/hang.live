@@ -1,4 +1,4 @@
-import path from "node:path";
+import * as path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
@@ -27,11 +27,16 @@ export default defineConfig({
 		solid(),
 		tailwindcss(),
 		viteStaticCopy({
-			// We copy onnxruntime-web locally so it gets bundled with the app, not downloaded at runtime.
 			targets: [
+				// We copy onnxruntime-web locally so it gets bundled with the app, not downloaded at runtime.
 				{
 					src: "../node_modules/onnxruntime-web/dist/*",
 					dest: "models/onnxruntime-web",
+				},
+				// We copy the version files otherwise Vite yells at us importing JSON modules.
+				{
+					src: "src/version/*",
+					dest: "public/version",
 				},
 			],
 		}),
