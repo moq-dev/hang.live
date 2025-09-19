@@ -56,8 +56,36 @@ async function detectMacArch(): Promise<"aarch64" | "x86_64" | "unknown"> {
 }
 
 function DownloadButton(props: { platform: PlatformInfo; isPrimary?: boolean; isDetectedArch?: boolean }) {
-	const href = props.platform.download || "#coming-soon";
+	const href = props.platform.download || "#";
 	const isAvailable = !!props.platform.download;
+
+	const buttonContent = (
+		<>
+			<span class={`${props.platform.icon} ${props.isPrimary ? "text-xl" : "text-lg"}`} />
+			<span>
+				{props.platform.name}
+				{props.platform.archLabel && <span class="text-sm opacity-80"> ({props.platform.archLabel})</span>}
+			</span>
+			{!isAvailable && (
+				<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">Coming Soon</span>
+			)}
+		</>
+	);
+
+	if (!isAvailable) {
+		return (
+			<div
+				class={
+					props.isPrimary
+						? "flex items-center gap-3 bg-gray-700 text-gray-400 px-6 py-4 rounded-lg font-semibold opacity-60 cursor-not-allowed"
+						: "flex items-center gap-2 bg-gray-800 text-gray-500 px-4 py-3 rounded-lg opacity-60 cursor-not-allowed"
+				}
+				title="Coming soon"
+			>
+				{buttonContent}
+			</div>
+		);
+	}
 
 	return (
 		<a
@@ -68,13 +96,8 @@ function DownloadButton(props: { platform: PlatformInfo; isPrimary?: boolean; is
 					: "flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-colors"
 			}
 			style="text-decoration: none;"
-			title={!isAvailable ? "Coming soon" : undefined}
 		>
-			<span class={`${props.platform.icon} ${props.isPrimary ? "text-xl" : "text-lg"}`} />
-			<span>
-				{props.platform.name}
-				{props.platform.archLabel && <span class="text-sm opacity-80"> ({props.platform.archLabel})</span>}
-			</span>
+			{buttonContent}
 		</a>
 	);
 }
@@ -163,8 +186,8 @@ export function Download(): JSX.Element {
 						{primary.map((platform) => {
 							const isDetected =
 								currentPlatform === "macOS" &&
-								((detectedArch() === "aarch64" && platform.archLabel?.includes("aarch64")) ||
-									(detectedArch() === "x86_64" && platform.archLabel?.includes("x86_64")));
+								((detectedArch() === "aarch64" && platform.archLabel === "Apple Silicon") ||
+									(detectedArch() === "x86_64" && platform.archLabel === "Intel"));
 
 							return (
 								<DownloadButton
@@ -182,15 +205,14 @@ export function Download(): JSX.Element {
 					<h2 class="text-2xl font-semibold mb-6 underline decoration-link-hue underline-offset-4">Mobile</h2>
 					<div class="flex flex-wrap gap-4">
 						{mobile.map((platform) => (
-							<a
-								href="#coming-soon"
-								class="flex items-center gap-3 bg-gray-700 hover:bg-gray-600 text-white px-6 py-4 rounded-lg font-semibold transition-colors"
-								style="text-decoration: none;"
+							<div
+								class="flex items-center gap-3 bg-gray-700 text-gray-400 px-6 py-4 rounded-lg font-semibold opacity-60 cursor-not-allowed"
 								title="Coming soon"
 							>
 								<span class={`${platform.icon} text-xl`} />
-								{platform.name}
-							</a>
+								<span>{platform.name}</span>
+								<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">Coming Soon</span>
+							</div>
 						))}
 					</div>
 				</div>
