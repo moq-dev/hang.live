@@ -1,18 +1,13 @@
-import * as Process from "@tauri-apps/plugin-process";
-import * as Updater from "@tauri-apps/plugin-updater";
+import * as Tauri from "./index";
 
-if (
-	import.meta.env.TAURI_ENV_PLATFORM === "windows" ||
-	import.meta.env.TAURI_ENV_PLATFORM === "darwin" ||
-	import.meta.env.TAURI_ENV_PLATFORM === "linux"
-) {
+if (Tauri.Process && Tauri.Updater && Tauri.DESKTOP) {
 	const check = async () => {
-		const update = await Updater.check();
+		const update = await Tauri.Updater?.check();
 		if (update) {
 			console.log(`found update ${update.version} from ${update.date} with notes ${update.body}`);
 			await update.download();
 			await update.install(); // TODO only install if we're not in a room
-			await Process.relaunch();
+			await Tauri.Process?.relaunch();
 		}
 	};
 
