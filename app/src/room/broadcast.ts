@@ -223,7 +223,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const dh = (targetSize.y - bounds.size.y) / 10;
 
 		// Only update the bounds if there's a significant change, to avoid recalculating minutiae.
-		if (Math.abs(dx) >= 0.1 || Math.abs(dy) >= 0.1 || Math.abs(dw) >= 0.1 || Math.abs(dh) >= 0.1) {
+		if (Math.abs(dx) >= 0.05 || Math.abs(dy) >= 0.05 || Math.abs(dw) >= 0.05 || Math.abs(dh) >= 0.05) {
 			this.bounds.mutate((bounds) => {
 				bounds.size.x += dw;
 				bounds.size.y += dh;
