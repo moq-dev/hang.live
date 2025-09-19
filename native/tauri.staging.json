@@ -1,0 +1,28 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "hang.now",
+	"identifier": "now.hang",
+	"build": {
+		"beforeBuildCommand": {
+			"cwd": "../app",
+			"script": "just build staging",
+			"wait": true
+		},
+		"frontendDist": "../app/dist"
+	},
+	"app": {
+		"windows": [
+			{
+				"title": "hang.now",
+				"width": 1280,
+				"height": 720,
+				"resizable": true
+			}
+		]
+	},
+	"plugins": {
+		"updater": {
+			"endpoints": ["https://hang.now/version/{{target}}.json"]
+		}
+	}
+}
