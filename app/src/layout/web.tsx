@@ -59,7 +59,7 @@ export default function Web(props: { children: JSX.Element; link?: string }) {
 						<span class="icon-[mdi--github]" />
 					</a>
 				</Tooltip>
-				<Tooltip content="Contact us" position="top">
+				<Tooltip content="Who uses Email?" position="top">
 					<a
 						href="mailto:admin@hang.live"
 						class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all cursor-pointer"

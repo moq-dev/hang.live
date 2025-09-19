@@ -9,6 +9,7 @@ default:
 # Run the CI checks
 check:
 	#!/usr/bin/env bash
+	set -euo pipefail
 	bun install --frozen-lockfile
 	if tty -s; then
 		bun run --filter='*' --elide-lines=0 check
