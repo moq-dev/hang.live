@@ -413,10 +413,9 @@ export const loginResponseSchema = z.object({
 });
 
 export const callbackSchema = z.object({
-	provider: providerIdSchema,
 	code: z.string(),
 	state: z.string(),
-	user: z.optional(z.string()),
+	user: z.string().nullable().optional(),
 });
 
 export const callbackResponseSchema = z.object({

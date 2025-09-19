@@ -20,6 +20,7 @@ const BORDER = 40;
 type IconVariant =
 	| "macos"
 	| "default"
+	| "default-round"
 	| "ios"
 	| "android-launcher"
 	| "android-foreground"
@@ -29,7 +30,7 @@ type IconVariant =
 	| "discord-banner";
 
 const PLATFORM_SIZES = {
-	desktop: [16, 24, 32, 48, 64, 256, 512], // Windows ICO
+	desktop: [16, 24, 32, 48, 64, 128, 256, 512], // Windows ICO
 	macOS: [16, 32, 64, 128, 256, 512, 1024], // macOS ICNS
 	iOS: [
 		20,
@@ -77,18 +78,22 @@ function generateSVG(variant: IconVariant): string {
 	const canvasWidth = isDiscordBanner ? 1100 : WIDTH;
 	const canvasHeight = isDiscordBanner ? 440 : HEIGHT;
 
+	// Android round and default-round should be perfectly circular
+	const isAndroidRound = variant === "android-round";
+	const isDefaultRound = variant === "default-round";
+
 	// Dock images are actually smaller than the canvas, so shrink the content down.
 	const scale = variant === "macos" ? 0.85 : 1.0;
 	const scaledSize = WIDTH * scale;
 	const offset = (WIDTH - scaledSize) / 2;
 
+	// For round variants, zoom out the background slightly for better composition
+	const backgroundScale = isAndroidRound || isDefaultRound ? 0.85 : 1.0;
+
 	// iOS and Android background variants should have no border or rounded corners
 	const useRoundedCorners = variant !== "ios" && variant !== "android-background" && !isDiscordBanner;
 	const useBorder =
 		variant !== "ios" && variant !== "android-foreground" && variant !== "android-background" && !isDiscordBanner;
-
-	// Android round should be perfectly circular
-	const isAndroidRound = variant === "android-round";
 
 	// Android adaptive icon system
 	const isAndroidForeground = variant === "android-foreground";
@@ -103,7 +108,7 @@ function generateSVG(variant: IconVariant): string {
 	const showHLogo = !isAndroidBackground && !isDiscordBanner;
 
 	const LINE_COUNT = Math.ceil(canvasHeight / LINE_SPACING);
-	const ROUNDED = useRoundedCorners ? (isAndroidRound ? WIDTH / 2 : 140) : 0;
+	const ROUNDED = useRoundedCorners ? (isAndroidRound || isDefaultRound ? WIDTH / 2 : 140) : 0;
 
 	const shadows = [];
 	const mainPaths = [];
@@ -155,8 +160,9 @@ function generateSVG(variant: IconVariant): string {
 	const hOriginalWidth = 201;
 	const hOriginalHeight = 251;
 
-	// Scale H logo for android foreground (much smaller)
-	const hScale = variant === "android-foreground" || variant === "android-round" ? 0.85 : 1.0;
+	// Scale H logo for android foreground and round variants (much smaller)
+	const hScale =
+		variant === "android-foreground" || variant === "android-round" || variant === "default-round" ? 0.85 : 1.0;
 	const zoom = Math.min(canvasWidth / hOriginalWidth, canvasHeight / hOriginalHeight) * 1.0;
 	const hX = (canvasWidth - hOriginalWidth * zoom * hScale) / 2 + 15 * zoom * hScale;
 	const hY = (canvasHeight - hOriginalHeight * zoom * hScale) / 2 - 15 * zoom * hScale;
@@ -275,9 +281,12 @@ function generateSVG(variant: IconVariant): string {
 		</defs>
 
 		<g ${clipPath} transform="translate(${offset}, ${offset}) scale(${scale})">
-			<!-- Background -->
-			${backgroundContent}
-			${linesContent}
+			<!-- Background and lines with optional zoom for round variants -->
+			<g transform="translate(${WIDTH / 2}, ${HEIGHT / 2}) scale(${backgroundScale}) translate(${-WIDTH / 2}, ${-HEIGHT / 2})">
+				<!-- Background -->
+				${backgroundContent}
+				${linesContent}
+			</g>
 
 			<!-- Border -->
 			${borderContent}
@@ -317,6 +326,7 @@ async function svgToPng(svgString: string, size: number, width?: number, height?
 function getVariantSizes(variant: IconVariant): number[] {
 	switch (variant) {
 		case "default":
+		case "default-round":
 			return PLATFORM_SIZES.desktop;
 		case "macos":
 			return PLATFORM_SIZES.macOS;
@@ -341,6 +351,8 @@ function getVariantDisplayName(variant: IconVariant): string {
 	switch (variant) {
 		case "default":
 			return "Windows/Linux Desktop";
+		case "default-round":
+			return "Windows/Linux Desktop (Round)";
 		case "macos":
 			return "macOS";
 		case "ios":
@@ -615,6 +627,7 @@ function IconCanvas(props: { variant: IconVariant }) {
 export function Icons(): JSX.Element {
 	const variants: IconVariant[] = [
 		"default",
+		"default-round",
 		"macos",
 		"ios",
 		"android-launcher",
