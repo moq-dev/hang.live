@@ -69,7 +69,7 @@ export function Home(): JSX.Element {
 									<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />
 									<h3 class="text-lg font-semibold">Sign in to favorite hangs</h3>
 									<div class="text-gray-400 text-sm leading-relaxed mb-8">
-										so you can see when your friends are online and eager
+										so you can tell when your friends are eager to hang
 									</div>
 									<Login small />
 								</div>
@@ -187,7 +187,13 @@ function FavoriteRoom(props: {
 			}}
 		>
 			<div class="flex items-center justify-between">
-				<a href={`/@${props.room}`} class="flex-1 min-w-0 truncate cursor-pointer">
+				<a
+					href={`/@${props.room}`}
+					class="flex-1 min-w-0 truncate cursor-pointer"
+					onclick={() => {
+						Local.join.set(true);
+					}}
+				>
 					<h3 class="font-semibold text-lg truncate">{props.room}</h3>
 				</a>
 				<div class="relative flex items-center">
