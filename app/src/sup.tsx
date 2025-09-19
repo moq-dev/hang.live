@@ -27,6 +27,9 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 	const local = new Local({ connection: connection.established });
 	onCleanup(() => local.close());
 
+	// Leave the room when the component is unmounted for whatever reason
+	onCleanup(() => Local.join.set(false));
+
 	createEffect(async () => {
 		const guest = !Api.client.authenticated() ? Settings.account.guest.peek() : undefined;
 

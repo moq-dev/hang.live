@@ -5,6 +5,10 @@ import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
 import type { Sound } from "./sound";
 
+export type SpaceProps = {
+	profile?: boolean;
+};
+
 export class Space {
 	// All of the broadcasts stored in z-index order.
 	ordered = new Signal<Broadcast[]>([]);
@@ -17,6 +21,7 @@ export class Space {
 
 	canvas: Canvas;
 	sound: Sound;
+	profile: boolean;
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
@@ -31,9 +36,10 @@ export class Space {
 
 	#signals = new Effect();
 
-	constructor(canvas: Canvas, sound: Sound) {
+	constructor(canvas: Canvas, sound: Sound, props?: SpaceProps) {
 		this.canvas = canvas;
 		this.sound = sound;
+		this.profile = props?.profile ?? false;
 
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
@@ -451,7 +457,7 @@ export class Space {
 		});
 	}
 
-	remove(name: string) {
+	async remove(name: string): Promise<Broadcast> {
 		const broadcast = this.lookup.get(name);
 		if (!broadcast) {
 			throw new Error(`broadcast not found: ${name}`);
@@ -467,81 +473,67 @@ export class Space {
 		broadcast.visible.set(false);
 
 		// Wait for the fade to complete, roughly.
-		setTimeout(() => {
-			this.#rip.splice(this.#rip.indexOf(broadcast), 1);
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-			// Don't close local broadcasts, we keep them open and toggle instead.
-			if (!(broadcast.source instanceof Publish.Broadcast)) {
-				broadcast.close();
-				broadcast.source.close();
-			}
-		}, 1000);
+		this.#rip.splice(this.#rip.indexOf(broadcast), 1);
+		return broadcast;
 	}
 
-	removeAll() {
-		for (const broadcast of this.ordered.peek()) {
-			if (!(broadcast.source instanceof Publish.Broadcast)) {
-				broadcast.close();
-				broadcast.source.close();
-			}
-		}
-
+	clear(): Broadcast[] {
+		const all = this.ordered.peek();
 		this.ordered.set([]);
 		this.lookup.clear();
+		return all;
 	}
 
 	#tick(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
-		try {
-			this.#tickScale();
+		this.#tickScale();
 
-			for (const broadcast of this.#rip) {
-				broadcast.tick(this.#scale);
-			}
-
-			const broadcasts = this.ordered.peek();
-
-			for (const broadcast of broadcasts) {
-				broadcast.tick(this.#scale);
-			}
-
-			// Check for collisions.
-			// We might need to optimize this with a quadtree or something.
-			for (let i = 0; i < broadcasts.length; i++) {
-				const a = broadcasts[i];
-				const abounds = a.bounds.peek();
-
-				for (let j = i + 1; j < broadcasts.length; j++) {
-					const b = broadcasts[j];
-					const bbounds = b.bounds.peek();
-
-					// Compute the intersection rectangle.
-					const intersection = abounds.intersects(bbounds);
-					if (!intersection) {
-						continue;
-					}
-
-					// Repel each other based on the size of the intersection.
-					const strength = (2 * intersection.area()) / (abounds.area() + bbounds.area());
-					let force = abounds.middle().sub(bbounds.middle()).mult(strength);
-
-					if (this.#dragging !== a && this.#dragging !== b) {
-						force = force.mult(10);
-					}
-
-					a.velocity = a.velocity.add(force);
-					b.velocity = b.velocity.sub(force);
-				}
-			}
-
-			this.#render(ctx, now);
-		} catch (err) {
-			console.error("tick error", err);
+		for (const broadcast of this.#rip) {
+			broadcast.tick(this.#scale);
 		}
+
+		const broadcasts = this.ordered.peek();
+
+		for (const broadcast of broadcasts) {
+			broadcast.tick(this.#scale);
+		}
+
+		// Check for collisions.
+		// We might need to optimize this with a quadtree or something.
+		for (let i = 0; i < broadcasts.length; i++) {
+			const a = broadcasts[i];
+			const abounds = a.bounds.peek();
+
+			for (let j = i + 1; j < broadcasts.length; j++) {
+				const b = broadcasts[j];
+				const bbounds = b.bounds.peek();
+
+				// Compute the intersection rectangle.
+				const intersection = abounds.intersects(bbounds);
+				if (!intersection) {
+					continue;
+				}
+
+				// Repel each other based on the size of the intersection.
+				const strength = (2 * intersection.area()) / (abounds.area() + bbounds.area());
+				let force = abounds.middle().sub(bbounds.middle()).mult(strength);
+
+				if (this.#dragging !== a && this.#dragging !== b) {
+					force = force.mult(10);
+				}
+
+				a.velocity = a.velocity.add(force);
+				b.velocity = b.velocity.sub(force);
+			}
+		}
+
+		this.#render(ctx, now);
 	}
 
 	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
 		// Render the audio click prompt if audio is suspended
-		if (this.sound.suspended.peek()) {
+		if (this.sound.suspended.peek() && !this.profile) {
 			this.#renderAudioPrompt(ctx);
 		}
 
@@ -563,7 +555,7 @@ export class Space {
 			if (this.#dragging !== broadcast) {
 				ctx.save();
 				broadcast.video.render(now, ctx, {
-					hovering: this.#hovering === broadcast,
+					hovering: this.#hovering === broadcast || this.profile,
 				});
 				ctx.restore();
 			}
@@ -634,7 +626,7 @@ export class Space {
 		}
 
 		const fillRatio = broadcastArea / canvasArea;
-		const targetFill = 0.25;
+		const targetFill = this.profile ? 0.5 : 0.25;
 
 		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 1);
 	}
@@ -644,12 +636,10 @@ export class Space {
 
 		for (const broadcast of this.ordered.peek()) {
 			broadcast.close();
-			broadcast.source.close();
 		}
 
 		for (const broadcast of this.#rip) {
 			broadcast.close();
-			broadcast.source.close();
 		}
 
 		this.#rip = [];

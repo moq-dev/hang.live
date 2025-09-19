@@ -1,4 +1,5 @@
 import { Publish } from "@kixelated/hang";
+import { Effect } from "@kixelated/signals";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
@@ -6,6 +7,7 @@ import { Broadcast } from "../room/broadcast";
 import { Canvas } from "../room/canvas";
 import { Local } from "../room/local";
 import { Sound } from "../room/sound";
+import { Space } from "../room/space";
 import Settings from "../settings";
 import AnotherOne from "./another-one";
 import Tooltip from "./tooltip";
@@ -115,6 +117,9 @@ class LocalPreview {
 	canvas: Canvas;
 	broadcast: Broadcast<Publish.Broadcast>;
 	sound: Sound;
+	space: Space;
+
+	signals = new Effect();
 
 	constructor(element: HTMLCanvasElement, camera: Publish.Broadcast) {
 		// Create a minimal canvas without the background effects
@@ -124,39 +129,45 @@ class LocalPreview {
 		this.sound = new Sound();
 		this.sound.suspended.set(true); // Keep suspended for preview
 
+		this.space = new Space(this.canvas, this.sound, {
+			// Not elegant, but disable some of the functionality for this profile preview.
+			profile: true,
+		});
+
 		// Create a broadcast wrapper for rendering
 		this.broadcast = new Broadcast(camera, this.canvas, this.sound, {
 			visible: true,
+			position: {
+				x: 0,
+				y: 0,
+				z: 0,
+				s: 1,
+			},
 		});
 
-		this.canvas.onRender = this.#render.bind(this);
-	}
+		this.space.add("local", this.broadcast);
 
-	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
-		// HACK: We shouldn't do this every frame.
-		this.broadcast.position.set({
-			x: 0,
-			y: 0,
-			z: 0,
-			s: 1,
+		this.signals.effect((effect: Effect) => {
+			const position = effect.get(this.broadcast.position);
+			if (position.x === 0 && position.y === 0 && position.s === 1) return;
+
+			// Reset the position after 2 seconds.
+			effect.timer(() => {
+				this.broadcast.position.set({
+					x: 0,
+					y: 0,
+					z: 0,
+					s: 1,
+				});
+			}, 2000);
 		});
-
-		const viewport = this.canvas.viewport.peek();
-		const targetSize = this.broadcast.video.targetSize;
-
-		const scale = Math.min(viewport.x / targetSize.x, viewport.y / targetSize.y) * 0.8;
-
-		// Update broadcast physics (simplified for preview)
-		this.broadcast.tick(scale);
-
-		this.broadcast.audio.renderBackground(ctx);
-		this.broadcast.audio.render(ctx);
-		this.broadcast.video.render(now, ctx, { hovering: true });
 	}
 
 	close() {
+		this.space.close();
 		this.canvas.close();
 		this.sound.close();
 		this.broadcast.close(); // NOTE: Doesn't close the source broadcast.
+		this.signals.close();
 	}
 }

@@ -1,4 +1,3 @@
-import { Signal } from "@kixelated/signals";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -89,39 +88,21 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 	const [message, setMessage] = createSignal<{ type: "success" | "error"; text: string } | undefined>(undefined);
 	const [randomClicks, setRandomClicks] = createSignal(0);
 
-	// Create a temporary Local instance for the profile preview
-	const [local, setLocal] = createSignal<Local | undefined>(undefined);
-
-	// Create signals for the preview values
-	const [previewName] = createSignal(new Signal<string | undefined>(name()));
-	const [previewAvatar] = createSignal(
-		new Signal<string | undefined>(
-			avatar() instanceof File ? URL.createObjectURL(avatar() as File) : (avatar() as string | undefined),
-		),
-	);
-
-	onMount(() => {
-		// Create Local with custom name/avatar signals
-		const tempLocal = new Local({
-			name: previewName(),
-			avatar: previewAvatar(),
-		});
-		setLocal(tempLocal);
-	});
+	const local = new Local();
+	onCleanup(() => local.close());
 
 	// Update preview signals when local state changes
 	createEffect(() => {
-		previewName().set(name() ?? "");
+		local.name.set(name() ?? "");
 		const av = avatar();
 		if (av instanceof File) {
-			previewAvatar().set(URL.createObjectURL(av));
+			local.avatar.set(URL.createObjectURL(av));
 		} else {
-			previewAvatar().set(av as string | undefined);
+			local.avatar.set(av);
 		}
 	});
 
 	onCleanup(() => {
-		local()?.close();
 		// Clean up object URLs to prevent memory leaks
 		const a = avatar();
 		if (a instanceof File) {
@@ -352,9 +333,7 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 
 				{/* Preview Panel using Profile component */}
 				<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6">
-					<h2 class="text-xl font-semibold mb-4">Live Preview</h2>
-
-					<Show when={local()}>{(localInstance) => <Profile local={localInstance()} />}</Show>
+					<Profile local={local} />
 
 					{/* Save Changes Button - appears below preview when there are changes */}
 					<div class="mt-6 w-full max-w-sm mx-auto">

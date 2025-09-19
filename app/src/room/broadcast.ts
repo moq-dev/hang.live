@@ -36,7 +36,6 @@ type Position = {
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	source: T;
 	canvas: Canvas;
-	sound: Sound;
 
 	audio: Audio;
 	video: Video;
@@ -73,7 +72,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	constructor(source: T, canvas: Canvas, sound: Sound, props?: BroadcastProps) {
 		this.source = source;
 		this.canvas = canvas;
-		this.sound = sound;
 		this.visible = new Signal(props?.visible ?? true);
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
@@ -95,10 +93,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		// Actually start the
 		// TODO This seems kinda buggy?
 		const viewport = this.canvas.viewport.peek();
-		const startPosition = Vector.create(position.x, position.y)
-			.normalize()
-			.mult(viewport.length())
-			.add(viewport.div(2));
+
+		let startPosition = Vector.create(position.x, position.y);
+		if (position.x === 0 && position.y === 0) {
+			// If we're in the center, avoid dividing by zero.
+			startPosition = Vector.create(Math.random() - 0.5, Math.random() - 0.5);
+		}
+
+		// Normalize to find the closest edge of the screen.
+		startPosition = startPosition.normalize().mult(viewport.length()).add(viewport.div(2));
+
 		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
 
 		// Load the broadcaster's position from the network.
