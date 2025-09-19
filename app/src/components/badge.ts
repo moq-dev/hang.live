@@ -1,10 +1,10 @@
 let lock = false;
 
-import Tauri from "../tauri/api";
+import * as Tauri from "../tauri";
 
 async function set(count: number | undefined) {
-	if (Tauri) {
-		await Tauri.window
+	if (Tauri.Api) {
+		await Tauri.Api.window
 			.getCurrentWindow()
 			.setBadgeCount(count || undefined)
 			.catch((error) => console.warn("Failed to set Tauri badge:", error));

@@ -5,7 +5,6 @@
 	// Cloudflare Pages configuration
 	"name": "hang-dev",
 	"compatibility_date": "2025-07-09",
-	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 
 	// Static asset configuration for Pages
 	"assets": {
@@ -22,6 +21,7 @@
 	"env": {
 		"staging": {
 			"name": "hang-now",
+			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 			"route": {
 				"pattern": "hang.now",
 				"custom_domain": true
@@ -31,6 +31,7 @@
 		// Production environment configuration
 		"live": {
 			"name": "hang-live",
+			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 			"route": {
 				"pattern": "hang.live",
 				"custom_domain": true

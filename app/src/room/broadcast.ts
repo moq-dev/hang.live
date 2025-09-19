@@ -90,8 +90,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.chat = new Chat(this, canvas);
 		this.captions = new Captions(this, canvas);
 
-		// Actually start the
-		// TODO This seems kinda buggy?
 		const viewport = this.canvas.viewport.peek();
 
 		let startPosition = Vector.create(position.x, position.y);
@@ -171,7 +169,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	tick(scale: number) {
 		this.video.tick();
 
-		const bounds = this.bounds.peek().clone(); //  clone is needed so SolidJS can track changes
+		const bounds = this.bounds.peek();
 		const viewport = this.canvas.viewport.peek();
 
 		const targetPosition = this.position.peek();
@@ -183,7 +181,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		target.x = Math.max(0, Math.min(target.x, viewport.x));
 		target.y = Math.max(0, Math.min(target.y, viewport.y));
 
-		const middle = this.bounds.peek().middle();
+		const middle = bounds.middle();
 		const force = target.sub(middle);
 		this.velocity = this.velocity.add(force);
 
@@ -218,14 +216,21 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const targetSize = this.video.targetSize.mult(this.scale * scale);
 		this.scale += (targetPosition.s - this.scale) * 0.1;
 
-		// Apply the velocity.
-		bounds.position = bounds.position.add(this.velocity.div(50));
+		// Apply the velocity and size.
+		const dx = this.velocity.x / 50;
+		const dy = this.velocity.y / 50;
+		const dw = (targetSize.x - bounds.size.x) / 10;
+		const dh = (targetSize.y - bounds.size.y) / 10;
 
-		// Slowly move from the actual size to the target size.
-		bounds.size.x += (targetSize.x - bounds.size.x) * 0.1;
-		bounds.size.y += (targetSize.y - bounds.size.y) * 0.1;
-
-		this.bounds.set(bounds);
+		// Only update the bounds if there's a significant change, to avoid recalculating minutiae.
+		if (Math.abs(dx) >= 0.1 || Math.abs(dy) >= 0.1 || Math.abs(dw) >= 0.1 || Math.abs(dh) >= 0.1) {
+			this.bounds.mutate((bounds) => {
+				bounds.size.x += dw;
+				bounds.size.y += dh;
+				bounds.position.x += dx;
+				bounds.position.y += dy;
+			});
+		}
 
 		// Pan the audio left or right based on the position.
 		// If a broadcast is visible, then it will be between -0.5 and 0.5.

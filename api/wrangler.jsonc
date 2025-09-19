@@ -4,7 +4,6 @@
 	"name": "api-hang-dev",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-07-09",
-	"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 	"workers_dev": false,
 
 	// Observability
@@ -66,6 +65,7 @@
 	"env": {
 		"staging": {
 			"name": "api-hang-now",
+			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 			"route": {
 				"pattern": "api.hang.now",
 				"custom_domain": true
@@ -110,6 +110,7 @@
 		// Live/production environment overrides
 		"live": {
 			"name": "api-hang-live",
+			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
 			"route": {
 				"pattern": "api.hang.live",
 				"custom_domain": true
