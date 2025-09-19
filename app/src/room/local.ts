@@ -1,13 +1,14 @@
 import { Publish } from "@kixelated/hang";
 import type * as Moq from "@kixelated/moq";
 import { Effect, Signal } from "@kixelated/signals";
-import * as Api from "../api";
 import Settings from "../settings";
 import * as Tauri from "../tauri";
 import { Sound } from "./sound";
 
 export interface LocalProps {
 	connection?: Signal<Moq.Connection.Established | undefined> | Moq.Connection.Established;
+	name?: Signal<string | undefined> | string;
+	avatar?: Signal<string | undefined> | string;
 }
 /**
  * LocalBroadcasts manages the local camera and screen broadcasts.
@@ -26,6 +27,10 @@ export class Local {
 	// For notifications, created here just because it's more convenient.
 	sound: Sound;
 
+	// Name and avatar signals that can be overridden
+	name: Signal<string | undefined>;
+	avatar: Signal<string | undefined>;
+
 	// Set to true to join the room immediately.
 	// This is static because I'm lazy.
 	static join = new Signal<boolean>(false);
@@ -36,18 +41,9 @@ export class Local {
 		this.connection = Signal.from(props?.connection);
 		this.sound = new Sound();
 
-		if (Api.client.authenticated()) {
-			this.#signals.spawn(async () => {
-				const response = await Api.client.routes.account.info.$get();
-				if (!response.ok) {
-					throw new Error(`Failed to get info: ${response.statusText}`);
-				}
-
-				const info = await response.json();
-				Settings.account.name.set(info.name);
-				Settings.account.avatar.set(info.avatar);
-			});
-		}
+		// Use provided name/avatar or fall back to Settings
+		this.name = Signal.from(props?.name ?? Settings.account.name);
+		this.avatar = Signal.from(props?.avatar ?? Settings.account.avatar);
 
 		this.webcam = new Publish.Source.Camera({
 			enabled: Settings.camera.enabled,
@@ -80,8 +76,8 @@ export class Local {
 			enabled: Local.join,
 			user: {
 				enabled: true,
-				name: Settings.account.name,
-				avatar: Settings.account.avatar,
+				name: this.name,
+				avatar: this.avatar,
 			},
 			video: {
 				enabled: Settings.camera.enabled,

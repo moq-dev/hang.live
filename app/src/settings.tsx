@@ -153,6 +153,21 @@ document.addEventListener("unload", () => {
 	effect.close();
 });
 
+// Try to load the current account info if we're authenticated.
+if (Api.client.authenticated()) {
+	(async () => {
+		const response = await Api.client.routes.account.info.$get();
+		if (!response.ok) {
+			console.error(`Failed to get info: ${response.statusText}`);
+			return;
+		}
+
+		const info = await response.json();
+		Settings.account.name.set(info.name);
+		Settings.account.avatar.set(info.avatar);
+	})();
+}
+
 export default Settings;
 
 export function Modal(props: { sound: Sound }): JSX.Element {

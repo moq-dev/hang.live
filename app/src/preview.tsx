@@ -18,7 +18,6 @@ export function PreviewRoomCompact(props: {
 
 	const members = solid(room.members);
 	createEffect(() => {
-		console.log("members", members().size);
 		props.setMemberCount(members().size);
 	});
 
@@ -101,14 +100,6 @@ export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: s
 	onCleanup(() => room.close());
 
 	const members = solid(room.members);
-	console.log("members0", members().size);
-	createEffect(() => {
-		console.log("members1", members().size);
-	});
-
-	room.members.subscribe((members) => {
-		console.log("members2", members.size);
-	});
 
 	return (
 		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">

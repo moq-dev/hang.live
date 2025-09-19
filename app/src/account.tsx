@@ -1,22 +1,26 @@
+import { Signal } from "@kixelated/signals";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
 import AnotherOne from "./components/another-one";
 import Gradient from "./components/gradient";
 import Login from "./components/login";
+import Profile from "./components/profile";
 import Layout from "./layout/web";
+import { Local } from "./room/local";
+import Settings from "./settings";
 
 export function Account(): JSX.Element {
 	return (
 		<Layout>
 			<Show when={Api.client.authenticated()} fallback={<LoginPage />}>
-				<SettingsLoad />
+				<AccountLoad />
 			</Show>
 		</Layout>
 	);
 }
 
-function SettingsLoad(): JSX.Element {
+function AccountLoad(): JSX.Element {
 	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
 
@@ -45,7 +49,7 @@ function SettingsLoad(): JSX.Element {
 						Error: {error()}
 					</div>
 				</Match>
-				<Match when={info()}>{(info) => <Settings info={info()} />}</Match>
+				<Match when={info()}>{(info) => <AccountLoaded info={info()} />}</Match>
 				<Match when={true}>
 					<div>Loading...</div>
 				</Match>
@@ -77,13 +81,53 @@ function SettingsLoad(): JSX.Element {
 	);
 }
 
-function Settings(props: { info: Api.Account.Info }): JSX.Element {
+function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 	const [info, setInfo] = createSignal(props.info);
 	const [name, setName] = createSignal<string | undefined>(props.info.name);
 	const [avatar, setAvatar] = createSignal<File | string | undefined>(props.info.avatar);
 	const [saving, setSaving] = createSignal(false);
 	const [message, setMessage] = createSignal<{ type: "success" | "error"; text: string } | undefined>(undefined);
 	const [randomClicks, setRandomClicks] = createSignal(0);
+
+	// Create a temporary Local instance for the profile preview
+	const [local, setLocal] = createSignal<Local | undefined>(undefined);
+
+	// Create signals for the preview values
+	const [previewName] = createSignal(new Signal<string | undefined>(name()));
+	const [previewAvatar] = createSignal(
+		new Signal<string | undefined>(
+			avatar() instanceof File ? URL.createObjectURL(avatar() as File) : (avatar() as string | undefined),
+		),
+	);
+
+	onMount(() => {
+		// Create Local with custom name/avatar signals
+		const tempLocal = new Local({
+			name: previewName(),
+			avatar: previewAvatar(),
+		});
+		setLocal(tempLocal);
+	});
+
+	// Update preview signals when local state changes
+	createEffect(() => {
+		previewName().set(name() ?? "");
+		const av = avatar();
+		if (av instanceof File) {
+			previewAvatar().set(URL.createObjectURL(av));
+		} else {
+			previewAvatar().set(av as string | undefined);
+		}
+	});
+
+	onCleanup(() => {
+		local()?.close();
+		// Clean up object URLs to prevent memory leaks
+		const a = avatar();
+		if (a instanceof File) {
+			URL.revokeObjectURL(URL.createObjectURL(a));
+		}
+	});
 
 	const avatarChanged = createMemo(() => {
 		return avatar() !== info().avatar;
@@ -116,11 +160,6 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 	window.addEventListener("beforeunload", handleBeforeUnload);
 	onCleanup(() => {
 		window.removeEventListener("beforeunload", handleBeforeUnload);
-		// Clean up object URLs to prevent memory leaks
-		const a = avatar();
-		if (a instanceof File) {
-			URL.revokeObjectURL(URL.createObjectURL(a));
-		}
 	});
 
 	const handleAvatarUpload = (event: Event) => {
@@ -162,9 +201,14 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 				throw new Error(response.statusText);
 			}
 
-			const info = await response.json();
-			setInfo(info);
-			setAvatar(info.avatar);
+			const updatedInfo = await response.json();
+			setInfo(updatedInfo);
+			setAvatar(updatedInfo.avatar);
+
+			// Update the global SettingsStore after successful save
+			Settings.account.name.set(updatedInfo.name);
+			Settings.account.avatar.set(updatedInfo.avatar);
+
 			setMessage({ type: "success", text: "Changes saved" });
 		} catch (e) {
 			setMessage({ type: "error", text: `Something went wrong. Try again? ${e}` });
@@ -182,16 +226,10 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 		return changed() && name()?.trim() !== "";
 	};
 
-	createEffect(() => {
-		if (changed()) {
-			setMessage(undefined);
-		}
-	});
-
 	const handleRandomAvatar = () => {
 		setRandomClicks((prev) => prev + 1);
 
-		const old = info().avatar;
+		const old = avatar();
 
 		while (true) {
 			const randomUrl = Api.randomAvatar();
@@ -200,6 +238,24 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 			break;
 		}
 	};
+
+	const handleRandomName = () => {
+		const current = name();
+
+		while (true) {
+			const newName = Api.randomName();
+			if (newName !== current) {
+				setName(newName);
+				break;
+			}
+		}
+	};
+
+	createEffect(() => {
+		if (changed()) {
+			setMessage(undefined);
+		}
+	});
 
 	return (
 		<>
@@ -263,15 +319,24 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 					<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
 						<h3 class="text-xl font-semibold mb-4">Display name</h3>
 						<div class="space-y-3">
-							<input
-								type="text"
-								value={name()}
-								onInput={(e) => {
-									setName(e.currentTarget.value);
-								}}
-								placeholder="Enter your name"
-								class="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
-							/>
+							<div class="flex gap-2">
+								<input
+									type="text"
+									value={name()}
+									onInput={(e) => {
+										setName(e.currentTarget.value);
+									}}
+									placeholder="Enter your name"
+									class="flex-1 px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
+								/>
+								<button
+									type="button"
+									onClick={handleRandomName}
+									class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer"
+								>
+									Random
+								</button>
+							</div>
 							<p class="text-sm text-gray-400">
 								How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
 							</p>
@@ -285,48 +350,14 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 					</div>
 				</div>
 
-				{/* Preview Panel */}
-				<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6 flex flex-col items-center justify-center">
-					<h2 class="text-xl font-semibold mb-4 self-start">Preview</h2>
+				{/* Preview Panel using Profile component */}
+				<div class="flex-1 min-w-[300px] grow bg-gray-900/30 rounded-2xl border border-gray-800 p-6">
+					<h2 class="text-xl font-semibold mb-4">Live Preview</h2>
 
-					{/* Avatar Preview with Name Overlay */}
-					<div class="relative text-center">
-						<div class="w-40 h-40 rounded-3xl overflow-hidden bg-gray-800 flex items-center justify-center border-8 border-black shadow-xl">
-							<Show
-								when={currentAvatarUrl()}
-								fallback={<span class="icon-[mdi--camera] w-8 h-8 text-gray-400" />}
-							>
-								{(avatarUrl) => (
-									<img src={avatarUrl()} alt="Avatar Preview" class="w-full h-full object-cover" />
-								)}
-							</Show>
-						</div>
-
-						{/* Display Name Overlay - Top Left Corner */}
-						<div class="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded-r-lg rounded-b-lg px-3 py-1 max-w-[calc(100%-1rem)]">
-							<div
-								class="text-sm font-bold truncate"
-								style={{
-									color: "white",
-									"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
-								}}
-							>
-								<Show when={!name()} fallback={name()}>
-									<span class="text-gray-400">Your Name</span>
-								</Show>
-							</div>
-						</div>
-
-						{/* Change Indicator */}
-						<Show when={changed()}>
-							<div class="absolute -top-2 -right-2 w-6 h-6 bg-yellow-500 rounded-full border-2 border-black flex items-center justify-center">
-								<div class="w-2 h-2 bg-black rounded-full" />
-							</div>
-						</Show>
-					</div>
+					<Show when={local()}>{(localInstance) => <Profile local={localInstance()} />}</Show>
 
 					{/* Save Changes Button - appears below preview when there are changes */}
-					<div class="mt-6 w-full max-w-sm">
+					<div class="mt-6 w-full max-w-sm mx-auto">
 						<div
 							class={`transition-all duration-500 ease-in-out overflow-hidden ${
 								changed() ? "opacity-100 max-h-32" : "opacity-0 max-h-0"
@@ -365,7 +396,7 @@ function Settings(props: { info: Api.Account.Info }): JSX.Element {
 					{/* Message */}
 					<Show when={message()}>
 						<div
-							class="rounded-2xl p-4 text-center mb-8 w-full"
+							class="rounded-2xl p-4 text-center mt-4 w-full"
 							classList={{
 								"bg-green-500/20 text-green-300 border border-green-400/30":
 									message()?.type === "success",

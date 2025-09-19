@@ -48,6 +48,7 @@ export const MEME_AUDIO = {
 	quack: { file: "quack.mp3", emoji: "🦆" },
 	rizz: { file: "rizz.mp3", emoji: "😏" },
 	spooky: { file: "spooky.mp3", emoji: "💀" },
+	stinks: { file: "stinks.mp3", emoji: "💩" },
 	suspense: { file: "suspense.mp3", emoji: "😰" },
 	uwu: { file: "uwu.mp3", emoji: "🥰" },
 	violin: { file: "violin.mp3", emoji: "🎻" },
