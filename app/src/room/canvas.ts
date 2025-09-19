@@ -8,7 +8,7 @@ const WOBBLE_AMPLITUDE = 5;
 const BEND_AMPLITUDE = 8;
 const BEND_PROBABILITY = 0.2;
 const WOBBLE_SPEED = 0.0006;
-const LINE_OVERDRAW = 2;
+const LINE_OVERDRAW = 4;
 const COLOR_SPEED = 0.01;
 
 export type CanvasProps = {
@@ -178,7 +178,11 @@ export class Canvas {
 		}
 
 		if (this.onRender) {
-			this.onRender(this.#context, now);
+			try {
+				this.onRender(this.#context, now);
+			} catch (err) {
+				console.error("render error", err);
+			}
 		}
 
 		// Restore the context to remove the scaling

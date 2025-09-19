@@ -23,6 +23,7 @@ export function Home(): JSX.Element {
 	onCleanup(() => badge.close());
 
 	const local = new Local();
+	onCleanup(() => local.close());
 
 	const [favorites, { refetch }] = createResource(async () => {
 		if (!Api.client.authenticated()) return null;

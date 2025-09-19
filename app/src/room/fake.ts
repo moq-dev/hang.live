@@ -157,7 +157,10 @@ export class FakeRoom {
 	}
 
 	remove(name: string) {
-		this.space.remove(name);
+		this.space.remove(name).then((broadcast) => {
+			broadcast.close();
+			broadcast.source.close();
+		});
 	}
 
 	close() {

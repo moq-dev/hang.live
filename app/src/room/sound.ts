@@ -127,6 +127,7 @@ export class Sound {
 	close() {
 		this.context.close();
 		this.gain.disconnect();
+		this.tts.close();
 		this.#signals.close();
 	}
 }

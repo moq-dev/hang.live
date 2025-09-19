@@ -33,47 +33,37 @@ export class Room {
 
 		const path = effect.get(this.path);
 
-		effect.spawn(this.#runMembers.bind(this, conn, path));
-	}
+		const announced = conn.announced(path);
+		effect.cleanup(() => announced.close());
 
-	async #runMembers(connection: Moq.Connection.Established, name?: Moq.Path.Valid) {
-		const announced = connection.announced(name);
-
-		try {
+		effect.spawn(async () => {
 			for (;;) {
 				const update = await announced.next();
 				if (!update) break;
 
-				this.#handleUpdate(connection, update);
-			}
-		} finally {
-			announced.close();
-			this.close();
-		}
-	}
+				if (!update.active) {
+					// Close the member when they're not active.
+					this.#members.mutate((members) => members.get(update.name)?.close());
+					continue;
+				}
 
-	#handleUpdate(connection: Moq.Connection.Established, update: Moq.AnnouncedEntry) {
-		if (update.active) {
-			const broadcast = connection.consume(update.name);
-			const member = new Member(broadcast, { enabled: this.enabled });
+				const broadcast = conn.consume(update.name);
 
-			// Only add the member when they're publishing preview info.
-			member.signals.effect((effect) => {
-				const active = effect.get(member.active);
-				if (!active) return;
+				const member = new Member(broadcast, { enabled: this.enabled });
+				effect.cleanup(() => member.close());
 
-				console.log("adding member", update.name);
-				this.#members.mutate((members) => members.set(update.name, member));
-				effect.cleanup(() => {
-					this.#members.mutate((members) => members.delete(update.name));
-					console.log("removing member", update.name);
+				// Only add the member when they're publishing preview info.
+				member.signals.effect((effect) => {
+					const active = effect.get(member.active);
+					if (!active) return;
+
+					this.#members.mutate((members) => members.set(update.name, member));
+					effect.cleanup(() => {
+						this.#members.mutate((members) => members.delete(update.name));
+					});
 				});
-			});
-		} else {
-			this.#members.peek().get(update.name)?.close();
-			// cleanup will remove the member from the map, but do it manually just in case
-			this.#members.mutate((members) => members.delete(update.name));
-		}
+			}
+		});
 	}
 
 	get members(): Getter<Map<Path.Valid, Member>> {
@@ -82,9 +72,5 @@ export class Room {
 
 	close() {
 		this.#signals.close();
-
-		for (const member of this.#members.peek().values()) {
-			member.close();
-		}
 	}
 }

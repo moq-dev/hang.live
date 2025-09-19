@@ -8,7 +8,6 @@ const FADE_TIME = 0.2;
 const GAIN_MIN = 0.001;
 
 export type AudioProps = {
-	sound?: Sound;
 	pan?: number;
 };
 

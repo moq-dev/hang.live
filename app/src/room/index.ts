@@ -40,12 +40,20 @@ export class Room {
 			effect.cleanup(() => announced.close());
 
 			effect.spawn(this.#run.bind(this, announced));
-			effect.cleanup(() => this.space.removeAll());
+			effect.cleanup(() => {
+				const all = this.space.clear();
+				for (const broadcast of all) {
+					broadcast.close();
+					if (!(broadcast.source instanceof Publish.Broadcast)) {
+						broadcast.source.close();
+					}
+				}
+			});
 		});
 
 		// After 1 second, start announcing new members.
 		this.#signals.timer(() => {
-			this.space.sound.tts.enabled.set(true);
+			this.space.sound?.tts.enabled.set(true);
 		}, 1000);
 	}
 
@@ -70,7 +78,10 @@ export class Room {
 
 					this.space.add(update.name, broadcast);
 				} else {
-					this.space.remove(update.name);
+					this.space.remove(update.name).then((broadcast) => {
+						broadcast.close();
+						// We don't close local sources so we can toggle them.
+					});
 				}
 				continue;
 			}
@@ -78,7 +89,10 @@ export class Room {
 			if (update.active) {
 				this.#addRemote(update.name);
 			} else {
-				this.space.remove(update.name);
+				this.space.remove(update.name).then((broadcast) => {
+					broadcast.close();
+					broadcast.source.close();
+				});
 			}
 		}
 	}
@@ -118,9 +132,6 @@ export class Room {
 		});
 
 		const broadcast = new Broadcast(watch, this.space.canvas, this.space.sound, {
-			audio: {
-				sound: this.space.sound,
-			},
 			visible: true,
 		});
 

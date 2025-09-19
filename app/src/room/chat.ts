@@ -26,7 +26,7 @@ export class Chat {
 	#render(effect: Effect) {
 		const root = DOM.create("div", {
 			className:
-				"flex items-center gap-2 px-3 py-2 backdrop-blur-md rounded-lg transition-all ease-out transform duration-200 shadow-lg bg-black/40 fixed max-w-sm text-xl",
+				"flex items-center gap-2 px-3 py-2 backdrop-blur-md rounded-lg transition-transform transition-opacity ease-out transform duration-200 shadow-lg bg-black/40 fixed max-w-sm text-xl",
 		});
 
 		const icon = document.createElement("div");
@@ -68,7 +68,7 @@ export class Chat {
 		};
 
 		// Save the previous message so we can fade-out.
-		const message = new Signal<Node>(document.createElement("span"));
+		const message = new Signal<Node | undefined>(undefined);
 		effect.effect((effect) => {
 			const current = effect.get(this.broadcast.message)?.cloneNode(true);
 			if (current) {
@@ -83,10 +83,10 @@ export class Chat {
 				effect.timeout((effect) => {
 					DOM.setClass(effect, icon, "animate-pulse");
 				}, 2000);
-			} else {
+			} else if (message.peek()) {
 				// Clear the message after a short delay.
 				effect.timeout(() => {
-					message.set(document.createElement("span"));
+					message.set(undefined);
 				}, 200);
 			}
 		});

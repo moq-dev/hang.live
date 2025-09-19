@@ -70,10 +70,15 @@ export class Local {
 		});
 		this.#signals.cleanup(() => this.microphone.close());
 
+		this.#signals.effect((effect) => {
+			const join = effect.get(Local.join);
+			console.log("publishing", join);
+		});
+
 		// Create the camera broadcast
 		this.camera = new Publish.Broadcast({
-			connection: this.connection,
 			enabled: Local.join,
+			connection: this.connection,
 			user: {
 				enabled: true,
 				name: this.name,
@@ -96,7 +101,7 @@ export class Local {
 			location: {
 				window: {
 					enabled: true,
-					position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+					//position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
 					handle: Math.random().toString(36).substring(2, 15),
 				},
 				peers: {
