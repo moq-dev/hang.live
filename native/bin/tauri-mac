@@ -4,28 +4,33 @@ set -euo pipefail
 OS="darwin"
 VERSION=$(cargo pkgid | cut -d'@' -f2)
 
+# TODO Remove the --debug flag when it looks gud.
+MODE="debug"
+
 # ARCH is one of x86_64, aarch64, i686 or armv7
 TARGET="$ARCH-apple-$OS"
 
+# Prompt for 1password permission early
+op run --env-file=".env" -- echo "1password permission granted"
+
 # Build but don't sign the app yet, just to minimize secrets exposure
-# TODO Remove the --debug flag when it looks gud.
-bun tauri build --debug --no-bundle --target "$TARGET"
+bun tauri build --$MODE --no-bundle --target "$TARGET"
 
 # Sign the app using secrets from 1password
-op run --env-file=".env" -- ./bin/tauri-bundle --debug --target "$TARGET"
+op run --env-file=".env" -- ./bin/tauri-bundle --$MODE --target "$TARGET"
 
-DMG=$(basename target/$TARGET/release/bundle/dmg/hang_${VERSION}_*.dmg)
-SIGNATURE=$(cat "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig")
+SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.live.app.tar.gz.sig")
+DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang.live_${VERSION}_*.dmg)
 
 # Upload the artifacts to R2
 echo "Uploading artifacts to R2..."
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz"
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig"
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --remote --file "target/$TARGET/release/bundle/dmg/$DMG"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.live.app.tar.gz"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.live.app.tar.gz.sig"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --remote --file "target/$TARGET/$MODE/bundle/dmg/$DMG"
 
 # Update (but don't deploy) the version.json file
 # You'll need to deploy the app when everything looks gud.
-cat > "../app/src/version/apple/$ARCH.json" << EOF
+cat > "../app/src/version/$OS/$ARCH.json" << EOF
 {
 	"version": "$VERSION",
 	"url": "https://download.hang.live/apple/$ARCH/$VERSION/hang.tar.gz",

@@ -29,8 +29,8 @@ staging:
 
 # Build, sign, and upload all the platform variants for the Mac app
 deploy-mac:
-	ARCH=aarch64 ./bin/tauri-mac
-	ARCH=x86_64 ./bin/tauri-mac
+	ARCH="aarch64" ./bin/tauri-mac
+	ARCH="x86_64" ./bin/tauri-mac
 	# ARCH=universal ./bin/tauri-mac
 
 # Run the native app in development mode

@@ -36,7 +36,7 @@ export default defineConfig({
 				// We copy the version files otherwise Vite yells at us importing JSON modules.
 				{
 					src: "src/version/*",
-					dest: "public/version",
+					dest: "version",
 				},
 			],
 		}),
