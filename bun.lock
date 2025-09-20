@@ -32,6 +32,7 @@
       "name": "@hang/live",
       "version": "0.1.0",
       "dependencies": {
+        "@fabianlars/tauri-plugin-oauth": "2",
         "@fontsource-variable/montserrat": "^5.2.6",
         "@hang/api": "workspace:*",
         "@huggingface/transformers": "^3.7.2",
@@ -299,6 +300,8 @@
     "@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.25.4", "", { "os": "win32", "cpu": "ia32" }, "sha512-i1sW+1i+oWvQzSgfRcxxG2k4I9n3O9NRqy8U+uugaT2Dy7kLO9Y7wI72haOahxceMX8hZAzgGou1FhndRldxRg=="],
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.4", "", { "os": "win32", "cpu": "x64" }, "sha512-nOT2vZNw6hJ+z43oP1SPea/G/6AbN6X+bGNhNuq8NtRHy4wsMhw765IKLNmnjek7GvjWBYQ8Q5VBoYTFg9y1UQ=="],
+
+    "@fabianlars/tauri-plugin-oauth": ["@fabianlars/tauri-plugin-oauth@2.0.0", "", { "dependencies": { "@tauri-apps/api": "^2.0.3" } }, "sha512-I1s08ZXrsFuYfNWusAcpLyiCfr5TCvaBrRuKfTG+XQrcaqnAcwjdWH0U5J9QWuMDLwCUMnVxdobtMJzPR8raxQ=="],
 
     "@fontsource-variable/montserrat": ["@fontsource-variable/montserrat@5.2.7", "", {}, "sha512-uBjVHAAlEux6bBUFnjrRQmONbuzSXPD1RlTKtWcXfG1qCx4sNgAGN0KUNYAWk+Pf/+WONCwuOpU2kOVloXQODA=="],
 

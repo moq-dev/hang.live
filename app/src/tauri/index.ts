@@ -13,9 +13,6 @@ export const LINUX = ENABLED && import.meta.env.TAURI_ENV_PLATFORM === "linux";
 export const WINDOWS = ENABLED && import.meta.env.TAURI_ENV_PLATFORM === "windows";
 export const MACOS = ENABLED && import.meta.env.TAURI_ENV_PLATFORM === "darwin";
 
-// Only export the Tauri modules if we're in a Tauri environment
+// Only load/export the Tauri modules if we're in a Tauri environment
 export const Api = ENABLED ? await import("@tauri-apps/api") : null;
-export const Process = ENABLED ? await import("@tauri-apps/plugin-process") : null;
-export const Updater = ENABLED ? await import("@tauri-apps/plugin-updater") : null;
 export const Opener = ENABLED ? await import("@tauri-apps/plugin-opener") : null;
-export const DeepLink = ENABLED ? await import("@tauri-apps/plugin-deep-link") : null;

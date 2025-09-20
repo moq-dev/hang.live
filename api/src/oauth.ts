@@ -522,8 +522,20 @@ export const router = rpc
 			const token = await ctx.auth.create(user.id);
 			const state = oauthStateSchema.parse(JSON.parse(callbackData.state));
 
+			// Validate redirect URL - only allow APP_URL, localhost, and hang://
+			if (
+				!(
+					state.redirect.startsWith("http://localhost/") ||
+					state.redirect.startsWith(ctx.env.APP_URL) ||
+					state.redirect.startsWith("hang://")
+				)
+			) {
+				throw new Error(`Invalid redirect URL: ${state.redirect}`);
+			}
+
 			// Redirect to frontend with token
-			const redirectUrl = `${state.redirect}?token=${encodeURIComponent(token)}&random=${encodeURIComponent(state.random)}`;
-			return c.redirect(redirectUrl);
+			return c.redirect(
+				`${state.redirect}?token=${encodeURIComponent(token)}&random=${encodeURIComponent(state.random)}`,
+			);
 		},
 	);

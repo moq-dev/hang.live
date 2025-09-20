@@ -6,11 +6,13 @@ import Layout from "./layout/web";
 
 export function Oauth(): JSX.Element {
 	const [error, setError] = createSignal<string | undefined>(undefined);
-	const params = Router.useParams();
-	const redirect = params.redirect;
+
 	const navigate = Router.useNavigate();
 
-	const [searchParams, setSearchParams] = Router.useSearchParams();
+	const params = Router.useParams();
+	const redirect = params.redirect;
+
+	const [searchParams, _] = Router.useSearchParams();
 	const token = searchParams.token;
 	const random = searchParams.random;
 
@@ -25,18 +27,18 @@ export function Oauth(): JSX.Element {
 	} else {
 		try {
 			client.loginComplete(token, random);
-			console.log("redirecting to", redirect);
 			navigate(`/${redirect}`, { replace: true });
 		} catch (error) {
 			setError(error instanceof Error ? error.message : "Unknown error");
-		} finally {
-			//setSearchParams({ token: undefined, random: undefined });
 		}
 	}
 
+	// Remove the token and random from the URL.
+	//setSearchParams({ token: undefined, random: undefined });
+
 	return (
 		<Layout>
-			<Show when={error()} fallback={<div class="text-center">You can close this window now.</div>}>
+			<Show when={error()} fallback={<div class="text-center">Logged in successfully!</div>}>
 				<div class="text-red-500">{error()}</div>
 			</Show>
 		</Layout>

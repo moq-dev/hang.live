@@ -1,7 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "../api";
-import * as Tauri from "../tauri";
 import { unreachable } from "../util/unreachable";
 
 export default function Login(props: { error?: string; small?: boolean }): JSX.Element {
