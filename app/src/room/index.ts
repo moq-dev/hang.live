@@ -60,7 +60,6 @@ export class Room {
 	async #run(announced: Moq.Announced) {
 		for (;;) {
 			const update = await announced.next();
-			console.log("got update", update);
 			if (!update) break;
 
 			let local: Publish.Broadcast | undefined;
@@ -72,7 +71,6 @@ export class Room {
 
 			if (local) {
 				if (update.active) {
-					console.log("adding local", update.path);
 					const broadcast = new Broadcast(local, this.space.canvas, this.space.sound, {
 						// Wait until we get an announcement before rendering ourselves as online.
 						visible: false,
@@ -80,7 +78,6 @@ export class Room {
 
 					this.space.add(update.path, broadcast);
 				} else {
-					console.log("removing local", update.path);
 					this.space.remove(update.path).then((broadcast) => {
 						broadcast.close();
 						// We don't close local sources so we can toggle them.
@@ -91,9 +88,7 @@ export class Room {
 
 			if (update.active) {
 				this.#addRemote(update.path);
-				console.log("adding remote", update.path);
 			} else {
-				console.log("removing remote", update.path);
 				this.space.remove(update.path).then((broadcast) => {
 					broadcast.close();
 					broadcast.source.close();

@@ -13,6 +13,7 @@
 	},
 	"license": "MIT",
 	"dependencies": {
+		"@fabianlars/tauri-plugin-oauth": "2",
 		"@fontsource-variable/montserrat": "^5.2.6",
 		"@hang/api": "workspace:*",
 		"@huggingface/transformers": "^3.7.2",

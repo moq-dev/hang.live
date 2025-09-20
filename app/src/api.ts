@@ -11,15 +11,24 @@ import Settings from "./settings";
 import * as Tauri from "./tauri";
 
 export class Client {
+	// TODO Make two separate routes for authenticated and unauthenticated.
 	routes: ReturnType<typeof hc<Api.App>>;
 
-	// TODO Make two separate routes for authenticated and unauthenticated.
 	#authenticated: Signal<boolean>;
+
+	// If a port is provided, then redirect to localhost:port.
+	#redirectPort?: Promise<number | undefined>;
 
 	signals = new Effect();
 
 	constructor() {
 		const url = Url.rewrite(import.meta.env.VITE_API_URL);
+
+		if (Tauri.ENABLED) {
+			// Kinda awkard that we load tauri deep link handling here.
+			// TODO Split into two parts?
+			this.#redirectPort = import("./tauri/deep_link").then((module) => module.start());
+		}
 
 		const token = Settings.oauth.token.peek();
 
@@ -62,8 +71,6 @@ export class Client {
 	// NOTE: Returns when the login is started, not when it's finished.
 	// callback() has to be called to finish the login.
 	async loginStart(provider: Api.OAuth.ProviderId, url = window.location.href) {
-		const redirect = new URL(url);
-
 		// Okay this is super annoying.
 		// - Google doesn't support hang:// redirect URLs.
 		// - Apple doesn't support http://localhost redirects
@@ -75,9 +82,23 @@ export class Client {
 		// The /oauth prefix is removed and the token is grabbed from the query params.
 		//
 		// NOTE: pathname starts with a slash.
-		redirect.pathname = `/oauth${redirect.pathname}`;
-		if (Tauri.DESKTOP) {
-			redirect.protocol = "hang";
+		const parts = new URL(url);
+
+		const redirectPort = await this.#redirectPort;
+
+		let redirect: string;
+		if (redirectPort) {
+			// Use a localhost server to handle the redirect.
+			// This works for local development and doesn't prompt the user.
+			redirect = `http://localhost:${redirectPort}/oauth${parts.pathname}`;
+		} else if (Tauri.DESKTOP) {
+			// As a fallback, use the deep-link handler.
+			// For some reason, Javascript won't let me set URL.protocol to hang://
+			redirect = `hang://oauth${parts.pathname}`;
+		} else {
+			// For web clients, just redirect to our current URL with the oauth prefix.
+			parts.pathname = `/oauth${parts.pathname}`;
+			redirect = parts.toString();
 		}
 
 		// We encode this random string which gets echoed back to us in the OAuth callback.

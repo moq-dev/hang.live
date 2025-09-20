@@ -1,9 +1,13 @@
 //import "tauri-plugin-web-transport";
 import "@kixelated/hang/support/element";
 
-import "./tauri/update";
-import "./tauri/open";
+import * as Tauri from "./tauri";
 
+if (Tauri.ENABLED && Tauri.DESKTOP) {
+	import("./tauri/update").then((module) => module.run());
+}
+
+import solid from "@kixelated/signals/solid";
 import { Route, Router, useLocation } from "@solidjs/router";
 import { onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
@@ -15,10 +19,9 @@ import { Download } from "./download";
 import { Home } from "./home";
 import { Icons } from "./icons";
 import { NotFound } from "./not-found";
+import { Oauth } from "./oauth";
 import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
-import solid from "@kixelated/signals/solid";
-import { Oauth } from "./oauth";
 
 export function Hang(): JSX.Element {
 	const background = (<canvas class="fixed inset-0 w-full h-full" />) as HTMLCanvasElement;
