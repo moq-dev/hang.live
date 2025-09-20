@@ -1,7 +1,6 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
 	"productName": "hang.live",
-	"version": "0.0.1",
 	"identifier": "live.hang",
 	"build": {
 		"devUrl": "http://localhost:1420",
@@ -40,7 +39,7 @@
 	},
 	"plugins": {
 		"updater": {
-			"endpoints": ["https://hang.live/version/{{target}}.json"],
+			"endpoints": ["https://hang.live/version/{{target}}/{{arch}}.json"],
 			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0NkJCNkJEOEYyNTNBRjIKUldUeU9pV1B2YlpyeEd0MXpyWi8waXdIaExWa1VUblBnamNvWmkxNGZtMk15ZGJSU1REYWFFeWwK"
 		},
 		"deep-link": {

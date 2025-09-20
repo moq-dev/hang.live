@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+OS="darwin"
 VERSION=$(cargo pkgid | cut -d'@' -f2)
+
+# ARCH is one of x86_64, aarch64, i686 or armv7
+TARGET="$ARCH-apple-$OS"
 
 # Build but don't sign the app yet, just to minimize secrets exposure
 # TODO Remove the --debug flag when it looks gud.
@@ -14,21 +19,17 @@ SIGNATURE=$(cat "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig")
 
 # Upload the artifacts to R2
 echo "Uploading artifacts to R2..."
-bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz"
-bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig"
-bun wrangler r2 object put "download-hang-live/$TARGET/$VERSION/hang.dmg" --remote --file "target/$TARGET/release/bundle/dmg/$DMG"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/release/bundle/macos/hang.app.tar.gz.sig"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --remote --file "target/$TARGET/release/bundle/dmg/$DMG"
 
 # Update (but don't deploy) the version.json file
 # You'll need to deploy the app when everything looks gud.
-cat > "../app/src/version/$TARGET.json" << EOF
+cat > "../app/src/version/apple/$ARCH.json" << EOF
 {
 	"version": "$VERSION",
-	"url": "https://download.hang.live/$TARGET/$VERSION/hang.dmg",
-	"platforms": {
-		"$TARGET": {
-			"signature": "$SIGNATURE",
-			"url": "https://download.hang.live/$TARGET/$VERSION/hang.tar.gz"
-		}
-	}
+	"url": "https://download.hang.live/apple/$ARCH/$VERSION/hang.tar.gz",
+	"signature": "$SIGNATURE",
+	"url_dmg": "https://download.hang.live/apple/$ARCH/$VERSION/hang.dmg"
 }
 EOF
