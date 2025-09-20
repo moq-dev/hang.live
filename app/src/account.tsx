@@ -1,3 +1,4 @@
+import solid from "@kixelated/signals/solid";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -10,9 +11,10 @@ import { Local } from "./room/local";
 import Settings from "./settings";
 
 export function Account(): JSX.Element {
+	const authenticated = solid(Api.client.authenticated);
 	return (
 		<Layout>
-			<Show when={Api.client.authenticated()} fallback={<LoginPage />}>
+			<Show when={authenticated()} fallback={<LoginPage />}>
 				<AccountLoad />
 			</Show>
 		</Layout>

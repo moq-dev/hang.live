@@ -1,5 +1,6 @@
 import { Publish } from "@kixelated/hang";
 import { Effect } from "@kixelated/signals";
+import solid from "@kixelated/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
@@ -48,11 +49,13 @@ export default function Profile(props: { local: Local }): JSX.Element {
 		}
 	};
 
+	const authenticated = solid(Api.client.authenticated);
+
 	return (
 		<div class="flex flex-col items-center mb-4 space-y-4">
 			<div class="flex self-start items-center gap-2 text-xl font-semibold mb-4 underline decoration-blue-500/80 underline-offset-2">
 				<span class="icon-[mdi--account] text-blue-500" />
-				Your <Show when={!Api.client.authenticated()}>Guest</Show> Profile
+				Your <Show when={!authenticated()}>Guest</Show> Profile
 			</div>
 
 			{/* Avatar/Video Preview */}
@@ -65,7 +68,7 @@ export default function Profile(props: { local: Local }): JSX.Element {
 			<div class="flex gap-3 justify-center mb-6">
 				<Microphone local={props.local} />
 				<Camera local={props.local} />
-				<Show when={Api.client.authenticated()}>
+				<Show when={authenticated()}>
 					<Tooltip content="Edit your profile" position="top">
 						<a
 							href="/account"
@@ -77,7 +80,7 @@ export default function Profile(props: { local: Local }): JSX.Element {
 				</Show>
 			</div>
 
-			<Show when={!Api.client.authenticated()}>
+			<Show when={!authenticated()}>
 				<div class="flex gap-3">
 					<div class="relative">
 						<button

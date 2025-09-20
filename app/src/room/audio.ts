@@ -84,7 +84,7 @@ export class Audio {
 			// Cancel any scheduled transitions on change.
 			effect.cleanup(() => gain.gain.cancelScheduledValues(gain.context.currentTime));
 
-			const volume = effect.get(Settings.muted) ? 0 : effect.get(Settings.volume);
+			const volume = effect.get(Settings.audio.muted) ? 0 : effect.get(Settings.audio.volume);
 
 			if (volume < GAIN_MIN) {
 				gain.gain.exponentialRampToValueAtTime(GAIN_MIN, gain.context.currentTime + FADE_TIME);
@@ -110,7 +110,7 @@ export class Audio {
 		const root = effect.get(this.broadcast.source.audio.root);
 		if (!root) return;
 
-		const gain = new GainNode(root.context, { gain: Settings.volume.peek() });
+		const gain = new GainNode(root.context, { gain: Settings.audio.volume.peek() });
 		effect.cleanup(() => gain.disconnect());
 
 		this.#gain.set(gain);

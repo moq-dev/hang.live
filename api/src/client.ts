@@ -27,7 +27,7 @@ export const oauthStateSchema = z.object({
 
 	// The client should redirect to this URL after login.
 	// This was the page they were on before they clicked the login button.
-	redirectUrl: z.optional(z.string()),
+	redirect: z.string(),
 });
 
 export type OauthState = z.infer<typeof oauthStateSchema>;

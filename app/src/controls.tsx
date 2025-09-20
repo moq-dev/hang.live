@@ -654,26 +654,26 @@ function Volume(props: { room: Room }): JSX.Element {
 			props.room.space.sound.suspended.set(false);
 
 			// If we unmuted but appeared to be muted, then don't toggle mute.
-			if (!Settings.muted.peek()) {
+			if (!Settings.audio.muted.peek()) {
 				return;
 			}
 		}
 
-		Settings.muted.update((prev) => !prev);
+		Settings.audio.muted.update((prev) => !prev);
 	};
 
-	const muted = solid(Settings.muted);
-	const volume = solid(Settings.volume);
+	const muted = solid(Settings.audio.muted);
+	const volume = solid(Settings.audio.volume);
 	const opacity = Opacity(() => showSlider());
 	const suspended = solid(props.room.space.sound.suspended);
 
 	const setVolume = (v: number) => {
 		if (v === 0) {
-			Settings.muted.set(true);
-			Settings.volume.set(1.0);
+			Settings.audio.muted.set(true);
+			Settings.audio.volume.set(1.0);
 		} else {
-			Settings.muted.set(false);
-			Settings.volume.set(v);
+			Settings.audio.muted.set(false);
+			Settings.audio.volume.set(v);
 		}
 	};
 

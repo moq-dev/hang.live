@@ -30,8 +30,10 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 	// Leave the room when the component is unmounted for whatever reason
 	onCleanup(() => Local.join.set(false));
 
+	const authenticated = solid(Api.client.authenticated);
+
 	createEffect(async () => {
-		const guest = !Api.client.authenticated() ? Settings.account.guest.peek() : undefined;
+		const guest = !authenticated() ? Settings.account.guest.peek() : undefined;
 
 		const response = await Api.client.routes.room[":room"].join.$post({
 			param: { room: props.room },
@@ -95,6 +97,7 @@ function App(props: { connection: Moq.Connection.Reload; canvas: Canvas; room: s
 
 function Preview(props: { room: string; local: Local; connection: Moq.Connection.Reload }): JSX.Element {
 	const status = createSelector(solid(props.connection.status));
+	const authenticated = solid(Api.client.authenticated);
 
 	return (
 		<WebLayout>
@@ -120,8 +123,8 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 					<Switch>
 						<Match when={status("connecting")}>Connecting...</Match>
 						<Match when={status("disconnected")}>Disconnected</Match>
-						<Match when={Api.client.authenticated()}>Join</Match>
-						<Match when={!Api.client.authenticated()}>Join as Guest</Match>
+						<Match when={authenticated()}>Join</Match>
+						<Match when={!authenticated()}>Join as Guest</Match>
 					</Switch>
 				</button>
 			</div>
@@ -138,7 +141,7 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 					<Show when={status("connected")} fallback={<div class="text-center text-gray-400">Loading...</div>}>
 						<div class="rounded-2xl border border-gray-800 p-6">
 							<Profile local={props.local} />
-							<Show when={!Api.client.authenticated()}>
+							<Show when={!authenticated()}>
 								<div class="text-center text-gray-400 my-4">
 									...or sign in to customize your profile
 								</div>

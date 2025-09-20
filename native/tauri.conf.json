@@ -42,6 +42,10 @@
 		"updater": {
 			"endpoints": ["https://hang.live/version/{{target}}.json"],
 			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0NkJCNkJEOEYyNTNBRjIKUldUeU9pV1B2YlpyeEd0MXpyWi8waXdIaExWa1VUblBnamNvWmkxNGZtMk15ZGJSU1REYWFFeWwK"
+		},
+		"deep-link": {
+			"mobile": [{ "host": "hang.live", "pathPrefix": ["/open"] }],
+			"desktop": { "schemes": ["hang"] }
 		}
 	}
 }

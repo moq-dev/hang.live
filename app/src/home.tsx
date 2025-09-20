@@ -9,6 +9,7 @@ import Profile from "./components/profile";
 import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
 import { Local } from "./room/local";
+import solid from "@kixelated/signals/solid";
 
 export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
@@ -25,8 +26,10 @@ export function Home(): JSX.Element {
 	const local = new Local();
 	onCleanup(() => local.close());
 
+	const authenticated = solid(Api.client.authenticated);
+
 	const [favorites, { refetch }] = createResource(async () => {
-		if (!Api.client.authenticated()) return null;
+		if (!authenticated()) return null;
 
 		const response = await Api.client.routes.fave.all.$get();
 		if (!response.ok) throw new Error(`Failed to fetch favorites: ${response.statusText}`);
@@ -64,7 +67,7 @@ export function Home(): JSX.Element {
 							</div>
 						</div>
 						<Show
-							when={Api.client.authenticated()}
+							when={authenticated()}
 							fallback={
 								<div class="text-center">
 									<span class="icon-[mdi--heart-outline] w-12 h-12 text-gray-500 mx-auto mb-4" />

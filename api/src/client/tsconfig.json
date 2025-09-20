@@ -1,9 +1,0 @@
-{
-	"extends": "../../../tsconfig.json",
-	"compilerOptions": {
-		"lib": ["esnext", "DOM", "DOM.Iterable"],
-		"noEmit": true,
-		"types": ["../../worker-configuration.d.ts"]
-	},
-	"include": ["."]
-}
