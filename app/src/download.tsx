@@ -1,8 +1,8 @@
 import { createSignal, type JSX, onMount } from "solid-js";
 import Layout from "./layout/web";
 
-import aarch64AppleDarwin from "./version/aarch64-apple-darwin.json";
-import x86_64AppleDarwin from "./version/x86_64-apple-darwin.json";
+import aarch64AppleDarwin from "./version/apple/aarch64.json";
+import x86_64AppleDarwin from "./version/apple/x86_64.json";
 
 interface PlatformInfo {
 	name: string;
@@ -117,13 +117,13 @@ export function Download(): JSX.Element {
 		{
 			name: "macOS",
 			icon: "icon-[mdi--apple]",
-			download: aarch64AppleDarwin.url,
+			download: aarch64AppleDarwin.url_dmg,
 			archLabel: "Apple Silicon",
 		},
 		{
 			name: "macOS",
 			icon: "icon-[mdi--apple]",
-			download: x86_64AppleDarwin.url,
+			download: x86_64AppleDarwin.url_dmg,
 			archLabel: "Intel",
 		},
 		{
