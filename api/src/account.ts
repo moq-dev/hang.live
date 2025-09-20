@@ -4,10 +4,10 @@ import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import * as Avatar from "./avatar";
+import { AccountId, accountIdSchema } from "./client";
 import * as Database from "./database";
 import * as OAuth from "./oauth";
 import * as rpc from "./rpc";
-import { AccountId, accountIdSchema } from "./shared";
 import * as Storage from "./storage";
 
 export type Id = AccountId;

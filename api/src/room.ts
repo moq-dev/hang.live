@@ -2,8 +2,8 @@ import * as Token from "@kixelated/moq-token";
 import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
+import { isValidRoom, ROOM_NAME_ERROR } from "./client";
 import * as rpc from "./rpc";
-import { isValidRoom, ROOM_NAME_ERROR } from "./shared";
 
 export const nameSchema = z.string().check(z.minLength(1), z.maxLength(100)).refine(isValidRoom, ROOM_NAME_ERROR);
 export type Name = z.infer<typeof nameSchema>;

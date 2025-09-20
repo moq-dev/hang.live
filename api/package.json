@@ -6,11 +6,11 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./client": "./src/client/index.ts"
+		"./client": "./src/client.ts"
 	},
 	"scripts": {
 		"dev": "wrangler dev",
-		"check": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project src/client/tsconfig.json && biome check",
+		"check": "tsc && biome check",
 		"fix": "biome check --fix",
 		"build": "tsc"
 	},

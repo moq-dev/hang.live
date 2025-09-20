@@ -91,7 +91,7 @@ export class Sound {
 
 	#runGain(effect: Effect) {
 		// Reduce the volume for notifications so we can hear them over everything else.
-		const volume = effect.get(Settings.muted) ? 0 : effect.get(Settings.volume) / 2;
+		const volume = effect.get(Settings.audio.muted) ? 0 : effect.get(Settings.audio.volume) / 2;
 
 		// Cancel any scheduled transitions on change.
 		effect.cleanup(() => this.gain.gain.cancelScheduledValues(this.gain.context.currentTime));

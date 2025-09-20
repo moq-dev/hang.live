@@ -1,6 +1,8 @@
 //import "tauri-plugin-web-transport";
 import "@kixelated/hang/support/element";
+
 import "./tauri/update";
+import "./tauri/open";
 
 import { Route, Router, useLocation } from "@solidjs/router";
 import { onCleanup, Show } from "solid-js";
@@ -15,21 +17,26 @@ import { Icons } from "./icons";
 import { NotFound } from "./not-found";
 import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
+import solid from "@kixelated/signals/solid";
+import { Oauth } from "./oauth";
 
 export function Hang(): JSX.Element {
 	const background = (<canvas class="fixed inset-0 w-full h-full" />) as HTMLCanvasElement;
 	const canvas = new Canvas(background);
 	onCleanup(() => canvas.close());
 
+	const authenticated = solid(Api.client.authenticated);
+
 	return (
 		<>
 			{background}
 			<Router>
-				<Route path="/" component={() => (Api.client.authenticated() ? <Home /> : <About />)} />
+				<Route path="/" component={() => (authenticated() ? <Home /> : <About />)} />
 				<Route path="/about" component={() => <About />} />
 				<Route path="/account" component={() => <Account />} />
 				<Route path="/download" component={() => <Download />} />
 				<Route path="/home" component={() => <Home />} />
+				<Route path="/oauth/*redirect" component={() => <Oauth />} />
 				{import.meta.env.DEV && <Route path="/dev/icons" component={Icons} />}
 				<Route path="*" component={() => <Fallback background={canvas} />} />
 			</Router>

@@ -142,7 +142,7 @@ export class TTS {
 			const tts = Comlink.wrap<TTSWorker>(worker);
 
 			effect.effect((effect) => {
-				const quality = effect.get(Settings.tts);
+				const quality = effect.get(Settings.audio.tts);
 
 				effect.spawn(async () => {
 					await tts.setQuality(quality);

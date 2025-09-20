@@ -9,6 +9,7 @@ pub fn run() {
 	#[allow(unused_mut)]
 	add_desktop_plugins(
 		tauri::Builder::default()
+			.plugin(tauri_plugin_deep_link::init())
 			.plugin(tauri_plugin_opener::init())
 			.plugin(tauri_plugin_process::init()),
 	)
@@ -19,7 +20,14 @@ pub fn run() {
 
 #[cfg(desktop)]
 fn add_desktop_plugins<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
-	builder.plugin(tauri_plugin_updater::Builder::new().build())
+	use tauri::Manager;
+
+	builder
+		.plugin(tauri_plugin_updater::Builder::new().build())
+		.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+			// Focus the main window
+			let _ = app.get_webview_window("main").expect("no main window").set_focus();
+		}))
 }
 
 #[cfg(not(desktop))]

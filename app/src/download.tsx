@@ -211,7 +211,9 @@ export function Download(): JSX.Element {
 							>
 								<span class={`${platform.icon} text-xl`} />
 								<span>{platform.name}</span>
-								<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">Coming Soon</span>
+								<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">
+									Coming Soon
+								</span>
 							</div>
 						))}
 					</div>

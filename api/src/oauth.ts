@@ -3,9 +3,9 @@ import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import * as jose from "jose";
 import { z } from "zod";
 import * as Account from "./account";
+import { OauthState, oauthStateSchema, oauthProviders as providers } from "./client";
 import * as Database from "./database";
 import * as rpc from "./rpc";
-import { OauthState, oauthStateSchema, oauthProviders as providers } from "./shared";
 import { unreachable } from "./util";
 
 export type ProviderId = (typeof providers)[number];
@@ -520,11 +520,10 @@ export const router = rpc
 
 			// Generate JWT token
 			const token = await ctx.auth.create(user.id);
-			const state = callbackData.state;
+			const state = oauthStateSchema.parse(JSON.parse(callbackData.state));
 
 			// Redirect to frontend with token
-			const redirectUrl = `${ctx.env.APP_URL}?token=${encodeURIComponent(token)}&state=${encodeURIComponent(state)}`;
-
+			const redirectUrl = `${state.redirect}?token=${encodeURIComponent(token)}&random=${encodeURIComponent(state.random)}`;
 			return c.redirect(redirectUrl);
 		},
 	);

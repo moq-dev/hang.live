@@ -1,4 +1,5 @@
 import * as Moq from "@kixelated/moq";
+import solid from "@kixelated/signals/solid";
 import { createResource, createSignal, JSX, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
@@ -78,9 +79,10 @@ function RoomNav(props: { room: string }) {
 function FavoriteButton(props: { room: string }) {
 	const [isToggling, setIsToggling] = createSignal(false);
 	const [showLoginPrompt, setShowLoginPrompt] = createSignal(false);
+	const authenticated = solid(Api.client.authenticated);
 
 	const [isFavorite, { refetch }] = createResource(
-		() => (Api.client.authenticated() ? props.room : null),
+		() => (authenticated() ? props.room : null),
 		async (room) => {
 			if (!room) return false;
 			try {
@@ -101,7 +103,7 @@ function FavoriteButton(props: { room: string }) {
 	const toggleFavorite = async () => {
 		if (!props.room || isToggling()) return;
 
-		if (!Api.client.authenticated()) {
+		if (!authenticated()) {
 			setShowLoginPrompt(true);
 			return;
 		}
@@ -132,7 +134,7 @@ function FavoriteButton(props: { room: string }) {
 		<>
 			<Tooltip
 				content={
-					!Api.client.authenticated()
+					!authenticated()
 						? "Sign in to favorite hangs"
 						: isFavorite.loading
 							? "Loading..."
@@ -148,11 +150,11 @@ function FavoriteButton(props: { room: string }) {
 					disabled={isFavorite.loading || isToggling()}
 					class="p-2 text-white hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					classList={{
-						"text-yellow-400": Api.client.authenticated() && isFavorite() && !isFavorite.loading,
-						"text-gray-400": !Api.client.authenticated(),
+						"text-yellow-400": authenticated() && isFavorite() && !isFavorite.loading,
+						"text-gray-400": !authenticated(),
 					}}
 				>
-					<Show when={Api.client.authenticated()} fallback={<span class="icon-[mdi--heart-outline]" />}>
+					<Show when={authenticated()} fallback={<span class="icon-[mdi--heart-outline]" />}>
 						<Show
 							when={!isFavorite.loading}
 							fallback={<span class="icon-[mdi--heart-outline] animate-pulse" />}

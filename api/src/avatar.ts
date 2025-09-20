@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as rpc from "./rpc";
 
-export { randomAvatar as random } from "./shared";
+export { randomAvatar as random } from "./client";
 
 export const typeSchema = z.enum(["url", "r2"]);
 export type Type = z.infer<typeof typeSchema>;

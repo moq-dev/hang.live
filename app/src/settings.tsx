@@ -1,26 +1,42 @@
+import * as Api from "@hang/api/client";
 import { Effect, Signal } from "@kixelated/signals";
 import solid from "@kixelated/signals/solid";
 import { createSelector, createSignal, Match, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
-import * as Api from "./api";
 import { Tab } from "./components/meme-selector";
 import { Sound } from "./room/sound";
 
 const ttsSchema = z.enum(["none", "low", "high"]);
 type TTS = z.infer<typeof ttsSchema>;
 
+// We use this function to verify the setting is valid and prevent defaulting to "low".
+// Otherwise, we might start downloading the model.
+function loadTTS() {
+	// Load and validate announcements setting
+	const ttsRaw = localStorage.getItem("settings.audio.tts");
+	if (ttsRaw) {
+		const parsed = ttsSchema.safeParse(ttsRaw);
+		if (parsed.success) {
+			return parsed.data;
+		}
+	}
+	return "low";
+}
+
 const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
-	volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.volume") ?? "1")),
-	muted: new Signal(localStorage.getItem("settings.muted") === "true"),
+
+	audio: {
+		volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.audio.volume") ?? "1")),
+		muted: new Signal(localStorage.getItem("settings.audio.muted") === "true"),
+		tts: new Signal<TTS>(loadTTS()),
+	},
 
 	captions: {
 		render: new Signal(localStorage.getItem("settings.captions.render") !== "false"),
 		capture: new Signal(supportsWebGPU() ? localStorage.getItem("settings.captions.capture") !== "false" : false),
 	},
-
-	tts: new Signal<TTS>("low"),
 
 	// Device states that persist across sessions
 	microphone: {
@@ -41,24 +57,20 @@ const Settings = {
 		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? Api.randomAvatar()),
 	},
 
+	oauth: {
+		token: new Signal<string | undefined>(localStorage.getItem("settings.oauth.token") ?? undefined),
+		random: new Signal<string | undefined>(localStorage.getItem("settings.oauth.random") ?? undefined),
+	},
+
 	// Meme selector settings
 	meme: {
 		tab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
 	},
 };
 
-// Load and validate announcements setting
-const ttsRaw = localStorage.getItem("settings.tts");
-if (ttsRaw) {
-	const parsed = ttsSchema.safeParse(ttsRaw);
-	if (parsed.success) {
-		Settings.tts.set(parsed.data);
-	}
-}
-
-const volume = Settings.volume.peek();
+const volume = Settings.audio.volume.peek();
 if (Number.isNaN(volume) || volume < 0 || volume > 1) {
-	Settings.volume.set(1);
+	Settings.audio.volume.set(1);
 }
 
 const effect = new Effect();
@@ -67,12 +79,12 @@ effect.subscribe(Settings.draggable, (draggable) => {
 	localStorage.setItem("settings.draggable", draggable.toString());
 });
 
-effect.subscribe(Settings.volume, (volume) => {
-	localStorage.setItem("settings.volume", volume.toString());
+effect.subscribe(Settings.audio.volume, (volume) => {
+	localStorage.setItem("settings.audio.volume", volume.toString());
 });
 
-effect.subscribe(Settings.muted, (muted) => {
-	localStorage.setItem("settings.muted", muted.toString());
+effect.subscribe(Settings.audio.muted, (muted) => {
+	localStorage.setItem("settings.audio.muted", muted.toString());
 });
 
 effect.subscribe(Settings.microphone.gain, (gain) => {
@@ -92,8 +104,8 @@ effect.subscribe(Settings.captions.capture, (transcription) => {
 	}
 });
 
-effect.subscribe(Settings.tts, (tts) => {
-	localStorage.setItem("settings.tts", tts);
+effect.subscribe(Settings.audio.tts, (tts) => {
+	localStorage.setItem("settings.audio.tts", tts);
 });
 
 effect.subscribe(Settings.microphone.enabled, (enabled) => {
@@ -128,6 +140,22 @@ effect.subscribe(Settings.account.avatar, (avatar) => {
 	}
 });
 
+effect.subscribe(Settings.oauth.token, (token) => {
+	if (token) {
+		localStorage.setItem("settings.oauth.token", token);
+	} else {
+		localStorage.removeItem("settings.oauth.token");
+	}
+});
+
+effect.subscribe(Settings.oauth.random, (random) => {
+	if (random) {
+		localStorage.setItem("settings.oauth.random", random);
+	} else {
+		localStorage.removeItem("settings.oauth.random");
+	}
+});
+
 effect.subscribe(Settings.meme.tab, (tab) => {
 	localStorage.setItem("settings.meme.tab", tab);
 });
@@ -153,33 +181,18 @@ document.addEventListener("unload", () => {
 	effect.close();
 });
 
-// Try to load the current account info if we're authenticated.
-if (Api.client.authenticated()) {
-	(async () => {
-		const response = await Api.client.routes.account.info.$get();
-		if (!response.ok) {
-			console.error(`Failed to get info: ${response.statusText}`);
-			return;
-		}
-
-		const info = await response.json();
-		Settings.account.name.set(info.name);
-		Settings.account.avatar.set(info.avatar);
-	})();
-}
-
 export default Settings;
 
 export function Modal(props: { sound: Sound }): JSX.Element {
 	const draggable = solid(Settings.draggable);
-	const tts = createSelector(solid(Settings.tts));
+	const tts = createSelector(solid(Settings.audio.tts));
 	const webGPUSupported = supportsWebGPU();
 
 	const progress = solid(props.sound.tts.progress);
 	const [isGenerating, setIsGenerating] = createSignal(false);
 
 	const load = (quality: "high" | "low" | "none") => {
-		Settings.tts.set(quality);
+		Settings.audio.tts.set(quality);
 	};
 
 	const testPhrases = [

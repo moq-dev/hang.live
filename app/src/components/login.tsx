@@ -1,6 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "../api";
+import * as Tauri from "../tauri";
 import { unreachable } from "../util/unreachable";
 
 export default function Login(props: { error?: string; small?: boolean }): JSX.Element {
@@ -35,7 +36,7 @@ export default function Login(props: { error?: string; small?: boolean }): JSX.E
 	const handleProviderLogin = async (provider: Api.OAuth.ProviderId) => {
 		setLoading(true);
 		try {
-			await Api.client.login(provider);
+			await Api.client.loginStart(provider);
 		} catch (error) {
 			console.error("Login failed:", error);
 			setLoading(false);

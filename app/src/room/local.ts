@@ -70,11 +70,6 @@ export class Local {
 		});
 		this.#signals.cleanup(() => this.microphone.close());
 
-		this.#signals.effect((effect) => {
-			const join = effect.get(Local.join);
-			console.log("publishing", join);
-		});
-
 		// Create the camera broadcast
 		this.camera = new Publish.Broadcast({
 			enabled: Local.join,
