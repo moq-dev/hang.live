@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OS="darwin"
 VERSION=$(cargo pkgid | cut -d'@' -f2)
 
 # TODO Remove the --debug flag when it looks gud.
 MODE="debug"
 
 # ARCH is one of x86_64, aarch64, i686 or armv7
-TARGET="$ARCH-apple-$OS"
+TARGET="$ARCH-apple-darwin"
 
 # Prompt for 1password permission early
 op run --env-file=".env" -- echo "1password permission granted"
@@ -30,7 +29,7 @@ bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --
 
 # Update (but don't deploy) the version.json file
 # You'll need to deploy the app when everything looks gud.
-cat > "../app/src/version/$OS/$ARCH.json" << EOF
+cat > "../app/src/version/darwin/$ARCH.json" << EOF
 {
 	"version": "$VERSION",
 	"url": "https://download.hang.live/apple/$ARCH/$VERSION/hang.tar.gz",

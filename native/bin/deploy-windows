@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VERSION=$(cargo pkgid | cut -d'@' -f2)
+
+# TODO Remove the --debug flag when it looks gud.
+MODE="debug"
+
+# Build but don't sign the app yet, just to minimize secrets exposure
+bun tauri build --$MODE --no-bundle
+
+# Sign the app using secrets from 1password
+op run --env-file=".env" -- bun tauri bundle --$MODE
+
+SIGNATURE=$(cat "target/$MODE/bundle/nsis/hang_${VERSION}_x64-setup.exe.sig")
+
+# Upload the artifacts to R2
+echo "Uploading artifacts to R2..."
+bun wrangler r2 object put "download-hang-live/windows/x64/$VERSION/hang-setup.exe" --remote --file "target/$MODE/bundle/nsis/hang_${VERSION}_x64-setup.exe"
+bun wrangler r2 object put "download-hang-live/windows/x64/$VERSION/hang-setup.exe.sig" --remote --file "target/$MODE/bundle/nsis/hang_${VERSION}_x64-setup.exe.sig"
+
+# Update (but don't deploy) the version.json file
+# You'll need to deploy the app when everything looks gud.
+cat > "../app/src/version/windows/x64.json" << EOF
+{
+	"version": "$VERSION",
+	"url": "https://download.hang.live/windows/x64/$VERSION/hang-setup.exe",
+	"signature": "$SIGNATURE"
+}
+EOF
