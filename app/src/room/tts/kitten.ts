@@ -25,7 +25,7 @@ export type Voice = (typeof VOICES)[number];
 
 const DEFAULT_VOICE = "expr-voice-5-f";
 
-const modelName = "kitten-tts-0.1";
+const modelName = "kitten-tts-0.2";
 const voicesURL = `/models/${modelName}/voices`;
 
 export class TTS {
