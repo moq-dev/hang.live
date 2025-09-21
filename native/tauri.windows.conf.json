@@ -4,5 +4,8 @@
 		"security": {
 			"capabilities": ["default", "desktop"]
 		}
+	},
+	"bundle": {
+		"targets": ["nsis"]
 	}
 }
