@@ -1,8 +1,8 @@
 import { createSignal, type JSX, onMount } from "solid-js";
 import Layout from "./layout/web";
 
-import aarch64AppleDarwin from "./version/apple/aarch64.json";
-import x86_64AppleDarwin from "./version/apple/x86_64.json";
+import aarch64AppleDarwin from "./version/darwin/aarch64.json";
+import x86_64AppleDarwin from "./version/darwin/x86_64.json";
 
 interface PlatformInfo {
 	name: string;

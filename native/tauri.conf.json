@@ -1,6 +1,6 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "hang.live",
+	"productName": "hang",
 	"identifier": "live.hang",
 	"build": {
 		"devUrl": "http://localhost:1420",
@@ -19,7 +19,7 @@
 	"app": {
 		"windows": [
 			{
-				"title": "hang.live",
+				"title": "hang",
 				"width": 1280,
 				"height": 720,
 				"resizable": true
