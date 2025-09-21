@@ -30,7 +30,10 @@ export default defineConfig({
 			targets: [
 				// We copy onnxruntime-web locally so it gets bundled with the app, not downloaded at runtime.
 				{
-					src: "../node_modules/onnxruntime-web/dist/*",
+					src: [
+						"../node_modules/onnxruntime-web/dist/ort-wasm-*",
+						"../node_modules/onnxruntime-web/dist/ort.bundle.min.mjs",
+					],
 					dest: "models/onnxruntime-web",
 				},
 				// We copy the version files otherwise Vite yells at us importing JSON modules.
