@@ -43,7 +43,6 @@ deploy env="staging":
 	cd app && just deploy "{{env}}"
 
 dev:
-	#!/usr/bin/env bash
 	bun install
 	@cd moq/rs && just auth-token
 	bun concurrently --kill-others --names api,app,moq --prefix-colors auto \
