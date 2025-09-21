@@ -1,8 +1,9 @@
 import { createSignal, type JSX, onMount } from "solid-js";
 import Layout from "./layout/web";
 
-import aarch64AppleDarwin from "./version/darwin/aarch64.json";
-import x86_64AppleDarwin from "./version/darwin/x86_64.json";
+import appleA64 from "./version/darwin/aarch64.json";
+import appleX64 from "./version/darwin/x86_64.json";
+import windowsX64 from "./version/windows/x86_64.json";
 
 interface PlatformInfo {
 	name: string;
@@ -67,7 +68,7 @@ function DownloadButton(props: { platform: PlatformInfo; isPrimary?: boolean; is
 				{props.platform.archLabel && <span class="text-sm opacity-80"> ({props.platform.archLabel})</span>}
 			</span>
 			{!isAvailable && (
-				<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">Coming Soon</span>
+				<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">Soon™</span>
 			)}
 		</>
 	);
@@ -117,17 +118,18 @@ export function Download(): JSX.Element {
 		{
 			name: "macOS",
 			icon: "icon-[mdi--apple]",
-			download: aarch64AppleDarwin.url_dmg,
+			download: appleA64.url_dmg,
 			archLabel: "Apple Silicon",
 		},
 		{
 			name: "macOS",
 			icon: "icon-[mdi--apple]",
-			download: x86_64AppleDarwin.url_dmg,
+			download: appleX64.url_dmg,
 			archLabel: "Intel",
 		},
 		{
 			name: "Windows",
+			download: windowsX64.url,
 			icon: "icon-[mdi--microsoft-windows]",
 		},
 		{
@@ -212,7 +214,7 @@ export function Download(): JSX.Element {
 								<span class={`${platform.icon} text-xl`} />
 								<span>{platform.name}</span>
 								<span class="ml-auto bg-gray-600 text-gray-300 text-xs px-2 py-1 rounded font-normal">
-									Coming Soon
+									Soon™
 								</span>
 							</div>
 						))}

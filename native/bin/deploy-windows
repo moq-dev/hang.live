@@ -21,7 +21,7 @@ bun wrangler r2 object put "download-hang-live/windows/x64/$VERSION/hang-setup.e
 
 # Update (but don't deploy) the version.json file
 # You'll need to deploy the app when everything looks gud.
-cat > "../app/src/version/windows/x64.json" << EOF
+cat > "../app/src/version/windows/x86_64.json" << EOF
 {
 	"version": "$VERSION",
 	"url": "https://download.hang.live/windows/x64/$VERSION/hang-setup.exe",
