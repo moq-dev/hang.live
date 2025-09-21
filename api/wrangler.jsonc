@@ -140,7 +140,7 @@
 				"DISCORD_CLIENT_ID": "1389725440020840548",
 				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env live
 
-				"APPLE_CLIENT_ID": "live.hang.service",
+				"APPLE_CLIENT_ID": "live.hang.api",
 				"APPLE_TEAM_ID": "D7D5SDDB5Z",
 				"APPLE_KEY_ID": "Q7CN38JH2Z",
 				// "APPLE_CLIENT_SECRET": npx wrangler secret put APPLE_CLIENT_SECRET --env live

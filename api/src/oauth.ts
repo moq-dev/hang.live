@@ -525,7 +525,7 @@ export const router = rpc
 			// Validate redirect URL - only allow APP_URL, localhost, and hang://
 			if (
 				!(
-					state.redirect.startsWith("http://localhost/") ||
+					state.redirect.startsWith("http://localhost:") ||
 					state.redirect.startsWith(ctx.env.APP_URL) ||
 					state.redirect.startsWith("hang://")
 				)

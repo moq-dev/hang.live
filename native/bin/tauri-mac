@@ -19,13 +19,13 @@ bun tauri build --$MODE --no-bundle --target "$TARGET"
 # Sign the app using secrets from 1password
 op run --env-file=".env" -- ./bin/tauri-bundle --$MODE --target "$TARGET"
 
-SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.live.app.tar.gz.sig")
-DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang.live_${VERSION}_*.dmg)
+SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig")
+DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang_${VERSION}_*.dmg)
 
 # Upload the artifacts to R2
 echo "Uploading artifacts to R2..."
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.live.app.tar.gz"
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.live.app.tar.gz.sig"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz"
+bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig"
 bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --remote --file "target/$TARGET/$MODE/bundle/dmg/$DMG"
 
 # Update (but don't deploy) the version.json file
