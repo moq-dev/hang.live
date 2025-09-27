@@ -266,7 +266,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const toggle = () => {
 		props.local.webcam.enabled.update((prev: boolean) => !prev);
 	};
-	const media = solid(props.local.webcam.stream);
+	const media = solid(props.local.webcam.source);
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -448,7 +448,7 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 	const toggle = () => {
 		props.local.screen.enabled.update((prev: boolean) => !prev);
 	};
-	const media = solid(props.local.screen.stream);
+	const media = solid(props.local.screen.source);
 
 	return (
 		<Tooltip content={media() ? "Disable screen sharing" : "Enable screen sharing"} position="top">

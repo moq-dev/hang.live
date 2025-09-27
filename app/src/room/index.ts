@@ -2,7 +2,6 @@ import { Publish, Watch } from "@kixelated/hang";
 import * as Moq from "@kixelated/moq";
 import { Effect } from "@kixelated/signals";
 import Settings from "../settings";
-import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
 import { Space } from "./space";
@@ -71,17 +70,10 @@ export class Room {
 
 			if (local) {
 				if (update.active) {
-					const broadcast = new Broadcast(local, this.space.canvas, this.space.sound, {
-						// Wait until we get an announcement before rendering ourselves as online.
-						visible: false,
-					});
-
-					this.space.add(update.path, broadcast);
+					this.space.add(update.path, local);
 				} else {
-					this.space.remove(update.path).then((broadcast) => {
-						broadcast.close();
-						// We don't close local sources so we can toggle them.
-					});
+					// NOTE: We don't close local sources so we can toggle them.
+					this.space.remove(update.path);
 				}
 				continue;
 			}
@@ -89,10 +81,7 @@ export class Room {
 			if (update.active) {
 				this.#addRemote(update.path);
 			} else {
-				this.space.remove(update.path).then((broadcast) => {
-					broadcast.close();
-					broadcast.source.close();
-				});
+				this.space.remove(update.path).then((broadcast) => broadcast.close());
 			}
 		}
 	}
@@ -131,13 +120,9 @@ export class Room {
 			},
 		});
 
-		const broadcast = new Broadcast(watch, this.space.canvas, this.space.sound, {
-			visible: true,
-		});
-
 		// Request the position we should use from this remote broadcast.
-		broadcast.signals.effect((effect) => {
-			const positions = effect.get(broadcast.source.location.peers.positions);
+		watch.signals.effect((effect) => {
+			const positions = effect.get(watch.location.peers.positions);
 			if (!positions) return;
 
 			// Check if our local handles are in the positions.
@@ -157,7 +142,7 @@ export class Room {
 			}
 		});
 
-		this.space.add(path, broadcast);
+		this.space.add(path, watch);
 	}
 
 	close() {

@@ -49,12 +49,13 @@ export class Local {
 			enabled: Settings.camera.enabled,
 			device: { preferred: Settings.camera.device },
 			constraints: {
-				width: { ideal: 640 },
-				height: { ideal: 640 },
+				width: { ideal: 720 },
+				height: { ideal: 720 },
 				frameRate: { ideal: 60 },
 				facingMode: { ideal: "user" },
 				resizeMode: "none",
 			},
+			flip: true,
 		});
 		this.#signals.cleanup(() => this.webcam.close());
 
@@ -80,14 +81,26 @@ export class Local {
 				avatar: this.avatar,
 			},
 			video: {
-				enabled: Settings.camera.enabled,
-				source: this.webcam.stream,
-				flip: true, // TODO setting?
+				source: this.webcam.source,
+				hd: {
+					enabled: Settings.camera.enabled,
+					config: {
+						maxPixels: 720 * 720,
+						bitrateScale: 0.08,
+					},
+				},
+				sd: {
+					enabled: Settings.camera.enabled,
+					config: {
+						maxPixels: 360 * 360,
+						bitrateScale: 0.06,
+					},
+				},
 			},
 			audio: {
 				enabled: Settings.microphone.enabled,
 				volume: Settings.microphone.gain,
-				source: this.microphone.stream,
+				source: this.microphone.source,
 				speaking: {
 					// TODO Figure out an efficient way to run models on mobile.
 					enabled: !Tauri.MOBILE ? Settings.microphone.enabled : undefined,
@@ -127,7 +140,7 @@ export class Local {
 				frameRate: { ideal: 60 },
 				resizeMode: "none",
 				width: { max: 1920 },
-				height: { max: 1080 },
+				height: { max: 1920 },
 			},
 			audio: {
 				channelCount: { ideal: 2, max: 2 },
@@ -145,7 +158,21 @@ export class Local {
 				enabled: this.screen.enabled,
 			},
 			video: {
-				enabled: this.screen.enabled,
+				hd: {
+					enabled: this.screen.enabled,
+					config: {
+						maxPixels: 1920 * 1920,
+						bitrateScale: 0.08,
+					},
+				},
+				// TODO only enable for large enough screen
+				sd: {
+					enabled: this.screen.enabled,
+					config: {
+						maxPixels: 960 * 960,
+						bitrateScale: 0.06,
+					},
+				},
 			},
 			location: {
 				window: {
@@ -160,11 +187,11 @@ export class Local {
 		});
 
 		this.#signals.effect((effect) => {
-			const stream = effect.get(this.screen.stream);
-			if (!stream) return;
+			const source = effect.get(this.screen.source);
+			if (!source) return;
 
-			effect.set(this.share.audio.source, stream.audio);
-			effect.set(this.share.video.source, stream.video);
+			effect.set(this.share.audio.source, source.audio);
+			effect.set(this.share.video.source, source.video);
 			effect.set(this.share.enabled, true, false); // only enable once there is a stream
 		});
 
