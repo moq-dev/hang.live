@@ -155,9 +155,9 @@ class LocalPreview {
 	}
 
 	close() {
+		this.signals.close();
 		this.space.close();
 		this.canvas.close();
 		this.sound.close();
-		this.signals.close();
 	}
 }

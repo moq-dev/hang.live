@@ -77,14 +77,18 @@ export class Video {
 			this.targetSize.set(avatar.div(ratio));
 			return;
 		}
+
+		this.targetSize.set(Vector.create(128, 128));
 	}
 
 	#runFrame(effect: Effect) {
+		if (this.frame instanceof VideoFrame) this.frame.close();
+
 		// TODO FakeBroadcast should return a VideoFrame instead of a HTMLVideoElement.
 		this.frame =
 			this.broadcast.source instanceof FakeBroadcast
 				? effect.get(this.broadcast.source.video.frame)
-				: effect.get(this.broadcast.source.video.frame);
+				: effect.get(this.broadcast.source.video.frame)?.clone();
 	}
 
 	tick() {
