@@ -26,31 +26,30 @@ import Settings, { Modal } from "./settings";
 export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	const mobile = useMobileLayout();
 
-	// Debug: log mobile state
-	createEffect(() => {
-		console.log("isMobile:", mobile.isMobile(), "expandedSection:", mobile.expandedSection());
-	});
-
 	// Check if any publish source is active
 	const micActive = solid(props.local.camera.audio.root);
 	const cameraActive = solid(props.local.webcam.source);
 	const screenActive = solid(props.local.screen.source);
 	const anySourceActive = createMemo(() => !!micActive() || !!cameraActive() || !!screenActive());
 
-	// Close expanded sections when clicking outside
-	let containerRef: HTMLDivElement | undefined;
+	// Close expanded sections when clicking outside (mobile only)
+	let publishRef: HTMLDivElement | undefined;
+	let chatRef: HTMLDivElement | undefined;
+	let settingsRef: HTMLDivElement | undefined;
 
 	onMount(() => {
 		const handleClick = (e: MouseEvent) => {
-			// Only collapse if clicking outside the container
-			if (
-				mobile.expandedSection() &&
-				containerRef &&
-				e.target instanceof Node &&
-				!containerRef.contains(e.target)
-			) {
-				mobile.collapseAll();
-			}
+			if (!mobile.isMobile() || !mobile.expandedSection()) return;
+
+			const target = e.target as Node;
+			const expanded = mobile.expandedSection();
+
+			// Check if click is inside the expanded section
+			if (expanded === "publish" && publishRef?.contains(target)) return;
+			if (expanded === "settings" && settingsRef?.contains(target)) return;
+
+			// Click is outside the expanded section, so collapse
+			mobile.collapseAll();
 		};
 		document.addEventListener("click", handleClick, true); // Use capture phase
 		onCleanup(() => document.removeEventListener("click", handleClick, true));
@@ -83,170 +82,158 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 				`}
 			</style>
 			<Tutorial />
-			<Show
-				when={!mobile.isMobile()}
-				fallback={
-					<>
-						{/* Mobile: Fixed positioned sections */}
 
-						{/* Left: Publish section */}
-						<div
-							ref={containerRef}
-							class="fixed bottom-0 left-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto z-[11] leading-none transition-all duration-300 ease-in-out"
-							style={{
-								width: mobile.expandedSection() === "publish" ? "100vw" : "fit-content",
-								opacity:
-									mobile.expandedSection() && mobile.expandedSection() !== "publish" ? "0" : "1",
-								"pointer-events":
-									mobile.expandedSection() && mobile.expandedSection() !== "publish" ? "none" : "auto",
-							}}
-						>
-							<Show
-								when={mobile.expandedSection() !== "publish"}
-								fallback={
-									<>
-										<Tooltip content="Close" position="top">
-											<button
-												type="button"
-												onClick={(e) => {
-													e.stopPropagation();
-													mobile.collapseAll();
-												}}
-												class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded text-red-500"
-												aria-label="Collapse publish menu"
-											>
-												<span class="icon-[mdi--close]" />
-											</button>
-										</Tooltip>
-										<div
-											class="flex gap-4 items-end"
-											style={{
-												animation: "slideInFromLeft 0.3s ease-out",
-											}}
-										>
-											<Microphone local={props.local} />
-											<Camera local={props.local} room={props.room} />
-											<Screen local={props.local} room={props.room} />
-										</div>
-									</>
-								}
-							>
-								<button
-									type="button"
-									onClick={(e) => {
-										e.stopPropagation();
-										mobile.toggleSection("publish");
-									}}
-									class="border hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded relative"
-									classList={{
-										"border-white": anySourceActive(),
-										"border-transparent": !anySourceActive(),
-									}}
-									aria-label="Open publish menu"
-								>
-									<Show when={micActive()}>
-										<Visualize audio={props.local.camera.audio} />
-									</Show>
-									<span class="icon-[mdi--broadcast]" />
-								</button>
-							</Show>
-						</div>
-
-						{/* Center: Chat */}
-						<div
-							class="fixed bottom-0 left-1/2 -translate-x-1/2 p-4 text-shadow-lg text-xl pointer-events-auto z-[10] leading-none transition-all duration-300 ease-in-out flex items-end"
-							style={{
-								opacity: mobile.expandedSection() ? "0" : "1",
-								"pointer-events": mobile.expandedSection() ? "none" : "auto",
-							}}
-						>
-							<Chat broadcast={props.local.camera} room={props.room} isMobile={mobile.isMobile()} />
-						</div>
-
-						{/* Right: Settings section */}
-						<div
-							class="fixed bottom-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto z-[11] leading-none transition-all duration-300 ease-in-out"
-							style={{
-								width: mobile.expandedSection() === "settings" ? "100vw" : "fit-content",
-								"justify-content": mobile.expandedSection() === "settings" ? "flex-end" : "flex-start",
-								opacity:
-									mobile.expandedSection() && mobile.expandedSection() !== "settings" ? "0" : "1",
-								"pointer-events":
-									mobile.expandedSection() && mobile.expandedSection() !== "settings" ? "none" : "auto",
-							}}
-						>
-							<Show
-								when={mobile.expandedSection() !== "settings"}
-								fallback={
-									<>
-										<div
-											class="flex gap-4 items-end"
-											style={{
-												animation: "slideInFromRight 0.3s ease-out",
-											}}
-										>
-											<Volume room={props.room} />
-											<Advanced sound={props.room.space.sound} />
-											<Fullscreen canvas={props.canvas} />
-										</div>
-										<Tooltip content="Close" position="top">
-											<button
-												type="button"
-												onClick={(e) => {
-													e.stopPropagation();
-													mobile.collapseAll();
-												}}
-												class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded text-red-500"
-												aria-label="Collapse settings menu"
-											>
-												<span class="icon-[mdi--close]" />
-											</button>
-										</Tooltip>
-									</>
-								}
-							>
-								<button
-									type="button"
-									onClick={(e) => {
-										e.stopPropagation();
-										mobile.toggleSection("settings");
-									}}
-									class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
-									aria-label="Open settings menu"
-								>
-									<span class="icon-[mdi--cog]" />
-								</button>
-							</Show>
-						</div>
-					</>
-				}
+			{/* Left: Publish section */}
+			<div
+				ref={publishRef}
+				class="fixed bottom-0 left-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto z-[11] leading-none transition-all duration-300 ease-in-out"
+				style={{
+					width: mobile.isMobile() && mobile.expandedSection() === "publish" ? "100vw" : "fit-content",
+					opacity:
+						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "publish"
+							? "0"
+							: "1",
+					"pointer-events":
+						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "publish"
+							? "none"
+							: "auto",
+				}}
 			>
-				{/* Desktop: Original flex layout */}
-				<div
-					ref={containerRef}
-					class="fixed bottom-0 left-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-none z-[10] leading-none"
-					role="toolbar"
-					aria-label="Media controls"
+				<Show
+					when={!mobile.isMobile() || mobile.expandedSection() === "publish"}
+					fallback={
+						<Tooltip content="Publish" position="top">
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									mobile.toggleSection("publish");
+								}}
+								class="border hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded relative"
+								classList={{
+									"border-white": anySourceActive(),
+									"border-transparent": !anySourceActive(),
+								}}
+								aria-label="Open publish menu"
+							>
+								<Show when={micActive()}>
+									<Visualize audio={props.local.camera.audio} />
+								</Show>
+								<span class="icon-[mdi--broadcast]" />
+							</button>
+						</Tooltip>
+					}
 				>
-					{/* Desktop: Original layout */}
-					<div class="flex gap-4 items-end">
+					<Show when={mobile.isMobile() && mobile.expandedSection() === "publish"}>
+						<Tooltip content="Close" position="top">
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									mobile.collapseAll();
+								}}
+								class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded text-red-500"
+								aria-label="Collapse publish menu"
+							>
+								<span class="icon-[mdi--close]" />
+							</button>
+						</Tooltip>
+					</Show>
+					<div
+						class="flex gap-4 items-end"
+						style={{
+							animation:
+								mobile.isMobile() && mobile.expandedSection() === "publish"
+									? "slideInFromLeft 0.3s ease-out"
+									: "none",
+						}}
+					>
 						<Microphone local={props.local} />
 						<Camera local={props.local} room={props.room} />
 						<Screen local={props.local} room={props.room} />
 					</div>
+				</Show>
+			</div>
 
-					<div class="flex-1 flex justify-center">
-						<Chat broadcast={props.local.camera} room={props.room} isMobile={false} />
-					</div>
+			{/* Center: Chat */}
+			<div
+				ref={chatRef}
+				class="fixed bottom-0 left-1/2 -translate-x-1/2 p-4 text-shadow-lg text-xl pointer-events-auto z-[10] leading-none transition-all duration-300 ease-in-out flex items-end"
+				style={{
+					opacity: mobile.isMobile() && mobile.expandedSection() ? "0" : "1",
+					"pointer-events": mobile.isMobile() && mobile.expandedSection() ? "none" : "auto",
+				}}
+			>
+				<Chat broadcast={props.local.camera} room={props.room} />
+			</div>
 
-					<div class="flex items-end gap-4">
+			{/* Right: Settings section */}
+			<div
+				ref={settingsRef}
+				class="fixed bottom-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto z-[11] leading-none transition-all duration-300 ease-in-out"
+				style={{
+					width:
+						mobile.isMobile() && mobile.expandedSection() === "settings" ? "100vw" : "fit-content",
+					"justify-content":
+						mobile.isMobile() && mobile.expandedSection() === "settings" ? "flex-end" : "flex-start",
+					opacity:
+						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "settings"
+							? "0"
+							: "1",
+					"pointer-events":
+						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "settings"
+							? "none"
+							: "auto",
+				}}
+			>
+				<Show
+					when={!mobile.isMobile() || mobile.expandedSection() === "settings"}
+					fallback={
+						<Tooltip content="Settings" position="top">
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									mobile.toggleSection("settings");
+								}}
+								class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
+								aria-label="Open settings menu"
+							>
+								<span class="icon-[mdi--cog]" />
+							</button>
+						</Tooltip>
+					}
+				>
+					<div
+						class="flex gap-4 items-end"
+						style={{
+							animation:
+								mobile.isMobile() && mobile.expandedSection() === "settings"
+									? "slideInFromRight 0.3s ease-out"
+									: "none",
+						}}
+					>
 						<Volume room={props.room} />
-						{/* <ClosedCaptions /> */}
 						<Advanced sound={props.room.space.sound} />
 						<Fullscreen canvas={props.canvas} />
 					</div>
-				</div>
-			</Show>
+					<Show when={mobile.isMobile() && mobile.expandedSection() === "settings"}>
+						<Tooltip content="Close" position="top">
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									mobile.collapseAll();
+								}}
+								class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded text-red-500"
+								aria-label="Collapse settings menu"
+							>
+								<span class="icon-[mdi--close]" />
+							</button>
+						</Tooltip>
+					</Show>
+				</Show>
+			</div>
 		</>
 	);
 }
@@ -747,7 +734,7 @@ export function Visualize(props: { audio: Publish.Audio.Encoder }): JSX.Element 
 	);
 }
 
-function Chat(props: { broadcast: Publish.Broadcast; room: Room; isMobile: boolean }): JSX.Element {
+function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element {
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
 	const [showMemeSelector, setShowMemeSelector] = createSignal(false);
@@ -807,80 +794,40 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room; isMobile: boole
 
 	return (
 		<div class="flex items-center gap-2 flex-1 min-w-48 relative">
-			<Show
-				when={!props.isMobile}
-				fallback={
-					<>
-						{/* Mobile: Chat input with emoji button on right */}
-						<form id="chat" onSubmit={submit} class="relative min-w-48">
-							<input
-								type="text"
-								autocomplete="off"
-								placeholder="chat"
-								ref={setInput}
-								value={message()}
-								onInput={(e) => setMessage(e.currentTarget.value)}
-								aria-label="Chat message"
-								tabIndex={0}
-								class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 pr-10 outline-none text-center placeholder:text-center"
-							/>
-							<button
-								type="button"
-								onClick={() => setShowMemeSelector((prev) => !prev)}
-								aria-label="Open meme selector"
-								aria-expanded={showMemeSelector()}
-								class="absolute right-2 top-1/2 -translate-y-1/2 transition-all cursor-pointer text-gray-500 hover:text-white"
-							>
-								<span class="icon-[mdi--sticker-emoji]" />
-							</button>
-						</form>
+			<form id="chat" onSubmit={submit} class="flex-1">
+				<input
+					type="text"
+					autocomplete="off"
+					placeholder="chat"
+					ref={setInput}
+					value={message()}
+					onInput={(e) => setMessage(e.currentTarget.value)}
+					aria-label="Chat message"
+					tabIndex={0}
+					class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-2 px-2 outline-none text-center placeholder:text-center"
+				/>
+			</form>
 
-						<Show when={showMemeSelector()}>
-							<MemeSelector
-								broadcast={props.broadcast}
-								chatInput={input()}
-								chatMessage={message()}
-								setChatMessage={setMessage}
-								onClose={() => setShowMemeSelector(false)}
-							/>
-						</Show>
-					</>
-				}
-			>
-				{/* Desktop: Original layout */}
-				<Tooltip content="Memes & Emojis" position="top">
-					<button
-						type="button"
-						onClick={() => setShowMemeSelector((prev) => !prev)}
-						aria-label="Open meme selector"
-						aria-expanded={showMemeSelector()}
-						class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-					>
-						<span class="icon-[mdi--sticker-emoji]" />
-					</button>
-				</Tooltip>
-				<Show when={showMemeSelector()}>
-					<MemeSelector
-						broadcast={props.broadcast}
-						chatInput={input()}
-						chatMessage={message()}
-						setChatMessage={setMessage}
-						onClose={() => setShowMemeSelector(false)}
-					/>
-				</Show>
-				<form id="chat" onSubmit={submit} class="flex-1">
-					<input
-						type="text"
-						autocomplete="off"
-						placeholder="chat"
-						ref={setInput}
-						value={message()}
-						onInput={(e) => setMessage(e.currentTarget.value)}
-						aria-label="Chat message"
-						tabIndex={0}
-						class="w-full pointer-events-auto backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none text-center placeholder:text-center"
-					/>
-				</form>
+			<Tooltip content="Memes & Emojis" position="top">
+				<button
+					type="button"
+					onClick={() => setShowMemeSelector((prev) => !prev)}
+					aria-label="Open meme selector"
+					aria-expanded={showMemeSelector()}
+					class="text-gray-500 hover:text-white hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded pointer-events-auto"
+				>
+					<span class="icon-[mdi--sticker-emoji]" />
+				</button>
+			</Tooltip>
+
+			<Show when={showMemeSelector()}>
+				<MemeSelector
+					broadcast={props.broadcast}
+					chatInput={input()}
+					chatMessage={message()}
+					setChatMessage={setMessage}
+					onClose={() => setShowMemeSelector(false)}
+				/>
 			</Show>
 		</div>
 	);
