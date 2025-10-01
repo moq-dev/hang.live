@@ -1,6 +1,6 @@
-import { type Catalog, Publish, Watch } from "@kixelated/hang";
+import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
-import { Audio, type AudioProps } from "./audio";
+import { Audio } from "./audio";
 import { Canvas } from "./canvas";
 import { Captions } from "./captions";
 import { Chat } from "./chat";
@@ -19,12 +19,6 @@ export type ChatMessage = {
 	expires: DOMHighResTimeStamp;
 };
 
-export type BroadcastProps = {
-	audio?: AudioProps;
-	position?: Catalog.Position;
-	visible?: boolean;
-};
-
 // Catalog.Position but all fields are required.
 type Position = {
 	x: number;
@@ -32,6 +26,13 @@ type Position = {
 	z: number;
 	s: number;
 };
+
+export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
+	source: T;
+	canvas: Canvas;
+	sound: Sound;
+	scale: Signal<number>;
+}
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	source: T;
@@ -46,7 +47,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	message = new Signal<HTMLElement | undefined>(undefined);
 
 	bounds: Signal<Bounds>; // 0 to canvas
-	scale = 1.0; // 1 is 100%
 	velocity = Vector.create(0, 0); // in pixels per ?
 
 	// Replaced by position
@@ -64,31 +64,35 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
 	memeName = new Signal<string | undefined>(undefined);
 
+	scale: Signal<number>; // room scale, 1 is 100%
+	zoom = new Signal<number>(1.0); // local zoom, 1 is 100%
+
 	// Show a locator arrow for 8 seconds to show our position on join.
 	#locatorStart?: DOMHighResTimeStamp;
 
 	signals = new Effect();
 
-	constructor(source: T, canvas: Canvas, sound: Sound, props?: BroadcastProps) {
-		this.source = source;
-		this.canvas = canvas;
-		this.visible = new Signal(props?.visible ?? true);
+	constructor(props: BroadcastProps<T>) {
+		this.source = props.source;
+		this.canvas = props.canvas;
+		this.visible = new Signal(true); // TODO
+		this.scale = props.scale;
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
 		const start = () => (Math.random() - 0.5) / 100;
 		const position = {
-			x: props?.position?.x ?? start(),
-			y: props?.position?.y ?? start(),
-			z: props?.position?.z ?? 0,
-			s: props?.position?.s ?? 1,
+			x: start(),
+			y: start(),
+			z: 0,
+			s: 1,
 		};
 
 		this.position = new Signal(position);
 
 		this.video = new Video(this);
-		this.audio = new Audio(this, sound, props?.audio);
-		this.chat = new Chat(this, canvas);
-		this.captions = new Captions(this, canvas);
+		this.audio = new Audio(this, props.sound);
+		this.chat = new Chat(this, props.canvas);
+		this.captions = new Captions(this, props.canvas);
 
 		const viewport = this.canvas.viewport.peek();
 
@@ -101,36 +105,38 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		// Normalize to find the closest edge of the screen.
 		startPosition = startPosition.normalize().mult(viewport.length()).add(viewport.div(2));
 
-		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize));
+		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize.peek()));
 
-		// Load the broadcaster's position from the network.
-		this.signals.effect((effect) => {
-			if (!effect.get(this.visible)) {
-				// Change the target position to somewhere outside the screen.
-				this.position.update((prev) => {
-					const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
-					return { ...prev, x: offscreen.x, y: offscreen.y };
-				});
-
-				return;
-			}
-
-			// Update the target position from the network.
-			const location = effect.get(this.source.location.window.position);
-			if (!location) return;
-
-			this.position.update((prev) => {
-				return {
-					...prev,
-					x: location.x ?? prev.x,
-					y: location.y ?? prev.y,
-					z: location.z ?? prev.z,
-					s: location.s ?? prev.s,
-				};
-			});
-		});
-
+		this.signals.effect(this.#runLocation.bind(this));
 		this.signals.effect(this.#runChat.bind(this));
+		this.signals.effect(this.#runTarget.bind(this));
+	}
+
+	// Load the broadcaster's position from the network.
+	#runLocation(effect: Effect) {
+		if (!effect.get(this.visible)) {
+			// Change the target position to somewhere outside the screen.
+			this.position.update((prev) => {
+				const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
+				return { ...prev, x: offscreen.x, y: offscreen.y };
+			});
+
+			return;
+		}
+
+		// Update the target position from the network.
+		const location = effect.get(this.source.location.window.position);
+		if (!location) return;
+
+		this.position.update((prev) => {
+			return {
+				...prev,
+				x: location.x ?? prev.x,
+				y: location.y ?? prev.y,
+				z: location.z ?? prev.z,
+				s: location.s ?? prev.s,
+			};
+		});
 	}
 
 	#runChat(effect: Effect) {
@@ -165,8 +171,29 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		});
 	}
 
+	// Decides the simulcast size to use based on the number of pixels.
+	#runTarget(effect: Effect) {
+		if (!(this.source instanceof Watch.Broadcast)) return;
+
+		const catalog = effect.get(this.source.video.catalog);
+		if (!catalog) return;
+
+		for (const rendition of catalog) {
+			if (!rendition.config.displayAspectHeight || !rendition.config.displayAspectWidth) continue;
+
+			const pixels = rendition.config.displayAspectHeight * rendition.config.displayAspectWidth;
+			const scale = effect.get(this.scale);
+			const zoom = effect.get(this.zoom);
+
+			const scaled = pixels * scale * zoom;
+			effect.set(this.source.video.target, { pixels: scaled });
+
+			return;
+		}
+	}
+
 	// TODO Also make scale a signal
-	tick(scale: number) {
+	tick() {
 		this.video.tick();
 
 		const bounds = this.bounds.peek();
@@ -213,8 +240,12 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 
 		// Apply everything now.
-		const targetSize = this.video.targetSize.mult(this.scale * scale);
-		this.scale += (targetPosition.s - this.scale) * 0.1;
+		const targetSize = this.video.targetSize.peek().mult(this.zoom.peek() * this.scale.peek());
+
+		const dz = (targetPosition.s - this.zoom.peek()) * 0.1;
+		if (Math.abs(dz) >= 0.002) {
+			this.zoom.update((prev) => prev + dz);
+		}
 
 		// Apply the velocity and size.
 		const dx = this.velocity.x / 50;
@@ -275,9 +306,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		ctx.globalAlpha *= alpha;
 
 		// Calculate arrow position and animation
-		const arrowSize = 12 * this.scale;
+		const arrowSize = 12 * this.zoom.peek();
 		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * this.scale;
+		const offset = 10 * this.zoom.peek();
 
 		const gap = 2 * (arrowSize + offset);
 
@@ -294,14 +325,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		ctx.closePath();
 
 		// Style the arrow
-		ctx.lineWidth = 4 * this.scale;
+		ctx.lineWidth = 4 * this.zoom.peek();
 		ctx.strokeStyle = "#000"; // Gold color
 		ctx.fillStyle = "#FFD700";
 		ctx.stroke();
 		ctx.fill();
 
 		// Draw "YOU" text
-		const fontSize = Math.round(32 * this.scale); // round to avoid busting font caches
+		const fontSize = Math.round(32 * this.zoom.peek()); // round to avoid busting font caches
 		ctx.font = `bold ${fontSize}px Arial`;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";

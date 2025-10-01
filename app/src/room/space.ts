@@ -1,6 +1,6 @@
 import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
-import { Broadcast } from "./broadcast";
+import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
 import type { Sound } from "./sound";
@@ -25,7 +25,8 @@ export class Space {
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
-	#scale = 1.0;
+
+	#scale = new Signal<number>(1.0);
 
 	#maxZ = 0;
 
@@ -52,6 +53,8 @@ export class Space {
 		this.#signals.event(canvas.element, "touchmove", this.#onTouchMove.bind(this), { passive: false });
 		this.#signals.event(canvas.element, "touchend", this.#onTouchEnd.bind(this), { passive: false });
 		this.#signals.event(canvas.element, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
+
+		this.#signals.effect(this.#runScale.bind(this));
 
 		// This is a bit of a hack, but register our render method.
 		this.canvas.onRender = this.#tick.bind(this);
@@ -379,7 +382,9 @@ export class Space {
 		return undefined;
 	}
 
-	add(id: string, broadcast: Broadcast) {
+	add(id: string, source: BroadcastSource): Broadcast {
+		const broadcast = new Broadcast({ source, canvas: this.canvas, sound: this.sound, scale: this.#scale });
+
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.
 		broadcast.position.update((prev) => ({
@@ -455,9 +460,11 @@ export class Space {
 
 			this.sound.tts.left(name);
 		});
+
+		return broadcast;
 	}
 
-	async remove(path: string): Promise<Broadcast> {
+	async remove(path: string): Promise<BroadcastSource> {
 		const broadcast = this.lookup.get(path);
 		if (!broadcast) {
 			throw new Error(`broadcast not found: ${path}`);
@@ -476,7 +483,9 @@ export class Space {
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		this.#rip.splice(this.#rip.indexOf(broadcast), 1);
-		return broadcast;
+		broadcast.close();
+
+		return broadcast.source;
 	}
 
 	clear(): Broadcast[] {
@@ -487,16 +496,14 @@ export class Space {
 	}
 
 	#tick(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
-		this.#tickScale();
-
 		for (const broadcast of this.#rip) {
-			broadcast.tick(this.#scale);
+			broadcast.tick();
 		}
 
 		const broadcasts = this.ordered.peek();
 
 		for (const broadcast of broadcasts) {
-			broadcast.tick(this.#scale);
+			broadcast.tick();
 		}
 
 		// Check for collisions.
@@ -611,24 +618,26 @@ export class Space {
 		ctx.restore();
 	}
 
-	#tickScale() {
-		const broadcasts = this.ordered.peek();
+	#runScale(effect: Effect) {
+		const broadcasts = effect.get(this.ordered);
 		if (broadcasts.length === 0) {
 			// Avoid division by zero.
 			return;
 		}
 
-		const canvasArea = this.canvas.viewport.peek().area();
+		const canvasArea = effect.get(this.canvas.viewport).area();
 
 		let broadcastArea = 0;
 		for (const broadcast of broadcasts) {
-			broadcastArea += broadcast.video.targetSize.x * broadcast.video.targetSize.y;
+			const size = effect.get(broadcast.video.targetSize);
+			broadcastArea += size.x * size.y;
 		}
 
 		const fillRatio = broadcastArea / canvasArea;
 		const targetFill = 0.25;
 
-		this.#scale = Math.min(Math.sqrt(targetFill / fillRatio), 1);
+		const scale = Math.min(Math.sqrt(targetFill / fillRatio), 1);
+		this.#scale.set(scale);
 	}
 
 	close() {

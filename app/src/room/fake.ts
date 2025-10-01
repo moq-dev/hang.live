@@ -1,6 +1,6 @@
 import { Catalog } from "@kixelated/hang";
+import { u53 } from "@kixelated/hang/catalog";
 import { Effect, Signal } from "@kixelated/signals";
-import { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
 import { Sound } from "./sound";
 import { Space } from "./space";
@@ -53,9 +53,8 @@ export class FakeBroadcast {
 	};
 
 	video = {
-		media: new Signal<MediaStream | undefined>(undefined),
 		frame: new Signal<HTMLVideoElement | undefined>(undefined),
-		flip: new Signal<boolean | undefined>(undefined),
+		catalog: new Signal<Catalog.Video[] | undefined>(undefined),
 		detection: {
 			enabled: new Signal(false),
 			objects: new Signal<Catalog.DetectionObjects | undefined>(undefined),
@@ -118,6 +117,20 @@ export class FakeBroadcast {
 		this.#video = video;
 		this.video.frame.set(video);
 
+		video.onloadedmetadata = () => {
+			this.video.catalog.set([
+				{
+					track: "video",
+					config: {
+						codec: "fake",
+						// Required for the correct display size.
+						displayAspectWidth: u53(video.videoWidth),
+						displayAspectHeight: u53(video.videoHeight),
+					},
+				},
+			]);
+		};
+
 		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });
 		this.audio.root.set(source);
 	}
@@ -125,8 +138,6 @@ export class FakeBroadcast {
 	stop() {
 		this.#video?.pause();
 		this.#video = undefined;
-
-		this.video.frame.set(undefined);
 
 		this.audio.root.update((prev) => {
 			prev?.disconnect();
@@ -153,13 +164,12 @@ export class FakeRoom {
 	}
 
 	add(path: string, broadcast: FakeBroadcast) {
-		this.space.add(path, new Broadcast(broadcast, this.space.canvas, this.sound));
+		this.space.add(path, broadcast);
 	}
 
 	remove(path: string) {
 		this.space.remove(path).then((broadcast) => {
 			broadcast.close();
-			broadcast.source.close();
 		});
 	}
 
