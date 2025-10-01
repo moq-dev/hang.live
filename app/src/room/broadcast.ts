@@ -109,7 +109,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		this.signals.effect(this.#runLocation.bind(this));
 		this.signals.effect(this.#runChat.bind(this));
-		this.signals.effect(this.#runTargetPixels.bind(this));
+		this.signals.effect(this.#runTarget.bind(this));
 	}
 
 	// Load the broadcaster's position from the network.
@@ -172,18 +172,24 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	}
 
 	// Decides the simulcast size to use based on the number of pixels.
-	#runTargetPixels(effect: Effect) {
+	#runTarget(effect: Effect) {
 		if (!(this.source instanceof Watch.Broadcast)) return;
 
 		const catalog = effect.get(this.source.video.catalog);
 		if (!catalog) return;
 
-		const desired = catalog.display.height * catalog.display.width;
-		const scale = effect.get(this.scale);
-		const zoom = effect.get(this.zoom);
+		for (const rendition of catalog) {
+			if (!rendition.config.displayAspectHeight || !rendition.config.displayAspectWidth) continue;
 
-		const requested = desired * scale * zoom;
-		this.source.video.targetPixels.set(requested);
+			const pixels = rendition.config.displayAspectHeight * rendition.config.displayAspectWidth;
+			const scale = effect.get(this.scale);
+			const zoom = effect.get(this.zoom);
+
+			const scaled = pixels * scale * zoom;
+			effect.set(this.source.video.target, { pixels: scaled });
+
+			return;
+		}
 	}
 
 	// TODO Also make scale a signal

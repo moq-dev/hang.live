@@ -65,9 +65,16 @@ export class Video {
 
 	#runTargetSize(effect: Effect) {
 		const catalog = effect.get(this.broadcast.source.video.catalog);
+
 		if (catalog) {
-			this.targetSize.set(Vector.create(catalog.display.width, catalog.display.height));
-			return;
+			for (const rendition of catalog) {
+				if (rendition.config.displayAspectHeight && rendition.config.displayAspectWidth) {
+					this.targetSize.set(
+						Vector.create(rendition.config.displayAspectWidth, rendition.config.displayAspectHeight),
+					);
+					return;
+				}
+			}
 		}
 
 		const avatar = effect.get(this.avatarSize);
@@ -82,13 +89,14 @@ export class Video {
 	}
 
 	#runFrame(effect: Effect) {
-		if (this.frame instanceof VideoFrame) this.frame.close();
-
-		// TODO FakeBroadcast should return a VideoFrame instead of a HTMLVideoElement.
-		this.frame =
-			this.broadcast.source instanceof FakeBroadcast
-				? effect.get(this.broadcast.source.video.frame)
-				: effect.get(this.broadcast.source.video.frame)?.clone();
+		if (this.broadcast.source instanceof FakeBroadcast) {
+			// TODO FakeBroadcast should return a VideoFrame instead of a HTMLVideoElement.
+			this.frame = effect.get(this.broadcast.source.video.frame);
+		} else {
+			const frame = effect.get(this.broadcast.source.video.frame)?.clone();
+			effect.cleanup(() => frame?.close());
+			this.frame = frame;
+		}
 	}
 
 	tick() {
@@ -172,7 +180,8 @@ export class Video {
 
 			// Apply horizontal flip when rendering the preview.
 			const flip =
-				this.broadcast.source instanceof Publish.Broadcast && this.broadcast.source.video.source.peek()?.flip;
+				this.broadcast.source instanceof Publish.Broadcast &&
+				this.broadcast.source.video.hd.config.peek()?.flip;
 
 			if (flip) {
 				ctx.save();

@@ -49,13 +49,12 @@ export class Local {
 			enabled: Settings.camera.enabled,
 			device: { preferred: Settings.camera.device },
 			constraints: {
-				width: { ideal: 720 },
-				height: { ideal: 720 },
+				width: { ideal: 640 },
+				height: { ideal: 640 },
 				frameRate: { ideal: 60 },
 				facingMode: { ideal: "user" },
 				resizeMode: "none",
 			},
-			flip: true,
 		});
 		this.#signals.cleanup(() => this.webcam.close());
 
@@ -85,15 +84,15 @@ export class Local {
 				hd: {
 					enabled: Settings.camera.enabled,
 					config: {
-						maxPixels: 720 * 720,
-						bitrateScale: 0.08,
+						maxPixels: 640 * 640,
+						flip: true,
 					},
 				},
 				sd: {
 					enabled: Settings.camera.enabled,
 					config: {
-						maxPixels: 360 * 360,
-						bitrateScale: 0.06,
+						maxPixels: 320 * 320,
+						flip: true,
 					},
 				},
 			},

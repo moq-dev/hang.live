@@ -54,7 +54,7 @@ export class FakeBroadcast {
 
 	video = {
 		frame: new Signal<HTMLVideoElement | undefined>(undefined),
-		catalog: new Signal<Catalog.Video | undefined>(undefined),
+		catalog: new Signal<Catalog.Video[] | undefined>(undefined),
 		detection: {
 			enabled: new Signal(false),
 			objects: new Signal<Catalog.DetectionObjects | undefined>(undefined),
@@ -118,13 +118,17 @@ export class FakeBroadcast {
 		this.video.frame.set(video);
 
 		video.onloadedmetadata = () => {
-			this.video.catalog.set({
-				tracks: {},
-				display: {
-					width: u53(video.videoWidth),
-					height: u53(video.videoHeight),
+			this.video.catalog.set([
+				{
+					track: "video",
+					config: {
+						codec: "fake",
+						// Required for the correct display size.
+						displayAspectWidth: u53(video.videoWidth),
+						displayAspectHeight: u53(video.videoHeight),
+					},
 				},
-			});
+			]);
 		};
 
 		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });

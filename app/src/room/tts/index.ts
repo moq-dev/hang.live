@@ -242,7 +242,6 @@ export class TTS {
 	}
 
 	close() {
-		this.context.close();
 		this.#signals.close();
 	}
 }
