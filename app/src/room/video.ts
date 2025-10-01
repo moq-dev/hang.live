@@ -1,6 +1,8 @@
 import { Publish, Watch } from "@kixelated/hang";
+import { Effect, Signal } from "@kixelated/signals";
 import * as Api from "../api";
 import type { Broadcast } from "./broadcast";
+import { FakeBroadcast } from "./fake";
 import { Vector } from "./geometry";
 import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
 
@@ -17,11 +19,14 @@ export class Video {
 	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
 	avatarTransition = 0;
 
-	// The current video frame, for transitioning back to the avatar.
-	frame?: VideoFrame | HTMLVideoElement;
+	// The size of the avatar in pixels.
+	avatarSize = new Signal<Vector | undefined>(undefined);
+
+	// The current video frame.
+	frame?: CanvasImageSource;
 
 	// The desired size of the video in pixels.
-	targetSize: Vector; // in pixels
+	targetSize = new Signal<Vector>(Vector.create(128, 128));
 
 	// The opacity from 0 to 1, where 0 is offline and 1 is online.
 	online = 0;
@@ -31,67 +36,74 @@ export class Video {
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
-		this.targetSize = Vector.create(128, 128);
+		this.broadcast.signals.effect(this.#runAvatar.bind(this));
+		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
+		this.broadcast.signals.effect(this.#runFrame.bind(this));
+	}
 
-		// Set a random default avatar while the user details are loading.
-		// TODO Only start a broadcast after receiving the catalog to avoid this.
-		this.avatar.src = Api.randomAvatar();
+	#runAvatar(effect: Effect) {
+		let avatar = effect.get(this.broadcast.source.user.avatar);
+		if (!avatar) {
+			// Don't unset the avatar if it's already set.
+			if (this.avatar) return;
 
-		// This doesn't use a memo because we intentionally prevent going back to the default avatar.
-		this.broadcast.signals.effect((effect) => {
-			const avatar = effect.get(this.broadcast.source.user.avatar);
-			if (!avatar) return; // don't unset
+			// Set a random default avatar while the user details are loading.
+			avatar = Api.randomAvatar();
+		}
 
-			// TODO only set the avatar if it successfully loads
-			const newAvatar = new Image();
-			newAvatar.src = avatar;
+		// TODO only set the avatar if it successfully loads
+		const newAvatar = new Image();
+		newAvatar.src = avatar;
 
-			const load = () => {
-				this.avatar = newAvatar;
-			};
+		const load = () => {
+			this.avatar = newAvatar;
+			this.avatarSize.set(Vector.create(newAvatar.width, newAvatar.height));
+		};
 
-			effect.event(newAvatar, "load", load);
-		});
+		effect.event(newAvatar, "load", load);
+	}
+
+	#runTargetSize(effect: Effect) {
+		const catalog = effect.get(this.broadcast.source.video.catalog);
+
+		if (catalog) {
+			for (const rendition of catalog) {
+				if (rendition.config.displayAspectHeight && rendition.config.displayAspectWidth) {
+					this.targetSize.set(
+						Vector.create(rendition.config.displayAspectWidth, rendition.config.displayAspectHeight),
+					);
+					return;
+				}
+			}
+		}
+
+		const avatar = effect.get(this.avatarSize);
+		if (avatar) {
+			// If the avatar is larger than 256x256, then shrink it to match the target area.
+			const ratio = Math.sqrt(avatar.x * avatar.y) / 256;
+			this.targetSize.set(avatar.div(ratio));
+			return;
+		}
+
+		this.targetSize.set(Vector.create(128, 128));
+	}
+
+	#runFrame(effect: Effect) {
+		if (this.broadcast.source instanceof FakeBroadcast) {
+			// TODO FakeBroadcast should return a VideoFrame instead of a HTMLVideoElement.
+			this.frame = effect.get(this.broadcast.source.video.frame);
+		} else {
+			const frame = effect.get(this.broadcast.source.video.frame)?.clone();
+			effect.cleanup(() => frame?.close());
+			this.frame = frame;
+		}
 	}
 
 	tick() {
-		const next = this.broadcast.source.video.frame.peek();
-		if (next) {
+		if (this.frame) {
 			this.avatarTransition = Math.min(this.avatarTransition + 0.05, 1);
-
-			let width: number;
-			let height: number;
-
-			if (next instanceof HTMLVideoElement) {
-				width = next.videoWidth;
-				height = next.videoHeight;
-			} else {
-				width = next.displayWidth;
-				height = next.displayHeight;
-			}
-
-			this.targetSize = Vector.create(width, height);
-
-			if (this.frame instanceof VideoFrame) this.frame.close();
-			this.frame = next instanceof HTMLVideoElement ? next : next.clone();
 		} else {
 			this.avatarTransition = Math.max(this.avatarTransition - 0.05, 0);
-			// TODO do this once, not on every frame.
-			if (this.avatar.complete) {
-				this.targetSize = Vector.create(this.avatar.width, this.avatar.height);
-
-				// If the avatar is larger than 256x256, then shrink it to match the target area.
-				const ratio = Math.sqrt(this.targetSize.x * this.targetSize.y) / 256;
-				if (ratio > 1) {
-					this.targetSize = this.targetSize.div(ratio);
-				}
-			}
-
-			// Deallocate the frame once we're done with it.
-			if (this.avatarTransition === 0 && this.frame instanceof VideoFrame) {
-				this.frame.close();
-				this.frame = undefined;
-			}
 		}
 
 		if (this.broadcast.visible.peek()) {
@@ -118,7 +130,7 @@ export class Video {
 		ctx.save();
 
 		const bounds = this.broadcast.bounds.peek();
-		const scale = this.broadcast.scale;
+		const scale = this.broadcast.zoom.peek();
 
 		ctx.translate(bounds.position.x, bounds.position.y);
 		ctx.globalAlpha *= this.online;
@@ -166,12 +178,12 @@ export class Video {
 			ctx.save();
 			ctx.globalAlpha *= this.avatarTransition;
 
-			// Apply horizontal flip only for Publish.Broadcast
-			// Watch.Broadcast already handles flipping internally with WebCodecs
-			const flip = this.broadcast.source.video.flip?.peek();
-			const shouldFlip = flip && this.broadcast.source instanceof Publish.Broadcast;
+			// Apply horizontal flip when rendering the preview.
+			const flip =
+				this.broadcast.source instanceof Publish.Broadcast &&
+				this.broadcast.source.video.hd.config.peek()?.flip;
 
-			if (shouldFlip) {
+			if (flip) {
 				ctx.save();
 				ctx.scale(-1, 1);
 				ctx.translate(-bounds.size.x, 0);

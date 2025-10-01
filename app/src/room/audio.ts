@@ -141,8 +141,8 @@ export class Audio {
 
 		ctx.translate(bounds.position.x, bounds.position.y);
 
-		const RADIUS = 12 * this.broadcast.scale;
-		const PADDING = 12 * this.broadcast.scale;
+		const RADIUS = 12 * this.broadcast.zoom.peek();
+		const PADDING = 12 * this.broadcast.zoom.peek();
 
 		// Background outline
 		ctx.beginPath();
@@ -166,7 +166,7 @@ export class Audio {
 		if (!analyserBuffer) return; // undefined in potato mode
 
 		const bounds = this.broadcast.bounds.peek();
-		const scale = this.broadcast.scale;
+		const scale = this.broadcast.zoom.peek();
 
 		ctx.save();
 		ctx.translate(bounds.position.x, bounds.position.y);
@@ -217,7 +217,7 @@ export class Audio {
 		// Add an additional border if we're speaking, ramping up/down the alpha
 		if (this.#speakingAlpha > 0) {
 			ctx.strokeStyle = `hsla(${hue}, 80%, 45%, ${this.#speakingAlpha})`;
-			ctx.lineWidth = 6 * this.broadcast.scale;
+			ctx.lineWidth = 6 * scale;
 			ctx.stroke();
 		}
 

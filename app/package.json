@@ -27,6 +27,7 @@
 		"@tauri-apps/plugin-opener": "^2.5.0",
 		"@tauri-apps/plugin-process": "^2.3.0",
 		"@tauri-apps/plugin-updater": "^2.5.0",
+		"@types/semver": "^7.7.1",
 		"comlink": "^4.4.2",
 		"dompurify": "^3.2.6",
 		"jszip": "^3.10.1",

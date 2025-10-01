@@ -4,7 +4,6 @@ import solid from "@kixelated/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
-import { Broadcast } from "../room/broadcast";
 import { Canvas } from "../room/canvas";
 import { Local } from "../room/local";
 import { Sound } from "../room/sound";
@@ -118,7 +117,6 @@ export default function Profile(props: { local: Local }): JSX.Element {
  */
 class LocalPreview {
 	canvas: Canvas;
-	broadcast: Broadcast<Publish.Broadcast>;
 	sound: Sound;
 	space: Space;
 
@@ -137,26 +135,16 @@ class LocalPreview {
 			profile: true,
 		});
 
-		// Create a broadcast wrapper for rendering
-		this.broadcast = new Broadcast(camera, this.canvas, this.sound, {
-			visible: true,
-			position: {
-				x: 0,
-				y: 0,
-				z: 0,
-				s: 1,
-			},
-		});
-
-		this.space.add("local", this.broadcast);
+		const broadcast = this.space.add("local", camera);
+		this.signals.cleanup(() => this.space.remove("local"));
 
 		this.signals.effect((effect: Effect) => {
-			const position = effect.get(this.broadcast.position);
+			const position = effect.get(broadcast.position);
 			if (position.x === 0 && position.y === 0 && position.s === 1) return;
 
 			// Reset the position after 2 seconds.
 			effect.timer(() => {
-				this.broadcast.position.set({
+				broadcast.position.set({
 					x: 0,
 					y: 0,
 					z: 0,
@@ -167,10 +155,9 @@ class LocalPreview {
 	}
 
 	close() {
+		this.signals.close();
 		this.space.close();
 		this.canvas.close();
 		this.sound.close();
-		this.broadcast.close(); // NOTE: Doesn't close the source broadcast.
-		this.signals.close();
 	}
 }
