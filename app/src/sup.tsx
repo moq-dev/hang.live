@@ -14,7 +14,6 @@ import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 import { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
-import * as Url from "./util/url";
 
 import "@kixelated/hang/support/element";
 import Settings from "./settings";
@@ -45,7 +44,7 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 		const data = await response.json();
 
-		connection.url.set(Url.rewrite(data.url));
+		connection.url.set(new URL(data.token, import.meta.env.VITE_RELAY_URL));
 
 		local.camera.path.set(Moq.Path.from(data.path, "camera"));
 		local.share.path.set(Moq.Path.from(data.path, "screen"));

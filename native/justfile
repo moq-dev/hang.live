@@ -40,8 +40,8 @@ deploy-windows:
 dev:
 	bun tauri dev
 
-android flags="":
-	bun tauri android dev {{flags}}
+android:
+	bun tauri android dev --host --open
 
 ios:
 	bun tauri ios dev

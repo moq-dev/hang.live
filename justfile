@@ -53,9 +53,9 @@ dev:
 native:
 	cd native && just dev
 
-# Run the emulator, or use --open for Android Studio
-android flags="":
-	cd native && just android {{flags}}
+# Open the Android Studio project
+android:
+	cd native && just android
 
 ios:
 	cd native && just ios

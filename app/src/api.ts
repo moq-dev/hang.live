@@ -1,7 +1,6 @@
 // The `type` keyword is VERY important here
 import type * as Api from "@hang/api";
 import { hc } from "hono/client";
-import * as Url from "./util/url";
 
 export type * from "@hang/api";
 export * from "@hang/api/client";
@@ -22,8 +21,6 @@ export class Client {
 	signals = new Effect();
 
 	constructor() {
-		const url = Url.rewrite(import.meta.env.VITE_API_URL);
-
 		if (Tauri.ENABLED) {
 			// Kinda awkard that we load tauri deep link handling here.
 			// TODO Split into two parts?
@@ -34,7 +31,7 @@ export class Client {
 
 		this.#authenticated = new Signal(!!token);
 		const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-		this.routes = hc<Api.App>(url.toString(), { headers });
+		this.routes = hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
 
 		this.signals.effect((effect: Effect) => {
 			// TODO async verify the token is valid
@@ -43,7 +40,7 @@ export class Client {
 
 			// Annoying duplication, but I don't want to leave this.routes uninitialized.
 			const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-			this.routes = hc<Api.App>(url.toString(), { headers });
+			this.routes = hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
 		});
 
 		this.signals.effect((effect) => {
