@@ -4,7 +4,8 @@ import { createResource, createSignal, JSX, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";
-import { useMobileLayout } from "../hooks/useMobileLayout";
+import Settings from "../settings";
+import { isMobile } from "../util/mobile";
 import { Logo } from "./logo";
 
 export default function App(props: { children: JSX.Element; connection: Moq.Connection.Reload; room: string }) {
@@ -17,16 +18,23 @@ export default function App(props: { children: JSX.Element; connection: Moq.Conn
 }
 
 function Header(props: { connection: Moq.Connection.Reload; room: string }) {
-	const mobile = useMobileLayout();
+	const mobile = isMobile();
 	const [showMobileNav, setShowMobileNav] = createSignal(false);
+	const activeStep = solid(Settings.tutorial.step);
 
 	return (
-		<header class="flex items-center justify-between leading-none text-xl">
+		<header
+			class="flex items-center justify-between leading-none text-xl relative transition-all duration-300"
+			classList={{
+				"z-auto": activeStep() !== 3,
+				"z-[1001]": activeStep() === 3,
+			}}
+		>
 			<Logo connection={props.connection} />
 			<div id="support" />
 			<nav class="rounded p-3 flex items-center gap-3 transition-all duration-300 ease-in-out">
 				<Show
-					when={!mobile.isMobile()}
+					when={!mobile()}
 					fallback={
 						<Show
 							when={!showMobileNav()}

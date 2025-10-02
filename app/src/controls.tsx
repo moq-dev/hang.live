@@ -16,15 +16,27 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
-import { useMobileLayout } from "./hooks/useMobileLayout";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
 import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
+import { isMobile } from "./util/mobile";
+
+type MobileSection = "publish" | "chat" | "settings" | null;
 
 export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
-	const mobile = useMobileLayout();
+	const mobile = isMobile();
+	const [expandedSection, setExpandedSection] = createSignal<MobileSection>(null);
+	const tutorial = solid(Settings.tutorial.step);
+
+	const toggleSection = (section: MobileSection) => {
+		setExpandedSection((prev) => (prev === section ? null : section));
+	};
+
+	const collapseAll = () => {
+		setExpandedSection(null);
+	};
 
 	// Check if any publish source is active
 	const micActive = solid(props.local.camera.audio.root);
@@ -39,17 +51,17 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 	onMount(() => {
 		const handleClick = (e: MouseEvent) => {
-			if (!mobile.isMobile() || !mobile.expandedSection()) return;
+			if (!mobile() || !expandedSection()) return;
 
 			const target = e.target as Node;
-			const expanded = mobile.expandedSection();
+			const expanded = expandedSection();
 
 			// Check if click is inside the expanded section
 			if (expanded === "publish" && publishRef?.contains(target)) return;
 			if (expanded === "settings" && settingsRef?.contains(target)) return;
 
 			// Click is outside the expanded section, so collapse
-			mobile.collapseAll();
+			collapseAll();
 		};
 		document.addEventListener("click", handleClick, true); // Use capture phase
 		onCleanup(() => document.removeEventListener("click", handleClick, true));
@@ -86,30 +98,29 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 			{/* Left: Publish section */}
 			<div
 				ref={publishRef}
-				class="fixed bottom-0 left-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto z-[11] leading-none transition-all duration-300 ease-in-out"
+				class="fixed bottom-0 left-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto leading-none transition-all duration-300 ease-in-out"
+				classList={{
+					"z-[11]": tutorial() !== 0,
+					"z-[1001]": tutorial() === 0,
+				}}
 				style={{
-					width: mobile.isMobile() && mobile.expandedSection() === "publish" ? "100vw" : "fit-content",
-					opacity:
-						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "publish"
-							? "0"
-							: "1",
+					width: mobile() && expandedSection() === "publish" ? "100vw" : "fit-content",
+					opacity: mobile() && expandedSection() && expandedSection() !== "publish" ? "0" : "1",
 					"pointer-events":
-						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "publish"
-							? "none"
-							: "auto",
+						mobile() && expandedSection() && expandedSection() !== "publish" ? "none" : "auto",
 				}}
 			>
 				<Show
-					when={!mobile.isMobile() || mobile.expandedSection() === "publish"}
+					when={!mobile() || expandedSection() === "publish"}
 					fallback={
 						<Tooltip content="Publish" position="top">
 							<button
 								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
-									mobile.toggleSection("publish");
+									toggleSection("publish");
 								}}
-								class="border hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded relative"
+								class="border hover:bg-gray-700 hover:text-purple-400 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded relative"
 								classList={{
 									"border-white": anySourceActive(),
 									"border-transparent": !anySourceActive(),
@@ -124,13 +135,13 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						</Tooltip>
 					}
 				>
-					<Show when={mobile.isMobile() && mobile.expandedSection() === "publish"}>
+					<Show when={mobile() && expandedSection() === "publish"}>
 						<Tooltip content="Close" position="top">
 							<button
 								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
-									mobile.collapseAll();
+									collapseAll();
 								}}
 								class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded text-red-500"
 								aria-label="Collapse publish menu"
@@ -143,9 +154,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						class="flex gap-4 items-end"
 						style={{
 							animation:
-								mobile.isMobile() && mobile.expandedSection() === "publish"
-									? "slideInFromLeft 0.3s ease-out"
-									: "none",
+								mobile() && expandedSection() === "publish" ? "slideInFromLeft 0.3s ease-out" : "none",
 						}}
 					>
 						<Microphone local={props.local} />
@@ -158,10 +167,14 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 			{/* Center: Chat */}
 			<div
 				ref={chatRef}
-				class="fixed bottom-0 left-1/2 -translate-x-1/2 p-4 text-shadow-lg text-xl pointer-events-auto z-[10] leading-none transition-all duration-300 ease-in-out flex items-end"
+				class="fixed bottom-0 left-1/2 -translate-x-1/2 p-4 text-shadow-lg text-xl pointer-events-auto leading-none transition-all duration-300 ease-in-out flex items-end"
+				classList={{
+					"z-[10]": tutorial() !== 1,
+					"z-[1001]": tutorial() === 1,
+				}}
 				style={{
-					opacity: mobile.isMobile() && mobile.expandedSection() ? "0" : "1",
-					"pointer-events": mobile.isMobile() && mobile.expandedSection() ? "none" : "auto",
+					opacity: mobile() && expandedSection() ? "0" : "1",
+					"pointer-events": mobile() && expandedSection() ? "none" : "auto",
 				}}
 			>
 				<Chat broadcast={props.local.camera} room={props.room} />
@@ -170,31 +183,28 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 			{/* Right: Settings section */}
 			<div
 				ref={settingsRef}
-				class="fixed bottom-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto z-[11] leading-none transition-all duration-300 ease-in-out"
+				class="fixed bottom-0 right-0 flex items-end gap-4 p-4 text-shadow-lg text-xl pointer-events-auto leading-none transition-all duration-300 ease-in-out"
+				classList={{
+					"z-[11]": tutorial() !== 2,
+					"z-[1001]": tutorial() === 2,
+				}}
 				style={{
-					width:
-						mobile.isMobile() && mobile.expandedSection() === "settings" ? "100vw" : "fit-content",
-					"justify-content":
-						mobile.isMobile() && mobile.expandedSection() === "settings" ? "flex-end" : "flex-start",
-					opacity:
-						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "settings"
-							? "0"
-							: "1",
+					width: mobile() && expandedSection() === "settings" ? "100vw" : "fit-content",
+					"justify-content": mobile() && expandedSection() === "settings" ? "flex-end" : "flex-start",
+					opacity: mobile() && expandedSection() && expandedSection() !== "settings" ? "0" : "1",
 					"pointer-events":
-						mobile.isMobile() && mobile.expandedSection() && mobile.expandedSection() !== "settings"
-							? "none"
-							: "auto",
+						mobile() && expandedSection() && expandedSection() !== "settings" ? "none" : "auto",
 				}}
 			>
 				<Show
-					when={!mobile.isMobile() || mobile.expandedSection() === "settings"}
+					when={!mobile() || expandedSection() === "settings"}
 					fallback={
 						<Tooltip content="Settings" position="top">
 							<button
 								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
-									mobile.toggleSection("settings");
+									toggleSection("settings");
 								}}
 								class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
 								aria-label="Open settings menu"
@@ -208,7 +218,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						class="flex gap-4 items-end"
 						style={{
 							animation:
-								mobile.isMobile() && mobile.expandedSection() === "settings"
+								mobile() && expandedSection() === "settings"
 									? "slideInFromRight 0.3s ease-out"
 									: "none",
 						}}
@@ -217,13 +227,13 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						<Advanced sound={props.room.space.sound} />
 						<Fullscreen canvas={props.canvas} />
 					</div>
-					<Show when={mobile.isMobile() && mobile.expandedSection() === "settings"}>
+					<Show when={mobile() && expandedSection() === "settings"}>
 						<Tooltip content="Close" position="top">
 							<button
 								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
-									mobile.collapseAll();
+									collapseAll();
 								}}
 								class="border border-transparent hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded text-red-500"
 								aria-label="Collapse settings menu"

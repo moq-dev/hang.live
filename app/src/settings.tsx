@@ -66,6 +66,11 @@ const Settings = {
 	meme: {
 		tab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
 	},
+
+	// Tutorial settings
+	tutorial: {
+		step: new Signal(Number.parseInt(localStorage.getItem("settings.tutorial.step") ?? "0", 10)),
+	},
 };
 
 const volume = Settings.audio.volume.peek();
@@ -174,6 +179,10 @@ effect.subscribe(Settings.camera.device, (device) => {
 	} else {
 		localStorage.removeItem("settings.camera.device");
 	}
+});
+
+effect.subscribe(Settings.tutorial.step, (step) => {
+	localStorage.setItem("settings.tutorial.step", step.toString());
 });
 
 // Mostly just to avoid console warnings about signals not being closed
