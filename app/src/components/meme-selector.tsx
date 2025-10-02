@@ -163,7 +163,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	return (
 		<div
 			ref={setModal}
-			class="fixed bottom-20 left-4 right-4 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 sm:w-[800px] sm:max-w-[90vw] max-h-[80vh] flex flex-col bg-black/80 border border-white/20 rounded-lg shadow-2xl pointer-events-auto backdrop-blur-lg z-[100]"
+			class="fixed bottom-20 left-1/2 -translate-x-1/2 w-[90vw] sm:w-[800px] sm:max-w-[90vw] max-h-[80vh] flex flex-col bg-black/80 border border-white/20 rounded-lg shadow-2xl pointer-events-auto backdrop-blur-lg z-[100]"
 		>
 			{/* Header with tabs */}
 			<div class="flex items-center justify-between border-b border-white/20 p-2 sm:p-3 shrink-0">
