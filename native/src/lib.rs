@@ -55,7 +55,10 @@ async fn start_server(window: tauri::Window) -> Result<u16, String> {
 		let _ = window.emit("redirect_uri", url);
 
 		// Focus the main window
-		let _ = window.get_webview_window("main").expect("no main window").set_focus();
+		#[cfg(desktop)]
+		{
+			let _ = window.get_webview_window("main").expect("no main window").set_focus();
+		}
 	})
 	.map_err(|err| err.to_string())
 }

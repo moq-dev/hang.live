@@ -6,29 +6,32 @@ import Settings from "../settings";
 export function Tutorial(): JSX.Element {
 	const step = solid(Settings.tutorial.step);
 
+	const supportsScreenShare = "mediaDevices" in navigator && "getDisplayMedia" in navigator.mediaDevices;
+
 	const steps = [
 		{
 			title: "Share Stuff",
-			description:
-				"Enable your microphone or webcam down here. Or share your screen, just make sure you close that tab first. You know the one.",
+			description: supportsScreenShare
+				? "Enable your microphone or webcam down here. Or share your screen, just make sure you close that tab first. You know the one."
+				: "Enable your microphone or camera down here.",
 			arrow: "bottom-left",
 			styles: { bottom: "5rem", left: "1rem" },
 		},
 		{
 			title: "Talk Stuff",
-			description: "Spam unfunny messages down here. There's also a dank meme selector.",
+			description: "Spam unfunny messages down here. There's also a dank meme selector below.",
 			arrow: "bottom",
 			styles: { bottom: "5rem", left: "50%", transform: "translateX(-50%)" },
 		},
 		{
 			title: "Advanced Stuff",
-			description: "I guess.",
+			description: "Cool, I guess.",
 			arrow: "bottom-right",
 			styles: { bottom: "5rem", right: "1rem" },
 		},
 		{
 			title: "Other Stuff",
-			description: "Favorite the room if you want to hang later. Or leave unannounced, cold.",
+			description: "Favorite the room if you want to hang later. Or skip the pleasantries and dip.",
 			arrow: "top-right",
 			styles: { top: "5rem", right: "1rem" },
 		},

@@ -35,7 +35,7 @@ export function Home(): JSX.Element {
 		if (!response.ok) throw new Error(`Failed to fetch favorites: ${response.statusText}`);
 
 		const data = await response.json();
-		connection.url.set(new URL(data.url));
+		connection.url.set(new URL(data.token, import.meta.env.VITE_RELAY_URL));
 		return data.favorites;
 	});
 

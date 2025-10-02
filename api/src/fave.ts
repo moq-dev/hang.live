@@ -58,8 +58,8 @@ export const router = rpc
 		}));
 
 		// Generate a token that allows subscribing to all favorited rooms
-		const url = await ctx.room.signPreview(favorites.map((f) => f.room));
-		return c.json({ favorites, url });
+		const token = await ctx.room.signPreview(favorites.map((f) => f.room));
+		return c.json({ favorites, token });
 	})
 	// Check if a room is favorited
 	.get("/:room", rpc.withParam(z.object({ room: Room.nameSchema })), Auth.required, async (c) => {

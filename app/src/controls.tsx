@@ -21,6 +21,7 @@ import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
 import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
+import * as Tauri from "./tauri";
 import { isMobile } from "./util/mobile";
 
 type MobileSection = "publish" | "chat" | "settings" | null;
@@ -647,23 +648,28 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 	};
 	const media = solid(props.local.screen.source);
 
+	// Check if getDisplayMedia is supported
+	const supportsScreenShare = "mediaDevices" in navigator && "getDisplayMedia" in navigator.mediaDevices;
+
 	return (
-		<Tooltip content={media() ? "Disable screen sharing" : "Enable screen sharing"} position="top">
-			<button
-				type="button"
-				onClick={toggle}
-				class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-				role="switch"
-				aria-checked={!!media()}
-				aria-label="Toggle screen sharing"
-				classList={{
-					"border-white": !!media(),
-					"border-transparent": !media(),
-				}}
-			>
-				<span class={media() ? "icon-[mdi--monitor-screenshot]" : "icon-[mdi--monitor-off]"} />
-			</button>
-		</Tooltip>
+		<Show when={supportsScreenShare}>
+			<Tooltip content={media() ? "Disable screen sharing" : "Enable screen sharing"} position="top">
+				<button
+					type="button"
+					onClick={toggle}
+					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
+					role="switch"
+					aria-checked={!!media()}
+					aria-label="Toggle screen sharing"
+					classList={{
+						"border-white": !!media(),
+						"border-transparent": !media(),
+					}}
+				>
+					<span class={media() ? "icon-[mdi--monitor-screenshot]" : "icon-[mdi--monitor-off]"} />
+				</button>
+			</Tooltip>
+		</Show>
 	);
 }
 
@@ -1010,16 +1016,18 @@ function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 	});
 
 	return (
-		<Tooltip content={isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"} position="top">
-			<button
-				type="button"
-				onClick={toggle}
-				aria-label="Toggle fullscreen"
-				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-			>
-				<span class="icon-[mdi--fullscreen]" />
-			</button>
-		</Tooltip>
+		<Show when={!Tauri.MOBILE}>
+			<Tooltip content={isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"} position="top">
+				<button
+					type="button"
+					onClick={toggle}
+					aria-label="Toggle fullscreen"
+					class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
+				>
+					<span class="icon-[mdi--fullscreen]" />
+				</button>
+			</Tooltip>
+		</Show>
 	);
 }
 
