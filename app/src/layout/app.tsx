@@ -4,15 +4,107 @@ import { createResource, createSignal, JSX, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";
+import Settings from "../settings";
+import { isMobile } from "../util/mobile";
 import { Logo } from "./logo";
 
 export default function App(props: { children: JSX.Element; connection: Moq.Connection.Reload; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">
-			<header class="flex items-center justify-between leading-none text-xl">
+			<Header connection={props.connection} room={props.room} />
+			{props.children}
+		</div>
+	);
+}
+
+function Header(props: { connection: Moq.Connection.Reload; room: string }) {
+	const mobile = isMobile();
+	const [showMobileNav, setShowMobileNav] = createSignal(false);
+	const activeStep = solid(Settings.tutorial.step);
+
+	return (
+		<header
+			class="flex items-center justify-between leading-none text-xl relative transition-all duration-300"
+			classList={{
+				"z-auto": activeStep() !== 3,
+				"z-[1001]": activeStep() === 3,
+			}}
+		>
+			<div
+				class="transition-opacity duration-300"
+				classList={{
+					"opacity-0": mobile() && showMobileNav(),
+					"opacity-100": !mobile() || !showMobileNav(),
+				}}
+			>
 				<Logo connection={props.connection} />
-				<div id="support" />
-				<nav class="rounded p-3 flex items-center gap-3">
+			</div>
+			<div id="support" />
+			<nav class="rounded p-3 flex items-center gap-3 transition-all duration-300 ease-in-out">
+				<Show
+					when={!mobile()}
+					fallback={
+						<Show
+							when={!showMobileNav()}
+							fallback={
+								<>
+									<div
+										class="flex items-center gap-3 transition-all duration-300 ease-in-out"
+										style={{
+											animation: "slideInFromRight 0.3s ease-out",
+										}}
+									>
+										<RoomNavMobile room={props.room} />
+									</div>
+									<button
+										type="button"
+										onClick={() => setShowMobileNav(false)}
+										class="p-2 text-red-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+										aria-label="Close navigation"
+										style={{
+											animation: "fadeIn 0.2s ease-out",
+										}}
+									>
+										<span class="icon-[mdi--close]" />
+									</button>
+									<style>
+										{`
+											@keyframes slideInFromRight {
+												from {
+													opacity: 0;
+													transform: translateX(20px);
+												}
+												to {
+													opacity: 1;
+													transform: translateX(0);
+												}
+											}
+											@keyframes fadeIn {
+												from {
+													opacity: 0;
+												}
+												to {
+													opacity: 1;
+												}
+											}
+										`}
+									</style>
+								</>
+							}
+						>
+							{/* Mobile: Just hamburger button */}
+							<button
+								type="button"
+								onClick={() => setShowMobileNav(true)}
+								class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+								aria-label="Open navigation"
+							>
+								<span class="icon-[mdi--menu]" />
+							</button>
+						</Show>
+					}
+				>
+					{/* Desktop: Show all nav items */}
 					<RoomNav room={props.room} />
 					<Tooltip content="Account settings" position="bottom">
 						<a
@@ -24,11 +116,9 @@ export default function App(props: { children: JSX.Element; connection: Moq.Conn
 							<span class="icon-[mdi--account]" />
 						</a>
 					</Tooltip>
-				</nav>
-			</header>
-
-			{props.children}
-		</div>
+				</Show>
+			</nav>
+		</header>
 	);
 }
 
@@ -50,7 +140,7 @@ function RoomNav(props: { room: string }) {
 			<Tooltip content="Leave" position="bottom">
 				<a
 					href="/home"
-					class="p-2 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					class="p-2 text-white hover:text-red-500 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 				>
 					<span class="icon-[mdi--exit-run]" />
 				</a>
@@ -64,7 +154,51 @@ function RoomNav(props: { room: string }) {
 				<button
 					type="button"
 					onClick={share}
-					class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					class="p-2 text-white hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+					classList={{
+						"animate-pulse": showCopiedNotification(),
+					}}
+				>
+					<span class="icon-[mdi--share-variant]" />
+				</button>
+			</Tooltip>
+		</>
+	);
+}
+
+function RoomNavMobile(props: { room: string }) {
+	const [showCopiedNotification, setShowCopiedNotification] = createSignal(false);
+
+	const share = async () => {
+		const url = window.location.href;
+		await navigator.clipboard.writeText(url);
+
+		setShowCopiedNotification(true);
+		setTimeout(() => {
+			setShowCopiedNotification(false);
+		}, 3000);
+	};
+
+	return (
+		<>
+			<Tooltip content="Leave" position="bottom">
+				<a
+					href="/home"
+					class="p-2 text-white hover:text-red-500 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
+				>
+					<span class="icon-[mdi--exit-run]" />
+				</a>
+			</Tooltip>
+			<FavoriteButton room={props.room} />
+			<Tooltip
+				content={showCopiedNotification() ? "Copied to clipboard" : "Copy link"}
+				position="bottom"
+				force={showCopiedNotification()}
+			>
+				<button
+					type="button"
+					onClick={share}
+					class="p-2 text-white hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 					classList={{
 						"animate-pulse": showCopiedNotification(),
 					}}
