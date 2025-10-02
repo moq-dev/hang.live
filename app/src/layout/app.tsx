@@ -30,7 +30,15 @@ function Header(props: { connection: Moq.Connection.Reload; room: string }) {
 				"z-[1001]": activeStep() === 3,
 			}}
 		>
-			<Logo connection={props.connection} />
+			<div
+				class="transition-opacity duration-300"
+				classList={{
+					"opacity-0": mobile() && showMobileNav(),
+					"opacity-100": !mobile() || !showMobileNav(),
+				}}
+			>
+				<Logo connection={props.connection} />
+			</div>
 			<div id="support" />
 			<nav class="rounded p-3 flex items-center gap-3 transition-all duration-300 ease-in-out">
 				<Show
