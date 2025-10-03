@@ -16,7 +16,7 @@ op run --env-file=".env" -- echo "1password permission granted"
 bun tauri build --$MODE --no-bundle --target "$TARGET"
 
 # Sign the app using secrets from 1password
-op run --env-file=".env" -- ./bin/tauri-bundle --$MODE --target "$TARGET"
+op run --env-file=".env" -- ./bin/sign-apple --$MODE --target "$TARGET"
 
 SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig")
 DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang_${VERSION}_*.dmg)

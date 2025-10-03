@@ -72,7 +72,12 @@ export const router = rpc
 			});
 			return c.json(info, 200);
 		},
-	);
+	)
+	.delete("/info", Auth.required, async (c) => {
+		const ctx = c.var.ctx;
+		await ctx.account.delete(c.var.account_id);
+		return c.json({ success: true }, 200);
+	});
 
 export class Context {
 	env: Env;
@@ -212,5 +217,27 @@ export class Context {
 			throw new Error("failed to update");
 		}
 		return res;
+	}
+
+	async delete(id: Id): Promise<void> {
+		// Get avatar info before deleting
+		const account = (
+			await this.db
+				.select({ avatar: table.avatar, avatarType: table.avatarType })
+				.from(table)
+				.where(eq(table.id, id))
+				.limit(1)
+		).at(0);
+
+		// Delete R2 avatar if it exists
+		if (account?.avatarType === "r2" && account.avatar) {
+			await this.storage.delete("avatar", account.avatar);
+		}
+
+		// Delete OAuth entries
+		await this.db.delete(OAuth.table).where(eq(OAuth.table.accountId, id));
+
+		// Delete account
+		await this.db.delete(table).where(eq(table.id, id));
 	}
 }

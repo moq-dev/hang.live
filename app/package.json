@@ -5,8 +5,8 @@
 	"description": "",
 	"type": "module",
 	"scripts": {
-		"dev": "vite --open",
-		"build": "vite build",
+		"dev": "bunx --bun vite --open",
+		"build": "bunx --bun vite build",
 		"check": "tsc --noEmit && biome check",
 		"fix": "biome check --fix",
 		"tauri": "tauri"

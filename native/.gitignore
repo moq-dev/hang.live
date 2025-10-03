@@ -22,3 +22,6 @@ dist/
 
 # Node modules
 node_modules/
+
+# Passwords
+gen/android/keystore.properties

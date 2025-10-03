@@ -1,6 +1,8 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"build": {
-		"devUrl": "http://$TAURI_DEV_HOST:1420"
+	"bundle": {
+		"iOS": {
+			"minimumSystemVersion": "14.0"
+		}
 	}
 }

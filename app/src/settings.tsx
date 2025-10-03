@@ -24,7 +24,7 @@ function loadTTS() {
 	return "low";
 }
 
-const Settings = {
+export const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 
 	audio: {
@@ -70,6 +70,11 @@ const Settings = {
 	// Tutorial settings
 	tutorial: {
 		step: new Signal(Number.parseInt(localStorage.getItem("settings.tutorial.step") ?? "0", 10)),
+	},
+
+	clear: () => {
+		localStorage.clear();
+		window.location.reload();
 	},
 };
 
