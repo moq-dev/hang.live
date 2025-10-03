@@ -9,9 +9,6 @@ import * as Kokoro from "./kokoro";
 env.allowLocalModels = true;
 env.allowRemoteModels = true; // Kokoro
 env.localModelPath = "/models";
-if (env.backends.onnx?.wasm) {
-	env.backends.onnx.wasm.wasmPaths = "/models/onnxruntime-web/";
-}
 
 export type Quality = "none" | "low" | "high";
 

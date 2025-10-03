@@ -1,0 +1,15 @@
+{
+	"applinks": {
+		"details": [
+			{
+				"appIDs": ["D7D5SDDB5Z.live.hang"],
+				"components": [
+					{
+						"/": "/*",
+						"comment": "Matches any URL"
+					}
+				]
+			}
+		]
+	}
+}

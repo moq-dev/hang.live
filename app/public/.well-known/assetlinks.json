@@ -1,0 +1,12 @@
+[
+	{
+		"relation": ["delegate_permission/common.handle_all_urls"],
+		"target": {
+			"namespace": "android_app",
+			"package_name": "live.hang",
+			"sha256_cert_fingerprints": [
+				"F1:4C:56:71:C7:BA:37:85:B4:C9:CF:26:18:F9:35:72:D0:4A:6F:1D:0A:6C:62:F0:E6:73:A8:38:0A:B8:2B:CF"
+			]
+		}
+	}
+]

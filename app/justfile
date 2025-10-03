@@ -13,7 +13,7 @@ upgrade:
 	bun outdated
 
 # Build the packages
-build env="dev":
+build env="development":
 	bun vite build --mode "{{env}}"
 
 # Deploy the site to Cloudflare Pages

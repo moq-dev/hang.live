@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Create a temporary directory to store the key
 TEMP_DIR=$(mktemp -d)
-#trap 'rm -rf "$TEMP_DIR"' EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Extract the key from 1Password and write to temp file
 base64 -d <<< "$ANDROID_KEYSTORE_FILE" > "$TEMP_DIR/keystore.jks"
@@ -11,10 +11,10 @@ base64 -d <<< "$ANDROID_KEYSTORE_FILE" > "$TEMP_DIR/keystore.jks"
 # Delete the keystore.properties file just in case
 # NOTE: keystore.properties is also in .gitignore
 rm -f "gen/android/keystore.properties"
-#trap 'rm -f "gen/android/keystore.properties"' EXIT
+trap 'rm -f "gen/android/keystore.properties"' EXIT
 
 echo "keyAlias=${ANDROID_KEYSTORE_ALIAS}" > "gen/android/keystore.properties"
 echo "password=${ANDROID_KEYSTORE_PASSWORD}" >> "gen/android/keystore.properties"
 echo "storeFile=${TEMP_DIR}/keystore.jks" >> "gen/android/keystore.properties"
 
-bun tauri android build "$@"
+bun tauri android "$@"

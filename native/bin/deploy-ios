@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+./bin/build-apple ios build --export-method app-store-connect
