@@ -17,15 +17,19 @@ fix:
 	cargo fmt
 	cargo clippy --fix --allow-dirty --allow-staged
 
-# Build the native app for the current platform without signing
-build:
+# Build the mac native app without signing
+build-mac:
 	bun tauri build --debug --no-bundle
-	op run --env-file=".env" -- ./bin/tauri-bundle --debug
+	op run --env-file=".env" -- ./bin/sign-apple --debug
+
+# Build the android app
+build-android:
+	op run --env-file=".env" -- ./bin/build-android --aab
 
 # Build a staging version of the app
-staging:
+staging-mac:
 	bun tauri build --debug --no-bundle --config tauri.staging.json
-	op run --env-file=".env" -- ./bin/tauri-bundle --debug --config tauri.staging.json
+	op run --env-file=".env" -- ./bin/sign-apple --debug --config tauri.staging.json
 
 # Build, sign, and upload all the platform variants for the Mac app
 deploy-mac:
@@ -44,7 +48,7 @@ android:
 	bun tauri android dev --host --open
 
 ios:
-	bun tauri ios dev
+	bun tauri ios dev --host
 
 # Generate Tauri icons from browser-generated ZIP files
 # Prerequisites: Download all ZIP files from http://localhost:1420/dev/icons to this directory

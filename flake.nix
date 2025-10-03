@@ -27,7 +27,6 @@
             cargo-shear
             cargo-edit
 			cargo-tauri
-            nodejs
             bun
             just
 

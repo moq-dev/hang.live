@@ -24,9 +24,28 @@ export function Account(): JSX.Element {
 function AccountLoad(): JSX.Element {
 	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
+	const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
+	const [deleting, setDeleting] = createSignal(false);
 
 	const handleLogout = () => {
 		Api.client.logout();
+	};
+
+	const handleDeleteAccount = async () => {
+		setDeleting(true);
+		try {
+			const response = await Api.client.routes.account.info.$delete();
+			if (response.ok) {
+				Api.client.logout();
+			} else {
+				setError("Failed to delete account. Please try again.");
+			}
+		} catch (e) {
+			setError(`Failed to delete account: ${e}`);
+		} finally {
+			setDeleting(false);
+			setShowDeleteConfirm(false);
+		}
 	};
 
 	onMount(async () => {
@@ -68,16 +87,62 @@ function AccountLoad(): JSX.Element {
 						<span class="icon-[mdi--arrow-left] w-4 h-4 mr-2" />
 						Back
 					</button>
-					<button
-						type="button"
-						onClick={handleLogout}
-						class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
-					>
-						Sign out
-						<span class="icon-[mdi--logout] w-4 h-4 ml-2" />
-					</button>
+					<div class="flex gap-4">
+						<button
+							type="button"
+							onClick={() => setShowDeleteConfirm(true)}
+							class="px-6 py-3 bg-red-800 hover:bg-red-900 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
+						>
+							<span class="icon-[mdi--account-remove] w-4 h-4 mr-2" />
+							Delete account
+						</button>
+						<button
+							type="button"
+							onClick={handleLogout}
+							class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer flex items-center"
+						>
+							Sign out
+							<span class="icon-[mdi--logout] w-4 h-4 ml-2" />
+						</button>
+					</div>
 				</div>
 			</div>
+
+			{/* Delete Confirmation Dialog */}
+			<Show when={showDeleteConfirm()}>
+				<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+					<div class="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-md mx-4">
+						<h2 class="text-2xl font-bold mb-4 text-red-400">Delete Account?</h2>
+						<p class="text-gray-300 mb-6">
+							This action cannot be undone. Your account, profile information, and all associated data will be
+							permanently deleted.
+						</p>
+						<div class="flex gap-4">
+							<button
+								type="button"
+								onClick={handleDeleteAccount}
+								disabled={deleting()}
+								class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:opacity-50 text-white rounded-xl font-medium transition-all cursor-pointer disabled:cursor-not-allowed"
+							>
+								<Show when={deleting()} fallback="Yes, delete my account">
+									<div class="flex items-center justify-center gap-2">
+										<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+										Deleting...
+									</div>
+								</Show>
+							</button>
+							<button
+								type="button"
+								onClick={() => setShowDeleteConfirm(false)}
+								disabled={deleting()}
+								class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white rounded-xl font-medium transition-all cursor-pointer disabled:cursor-not-allowed"
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
+				</div>
+			</Show>
 		</>
 	);
 }

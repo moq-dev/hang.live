@@ -20,6 +20,7 @@ import { Home } from "./home";
 import { Icons } from "./icons";
 import { NotFound } from "./not-found";
 import { Oauth } from "./oauth";
+import Privacy from "./privacy";
 import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
 
@@ -39,6 +40,7 @@ export function Hang(): JSX.Element {
 				<Route path="/account" component={() => <Account />} />
 				<Route path="/download" component={() => <Download />} />
 				<Route path="/home" component={() => <Home />} />
+				<Route path="/privacy" component={() => <Privacy />} />
 				<Route path="/oauth/*redirect" component={() => <Oauth />} />
 				{import.meta.env.DEV && <Route path="/dev/icons" component={Icons} />}
 				<Route path="*" component={() => <Fallback background={canvas} />} />

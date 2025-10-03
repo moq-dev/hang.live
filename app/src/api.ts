@@ -145,8 +145,7 @@ export class Client {
 	}
 
 	async logout(): Promise<void> {
-		Settings.oauth.token.set(undefined);
-		Settings.oauth.random.set(undefined);
+		Settings.clear();
 	}
 }
 

@@ -57,5 +57,6 @@ native:
 android:
 	cd native && just android
 
+# Open the Xcode project
 ios:
 	cd native && just ios
