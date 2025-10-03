@@ -1,29 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Create a temporary directory because APPLE_API_KEY needs to be a file
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TEMP_DIR"' EXIT
+
 VERSION=$(cargo pkgid | cut -d'@' -f2)
 
 # TODO Remove the --debug flag when it looks gud.
 MODE="debug"
 
-# ARCH is one of x86_64, aarch64, i686 or armv7
-TARGET="$ARCH-apple-darwin"
+# Extract the API key from 1Password and write to temp file
+echo "$APPLE_API_KEY_FILE" > "$TEMP_DIR/AuthKey_${APPLE_API_KEY}.p8"
+export APPLE_API_KEY_PATH="$TEMP_DIR/AuthKey_${APPLE_API_KEY}.p8"
 
-# Build the app
-./bin/build-apple --$MODE --target "$TARGET"
+# Loop over supported architectures
+for ARCH in x86_64 aarch64; do
+	echo "Building for $ARCH..."
+	TARGET="$ARCH-apple-darwin"
 
-SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig")
-DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang_${VERSION}_*.dmg)
+	# Build and sign the app
+	bun tauri build --$MODE --target "$TARGET"
 
-# Upload the artifacts to R2
-echo "Uploading artifacts to R2..."
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz"
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig"
-bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --remote --file "target/$TARGET/$MODE/bundle/dmg/$DMG"
+	SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig")
+	DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang_${VERSION}_*.dmg)
 
-# Update (but don't deploy) the version.json file
-# You'll need to deploy the app when everything looks gud.
-cat > "../app/src/version/darwin/$ARCH.json" << EOF
+	# Upload the artifacts to R2
+	echo "Uploading artifacts to R2..."
+	bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz"
+	bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.tar.gz.sig" --remote --file "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig"
+	bun wrangler r2 object put "download-hang-live/apple/$ARCH/$VERSION/hang.dmg" --remote --file "target/$TARGET/$MODE/bundle/dmg/$DMG"
+
+	# Update (but don't deploy) the version.json file
+	# You'll need to deploy the app when everything looks gud.
+	cat > "../app/src/version/darwin/$ARCH.json" << EOF
 {
 	"version": "$VERSION",
 	"url": "https://download.hang.live/apple/$ARCH/$VERSION/hang.tar.gz",
@@ -31,3 +41,4 @@ cat > "../app/src/version/darwin/$ARCH.json" << EOF
 	"url_dmg": "https://download.hang.live/apple/$ARCH/$VERSION/hang.dmg"
 }
 EOF
+done

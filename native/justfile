@@ -17,26 +17,10 @@ fix:
 	cargo fmt
 	cargo clippy --fix --allow-dirty --allow-staged
 
-# Build the mac native app
-build-mac:
-	op run --env-file=".env" -- ./bin/tauri-apple build --debug
-
-# Build the android app
-build-android:
-	op run --env-file=".env" -- ./bin/tauri-android build --debug --aab
-
-# Build the iOS app
-build-ios:
-	op run --env-file=".env" -- ./bin/tauri-apple ios build --debug
-
-# Build, sign, and upload all the platform variants for the Mac app
-deploy-mac:
-	ARCH="aarch64" op run --env-file=".env" -- ./bin/deploy-mac
-	ARCH="x86_64" op run --env-file=".env" -- ./bin/deploy-mac
-	# ARCH=universal ./bin/deploy-mac
-
-deploy-windows:
-	op run --env-file=".env" -- ./bin/deploy-windows
+# Build and upload the app for the given platform
+# NOTE: Actually deploying requires extra steps based on the platform
+deploy platform:
+	op run --env-file=".env" -- ./bin/deploy-{{platform}}
 
 # Run the native app in development mode
 dev:
