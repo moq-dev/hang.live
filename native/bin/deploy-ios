@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-./bin/build-apple ios build --export-method app-store-connect
+# Create a temporary directory because APPLE_API_KEY needs to be a file
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TEMP_DIR"' EXIT
+
+# Extract the API key from 1Password and write to temp file
+echo "$APPLE_API_KEY_FILE" > "$TEMP_DIR/AuthKey_${APPLE_API_KEY}.p8"
+export APPLE_API_KEY_PATH="$TEMP_DIR/AuthKey_${APPLE_API_KEY}.p8"
+export API_PRIVATE_KEYS_DIR="$TEMP_DIR" # For altool
+
+# Build and sign the app
+bun tauri ios build --export-method app-store-connect
+
+# Upload the app to App Store Connect
+xcrun altool --upload-app --type ios --file "gen/apple/build/arm64/hang.ipa" --apple-id "$APPLE_APP_ID" --apiKey "$APPLE_API_KEY" --apiIssuer "$APPLE_API_ISSUER"
+
+# Go here to submit it for review
+echo "https://appstoreconnect.apple.com/apps/$APPLE_APP_ID/distribution"

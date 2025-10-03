@@ -51,12 +51,12 @@ dev:
 		"cd moq && just root"
 
 native:
-	cd native && just dev "{{env}}"
+	cd native && just dev
 
 # Open the Android Studio project
 android:
-	cd native && just android "{{env}}"
+	cd native && just android
 
 # Open the Xcode project
 ios:
-	cd native && just ios "{{env}}"
+	cd native && just ios

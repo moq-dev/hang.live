@@ -29,7 +29,7 @@
 		379401DBF306137C939AB967 /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
 		3796D493745A25FF2483642C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		4889984506BFA9D38DFA28BD /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
-		5C0DF3B323ED0292E51618A0 /* hang_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; name = hang_iOS.app; path = hang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0DF3B323ED0292E51618A0 /* hang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hang.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		800490F4FC9FF809C3D6A0BD /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		9222E8423A2AD33CEDC45E1E /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		942B963CBE9E162DF1762F9D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -89,7 +89,7 @@
 		7E5433625ABA61B6264295D3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5C0DF3B323ED0292E51618A0 /* hang_iOS.app */,
+				5C0DF3B323ED0292E51618A0 /* hang.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -170,7 +170,7 @@
 			packageProductDependencies = (
 			);
 			productName = hang_iOS;
-			productReference = 5C0DF3B323ED0292E51618A0 /* hang_iOS.app */;
+			productReference = 5C0DF3B323ED0292E51618A0 /* hang.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -312,7 +312,9 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = hang_iOS/hang_iOS.entitlements;
-				CODE_SIGN_IDENTITY = "Developer ID Application: Luke Curley (D7D5SDDB5Z)";
+				CODE_SIGN_IDENTITY = "Apple Distribution: Luke Curley (D7D5SDDB5Z)";
+				CODE_SIGN_STYLE = Manual;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = "D7D5SDDB5Z";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -340,20 +342,21 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = live.hang;
 				PRODUCT_NAME = "hang";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "3a83435e-25c5-4801-ba3d-e7f438c554da";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
-				CODE_SIGN_STYLE = Manual;
-			};
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Developer ID Application: Luke Curley (D7D5SDDB5Z)";
-			name = release;
 				DEVELOPMENT_TEAM = "D7D5SDDB5Z";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution: Luke Curley (D7D5SDDB5Z)";
+				PROVISIONING_PROFILE_SPECIFIER = "3a83435e-25c5-4801-ba3d-e7f438c554da";
+			};
+				PROVISIONING_PROFILE_SPECIFIER = "3a83435e-25c5-4801-ba3d-e7f438c554da";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution: Luke Curley (D7D5SDDB5Z)";
+			name = release;
+				PROVISIONING_PROFILE_SPECIFIER = "3a83435e-25c5-4801-ba3d-e7f438c554da";
 		};
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = "D7D5SDDB5Z";
 		A981A291F13CD61156C96A03 /* debug */ = {
-				PROVISIONING_PROFILE_SPECIFIER = "eb3cd701-e59c-4680-80c2-ac78a9180737";
 			isa = XCBuildConfiguration;
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "eb3cd701-e59c-4680-80c2-ac78a9180737";
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -422,7 +425,9 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = hang_iOS/hang_iOS.entitlements;
-				CODE_SIGN_IDENTITY = "Developer ID Application: Luke Curley (D7D5SDDB5Z)";
+				CODE_SIGN_IDENTITY = "Apple Distribution: Luke Curley (D7D5SDDB5Z)";
+				CODE_SIGN_STYLE = Manual;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = "D7D5SDDB5Z";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -450,20 +455,21 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = live.hang;
 				PRODUCT_NAME = "hang";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "3a83435e-25c5-4801-ba3d-e7f438c554da";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
-				CODE_SIGN_STYLE = Manual;
-			};
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Developer ID Application: Luke Curley (D7D5SDDB5Z)";
-			name = debug;
 				DEVELOPMENT_TEAM = "D7D5SDDB5Z";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution: Luke Curley (D7D5SDDB5Z)";
+				PROVISIONING_PROFILE_SPECIFIER = "3a83435e-25c5-4801-ba3d-e7f438c554da";
+			};
+				PROVISIONING_PROFILE_SPECIFIER = "3a83435e-25c5-4801-ba3d-e7f438c554da";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution: Luke Curley (D7D5SDDB5Z)";
+			name = debug;
+				PROVISIONING_PROFILE_SPECIFIER = "3a83435e-25c5-4801-ba3d-e7f438c554da";
 		};
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = "D7D5SDDB5Z";
 /* End XCBuildConfiguration section */
-				PROVISIONING_PROFILE_SPECIFIER = "eb3cd701-e59c-4680-80c2-ac78a9180737";
 
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "eb3cd701-e59c-4680-80c2-ac78a9180737";
 /* Begin XCConfigurationList section */
 		3AF7D620D55090E38FEA24FB /* Build configuration list for PBXNativeTarget "hang_iOS" */ = {
 			isa = XCConfigurationList;
