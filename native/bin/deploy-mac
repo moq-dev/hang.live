@@ -9,14 +9,8 @@ MODE="debug"
 # ARCH is one of x86_64, aarch64, i686 or armv7
 TARGET="$ARCH-apple-darwin"
 
-# Prompt for 1password permission early
-op run --env-file=".env" -- echo "1password permission granted"
-
-# Build but don't sign the app yet, just to minimize secrets exposure
-bun tauri build --$MODE --no-bundle --target "$TARGET"
-
-# Sign the app using secrets from 1password
-op run --env-file=".env" -- ./bin/sign-apple --$MODE --target "$TARGET"
+# Build the app
+./bin/build-apple --$MODE --target "$TARGET"
 
 SIGNATURE=$(cat "target/$TARGET/$MODE/bundle/macos/hang.app.tar.gz.sig")
 DMG=$(basename target/$TARGET/$MODE/bundle/dmg/hang_${VERSION}_*.dmg)

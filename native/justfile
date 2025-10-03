@@ -17,28 +17,26 @@ fix:
 	cargo fmt
 	cargo clippy --fix --allow-dirty --allow-staged
 
-# Build the mac native app without signing
+# Build the mac native app
 build-mac:
-	bun tauri build --debug --no-bundle
-	op run --env-file=".env" -- ./bin/sign-apple --debug
+	op run --env-file=".env" -- ./bin/tauri-apple build --debug
 
 # Build the android app
 build-android:
-	op run --env-file=".env" -- ./bin/build-android --aab
+	op run --env-file=".env" -- ./bin/tauri-android build --debug --aab
 
-# Build a staging version of the app
-staging-mac:
-	bun tauri build --debug --no-bundle --config tauri.staging.json
-	op run --env-file=".env" -- ./bin/sign-apple --debug --config tauri.staging.json
+# Build the iOS app
+build-ios:
+	op run --env-file=".env" -- ./bin/tauri-apple ios build --debug
 
 # Build, sign, and upload all the platform variants for the Mac app
 deploy-mac:
-	ARCH="aarch64" ./bin/deploy-mac
-	ARCH="x86_64" ./bin/deploy-mac
+	ARCH="aarch64" op run --env-file=".env" -- ./bin/deploy-mac
+	ARCH="x86_64" op run --env-file=".env" -- ./bin/deploy-mac
 	# ARCH=universal ./bin/deploy-mac
 
 deploy-windows:
-	./bin/deploy-windows
+	op run --env-file=".env" -- ./bin/deploy-windows
 
 # Run the native app in development mode
 dev:

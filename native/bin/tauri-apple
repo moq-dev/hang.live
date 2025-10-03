@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Add the script's directory to the PATH
 # This is used to work around Tauri requiring the system base64
-PATH="$(dirname "$0"):$PATH"
+#PATH="$(dirname "$0"):$PATH"
 
 # Create a temporary directory because APPLE_API_KEY needs to be a file
 TEMP_DIR=$(mktemp -d)
@@ -15,6 +15,6 @@ export APPLE_API_KEY_PATH="$TEMP_DIR/AuthKey.p8"
 
 # Don't use the Nix provided SDK.
 # We need XCode proper in order to use notarytool.
-export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+#export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 
-bun tauri bundle "$@"
+bun tauri "$@"

@@ -6,11 +6,8 @@ VERSION=$(cargo pkgid | cut -d'@' -f2)
 # TODO Remove the --debug flag when it looks gud.
 MODE="debug"
 
-# Build but don't sign the app yet, just to minimize secrets exposure
-bun tauri build --$MODE --no-bundle
-
-# Sign the app using secrets from 1password
-op run --env-file=".env" -- bun tauri bundle --$MODE
+# Build and sign the app
+bun tauri build --$MODE
 
 SIGNATURE=$(cat "target/$MODE/bundle/nsis/hang_${VERSION}_x64-setup.exe.sig")
 

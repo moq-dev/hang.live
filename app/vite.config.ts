@@ -6,17 +6,9 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-	const apiUrl = process.env.TAURI_DEV_HOST ? `http://${process.env.TAURI_DEV_HOST}:3000` : process.env.VITE_API_URL;
-	const appUrl = process.env.TAURI_DEV_HOST ? `http://${process.env.TAURI_DEV_HOST}:1420` : process.env.VITE_APP_URL;
-	const relayUrl = process.env.TAURI_DEV_HOST ? `http://${process.env.TAURI_DEV_HOST}:4443` : process.env.VITE_RELAY_URL;
-
 	return {
 		define: {
 			TAURI: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM),
-			// Rewrite the env vars to use the correct host.
-			"import.meta.env.VITE_API_URL": JSON.stringify(apiUrl),
-			"import.meta.env.VITE_APP_URL": JSON.stringify(appUrl),
-			"import.meta.env.VITE_RELAY_URL": JSON.stringify(relayUrl),
 		},
 		envPrefix: ["VITE_", "TAURI_ENV_"],
 		build: {
@@ -41,14 +33,6 @@ export default defineConfig(({ mode }) => {
 			tailwindcss(),
 			viteStaticCopy({
 				targets: [
-					// We copy onnxruntime-web locally so it gets bundled with the app, not downloaded at runtime.
-					{
-						src: [
-							"../node_modules/onnxruntime-web/dist/ort-wasm-*",
-							"../node_modules/onnxruntime-web/dist/ort.bundle.min.mjs",
-						],
-						dest: "models/onnxruntime-web",
-					},
 					// We copy the version files otherwise Vite yells at us importing JSON modules.
 					{
 						src: "src/version/*",
