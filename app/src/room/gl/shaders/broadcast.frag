@@ -1,0 +1,47 @@
+#version 300 es
+precision highp float;
+
+in vec2 v_texCoord;
+in vec2 v_pos;
+
+uniform sampler2D u_texture;
+uniform sampler2D u_avatarTexture;
+uniform bool u_hasTexture;
+uniform bool u_hasAvatar;
+uniform float u_radius;
+uniform vec2 u_size;
+uniform float u_opacity;
+uniform float u_avatarTransition; // 0 = avatar, 1 = video
+
+out vec4 fragColor;
+
+// Signed distance function for rounded rectangle
+float roundedBoxSDF(vec2 center, vec2 size, float radius) {
+	vec2 q = abs(center) - size + radius;
+	return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius;
+}
+
+void main() {
+	// Calculate position from center
+	vec2 center = (v_pos - 0.5) * u_size;
+
+	// Calculate SDF for rounded corners
+	float dist = roundedBoxSDF(center, u_size * 0.5, u_radius);
+
+	// Discard pixels outside the rounded rectangle
+	if (dist > 0.0) {
+		discard;
+	}
+
+	// Smooth edge antialiasing
+	float alpha = 1.0 - smoothstep(-1.0, 0.0, dist);
+
+	// Sample textures
+	vec4 videoColor = u_hasTexture ? texture(u_texture, v_texCoord) : vec4(0.0, 0.0, 0.0, 1.0);
+	vec4 avatarColor = u_hasAvatar ? texture(u_avatarTexture, v_texCoord) : vec4(0.0, 0.0, 0.0, 1.0);
+
+	// Blend between avatar and video based on transition
+	vec4 texColor = mix(avatarColor, videoColor, u_avatarTransition);
+
+	fragColor = vec4(texColor.rgb, texColor.a * alpha * u_opacity);
+}

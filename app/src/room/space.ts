@@ -3,6 +3,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
+import { BroadcastRenderer } from "./gl/broadcast-renderer";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {
@@ -30,6 +31,9 @@ export class Space {
 
 	#maxZ = 0;
 
+	// WebGL renderer
+	#broadcastRenderer: BroadcastRenderer;
+
 	// Touch handling for mobile
 	#touches = new Map<number, { x: number; y: number }>();
 	#pinchStartDistance = 0;
@@ -41,6 +45,9 @@ export class Space {
 		this.canvas = canvas;
 		this.sound = sound;
 		this.profile = props?.profile ?? false;
+
+		// Initialize WebGL renderer
+		this.#broadcastRenderer = new BroadcastRenderer(canvas.gl);
 
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
@@ -56,10 +63,16 @@ export class Space {
 
 		this.#signals.effect(this.#runScale.bind(this));
 
-		// This is a bit of a hack, but register our render method.
-		this.canvas.onRender = this.#tick.bind(this);
+		// Register tick and render methods separately
+		this.canvas.onRender = this.#render.bind(this);
 		this.#signals.cleanup(() => {
 			this.canvas.onRender = undefined;
+		});
+
+		// Run tick separately from render at 60fps
+		this.#signals.effect((effect) => {
+			const interval = setInterval(() => this.#tickAll(), 1000 / 60);
+			effect.cleanup(() => clearInterval(interval));
 		});
 	}
 
@@ -385,6 +398,9 @@ export class Space {
 	add(id: string, source: BroadcastSource): Broadcast {
 		const broadcast = new Broadcast({ source, canvas: this.canvas, sound: this.sound, scale: this.#scale });
 
+		// Set GL context for video texture uploads
+		broadcast.video.setGLContext(this.canvas.gl.gl);
+
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.
 		broadcast.position.update((prev) => ({
@@ -495,7 +511,8 @@ export class Space {
 		return all;
 	}
 
-	#tick(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
+	// Tick physics separately from rendering
+	#tickAll() {
 		for (const broadcast of this.#rip) {
 			broadcast.tick();
 		}
@@ -534,89 +551,60 @@ export class Space {
 				b.velocity = b.velocity.sub(force);
 			}
 		}
-
-		this.#render(ctx, now);
 	}
 
-	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
-		// Render the audio click prompt if audio is suspended
-		if (this.sound.suspended.peek() && !this.profile) {
-			this.#renderAudioPrompt(ctx);
-		}
+	// Render using WebGL
+	#render(now: DOMHighResTimeStamp) {
+		// TODO: Render the audio click prompt if audio is suspended
+		// if (this.sound.suspended.peek() && !this.profile) {
+		// 	this.#renderAudioPrompt();
+		// }
 
 		const broadcasts = this.ordered.peek();
-		for (const broadcast of broadcasts) {
-			broadcast.audio.renderBackground(ctx);
-		}
 
-		for (const broadcast of broadcasts) {
-			broadcast.audio.render(ctx);
-		}
+		// TODO: Render audio visualization backgrounds
+		// for (const broadcast of broadcasts) {
+		// 	// Audio background rendering
+		// }
 
-		// Broadcasts fading out don't have collision so they're in a separate structure.
+		// TODO: Render audio visualization
+		// for (const broadcast of broadcasts) {
+		// 	// Audio visualization rendering
+		// }
+
+		// Render broadcasts fading out
 		for (const broadcast of this.#rip) {
-			broadcast.video.render(now, ctx);
+			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
 
+		// Render all broadcasts (except dragging)
 		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
-				ctx.save();
-				broadcast.video.render(now, ctx, {
+				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, {
 					hovering: this.#hovering === broadcast || this.profile,
 				});
-				ctx.restore();
 			}
 		}
 
-		// Render the dragging broadcast last so it's always on top.
+		// Render the dragging broadcast last so it's always on top
 		if (this.#dragging) {
-			ctx.save();
-			ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-			this.#dragging.video.render(now, ctx, { dragging: true });
-			ctx.restore();
+			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, {
+				dragging: true,
+			});
 		}
 
-		// Render the locator arrows for our broadcasts on join.
-		for (const broadcast of broadcasts) {
-			if (broadcast.source instanceof Publish.Broadcast) {
-				broadcast.renderLocator(now, ctx);
-			}
-		}
+		// TODO: Render the locator arrows for our broadcasts on join
+		// for (const broadcast of broadcasts) {
+		// 	if (broadcast.source instanceof Publish.Broadcast) {
+		// 		broadcast.renderLocator(now);
+		// 	}
+		// }
 	}
 
-	#renderAudioPrompt(ctx: CanvasRenderingContext2D) {
-		ctx.save();
-
-		// Use logical dimensions (CSS pixels)
-		const width = ctx.canvas.width / window.devicePixelRatio;
-		const padding = 30;
-		const boxWidth = 400;
-		const height = 80;
-		const y = ctx.canvas.height / window.devicePixelRatio - height - padding;
-		const x = (width - boxWidth) / 2;
-		const borderRadius = 16;
-
-		// Rounded rectangle with thick black border
-		ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
-		ctx.beginPath();
-		ctx.roundRect(x, y, boxWidth, height, borderRadius);
-		ctx.fill();
-
-		// Thick border
-		ctx.strokeStyle = "rgba(0, 0, 0, 1)";
-		ctx.lineWidth = 6;
-		ctx.stroke();
-
-		// Text
-		const fontSize = Math.round(24); // round to avoid busting font caches
-		ctx.font = `${fontSize}px sans-serif`;
-		ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillText("🔊 Click to enable audio", width * 0.5, y + height / 2);
-
-		ctx.restore();
-	}
+	// TODO: Implement audio prompt with WebGL or DOM overlay
+	// #renderAudioPrompt() {
+	// 	// "🔊 Click to enable audio"
+	// }
 
 	#runScale(effect: Effect) {
 		const broadcasts = effect.get(this.ordered);
@@ -654,6 +642,9 @@ export class Space {
 		this.#rip = [];
 		this.ordered.set([]);
 		this.lookup.clear();
+
+		// Cleanup WebGL resources
+		this.#broadcastRenderer.cleanup();
 	}
 
 	// Publish the current position to the network.

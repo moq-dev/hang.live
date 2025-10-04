@@ -33,6 +33,9 @@
             # Icon generation tools
             imagemagick
             libicns  # provides png2icns
+
+			# Shader validation
+			glslang
           ];
         };
 

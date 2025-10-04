@@ -281,78 +281,15 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		return false;
 	}
 
-	// Render a locator arrow for our local broadcasts on join
-	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
-		if (!this.source.enabled.peek()) return;
-
-		if (!this.visible.peek()) {
-			this.#locatorStart = undefined;
-			return;
-		}
-
-		if (!this.#locatorStart) {
-			this.#locatorStart = now;
-		}
-
-		const elapsed = now - this.#locatorStart;
-		const alpha = Math.min(Math.max((7000 - elapsed) / (10000 - 8000), 0), 1);
-		if (alpha <= 0) {
-			return;
-		}
-
-		const bounds = this.bounds.peek();
-
-		ctx.save();
-		ctx.globalAlpha *= alpha;
-
-		// Calculate arrow position and animation
-		const arrowSize = 12 * this.zoom.peek();
-		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * this.zoom.peek();
-
-		const gap = 2 * (arrowSize + offset);
-
-		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2, 0), ctx.canvas.width);
-		const y = Math.min(Math.max(bounds.position.y, 2 * gap), ctx.canvas.height);
-
-		ctx.translate(x, y - gap);
-		ctx.scale(pulseScale, pulseScale);
-
-		ctx.beginPath();
-		ctx.moveTo(0, arrowSize);
-		ctx.lineTo(-arrowSize / 2, 0);
-		ctx.lineTo(arrowSize / 2, 0);
-		ctx.closePath();
-
-		// Style the arrow
-		ctx.lineWidth = 4 * this.zoom.peek();
-		ctx.strokeStyle = "#000"; // Gold color
-		ctx.fillStyle = "#FFD700";
-		ctx.stroke();
-		ctx.fill();
-
-		// Draw "YOU" text
-		const fontSize = Math.round(32 * this.zoom.peek()); // round to avoid busting font caches
-		ctx.font = `bold ${fontSize}px Arial`;
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillStyle = "#FFD700";
-		ctx.strokeText("YOU", 0, -arrowSize - offset);
-		ctx.fillText("YOU", 0, -arrowSize - offset);
-
-		/*
-		// Add a subtle glow effect
-		ctx.shadowColor = "#FFD700";
-		ctx.shadowBlur = 10 * fontScale;
-		ctx.stroke();
-		*/
-
-		ctx.restore();
-	}
+	// TODO: Implement locator arrow with WebGL
+	// renderLocator(now: DOMHighResTimeStamp) {
+	// 	// Render "YOU" arrow above broadcast
+	// }
 
 	close() {
 		this.signals.close();
 		this.audio.close();
+		this.video.close();
 		this.chat.close();
 		this.captions.close();
 

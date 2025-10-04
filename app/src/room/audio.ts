@@ -134,95 +134,14 @@ export class Audio {
 		}
 	}
 
-	renderBackground(ctx: CanvasRenderingContext2D) {
-		ctx.save();
+	// TODO: Audio visualization will be implemented with WebGL shaders
+	// renderBackground(ctx: CanvasRenderingContext2D) {
+	// 	// Black background outline
+	// }
 
-		const bounds = this.broadcast.bounds.peek();
-
-		ctx.translate(bounds.position.x, bounds.position.y);
-
-		const RADIUS = 12 * this.broadcast.zoom.peek();
-		const PADDING = 12 * this.broadcast.zoom.peek();
-
-		// Background outline
-		ctx.beginPath();
-		this.#roundedRectPath(
-			ctx,
-			-PADDING,
-			-PADDING,
-			bounds.size.x + PADDING * 2,
-			bounds.size.y + PADDING * 2,
-			RADIUS,
-		);
-		ctx.fillStyle = "#000";
-		ctx.fill();
-
-		ctx.restore();
-	}
-
-	render(ctx: CanvasRenderingContext2D) {
-		// Compute average volume
-		const analyserBuffer = this.sound.analyze();
-		if (!analyserBuffer) return; // undefined in potato mode
-
-		const bounds = this.broadcast.bounds.peek();
-		const scale = this.broadcast.zoom.peek();
-
-		ctx.save();
-		ctx.translate(bounds.position.x, bounds.position.y);
-
-		const PADDING = 12 * scale;
-		const RADIUS = 12 * scale;
-
-		// Take the absolute value of the distance from 128, which is silence.
-		for (let i = 0; i < this.#analyserBuffer.length; i++) {
-			analyserBuffer[i] = Math.abs(analyserBuffer[i] - 128);
-		}
-
-		// If the audio is playing, combine the buffers.
-		if (this.#analyser) {
-			if (this.#analyserBuffer.length !== analyserBuffer.length) {
-				throw new Error("analyser buffer length mismatch");
-			}
-
-			this.#analyser.getByteTimeDomainData(this.#analyserBuffer);
-			for (let i = 0; i < this.#analyserBuffer.length; i++) {
-				analyserBuffer[i] += Math.abs(this.#analyserBuffer[i] - 128);
-			}
-		}
-
-		let sum = 0;
-		for (let i = 0; i < this.#analyserBuffer.length; i++) {
-			const sample = analyserBuffer[i];
-			sum += sample * sample;
-		}
-		const volume = Math.sqrt(sum) / this.#analyserBuffer.length;
-		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
-
-		// Colored fill based on volume and speaking state
-		const expand = PADDING * Math.min(1, this.#volumeSmoothed - 0.01);
-
-		ctx.beginPath();
-		this.#roundedRectPath(ctx, -expand, -expand, bounds.size.x + expand * 2, bounds.size.y + expand * 2, RADIUS);
-
-		const hue = 180 + this.#volumeSmoothed * 120;
-		const alpha = 0.3 + this.#volumeSmoothed * 0.4;
-
-		ctx.fillStyle = `hsla(${hue}, 80%, 45%, ${alpha})`;
-		ctx.fill();
-
-		// Ramp up/down the speaking alpha based on the speaking state.
-		this.#speakingAlpha = Math.max(Math.min(1, this.#speakingAlpha + (this.#speaking ? 0.1 : -0.1)), 0);
-
-		// Add an additional border if we're speaking, ramping up/down the alpha
-		if (this.#speakingAlpha > 0) {
-			ctx.strokeStyle = `hsla(${hue}, 80%, 45%, ${this.#speakingAlpha})`;
-			ctx.lineWidth = 6 * scale;
-			ctx.stroke();
-		}
-
-		ctx.restore();
-	}
+	// render(ctx: CanvasRenderingContext2D) {
+	// 	// Audio visualization with colored fill based on volume
+	// }
 
 	#roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
 		const maxR = Math.min(r, w / 2, h / 2);

@@ -28,6 +28,8 @@ export default defineConfig(({ mode }) => {
 			format: "es" as const,
 		},
 
+		assetsInclude: ["**/*.glsl", "**/*.vert", "**/*.frag"],
+
 		plugins: [
 			solid(),
 			tailwindcss(),

@@ -34,11 +34,32 @@ export class Video {
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
+	// WebGL textures for this broadcast
+	texture?: WebGLTexture; // Video texture
+	avatarTexture?: WebGLTexture; // Avatar texture
+	#gl?: WebGL2RenderingContext;
+
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 		this.broadcast.signals.effect(this.#runAvatar.bind(this));
 		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
 		this.broadcast.signals.effect(this.#runFrame.bind(this));
+	}
+
+	setGLContext(gl: WebGL2RenderingContext) {
+		this.#gl = gl;
+
+		// Create the textures
+		this.texture = gl.createTexture();
+		if (!this.texture) throw new Error("Failed to create video texture");
+
+		this.avatarTexture = gl.createTexture();
+		if (!this.avatarTexture) throw new Error("Failed to create avatar texture");
+
+		// Set up texture upload effects
+		this.broadcast.signals.effect(this.#uploadVideoTexture.bind(this));
+		this.broadcast.signals.effect(this.#uploadAvatarTexture.bind(this));
+		// TODO: Add meme texture upload effect
 	}
 
 	#runAvatar(effect: Effect) {
@@ -53,11 +74,28 @@ export class Video {
 
 		// TODO only set the avatar if it successfully loads
 		const newAvatar = new Image();
+
+		// For SVGs, load at higher resolution to avoid pixelation
+		// Set a reasonable size (e.g., 512x512) for better quality
+		if (avatar.endsWith('.svg')) {
+			newAvatar.width = 512;
+			newAvatar.height = 512;
+		}
+
 		newAvatar.src = avatar;
 
 		const load = () => {
 			this.avatar = newAvatar;
-			this.avatarSize.set(Vector.create(newAvatar.width, newAvatar.height));
+			this.avatarSize.set(Vector.create(newAvatar.naturalWidth || newAvatar.width, newAvatar.naturalHeight || newAvatar.height));
+
+			// Upload avatar texture after it loads
+			if (this.#gl && this.avatarTexture) {
+				try {
+					this.#uploadImageToAvatarTexture(this.avatar);
+				} catch (err) {
+					console.error("Failed to upload avatar texture on load:", err);
+				}
+			}
 		};
 
 		effect.event(newAvatar, "load", load);
@@ -99,6 +137,89 @@ export class Video {
 		}
 	}
 
+	// Effect: Upload video frame to texture when it changes
+	#uploadVideoTexture(effect: Effect) {
+		if (!this.#gl || !this.texture) return;
+
+		// Listen to the actual video frame signal from the source
+		let frame: VideoFrame | HTMLVideoElement | undefined;
+
+		if (this.broadcast.source instanceof FakeBroadcast) {
+			frame = effect.get(this.broadcast.source.video.frame);
+		} else {
+			frame = effect.get(this.broadcast.source.video.frame);
+		}
+
+		if (!frame) {
+			// No video frame available
+			return;
+		}
+
+		try {
+			if (frame instanceof VideoFrame) {
+				this.#uploadVideoFrameToTexture(frame);
+			} else if (frame instanceof HTMLVideoElement) {
+				this.#uploadVideoElementToTexture(frame);
+			}
+		} catch (err) {
+			console.error("Failed to upload video texture:", err);
+		}
+	}
+
+	// Effect: Upload avatar to texture when it loads
+	#uploadAvatarTexture(effect: Effect) {
+		if (!this.#gl || !this.avatarTexture) return;
+
+		// Listen to the avatar signal
+		const avatarUrl = effect.get(this.broadcast.source.user.avatar);
+		if (!avatarUrl) return;
+
+		// Wait for the image to load
+		if (!this.avatar.complete || this.avatar.src !== avatarUrl) {
+			return;
+		}
+
+		try {
+			this.#uploadImageToAvatarTexture(this.avatar);
+		} catch (err) {
+			console.error("Failed to upload avatar texture:", err);
+		}
+	}
+
+	#uploadVideoFrameToTexture(frame: VideoFrame) {
+		const gl = this.#gl!;
+		gl.bindTexture(gl.TEXTURE_2D, this.texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, frame);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
+
+	#uploadVideoElementToTexture(video: HTMLVideoElement) {
+		const gl = this.#gl!;
+		gl.bindTexture(gl.TEXTURE_2D, this.texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
+
+	#uploadImageToAvatarTexture(image: HTMLImageElement) {
+		const gl = this.#gl!;
+		gl.bindTexture(gl.TEXTURE_2D, this.avatarTexture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
+
 	tick() {
 		if (this.frame) {
 			this.avatarTransition = Math.min(this.avatarTransition + 0.05, 1);
@@ -118,7 +239,22 @@ export class Video {
 		*/
 	}
 
-	// Try to avoid any mutations in this function; do it in tick instead.
+	close() {
+		if (this.#gl) {
+			if (this.texture) {
+				this.#gl.deleteTexture(this.texture);
+				this.texture = undefined;
+			}
+			if (this.avatarTexture) {
+				this.#gl.deleteTexture(this.avatarTexture);
+				this.avatarTexture = undefined;
+			}
+		}
+	}
+
+	// TODO: Rendering is now handled by WebGL in space.ts
+	// This method is kept for reference but will be removed
+	/*
 	render(
 		_now: DOMHighResTimeStamp,
 		ctx: CanvasRenderingContext2D,
@@ -353,4 +489,5 @@ export class Video {
 
 		ctx.restore();
 	}
+	*/
 }
