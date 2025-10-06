@@ -1,4 +1,5 @@
 import { Effect, Signal } from "@kixelated/signals";
+import Settings from "../settings";
 import { Vector } from "./geometry";
 import { BackgroundRenderer } from "./gl/background";
 import { Camera } from "./gl/camera";
@@ -54,12 +55,13 @@ export class Canvas {
 
 		const resize = (entries: ResizeObserverEntry[]) => {
 			for (const entry of entries) {
-				// Get device pixel dimensions
-				const dpr = window.devicePixelRatio;
-				const width = entry.devicePixelContentBoxSize?.[0].inlineSize ??
-					entry.contentBoxSize[0].inlineSize * dpr;
-				const height = entry.devicePixelContentBoxSize?.[0].blockSize ??
-					entry.contentBoxSize[0].blockSize * dpr;
+				// Get device pixel dimensions using the user's configured ratio
+				const dpr = Settings.rendering.devicePixelRatio.peek();
+
+				// Always use contentBoxSize and multiply by our custom ratio
+				// to ensure we respect the user's setting
+				const width = entry.contentBoxSize[0].inlineSize * dpr;
+				const height = entry.contentBoxSize[0].blockSize * dpr;
 
 				const newWidth = Math.max(1, Math.floor(width));
 				const newHeight = Math.max(1, Math.floor(height));
@@ -96,16 +98,18 @@ export class Canvas {
 		visible();
 
 		// Set up ResizeObserver for canvas
+		// Use content-box so we can apply our custom devicePixelRatio setting
 		const resizeObserver = new ResizeObserver(resize);
-		try {
-			// Try to observe device-pixel-content-box for pixel-perfect sizing
-			resizeObserver.observe(this.#canvas, { box: "device-pixel-content-box" });
-		} catch {
-			// Fallback to content-box if device-pixel-content-box is not supported
-			resizeObserver.observe(this.#canvas, { box: "content-box" });
-		}
+		resizeObserver.observe(this.#canvas, { box: "content-box" });
 
 		this.#signals.event(document, "visibilitychange", visible);
+
+		// Trigger resize when devicePixelRatio setting changes
+		this.#signals.subscribe(Settings.rendering.devicePixelRatio, () => {
+			// Force a resize by temporarily disconnecting and reconnecting
+			resizeObserver.disconnect();
+			resizeObserver.observe(this.#canvas, { box: "content-box" });
+		});
 
 		this.#signals.cleanup(() => {
 			resizeObserver.disconnect();
