@@ -1,9 +1,11 @@
 import { Publish, Watch } from "@kixelated/hang";
 import * as Moq from "@kixelated/moq";
-import { Effect } from "@kixelated/signals";
+import { Effect, Signal } from "@kixelated/signals";
 import Settings from "../settings";
+import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
+import { Locator } from "./locator";
 import { Space } from "./space";
 
 export interface RoomProps {
@@ -23,6 +25,9 @@ export class Room {
 
 	// The physics space for the room.
 	space: Space;
+
+	#cameraBroadcast = new Signal<Broadcast<Publish.Broadcast> | undefined>(undefined);
+	#shareBroadcast = new Signal<Broadcast<Publish.Broadcast> | undefined>(undefined);
 
 	#signals = new Effect();
 
@@ -54,6 +59,30 @@ export class Room {
 		this.#signals.timer(() => {
 			this.space.sound?.tts.enabled.set(true);
 		}, 1000);
+
+		// Manage the locator for the camera broadcast
+		this.#signals.effect((effect) => {
+			const cameraBroadcast = effect.get(this.#cameraBroadcast);
+			if (!cameraBroadcast) return;
+
+			const locator = new Locator(cameraBroadcast);
+			effect.cleanup(() => locator.close());
+
+			// Auto-close after 8 seconds (7s visible + 1s fade transition)
+			effect.timer(() => locator.close(), 8000);
+		});
+
+		// Manage the locator for the share broadcast
+		this.#signals.effect((effect) => {
+			const shareBroadcast = effect.get(this.#shareBroadcast);
+			if (!shareBroadcast) return;
+
+			const locator = new Locator(shareBroadcast);
+			effect.cleanup(() => locator.close());
+
+			// Auto-close after 8 seconds (7s visible + 1s fade transition)
+			effect.timer(() => locator.close(), 8000);
+		});
 	}
 
 	async #run(announced: Moq.Announced) {
@@ -61,20 +90,27 @@ export class Room {
 			const update = await announced.next();
 			if (!update) break;
 
-			let local: Publish.Broadcast | undefined;
 			if (update.path === this.local.camera.path.peek()) {
-				local = this.local.camera;
-			} else if (update.path === this.local.share.path.peek()) {
-				local = this.local.share;
+				if (update.active) {
+					const broadcast = this.space.add(update.path, this.local.camera);
+					this.#cameraBroadcast.set(broadcast as Broadcast<Publish.Broadcast>);
+				} else {
+					this.space.remove(update.path);
+					this.#cameraBroadcast.set(undefined);
+				}
+
+				continue;
 			}
 
-			if (local) {
+			if (update.path === this.local.share.path.peek()) {
 				if (update.active) {
-					this.space.add(update.path, local);
+					const broadcast = this.space.add(update.path, this.local.share);
+					this.#shareBroadcast.set(broadcast as Broadcast<Publish.Broadcast>);
 				} else {
-					// NOTE: We don't close local sources so we can toggle them.
 					this.space.remove(update.path);
+					this.#shareBroadcast.set(undefined);
 				}
+
 				continue;
 			}
 

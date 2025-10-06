@@ -604,13 +604,6 @@ export class Space {
 				dragging: true,
 			});
 		}
-
-		// TODO: Render the locator arrows for our broadcasts on join
-		// for (const broadcast of broadcasts) {
-		// 	if (broadcast.source instanceof Publish.Broadcast) {
-		// 		broadcast.renderLocator(now);
-		// 	}
-		// }
 	}
 
 	// TODO: Implement audio prompt with WebGL or DOM overlay

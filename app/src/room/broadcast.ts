@@ -67,9 +67,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	scale: Signal<number>; // room scale, 1 is 100%
 	zoom = new Signal<number>(1.0); // local zoom, 1 is 100%
 
-	// Show a locator arrow for 8 seconds to show our position on join.
-	#locatorStart?: DOMHighResTimeStamp;
-
 	signals = new Effect();
 
 	constructor(props: BroadcastProps<T>) {
@@ -281,11 +278,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		return false;
 	}
-
-	// TODO: Implement locator arrow with WebGL
-	// renderLocator(now: DOMHighResTimeStamp) {
-	// 	// Render "YOU" arrow above broadcast
-	// }
 
 	close() {
 		this.signals.close();
