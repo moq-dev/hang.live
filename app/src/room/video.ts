@@ -31,6 +31,9 @@ export class Video {
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
+	// Cached meme bounds (x_offset, y_offset, width_scale, height_scale)
+	memeBounds = { x: 0, y: 0, width: 1, height: 1 };
+
 	// WebGL textures for this broadcast
 	webcamTexture: WebGLTexture; // Video texture
 	avatarTexture: WebGLTexture; // Avatar texture
@@ -50,6 +53,7 @@ export class Video {
 		// Set up texture upload effects
 		this.broadcast.signals.effect(this.#runWebcam.bind(this));
 		this.broadcast.signals.effect(this.#runMeme.bind(this));
+		this.broadcast.signals.effect(this.#runMemeBounds.bind(this));
 		this.broadcast.signals.effect(this.#runAvatar.bind(this));
 		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
 	}
@@ -142,6 +146,90 @@ export class Video {
 		if (!(meme instanceof HTMLVideoElement)) return;
 
 		this.#videoToTexture(effect, meme, this.memeTexture);
+	}
+
+	#runMemeBounds(effect: Effect) {
+		const meme = effect.get(this.broadcast.meme);
+		if (!meme || !(meme instanceof HTMLVideoElement)) {
+			return;
+		}
+
+		// Also react to bounds changes
+		const bounds = effect.get(this.broadcast.bounds);
+
+		// Wait until video metadata is loaded
+		if (meme.videoWidth === 0 || meme.videoHeight === 0) return;
+
+		// Get meme configuration
+		const memeName = effect.get(this.broadcast.memeName);
+		let fit: "contain" | "cover" = "cover";
+		let position = "center";
+
+		if (memeName) {
+			const lookupKey = memeName.toLowerCase().replace(/-/g, "");
+			const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
+			const memeData = MEME_VIDEO[memeKey as MemeVideoName];
+			if (memeData) {
+				fit = memeData.fit || "cover";
+				position = memeData.position || "center";
+			}
+		}
+
+		// Calculate meme bounds based on fit and position
+		const aspectRatio = meme.videoWidth / meme.videoHeight;
+		const boundsAspectRatio = bounds.size.x / bounds.size.y;
+		let width: number;
+		let height: number;
+
+		if (fit === "contain") {
+			// Fit entire video within bounds
+			if (aspectRatio > boundsAspectRatio) {
+				width = 1.0;
+				height = boundsAspectRatio / aspectRatio;
+			} else {
+				height = 1.0;
+				width = aspectRatio / boundsAspectRatio;
+			}
+		} else {
+			// cover: fill the bounds (may crop)
+			if (aspectRatio > boundsAspectRatio) {
+				height = 1.0;
+				width = aspectRatio / boundsAspectRatio;
+			} else {
+				width = 1.0;
+				height = boundsAspectRatio / aspectRatio;
+			}
+		}
+
+		// Parse position string
+		let xPos = 0.5;
+		let yPos = 0.5;
+
+		const positionParts = position.toLowerCase().split(/\s+/);
+		for (const part of positionParts) {
+			if (part === "left") xPos = 0;
+			else if (part === "right") xPos = 1;
+			else if (part === "top") yPos = 0;
+			else if (part === "bottom") yPos = 1;
+			else if (part === "center") {
+				// Keep defaults
+			} else if (part.endsWith("%")) {
+				const value = parseFloat(part) / 100;
+				if (positionParts.length === 1) {
+					xPos = value;
+				} else if (positionParts.indexOf(part) === 0) {
+					xPos = value;
+				} else {
+					yPos = value;
+				}
+			}
+		}
+
+		// Calculate offset in texture coordinates (0-1 range)
+		this.memeBounds.x = (1.0 - width) * xPos;
+		this.memeBounds.y = (1.0 - height) * yPos;
+		this.memeBounds.width = width;
+		this.memeBounds.height = height;
 	}
 
 	#frameToTexture(src: VideoFrame, dst: WebGLTexture) {

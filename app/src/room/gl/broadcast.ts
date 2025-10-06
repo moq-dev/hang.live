@@ -1,6 +1,5 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
-import { MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "../meme";
 import type { Camera } from "./camera";
 import { Attribute, Shader, Uniform1f, Uniform1i, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
 import broadcastFragSource from "./shaders/broadcast.frag?raw";
@@ -204,77 +203,9 @@ export class BroadcastRenderer {
 			this.#u_hasMeme.set(1);
 			this.#u_memeOpacity.set(broadcast.video.memeOpacity);
 
-			// Get meme configuration
-			const memeName = broadcast.memeName.peek();
-			let fit: "contain" | "cover" = "cover";
-			let position = "center";
-
-			if (memeName) {
-				const lookupKey = memeName.toLowerCase().replace(/-/g, "");
-				const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
-				const memeData = MEME_VIDEO[memeKey as MemeVideoName];
-				if (memeData) {
-					fit = memeData.fit || "cover";
-					position = memeData.position || "center";
-				}
-			}
-
-			// Calculate meme bounds based on fit and position
-			const aspectRatio = meme.videoWidth / meme.videoHeight;
-			const boundsAspectRatio = bounds.size.x / bounds.size.y;
-			let width: number;
-			let height: number;
-
-			if (fit === "contain") {
-				// Fit entire video within bounds
-				if (aspectRatio > boundsAspectRatio) {
-					width = 1.0;
-					height = boundsAspectRatio / aspectRatio;
-				} else {
-					height = 1.0;
-					width = aspectRatio / boundsAspectRatio;
-				}
-			} else {
-				// cover: fill the bounds (may crop)
-				if (aspectRatio > boundsAspectRatio) {
-					height = 1.0;
-					width = aspectRatio / boundsAspectRatio;
-				} else {
-					width = 1.0;
-					height = boundsAspectRatio / aspectRatio;
-				}
-			}
-
-			// Parse position string
-			let xPos = 0.5;
-			let yPos = 0.5;
-
-			const positionParts = position.toLowerCase().split(/\s+/);
-			for (const part of positionParts) {
-				if (part === "left") xPos = 0;
-				else if (part === "right") xPos = 1;
-				else if (part === "top") yPos = 0;
-				else if (part === "bottom") yPos = 1;
-				else if (part === "center") {
-					// Keep defaults
-				} else if (part.endsWith("%")) {
-					const value = parseFloat(part) / 100;
-					if (positionParts.length === 1) {
-						xPos = value;
-					} else if (positionParts.indexOf(part) === 0) {
-						xPos = value;
-					} else {
-						yPos = value;
-					}
-				}
-			}
-
-			// Calculate offset in texture coordinates (0-1 range)
-			const x = (1.0 - width) * xPos;
-			const y = (1.0 - height) * yPos;
-
-			// Set memeBounds as (x_offset, y_offset, width_scale, height_scale)
-			this.#u_memeBounds.set(x, y, width, height);
+			// Use pre-computed meme bounds from Video class
+			const memeBounds = broadcast.video.memeBounds;
+			this.#u_memeBounds.set(memeBounds.x, memeBounds.y, memeBounds.width, memeBounds.height);
 		} else {
 			this.#u_hasMeme.set(0);
 		}
