@@ -67,10 +67,10 @@ void main() {
 	// Distance to the edge of the colored region
 	float colorDist = roundedBoxSDF(center, videoSize * 0.5 + totalExpand, u_radius);
 
-	// Line configuration
-	float lineInset = 5.0; // Push line inward to hide behind video frame edge
-	float lineWidth = 3.0; // Solid line width
-	float aaWidth = 2.0;   // Anti-aliasing width on each side
+	// Line configuration (as percentage of border)
+	float lineInset = u_border * 0.42; // Push line inward to hide behind video frame edge
+	float lineWidth = u_border * 0.25; // Solid line width
+	float aaWidth = u_border * 0.17;   // Anti-aliasing width on each side
 	float totalWidth = lineWidth + aaWidth;
 
 	// Discard if well outside the line region
