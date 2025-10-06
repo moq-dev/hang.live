@@ -1,13 +1,103 @@
-export class ShaderProgram {
+// Typed uniform wrappers
+export class Uniform1f {
+	#location: WebGLUniformLocation;
+	#gl: WebGL2RenderingContext;
+
+	constructor(location: WebGLUniformLocation, gl: WebGL2RenderingContext) {
+		this.#location = location;
+		this.#gl = gl;
+	}
+
+	set(value: number) {
+		this.#gl.uniform1f(this.#location, value);
+	}
+}
+
+export class Uniform2f {
+	#location: WebGLUniformLocation;
+	#gl: WebGL2RenderingContext;
+
+	constructor(location: WebGLUniformLocation, gl: WebGL2RenderingContext) {
+		this.#location = location;
+		this.#gl = gl;
+	}
+
+	set(x: number, y: number) {
+		this.#gl.uniform2f(this.#location, x, y);
+	}
+}
+
+export class Uniform3f {
+	#location: WebGLUniformLocation;
+	#gl: WebGL2RenderingContext;
+
+	constructor(location: WebGLUniformLocation, gl: WebGL2RenderingContext) {
+		this.#location = location;
+		this.#gl = gl;
+	}
+
+	set(x: number, y: number, z: number) {
+		this.#gl.uniform3f(this.#location, x, y, z);
+	}
+}
+
+export class Uniform4f {
+	#location: WebGLUniformLocation;
+	#gl: WebGL2RenderingContext;
+
+	constructor(location: WebGLUniformLocation, gl: WebGL2RenderingContext) {
+		this.#location = location;
+		this.#gl = gl;
+	}
+
+	set(x: number, y: number, z: number, w: number) {
+		this.#gl.uniform4f(this.#location, x, y, z, w);
+	}
+}
+
+export class Uniform1i {
+	#location: WebGLUniformLocation;
+	#gl: WebGL2RenderingContext;
+
+	constructor(location: WebGLUniformLocation, gl: WebGL2RenderingContext) {
+		this.#location = location;
+		this.#gl = gl;
+	}
+
+	set(value: number) {
+		this.#gl.uniform1i(this.#location, value);
+	}
+}
+
+export class UniformMatrix4fv {
+	#location: WebGLUniformLocation;
+	#gl: WebGL2RenderingContext;
+
+	constructor(location: WebGLUniformLocation, gl: WebGL2RenderingContext) {
+		this.#location = location;
+		this.#gl = gl;
+	}
+
+	set(value: Float32Array) {
+		this.#gl.uniformMatrix4fv(this.#location, false, value);
+	}
+}
+
+// Typed attribute wrapper
+export class Attribute {
+	readonly location: number;
+
+	constructor(location: number) {
+		this.location = location;
+	}
+}
+
+export class Shader {
 	gl: WebGL2RenderingContext;
 	program: WebGLProgram;
-	uniforms: Map<string, WebGLUniformLocation>;
-	attributes: Map<string, number>;
 
 	constructor(gl: WebGL2RenderingContext, vertexSource: string, fragmentSource: string) {
 		this.gl = gl;
-		this.uniforms = new Map();
-		this.attributes = new Map();
 
 		const vertexShader = this.#compileShader(gl.VERTEX_SHADER, vertexSource);
 		const fragmentShader = this.#compileShader(gl.FRAGMENT_SHADER, fragmentSource);
@@ -57,54 +147,49 @@ export class ShaderProgram {
 		this.gl.useProgram(this.program);
 	}
 
-	getUniform(name: string): WebGLUniformLocation {
-		let location = this.uniforms.get(name);
-		if (location === undefined) {
-			const loc = this.gl.getUniformLocation(this.program, name);
-			if (!loc) {
-				throw new Error(`Uniform ${name} not found`);
-			}
-			this.uniforms.set(name, loc);
-			location = loc;
+	#getUniform(name: string): WebGLUniformLocation {
+		const loc = this.gl.getUniformLocation(this.program, name);
+		if (!loc) {
+			throw new Error(`Uniform ${name} not found`);
 		}
-		return location;
+		return loc;
 	}
 
-	getAttribute(name: string): number {
-		let location = this.attributes.get(name);
-		if (location === undefined) {
-			const loc = this.gl.getAttribLocation(this.program, name);
-			if (loc === -1) {
-				throw new Error(`Attribute ${name} not found`);
-			}
-			this.attributes.set(name, loc);
-			location = loc;
+	#getAttribute(name: string): number {
+		const loc = this.gl.getAttribLocation(this.program, name);
+		if (loc === -1) {
+			throw new Error(`Attribute ${name} not found`);
 		}
-		return location;
+		return loc;
 	}
 
-	setUniform1f(name: string, value: number) {
-		this.gl.uniform1f(this.getUniform(name), value);
+	// Typed wrapper factory methods
+	createUniform1f(name: string): Uniform1f {
+		return new Uniform1f(this.#getUniform(name), this.gl);
 	}
 
-	setUniform2f(name: string, x: number, y: number) {
-		this.gl.uniform2f(this.getUniform(name), x, y);
+	createUniform2f(name: string): Uniform2f {
+		return new Uniform2f(this.#getUniform(name), this.gl);
 	}
 
-	setUniform3f(name: string, x: number, y: number, z: number) {
-		this.gl.uniform3f(this.getUniform(name), x, y, z);
+	createUniform3f(name: string): Uniform3f {
+		return new Uniform3f(this.#getUniform(name), this.gl);
 	}
 
-	setUniform4f(name: string, x: number, y: number, z: number, w: number) {
-		this.gl.uniform4f(this.getUniform(name), x, y, z, w);
+	createUniform4f(name: string): Uniform4f {
+		return new Uniform4f(this.#getUniform(name), this.gl);
 	}
 
-	setUniform1i(name: string, value: number) {
-		this.gl.uniform1i(this.getUniform(name), value);
+	createUniform1i(name: string): Uniform1i {
+		return new Uniform1i(this.#getUniform(name), this.gl);
 	}
 
-	setUniformMatrix4fv(name: string, value: Float32Array) {
-		this.gl.uniformMatrix4fv(this.getUniform(name), false, value);
+	createUniformMatrix4fv(name: string): UniformMatrix4fv {
+		return new UniformMatrix4fv(this.#getUniform(name), this.gl);
+	}
+
+	createAttribute(name: string): Attribute {
+		return new Attribute(this.#getAttribute(name));
 	}
 
 	cleanup() {

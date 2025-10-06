@@ -35,31 +35,27 @@ export class Video {
 	#nameOpacity = 0;
 
 	// WebGL textures for this broadcast
-	texture?: WebGLTexture; // Video texture
-	avatarTexture?: WebGLTexture; // Avatar texture
-	#gl?: WebGL2RenderingContext;
+	texture: WebGLTexture; // Video texture
+	avatarTexture: WebGLTexture; // Avatar texture
+	#gl: WebGL2RenderingContext;
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
-		this.broadcast.signals.effect(this.#runAvatar.bind(this));
-		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
-		this.broadcast.signals.effect(this.#runFrame.bind(this));
-	}
 
-	setGLContext(gl: WebGL2RenderingContext) {
-		this.#gl = gl;
+		this.#gl = broadcast.canvas.gl;
 
 		// Create the textures
-		this.texture = gl.createTexture();
-		if (!this.texture) throw new Error("Failed to create video texture");
-
-		this.avatarTexture = gl.createTexture();
-		if (!this.avatarTexture) throw new Error("Failed to create avatar texture");
+		this.texture = this.#gl.createTexture();
+		this.avatarTexture = this.#gl.createTexture();
 
 		// Set up texture upload effects
 		this.broadcast.signals.effect(this.#uploadVideoTexture.bind(this));
 		this.broadcast.signals.effect(this.#uploadAvatarTexture.bind(this));
 		// TODO: Add meme texture upload effect
+
+		this.broadcast.signals.effect(this.#runAvatar.bind(this));
+		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
+		this.broadcast.signals.effect(this.#runFrame.bind(this));
 	}
 
 	#runAvatar(effect: Effect) {
@@ -77,7 +73,7 @@ export class Video {
 
 		// For SVGs, load at higher resolution to avoid pixelation
 		// Set a reasonable size (e.g., 512x512) for better quality
-		if (avatar.endsWith('.svg')) {
+		if (avatar.endsWith(".svg")) {
 			newAvatar.width = 512;
 			newAvatar.height = 512;
 		}
@@ -86,7 +82,9 @@ export class Video {
 
 		const load = () => {
 			this.avatar = newAvatar;
-			this.avatarSize.set(Vector.create(newAvatar.naturalWidth || newAvatar.width, newAvatar.naturalHeight || newAvatar.height));
+			this.avatarSize.set(
+				Vector.create(newAvatar.naturalWidth || newAvatar.width, newAvatar.naturalHeight || newAvatar.height),
+			);
 
 			// Upload avatar texture after it loads
 			if (this.#gl && this.avatarTexture) {
@@ -187,7 +185,7 @@ export class Video {
 	}
 
 	#uploadVideoFrameToTexture(frame: VideoFrame) {
-		const gl = this.#gl!;
+		const gl = this.#gl;
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, frame);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -198,7 +196,7 @@ export class Video {
 	}
 
 	#uploadVideoElementToTexture(video: HTMLVideoElement) {
-		const gl = this.#gl!;
+		const gl = this.#gl;
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -209,7 +207,7 @@ export class Video {
 	}
 
 	#uploadImageToAvatarTexture(image: HTMLImageElement) {
-		const gl = this.#gl!;
+		const gl = this.#gl;
 		gl.bindTexture(gl.TEXTURE_2D, this.avatarTexture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 		gl.generateMipmap(gl.TEXTURE_2D);
@@ -240,16 +238,8 @@ export class Video {
 	}
 
 	close() {
-		if (this.#gl) {
-			if (this.texture) {
-				this.#gl.deleteTexture(this.texture);
-				this.texture = undefined;
-			}
-			if (this.avatarTexture) {
-				this.#gl.deleteTexture(this.avatarTexture);
-				this.avatarTexture = undefined;
-			}
-		}
+		this.#gl.deleteTexture(this.texture);
+		this.#gl.deleteTexture(this.avatarTexture);
 	}
 
 	// TODO: Rendering is now handled by WebGL in space.ts

@@ -1,19 +1,29 @@
 import type { GLContext } from "./context";
-import { ShaderProgram } from "./shader";
-import backgroundVertSource from "./shaders/background.vert?raw";
+import { Attribute, Shader, Uniform1f, Uniform2f } from "./shader";
 import backgroundFragSource from "./shaders/background.frag?raw";
+import backgroundVertSource from "./shaders/background.vert?raw";
 
 export class BackgroundRenderer {
 	#glContext: GLContext;
-	#program: ShaderProgram;
+	#program: Shader;
 	#vao: WebGLVertexArrayObject;
 	#positionBuffer: WebGLBuffer;
+
+	// Typed uniforms and attributes
+	#u_resolution: Uniform2f;
+	#u_time: Uniform1f;
+	#a_position: Attribute;
 
 	constructor(glContext: GLContext) {
 		this.#glContext = glContext;
 		const gl = glContext.gl;
 
-		this.#program = new ShaderProgram(gl, backgroundVertSource, backgroundFragSource);
+		this.#program = new Shader(gl, backgroundVertSource, backgroundFragSource);
+
+		// Initialize typed uniforms and attributes
+		this.#u_resolution = this.#program.createUniform2f("u_resolution");
+		this.#u_time = this.#program.createUniform1f("u_time");
+		this.#a_position = this.#program.createAttribute("a_position");
 
 		const vao = gl.createVertexArray();
 		if (!vao) throw new Error("Failed to create VAO");
@@ -30,20 +40,14 @@ export class BackgroundRenderer {
 		const gl = this.#glContext.gl;
 
 		// Fullscreen quad vertices (clip space)
-		const positions = new Float32Array([
-			-1.0, -1.0,
-			1.0, -1.0,
-			-1.0, 1.0,
-			1.0, 1.0,
-		]);
+		const positions = new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
 
 		gl.bindVertexArray(this.#vao);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.#positionBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
-		const posLoc = this.#program.getAttribute("a_position");
-		gl.enableVertexAttribArray(posLoc);
-		gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(this.#a_position.location);
+		gl.vertexAttribPointer(this.#a_position.location, 2, gl.FLOAT, false, 0, 0);
 
 		gl.bindVertexArray(null);
 	}
@@ -53,8 +57,8 @@ export class BackgroundRenderer {
 		const viewport = this.#glContext.viewport.peek();
 
 		this.#program.use();
-		this.#program.setUniform2f("u_resolution", viewport.x, viewport.y);
-		this.#program.setUniform1f("u_time", now);
+		this.#u_resolution.set(viewport.x, viewport.y);
+		this.#u_time.set(now);
 
 		gl.bindVertexArray(this.#vao);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

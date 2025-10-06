@@ -3,7 +3,7 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
-import { BroadcastRenderer } from "./gl/broadcast-renderer";
+import { BroadcastRenderer } from "./gl/broadcast";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {
@@ -47,7 +47,7 @@ export class Space {
 		this.profile = props?.profile ?? false;
 
 		// Initialize WebGL renderer
-		this.#broadcastRenderer = new BroadcastRenderer(canvas.gl);
+		this.#broadcastRenderer = new BroadcastRenderer(canvas);
 
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
@@ -397,9 +397,6 @@ export class Space {
 
 	add(id: string, source: BroadcastSource): Broadcast {
 		const broadcast = new Broadcast({ source, canvas: this.canvas, sound: this.sound, scale: this.#scale });
-
-		// Set GL context for video texture uploads
-		broadcast.video.setGLContext(this.canvas.gl.gl);
 
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.

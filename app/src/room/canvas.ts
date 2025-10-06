@@ -28,8 +28,8 @@ export class Canvas {
 		return this.#canvas;
 	}
 
-	get gl() {
-		return this.#glContext;
+	get gl(): WebGL2RenderingContext {
+		return this.#glContext.gl;
 	}
 
 	get camera() {
