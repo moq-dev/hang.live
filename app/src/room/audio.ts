@@ -29,8 +29,8 @@ export class Audio {
 
 	#volumeSmoothed = 0;
 
-	#speaking = false;
-	#speakingAlpha = 0;
+	// Public volume for visualization (0 to 1)
+	volume = 0;
 
 	#signals = new Effect();
 
@@ -98,12 +98,6 @@ export class Audio {
 		if (!(this.broadcast.source instanceof Publish.Broadcast)) {
 			this.#signals.effect(this.#runOutput.bind(this));
 		}
-
-		// Track speaking state from publish broadcast
-		this.#signals.effect((effect) => {
-			const speaking = effect.get(this.broadcast.source.audio.speaking.active);
-			this.#speaking = speaking ?? false;
-		});
 	}
 
 	#runOutput(effect: Effect) {
@@ -134,26 +128,44 @@ export class Audio {
 		}
 	}
 
-	// TODO: Audio visualization will be implemented with WebGL shaders
-	// renderBackground(ctx: CanvasRenderingContext2D) {
-	// 	// Black background outline
-	// }
+	tick() {
+		// Get audio from the notification/meme context
+		const soundBuffer = this.sound.analyze();
+		if (!soundBuffer) {
+			this.volume *= 0.95; // Fade out when no analyser
+			return;
+		}
 
-	// render(ctx: CanvasRenderingContext2D) {
-	// 	// Audio visualization with colored fill based on volume
-	// }
+		// Take the absolute value of the distance from 128 (silence)
+		for (let i = 0; i < soundBuffer.length; i++) {
+			soundBuffer[i] = Math.abs(soundBuffer[i] - 128);
+		}
 
-	#roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-		const maxR = Math.min(r, w / 2, h / 2);
-		ctx.moveTo(x + maxR, y);
-		ctx.lineTo(x + w - maxR, y);
-		ctx.quadraticCurveTo(x + w, y, x + w, y + maxR);
-		ctx.lineTo(x + w, y + h - maxR);
-		ctx.quadraticCurveTo(x + w, y + h, x + w - maxR, y + h);
-		ctx.lineTo(x + maxR, y + h);
-		ctx.quadraticCurveTo(x, y + h, x, y + h - maxR);
-		ctx.lineTo(x, y + maxR);
-		ctx.quadraticCurveTo(x, y, x + maxR, y);
+		// If the broadcast audio is playing, combine the buffers
+		if (this.#analyser) {
+			if (this.#analyserBuffer.length !== soundBuffer.length) {
+				throw new Error("analyser buffer length mismatch");
+			}
+
+			this.#analyser.getByteTimeDomainData(this.#analyserBuffer);
+			for (let i = 0; i < this.#analyserBuffer.length; i++) {
+				soundBuffer[i] += Math.abs(this.#analyserBuffer[i] - 128);
+			}
+		}
+
+		// Calculate RMS volume
+		let sum = 0;
+		for (let i = 0; i < soundBuffer.length; i++) {
+			const sample = soundBuffer[i];
+			sum += sample * sample;
+		}
+		const volume = Math.sqrt(sum) / soundBuffer.length;
+
+		// Smooth the volume with exponential moving average
+		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
+
+		// Store the smoothed volume (already in the right range from the buffer values)
+		this.volume = this.#volumeSmoothed;
 	}
 
 	close() {

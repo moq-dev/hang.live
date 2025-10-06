@@ -195,6 +195,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// TODO Also make scale a signal
 	tick() {
 		this.video.tick();
+		this.audio.tick();
 
 		const bounds = this.bounds.peek();
 		const viewport = this.canvas.viewport.peek();

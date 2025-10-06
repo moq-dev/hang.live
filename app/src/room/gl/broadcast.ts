@@ -196,7 +196,13 @@ export class BroadcastRenderer {
 		// Bind meme texture if available
 		const meme = broadcast.meme.peek();
 		const memeTexture = broadcast.video.memeTexture;
-		if (meme instanceof HTMLVideoElement && memeTexture && meme.readyState >= meme.HAVE_CURRENT_DATA) {
+		const memeBounds = broadcast.video.memeBounds;
+		if (
+			meme instanceof HTMLVideoElement &&
+			memeTexture &&
+			meme.readyState >= meme.HAVE_CURRENT_DATA &&
+			memeBounds
+		) {
 			gl.activeTexture(gl.TEXTURE2);
 			gl.bindTexture(gl.TEXTURE_2D, memeTexture);
 			this.#u_memeTexture.set(2);
@@ -204,7 +210,6 @@ export class BroadcastRenderer {
 			this.#u_memeOpacity.set(broadcast.video.memeOpacity);
 
 			// Use pre-computed meme bounds from Video class
-			const memeBounds = broadcast.video.memeBounds;
 			this.#u_memeBounds.set(memeBounds.x, memeBounds.y, memeBounds.width, memeBounds.height);
 		} else {
 			this.#u_hasMeme.set(0);

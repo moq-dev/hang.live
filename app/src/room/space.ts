@@ -3,7 +3,9 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
+import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
+import { OutlineRenderer } from "./gl/outline";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {
@@ -31,7 +33,9 @@ export class Space {
 
 	#maxZ = 0;
 
-	// WebGL renderer
+	// WebGL renderers
+	#borderRenderer: BorderRenderer;
+	#outlineRenderer: OutlineRenderer;
 	#broadcastRenderer: BroadcastRenderer;
 
 	// Touch handling for mobile
@@ -46,7 +50,9 @@ export class Space {
 		this.sound = sound;
 		this.profile = props?.profile ?? false;
 
-		// Initialize WebGL renderer
+		// Initialize WebGL renderers
+		this.#borderRenderer = new BorderRenderer(canvas);
+		this.#outlineRenderer = new OutlineRenderer(canvas);
 		this.#broadcastRenderer = new BroadcastRenderer(canvas);
 
 		// Use the new eventListener helper that automatically handles cleanup
@@ -559,17 +565,26 @@ export class Space {
 
 		const broadcasts = this.ordered.peek();
 
-		// TODO: Render audio visualization backgrounds
-		// for (const broadcast of broadcasts) {
-		// 	// Audio background rendering
-		// }
+		// Render in order: black borders (back) -> audio viz (middle) -> videos (front)
+		// This way audio viz shows through overlapping black borders
 
-		// TODO: Render audio visualization
-		// for (const broadcast of broadcasts) {
-		// 	// Audio visualization rendering
-		// }
+		// 1. Render black borders (furthest back)
+		for (const broadcast of this.#rip) {
+			this.#borderRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+		}
+		for (const broadcast of broadcasts) {
+			this.#borderRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+		}
 
-		// Render broadcasts fading out
+		// 2. Render audio visualizations (middle layer)
+		for (const broadcast of this.#rip) {
+			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+		}
+		for (const broadcast of broadcasts) {
+			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+		}
+
+		// 3. Render video content (front layer)
 		for (const broadcast of this.#rip) {
 			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
@@ -641,6 +656,8 @@ export class Space {
 		this.lookup.clear();
 
 		// Cleanup WebGL resources
+		this.#borderRenderer.cleanup();
+		this.#outlineRenderer.cleanup();
 		this.#broadcastRenderer.cleanup();
 	}
 

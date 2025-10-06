@@ -32,7 +32,7 @@ export class Video {
 	#nameOpacity = 0;
 
 	// Cached meme bounds (x_offset, y_offset, width_scale, height_scale)
-	memeBounds = { x: 0, y: 0, width: 1, height: 1 };
+	memeBounds?: { x: number; y: number; width: number; height: number };
 
 	// WebGL textures for this broadcast
 	webcamTexture: WebGLTexture; // Video texture
@@ -151,6 +151,8 @@ export class Video {
 	#runMemeBounds(effect: Effect) {
 		const meme = effect.get(this.broadcast.meme);
 		if (!meme || !(meme instanceof HTMLVideoElement)) {
+			// Clear memeBounds when no meme
+			this.memeBounds = undefined;
 			return;
 		}
 
@@ -226,10 +228,12 @@ export class Video {
 		}
 
 		// Calculate offset in texture coordinates (0-1 range)
-		this.memeBounds.x = (1.0 - width) * xPos;
-		this.memeBounds.y = (1.0 - height) * yPos;
-		this.memeBounds.width = width;
-		this.memeBounds.height = height;
+		this.memeBounds = {
+			x: (1.0 - width) * xPos,
+			y: (1.0 - height) * yPos,
+			width: width,
+			height: height,
+		};
 	}
 
 	#frameToTexture(src: VideoFrame, dst: WebGLTexture) {

@@ -39,11 +39,12 @@ export class Camera {
 	}
 
 	// Convert z-index to depth value
-	// Higher z-index = closer to camera (lower depth value)
+	// Higher z-index = closer to camera (lower depth value for LEQUAL test)
 	zToDepth(z: number, maxZ: number): number {
 		// Normalize z-index to 0-1 range, then map to depth range
 		// We use a small range to keep everything mostly 2D
+		// Invert so higher z = more negative (closer to camera)
 		const normalized = maxZ > 0 ? z / maxZ : 0;
-		return -normalized * 0.01; // Small depth range for subtle effect
+		return -(1.0 - normalized) * 0.01; // Higher z = closer to 0 (front)
 	}
 }
