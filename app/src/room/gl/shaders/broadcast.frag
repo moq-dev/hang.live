@@ -6,12 +6,16 @@ in vec2 v_pos;
 
 uniform sampler2D u_texture;
 uniform sampler2D u_avatarTexture;
+uniform sampler2D u_memeTexture;
 uniform bool u_hasTexture;
 uniform bool u_hasAvatar;
+uniform bool u_hasMeme;
 uniform float u_radius;
 uniform vec2 u_size;
 uniform float u_opacity;
 uniform float u_avatarTransition; // 0 = avatar, 1 = video
+uniform float u_memeOpacity;
+uniform vec4 u_memeBounds; // x, y, width, height in texture coordinates
 
 out vec4 fragColor;
 
@@ -41,7 +45,26 @@ void main() {
 	vec4 avatarColor = u_hasAvatar ? texture(u_avatarTexture, v_texCoord) : vec4(0.0, 0.0, 0.0, 1.0);
 
 	// Blend between avatar and video based on transition
-	vec4 texColor = mix(avatarColor, videoColor, u_avatarTransition);
+	vec4 baseColor = mix(avatarColor, videoColor, u_avatarTransition);
 
-	fragColor = vec4(texColor.rgb, texColor.a * alpha * u_opacity);
+	// Apply meme overlay if present
+	if (u_hasMeme && u_memeOpacity > 0.0) {
+		// Calculate the meme texture coordinates based on memeBounds
+		// memeBounds contains the x, y offset and width, height scaling
+		vec2 memeTexCoord = (v_texCoord - u_memeBounds.xy) / u_memeBounds.zw;
+
+		// Only sample if we're within the meme bounds
+		if (memeTexCoord.x >= 0.0 && memeTexCoord.x <= 1.0 &&
+		    memeTexCoord.y >= 0.0 && memeTexCoord.y <= 1.0) {
+			vec4 memeColor = texture(u_memeTexture, memeTexCoord);
+
+			// Blend meme on top using alpha compositing
+			// The meme uses WebM+VP9 with alpha channel for transparency
+			float memeAlpha = memeColor.a * u_memeOpacity;
+			baseColor.rgb = mix(baseColor.rgb, memeColor.rgb, memeAlpha);
+			baseColor.a = max(baseColor.a, memeAlpha);
+		}
+	}
+
+	fragColor = vec4(baseColor.rgb, baseColor.a * alpha * u_opacity);
 }

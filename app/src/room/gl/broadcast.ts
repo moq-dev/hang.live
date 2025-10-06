@@ -1,5 +1,6 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
+import { MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "../meme";
 import type { Camera } from "./camera";
 import { Attribute, Shader, Uniform1f, Uniform1i, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
 import broadcastFragSource from "./shaders/broadcast.frag?raw";
@@ -25,6 +26,10 @@ export class BroadcastRenderer {
 	#u_hasTexture: Uniform1i;
 	#u_avatarTexture: Uniform1i;
 	#u_hasAvatar: Uniform1i;
+	#u_memeTexture: Uniform1i;
+	#u_hasMeme: Uniform1i;
+	#u_memeOpacity: Uniform1f;
+	#u_memeBounds: Uniform4f;
 
 	// Typed attributes
 	#a_position: Attribute;
@@ -46,6 +51,10 @@ export class BroadcastRenderer {
 		this.#u_hasTexture = this.#program.createUniform1i("u_hasTexture");
 		this.#u_avatarTexture = this.#program.createUniform1i("u_avatarTexture");
 		this.#u_hasAvatar = this.#program.createUniform1i("u_hasAvatar");
+		this.#u_memeTexture = this.#program.createUniform1i("u_memeTexture");
+		this.#u_hasMeme = this.#program.createUniform1i("u_hasMeme");
+		this.#u_memeOpacity = this.#program.createUniform1f("u_memeOpacity");
+		this.#u_memeBounds = this.#program.createUniform4f("u_memeBounds");
 
 		// Initialize typed attributes
 		this.#a_position = this.#program.createAttribute("a_position");
@@ -164,7 +173,7 @@ export class BroadcastRenderer {
 		this.#u_avatarTransition.set(broadcast.video.avatarTransition);
 
 		// Bind video texture if available
-		const texture = broadcast.video.texture;
+		const texture = broadcast.video.webcamTexture;
 		if (texture) {
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -183,6 +192,91 @@ export class BroadcastRenderer {
 			this.#u_hasAvatar.set(1);
 		} else {
 			this.#u_hasAvatar.set(0);
+		}
+
+		// Bind meme texture if available
+		const meme = broadcast.meme.peek();
+		const memeTexture = broadcast.video.memeTexture;
+		if (meme instanceof HTMLVideoElement && memeTexture && meme.readyState >= meme.HAVE_CURRENT_DATA) {
+			gl.activeTexture(gl.TEXTURE2);
+			gl.bindTexture(gl.TEXTURE_2D, memeTexture);
+			this.#u_memeTexture.set(2);
+			this.#u_hasMeme.set(1);
+			this.#u_memeOpacity.set(broadcast.video.memeOpacity);
+
+			// Get meme configuration
+			const memeName = broadcast.memeName.peek();
+			let fit: "contain" | "cover" = "cover";
+			let position = "center";
+
+			if (memeName) {
+				const lookupKey = memeName.toLowerCase().replace(/-/g, "");
+				const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
+				const memeData = MEME_VIDEO[memeKey as MemeVideoName];
+				if (memeData) {
+					fit = memeData.fit || "cover";
+					position = memeData.position || "center";
+				}
+			}
+
+			// Calculate meme bounds based on fit and position
+			const aspectRatio = meme.videoWidth / meme.videoHeight;
+			const boundsAspectRatio = bounds.size.x / bounds.size.y;
+			let width: number;
+			let height: number;
+
+			if (fit === "contain") {
+				// Fit entire video within bounds
+				if (aspectRatio > boundsAspectRatio) {
+					width = 1.0;
+					height = boundsAspectRatio / aspectRatio;
+				} else {
+					height = 1.0;
+					width = aspectRatio / boundsAspectRatio;
+				}
+			} else {
+				// cover: fill the bounds (may crop)
+				if (aspectRatio > boundsAspectRatio) {
+					height = 1.0;
+					width = aspectRatio / boundsAspectRatio;
+				} else {
+					width = 1.0;
+					height = boundsAspectRatio / aspectRatio;
+				}
+			}
+
+			// Parse position string
+			let xPos = 0.5;
+			let yPos = 0.5;
+
+			const positionParts = position.toLowerCase().split(/\s+/);
+			for (const part of positionParts) {
+				if (part === "left") xPos = 0;
+				else if (part === "right") xPos = 1;
+				else if (part === "top") yPos = 0;
+				else if (part === "bottom") yPos = 1;
+				else if (part === "center") {
+					// Keep defaults
+				} else if (part.endsWith("%")) {
+					const value = parseFloat(part) / 100;
+					if (positionParts.length === 1) {
+						xPos = value;
+					} else if (positionParts.indexOf(part) === 0) {
+						xPos = value;
+					} else {
+						yPos = value;
+					}
+				}
+			}
+
+			// Calculate offset in texture coordinates (0-1 range)
+			const x = (1.0 - width) * xPos;
+			const y = (1.0 - height) * yPos;
+
+			// Set memeBounds as (x_offset, y_offset, width_scale, height_scale)
+			this.#u_memeBounds.set(x, y, width, height);
+		} else {
+			this.#u_hasMeme.set(0);
 		}
 
 		// Draw
