@@ -17,7 +17,6 @@ export class Canvas {
 
 	// Use a callback to render after the background.
 	onRender?: (now: DOMHighResTimeStamp) => void;
-	#animate?: number;
 
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
@@ -120,8 +119,15 @@ export class Canvas {
 			const visible = effect.get(this.visible);
 			if (!visible) return;
 
-			this.#animate = requestAnimationFrame(this.#render.bind(this));
-			effect.cleanup(() => cancelAnimationFrame(this.#animate ?? 0));
+			let cancel: number;
+			const render = (now: DOMHighResTimeStamp) => {
+				this.#render(now);
+				cancel = requestAnimationFrame(render);
+			};
+
+			cancel = requestAnimationFrame(render);
+
+			effect.cleanup(() => cancelAnimationFrame(cancel));
 		});
 	}
 
@@ -148,8 +154,6 @@ export class Canvas {
 				console.error("render error", err);
 			}
 		}
-
-		this.#animate = requestAnimationFrame(this.#render.bind(this));
 	}
 
 	// TODO: Implement demo text rendering with WebGL

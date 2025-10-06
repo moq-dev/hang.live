@@ -133,7 +133,7 @@ export class BorderRenderer {
 		gl.bindVertexArray(null);
 	}
 
-	cleanup() {
+	close() {
 		const gl = this.#canvas.gl;
 		gl.deleteVertexArray(this.#vao);
 		gl.deleteBuffer(this.#positionBuffer);

@@ -641,6 +641,10 @@ export class Space {
 	}
 
 	close() {
+		this.#borderRenderer.close();
+		this.#outlineRenderer.close();
+		this.#broadcastRenderer.close();
+
 		this.#signals.close();
 
 		for (const broadcast of this.ordered.peek()) {
@@ -654,11 +658,6 @@ export class Space {
 		this.#rip = [];
 		this.ordered.set([]);
 		this.lookup.clear();
-
-		// Cleanup WebGL resources
-		this.#borderRenderer.cleanup();
-		this.#outlineRenderer.cleanup();
-		this.#broadcastRenderer.cleanup();
 	}
 
 	// Publish the current position to the network.
