@@ -115,7 +115,10 @@ export class Space {
 			this.#publishPosition(this.#dragging);
 
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			document.body.style.cursor = "default";
 		}
 	}
@@ -135,13 +138,22 @@ export class Space {
 
 		const broadcast = this.#at(mouse);
 		if (broadcast) {
-			this.#hovering = broadcast;
+			if (this.#hovering !== broadcast) {
+				if (this.#hovering) {
+					this.#hovering.name.setHovering(false);
+				}
+				this.#hovering = broadcast;
+				this.#hovering.name.setHovering(true);
+			}
 
 			if (!broadcast.locked()) {
 				document.body.style.cursor = "grab";
 			}
 		} else {
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			document.body.style.cursor = "default";
 		}
 	}
@@ -151,7 +163,10 @@ export class Space {
 			this.#publishPosition(this.#dragging);
 
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			document.body.style.cursor = "default";
 		}
 	}
@@ -168,7 +183,13 @@ export class Space {
 				return;
 			}
 
-			this.#hovering = broadcast;
+			if (this.#hovering !== broadcast) {
+				if (this.#hovering) {
+					this.#hovering.name.setHovering(false);
+				}
+				this.#hovering = broadcast;
+				this.#hovering.name.setHovering(true);
+			}
 
 			// Bump the z-index unless we're already at the top.
 			broadcast.position.update((prev) => ({
@@ -343,7 +364,10 @@ export class Space {
 		if (this.#touches.size === 0 && this.#dragging) {
 			this.#publishPosition(this.#dragging);
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			this.#pinchStartDistance = 0;
 			this.#pinchStartScale = 1;
 		}
@@ -379,7 +403,10 @@ export class Space {
 		if (this.#dragging) {
 			this.#publishPosition(this.#dragging);
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			this.#pinchStartDistance = 0;
 			this.#pinchStartScale = 1;
 		}
@@ -410,6 +437,9 @@ export class Space {
 			...prev,
 			z: ++this.#maxZ,
 		}));
+
+		// Set profile mode for the name display
+		broadcast.name.setProfile(this.profile);
 
 		if (this.lookup.has(id)) {
 			throw new Error(`broadcast already exists: ${id}`);
