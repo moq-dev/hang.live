@@ -52,13 +52,13 @@ export class BackgroundRenderer {
 		gl.bindVertexArray(null);
 	}
 
-	render(now: DOMHighResTimeStamp) {
+	render() {
 		const gl = this.#glContext.gl;
 		const viewport = this.#glContext.viewport.peek();
 
 		this.#program.use();
 		this.#u_resolution.set(viewport.x, viewport.y);
-		this.#u_time.set(now);
+		this.#u_time.set(this.#glContext.uniforms.time);
 
 		gl.bindVertexArray(this.#vao);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

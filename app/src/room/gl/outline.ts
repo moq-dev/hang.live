@@ -27,8 +27,6 @@ export class OutlineRenderer {
 	// Typed attributes
 	#a_position: Attribute;
 
-	#startTime: number;
-
 	constructor(canvas: Canvas) {
 		this.#canvas = canvas;
 		this.#program = new Shader(canvas.gl, outlineVertSource, outlineFragSource);
@@ -60,7 +58,6 @@ export class OutlineRenderer {
 		if (!indexBuffer) throw new Error("Failed to create index buffer");
 		this.#indexBuffer = indexBuffer;
 
-		this.#startTime = performance.now();
 		this.#setupBuffers();
 	}
 
@@ -97,7 +94,7 @@ export class OutlineRenderer {
 		gl.bindVertexArray(null);
 	}
 
-	render(broadcast: Broadcast, camera: Camera, maxZ: number, now: DOMHighResTimeStamp) {
+	render(broadcast: Broadcast, camera: Camera, maxZ: number) {
 		const gl = this.#canvas.gl;
 		const bounds = broadcast.bounds.peek();
 		const scale = broadcast.zoom.peek();
@@ -148,8 +145,7 @@ export class OutlineRenderer {
 		this.#u_border.set(border);
 
 		// Set time for animation
-		const time = (now - this.#startTime) / 1000;
-		this.#u_time.set(time);
+		this.#u_time.set(this.#canvas.glContext.uniforms.time);
 
 		// Set color based on volume using HSL from old implementation
 		// hue = 180 + volume * 120

@@ -1,10 +1,9 @@
-import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import * as Api from "../api";
 import type { Broadcast } from "./broadcast";
 import { FakeBroadcast } from "./fake";
-import { Vector } from "./geometry";
-import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
+import { Bounds, Vector } from "./geometry";
+import { MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
 
 //export type VideoSource = Watch.Video.Source | Publish.Video.Encoder;
 
@@ -31,8 +30,11 @@ export class Video {
 	#memeOpacity = 0;
 	#nameOpacity = 0;
 
+	// Signal that updates when meme video dimensions are loaded
+	#memeSize = new Signal<Vector | undefined>(undefined);
+
 	// Cached meme bounds (x_offset, y_offset, width_scale, height_scale)
-	memeBounds?: { x: number; y: number; width: number; height: number };
+	memeBounds?: Bounds;
 
 	// WebGL textures for this broadcast
 	webcamTexture: WebGLTexture; // Video texture
@@ -146,21 +148,33 @@ export class Video {
 		if (!(meme instanceof HTMLVideoElement)) return;
 
 		this.#videoToTexture(effect, meme, this.memeTexture);
+
+		// Listen for loadedmetadata event to update meme size when dimensions are available
+		const updateSize = () => {
+			if (meme.videoWidth > 0 && meme.videoHeight > 0) {
+				effect.set(this.#memeSize, Vector.create(meme.videoWidth, meme.videoHeight));
+			}
+		};
+
+		// Check if already loaded
+		if (meme.readyState >= 1) {
+			updateSize();
+		}
+
+		// Listen for metadata load
+		effect.event(meme, "loadedmetadata", updateSize);
 	}
 
 	#runMemeBounds(effect: Effect) {
 		const meme = effect.get(this.broadcast.meme);
-		if (!meme || !(meme instanceof HTMLVideoElement)) {
-			// Clear memeBounds when no meme
-			this.memeBounds = undefined;
-			return;
-		}
+		if (!meme || !(meme instanceof HTMLVideoElement)) return;
+
+		// Wait until meme dimensions are available
+		const memeSize = effect.get(this.#memeSize);
+		if (!memeSize) return;
 
 		// Also react to bounds changes
 		const bounds = effect.get(this.broadcast.bounds);
-
-		// Wait until video metadata is loaded
-		if (meme.videoWidth === 0 || meme.videoHeight === 0) return;
 
 		// Get meme configuration
 		const memeName = effect.get(this.broadcast.memeName);
@@ -178,7 +192,7 @@ export class Video {
 		}
 
 		// Calculate meme bounds based on fit and position
-		const aspectRatio = meme.videoWidth / meme.videoHeight;
+		const aspectRatio = memeSize.x / memeSize.y;
 		const boundsAspectRatio = bounds.size.x / bounds.size.y;
 		let width: number;
 		let height: number;
@@ -228,12 +242,14 @@ export class Video {
 		}
 
 		// Calculate offset in texture coordinates (0-1 range)
-		this.memeBounds = {
-			x: (1.0 - width) * xPos,
-			y: (1.0 - height) * yPos,
-			width: width,
-			height: height,
-		};
+		this.memeBounds = new Bounds(
+			Vector.create((1.0 - width) * xPos, (1.0 - height) * yPos),
+			Vector.create(width, height),
+		);
+
+		effect.cleanup(() => {
+			this.memeBounds = undefined;
+		});
 	}
 
 	#frameToTexture(src: VideoFrame, dst: WebGLTexture) {

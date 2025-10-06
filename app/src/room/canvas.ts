@@ -32,6 +32,10 @@ export class Canvas {
 		return this.#glContext.gl;
 	}
 
+	get glContext(): GLContext {
+		return this.#glContext;
+	}
+
 	get camera() {
 		return this.#camera;
 	}
@@ -48,68 +52,41 @@ export class Canvas {
 		this.#camera = new Camera();
 		this.#backgroundRenderer = new BackgroundRenderer(this.#glContext);
 
-		const resize = () => {
-			// Check if we're in fullscreen or fixed position
-			const isFullscreen = document.fullscreenElement === this.#canvas;
-			const style = window.getComputedStyle(this.#canvas);
-			const isFixed = style.position === "fixed";
+		const resize = (entries: ResizeObserverEntry[]) => {
+			for (const entry of entries) {
+				// Get device pixel dimensions
+				const dpr = window.devicePixelRatio;
+				const width = entry.devicePixelContentBoxSize?.[0].inlineSize ??
+					entry.contentBoxSize[0].inlineSize * dpr;
+				const height = entry.devicePixelContentBoxSize?.[0].blockSize ??
+					entry.contentBoxSize[0].blockSize * dpr;
 
-			let newWidth: number;
-			let newHeight: number;
+				const newWidth = Math.max(1, Math.floor(width));
+				const newHeight = Math.max(1, Math.floor(height));
 
-			if (isFullscreen || isFixed) {
-				// Use window dimensions for fullscreen or fixed position
-				newWidth = window.innerWidth;
-				newHeight = window.innerHeight;
-			} else {
-				// Use parent container dimensions
-				const parent = this.#canvas.parentElement;
-				if (!parent) return;
+				// Only update canvas if dimensions actually changed
+				if (this.#canvas.width === newWidth && this.#canvas.height === newHeight) {
+					return;
+				}
 
-				const rect = parent.getBoundingClientRect();
-				newWidth = rect.width;
-				newHeight = rect.height;
+				this.#canvas.width = newWidth;
+				this.#canvas.height = newHeight;
+
+				// Update WebGL viewport
+				this.#glContext.resize(newWidth, newHeight);
+
+				// The internal logic ignores devicePixelRatio because we automatically scale when rendering.
+				const viewport = Vector.create(newWidth / dpr, newHeight / dpr);
+				this.viewport.set(viewport);
+
+				// Update camera projection
+				this.#camera.updateOrtho(viewport);
+
+				// Render immediately to avoid black flicker during resize
+				if (this.visible.peek()) {
+					this.#render(performance.now());
+				}
 			}
-
-			newWidth *= window.devicePixelRatio;
-			newHeight *= window.devicePixelRatio;
-
-			// Only update canvas if dimensions actually changed
-			// This prevents the canvas from being cleared when layout changes don't affect size
-			if (this.#canvas.width === newWidth && this.#canvas.height === newHeight) {
-				return;
-			}
-
-			this.#canvas.width = newWidth;
-			this.#canvas.height = newHeight;
-
-			// Update WebGL viewport
-			this.#glContext.resize(newWidth, newHeight);
-
-			// The internal logic ignores devicePixelRatio because we automatically scale when rendering.
-			const viewport = Vector.create(
-				this.#canvas.width / window.devicePixelRatio,
-				this.#canvas.height / window.devicePixelRatio,
-			);
-			this.viewport.set(viewport);
-
-			// Update camera projection
-			this.#camera.updateOrtho(viewport);
-		};
-
-		let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
-
-		const scheduleResize = () => {
-			// Clear any existing timeout
-			if (resizeTimeout) {
-				clearTimeout(resizeTimeout);
-			}
-
-			// Debounce resize to prevent flickering during rapid changes
-			resizeTimeout = setTimeout(() => {
-				resize();
-				resizeTimeout = undefined;
-			}, 50);
 		};
 
 		const visible = () => {
@@ -118,43 +95,20 @@ export class Canvas {
 
 		visible();
 
-		// Set up ResizeObserver for parent when canvas is added to DOM
-		let resizeObserver: ResizeObserver | null = null;
-
-		const setupParentObserver = () => {
-			const parent = this.#canvas.parentElement;
-			if (parent && !resizeObserver) {
-				resizeObserver = new ResizeObserver(scheduleResize);
-				resizeObserver.observe(parent);
-				resize();
-			}
-		};
-
-		// Try to set up observer immediately if already in DOM
-		setupParentObserver();
-
-		// Watch for canvas being added to DOM
-		const mutationObserver = new MutationObserver(() => {
-			if (this.#canvas.parentElement) {
-				setupParentObserver();
-				mutationObserver.disconnect();
-			}
-		});
-
-		if (!this.#canvas.parentElement) {
-			mutationObserver.observe(document.body, { childList: true, subtree: true });
+		// Set up ResizeObserver for canvas
+		const resizeObserver = new ResizeObserver(resize);
+		try {
+			// Try to observe device-pixel-content-box for pixel-perfect sizing
+			resizeObserver.observe(this.#canvas, { box: "device-pixel-content-box" });
+		} catch {
+			// Fallback to content-box if device-pixel-content-box is not supported
+			resizeObserver.observe(this.#canvas, { box: "content-box" });
 		}
 
 		this.#signals.event(document, "visibilitychange", visible);
 
 		this.#signals.cleanup(() => {
-			if (resizeObserver) {
-				resizeObserver.disconnect();
-			}
-			mutationObserver.disconnect();
-			if (resizeTimeout) {
-				clearTimeout(resizeTimeout);
-			}
+			resizeObserver.disconnect();
 		});
 
 		// Only render the canvas when it's visible.
@@ -168,11 +122,14 @@ export class Canvas {
 	}
 
 	#render(now: DOMHighResTimeStamp) {
+		// Update common uniforms for this frame
+		this.#glContext.uniforms.update(now);
+
 		// Clear the screen
 		this.#glContext.clear();
 
 		// Render background with shader
-		this.#backgroundRenderer.render(now);
+		this.#backgroundRenderer.render();
 
 		// TODO: Render demo text if enabled
 		// if (this.demo.peek()) {

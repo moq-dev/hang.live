@@ -210,7 +210,7 @@ export class BroadcastRenderer {
 			this.#u_memeOpacity.set(broadcast.video.memeOpacity);
 
 			// Use pre-computed meme bounds from Video class
-			this.#u_memeBounds.set(memeBounds.x, memeBounds.y, memeBounds.width, memeBounds.height);
+			this.#u_memeBounds.set(memeBounds.position.x, memeBounds.position.y, memeBounds.size.x, memeBounds.size.y);
 		} else {
 			this.#u_hasMeme.set(0);
 		}

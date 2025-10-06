@@ -1,10 +1,12 @@
 import { Signal } from "@kixelated/signals";
 import { Vector } from "../geometry";
+import { CommonUniforms } from "./common";
 
 export class GLContext {
 	gl: WebGL2RenderingContext;
 	canvas: HTMLCanvasElement;
 	viewport: Signal<Vector>;
+	uniforms: CommonUniforms;
 
 	constructor(canvas: HTMLCanvasElement, viewport: Signal<Vector>) {
 		const gl = canvas.getContext("webgl2", {
@@ -21,6 +23,7 @@ export class GLContext {
 		this.gl = gl;
 		this.canvas = canvas;
 		this.viewport = viewport;
+		this.uniforms = new CommonUniforms();
 
 		// Enable depth testing for z-index ordering
 		gl.enable(gl.DEPTH_TEST);
