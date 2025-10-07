@@ -53,13 +53,19 @@ export class Name {
 			// Position name at top-left of broadcast with offset
 			const fontSize = 12;
 			const offset = 12;
-			const left = Math.round(pageBounds.x + offset);
-			const top = Math.round(pageBounds.y + offset);
+
+			// Clamp position to stay within canvas bounds
+			const left = Math.round(Math.max(canvasRect.left + offset, Math.min(pageBounds.x + offset, canvasRect.right - offset)));
+			const top = Math.round(Math.max(canvasRect.top + offset, Math.min(pageBounds.y + offset, canvasRect.bottom - fontSize - offset)));
 
 			root.style.left = `${left}px`;
 			root.style.top = `${top}px`;
 			root.style.fontSize = `${fontSize}px`;
-			root.style.maxWidth = `${Math.max(0, pageBounds.width - 2 * offset)}px`;
+
+			// Max width should be constrained by both broadcast width and canvas bounds
+			const maxWidthFromBroadcast = Math.max(0, pageBounds.width - 2 * offset);
+			const maxWidthFromCanvas = Math.max(0, canvasRect.right - left - offset);
+			root.style.maxWidth = `${Math.min(maxWidthFromBroadcast, maxWidthFromCanvas)}px`;
 		};
 
 		// Update name text
@@ -74,6 +80,13 @@ export class Name {
 			const viewport = effect.get(this.broadcast.canvas.viewport);
 			updatePosition(bounds, viewport);
 		});
+
+		// Update position when window scrolls
+		effect.event(window, "scroll", () => {
+			const bounds = this.broadcast.bounds.peek();
+			const viewport = this.broadcast.canvas.viewport.peek();
+			updatePosition(bounds, viewport);
+		}, { passive: true });
 
 		// Update z-index based on broadcast position
 		effect.effect((effect) => {

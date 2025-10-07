@@ -118,11 +118,11 @@ export function About(): JSX.Element {
 		() => { },
 		() => {
 			two.user.name.set("omni-chan");
-			two.user.avatar.set("/avatar/omni.jpg");
+			two.show(new URL("/avatar/omni.jpg", import.meta.url));
 		},
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("oops wrong button"),
-		() => two.user.avatar.set("/avatar/43.svg"),
+		() => two.stop(),
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
@@ -271,10 +271,6 @@ export function About(): JSX.Element {
 					<a href="https://moq.dev">MoQ</a>. There's more to live than another {services[currentService()]}{" "}
 					clone. <i>Crazy</i>, I know.
 				</p>
-
-				<div class="flex my-18">
-					<img src="/image/we-are/5.svg" alt="we are live" class="max-w-120 w-full" />
-				</div>
 			</div>
 		</Layout>
 	);

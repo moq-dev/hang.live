@@ -97,6 +97,7 @@ export class FakeBroadcast {
 		});
 	}
 
+	// Plays a video file.
 	play(src: URL) {
 		const video = document.createElement("video");
 		video.src = src.toString();
@@ -117,18 +118,11 @@ export class FakeBroadcast {
 		this.#video = video;
 
 		const onFrame = () => {
-			if (!video.paused && !video.ended) {
-				this.video.frame.update((prev) => {
-					prev?.close();
-					return new VideoFrame(video);
-				});
-				video.requestVideoFrameCallback(onFrame);
-			} else {
-				this.video.frame.update((prev) => {
-					prev?.close();
-					return undefined;
-				});
-			}
+			this.video.frame.update((prev) => {
+				prev?.close();
+				return new VideoFrame(video);
+			});
+			video.requestVideoFrameCallback(onFrame);
 		};
 
 		video.requestVideoFrameCallback(onFrame);
@@ -147,18 +141,47 @@ export class FakeBroadcast {
 			]);
 		};
 
+		video.onended = () => this.stop();
+
 		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });
 		this.audio.root.set(source);
 	}
 
+	// "plays" an image file.
+	show(src: URL) {
+		const image = new Image();
+		image.src = src.toString();
+		image.onload = () => {
+			this.video.frame.update((prev) => {
+				prev?.close();
+				return new VideoFrame(image, { timestamp: 0 });
+			});
+
+			this.video.catalog.set([
+				{
+					track: "image",
+					config: {
+						codec: "fake",
+						displayAspectWidth: u53(image.width),
+						displayAspectHeight: u53(image.height),
+					},
+				},
+			]);
+		};
+	}
+
 	stop() {
-		this.#video?.pause();
-		this.#video = undefined;
+		this.video.frame.update((prev) => {
+			prev?.close();
+			return undefined;
+		});
 
 		this.audio.root.update((prev) => {
 			prev?.disconnect();
 			return undefined;
 		});
+
+		this.video.catalog.set(undefined);
 	}
 
 	close() {
