@@ -118,10 +118,16 @@ export class FakeBroadcast {
 
 		const onFrame = () => {
 			if (!video.paused && !video.ended) {
-				this.video.frame.set(new VideoFrame(video));
+				this.video.frame.update((prev) => {
+					prev?.close();
+					return new VideoFrame(video);
+				});
 				video.requestVideoFrameCallback(onFrame);
 			} else {
-				this.video.frame.set(undefined);
+				this.video.frame.update((prev) => {
+					prev?.close();
+					return undefined;
+				});
 			}
 		};
 

@@ -59,7 +59,7 @@ export class Name {
 			root.style.left = `${left}px`;
 			root.style.top = `${top}px`;
 			root.style.fontSize = `${fontSize}px`;
-			root.style.maxWidth = `${pageBounds.width - 2 * offset}px`;
+			root.style.maxWidth = `${Math.max(0, pageBounds.width - 2 * offset)}px`;
 		};
 
 		// Update name text

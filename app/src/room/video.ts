@@ -79,6 +79,9 @@ export class Video {
 		// TODO only set the avatar if it successfully loads
 		const newAvatar = new Image();
 
+		// Enable CORS for external avatar images
+		newAvatar.crossOrigin = "anonymous";
+
 		// For SVGs, load at higher resolution to avoid pixelation
 		// Set a reasonable size (e.g., 512x512) for better quality
 		if (avatar.endsWith(".svg")) {
@@ -310,7 +313,7 @@ export class Video {
 		canvas.width = size;
 		canvas.height = size;
 		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
+		if (!ctx) throw new Error("Failed to get context");
 
 		// Render emoji centered
 		ctx.textAlign = "center";

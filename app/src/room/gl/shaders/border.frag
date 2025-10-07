@@ -28,7 +28,7 @@ void main() {
 	float outerDist = roundedBoxSDF(center, u_size * 0.5, u_radius);
 
 	// Discard anything outside the outer bounds
-	if (outerDist > 0.0) {
+	if (outerDist > 1.0) {
 		discard;
 	}
 
