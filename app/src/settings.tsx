@@ -74,16 +74,18 @@ export const Settings = {
 
 	// Rendering settings
 	rendering: {
-		devicePixelRatio: new Signal<number>((() => {
-			const stored = localStorage.getItem("settings.rendering.devicePixelRatio");
-			if (stored) {
-				const parsed = Number.parseFloat(stored);
-				if (!Number.isNaN(parsed) && parsed > 0 && parsed <= window.devicePixelRatio) {
-					return parsed;
+		devicePixelRatio: new Signal<number>(
+			(() => {
+				const stored = localStorage.getItem("settings.rendering.devicePixelRatio");
+				if (stored) {
+					const parsed = Number.parseFloat(stored);
+					if (!Number.isNaN(parsed) && parsed > 0 && parsed <= window.devicePixelRatio) {
+						return parsed;
+					}
 				}
-			}
-			return Math.max(1, window.devicePixelRatio / 2);
-		})()),
+				return Math.max(1, window.devicePixelRatio / 2);
+			})(),
+		),
 	},
 
 	clear: () => {

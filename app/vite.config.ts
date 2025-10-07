@@ -5,7 +5,7 @@ import solid from "vite-plugin-solid";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
 	return {
 		define: {
 			TAURI: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM),

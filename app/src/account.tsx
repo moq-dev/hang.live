@@ -114,8 +114,8 @@ function AccountLoad(): JSX.Element {
 					<div class="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-md mx-4">
 						<h2 class="text-2xl font-bold mb-4 text-red-400">Delete Account?</h2>
 						<p class="text-gray-300 mb-6">
-							This action cannot be undone. Your account, profile information, and all associated data will be
-							permanently deleted.
+							This action cannot be undone. Your account, profile information, and all associated data
+							will be permanently deleted.
 						</p>
 						<div class="flex gap-4">
 							<button
