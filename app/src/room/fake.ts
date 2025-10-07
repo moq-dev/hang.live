@@ -53,7 +53,7 @@ export class FakeBroadcast {
 	};
 
 	video = {
-		frame: new Signal<HTMLVideoElement | undefined>(undefined),
+		frame: new Signal<VideoFrame | undefined>(undefined),
 		catalog: new Signal<Catalog.Video[] | undefined>(undefined),
 		detection: {
 			enabled: new Signal(false),
@@ -62,8 +62,6 @@ export class FakeBroadcast {
 	};
 
 	signals = new Effect();
-
-	#video: HTMLVideoElement | undefined;
 
 	constructor(sound: Sound, props?: FakeBroadcastProps) {
 		this.sound = sound;
@@ -97,6 +95,7 @@ export class FakeBroadcast {
 		});
 	}
 
+	// Plays a video file.
 	play(src: URL) {
 		const video = document.createElement("video");
 		video.src = src.toString();
@@ -114,8 +113,15 @@ export class FakeBroadcast {
 		video.load();
 		video.play();
 
-		this.#video = video;
-		this.video.frame.set(video);
+		const onFrame = () => {
+			this.video.frame.update((prev) => {
+				prev?.close();
+				return new VideoFrame(video);
+			});
+			video.requestVideoFrameCallback(onFrame);
+		};
+
+		video.requestVideoFrameCallback(onFrame);
 
 		video.onloadedmetadata = () => {
 			this.video.catalog.set([
@@ -131,18 +137,47 @@ export class FakeBroadcast {
 			]);
 		};
 
+		video.onended = () => this.stop();
+
 		const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: video });
 		this.audio.root.set(source);
 	}
 
+	// "plays" an image file.
+	show(src: URL) {
+		const image = new Image();
+		image.src = src.toString();
+		image.onload = () => {
+			this.video.frame.update((prev) => {
+				prev?.close();
+				return new VideoFrame(image, { timestamp: 0 });
+			});
+
+			this.video.catalog.set([
+				{
+					track: "image",
+					config: {
+						codec: "fake",
+						displayAspectWidth: u53(image.width),
+						displayAspectHeight: u53(image.height),
+					},
+				},
+			]);
+		};
+	}
+
 	stop() {
-		this.#video?.pause();
-		this.#video = undefined;
+		this.video.frame.update((prev) => {
+			prev?.close();
+			return undefined;
+		});
 
 		this.audio.root.update((prev) => {
 			prev?.disconnect();
 			return undefined;
 		});
+
+		this.video.catalog.set(undefined);
 	}
 
 	close() {

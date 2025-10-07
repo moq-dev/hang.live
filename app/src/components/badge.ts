@@ -4,14 +4,20 @@ import * as Tauri from "../tauri";
 
 async function set(count: number | undefined) {
 	if (Tauri.Api) {
-		await Tauri.Api.window
+		const success = await Tauri.Api.window
 			.getCurrentWindow()
 			.setBadgeCount(count || undefined)
-			.catch((error) => console.warn("Failed to set Tauri badge:", error));
-	} else if (navigator.setAppBadge) {
-		await navigator
+			.then(() => true)
+			.catch(() => false);
+		if (success) return;
+	}
+
+	if (navigator.setAppBadge) {
+		const success = await navigator
 			.setAppBadge(count || undefined)
-			.catch((error) => console.warn("Failed to set Web badge:", error));
+			.then(() => true)
+			.catch(() => false);
+		if (success) return;
 	}
 }
 

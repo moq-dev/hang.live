@@ -3,6 +3,9 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
+import { BorderRenderer } from "./gl/border";
+import { BroadcastRenderer } from "./gl/broadcast";
+import { OutlineRenderer } from "./gl/outline";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {
@@ -30,6 +33,11 @@ export class Space {
 
 	#maxZ = 0;
 
+	// WebGL renderers
+	#borderRenderer: BorderRenderer;
+	#outlineRenderer: OutlineRenderer;
+	#broadcastRenderer: BroadcastRenderer;
+
 	// Touch handling for mobile
 	#touches = new Map<number, { x: number; y: number }>();
 	#pinchStartDistance = 0;
@@ -41,6 +49,11 @@ export class Space {
 		this.canvas = canvas;
 		this.sound = sound;
 		this.profile = props?.profile ?? false;
+
+		// Initialize WebGL renderers
+		this.#borderRenderer = new BorderRenderer(canvas);
+		this.#outlineRenderer = new OutlineRenderer(canvas);
+		this.#broadcastRenderer = new BroadcastRenderer(canvas);
 
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
@@ -56,10 +69,16 @@ export class Space {
 
 		this.#signals.effect(this.#runScale.bind(this));
 
-		// This is a bit of a hack, but register our render method.
-		this.canvas.onRender = this.#tick.bind(this);
+		// Register tick and render methods separately
+		this.canvas.onRender = this.#render.bind(this);
 		this.#signals.cleanup(() => {
 			this.canvas.onRender = undefined;
+		});
+
+		// Run tick separately from render at 60fps
+		this.#signals.effect((effect) => {
+			const interval = setInterval(() => this.#tickAll(), 1000 / 60);
+			effect.cleanup(() => clearInterval(interval));
 		});
 	}
 
@@ -96,7 +115,10 @@ export class Space {
 			this.#publishPosition(this.#dragging);
 
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			document.body.style.cursor = "default";
 		}
 	}
@@ -116,13 +138,22 @@ export class Space {
 
 		const broadcast = this.#at(mouse);
 		if (broadcast) {
-			this.#hovering = broadcast;
+			if (this.#hovering !== broadcast) {
+				if (this.#hovering) {
+					this.#hovering.name.setHovering(false);
+				}
+				this.#hovering = broadcast;
+				this.#hovering.name.setHovering(true);
+			}
 
 			if (!broadcast.locked()) {
 				document.body.style.cursor = "grab";
 			}
 		} else {
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			document.body.style.cursor = "default";
 		}
 	}
@@ -132,7 +163,10 @@ export class Space {
 			this.#publishPosition(this.#dragging);
 
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			document.body.style.cursor = "default";
 		}
 	}
@@ -149,7 +183,13 @@ export class Space {
 				return;
 			}
 
-			this.#hovering = broadcast;
+			if (this.#hovering !== broadcast) {
+				if (this.#hovering) {
+					this.#hovering.name.setHovering(false);
+				}
+				this.#hovering = broadcast;
+				this.#hovering.name.setHovering(true);
+			}
 
 			// Bump the z-index unless we're already at the top.
 			broadcast.position.update((prev) => ({
@@ -324,7 +364,10 @@ export class Space {
 		if (this.#touches.size === 0 && this.#dragging) {
 			this.#publishPosition(this.#dragging);
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			this.#pinchStartDistance = 0;
 			this.#pinchStartScale = 1;
 		}
@@ -360,7 +403,10 @@ export class Space {
 		if (this.#dragging) {
 			this.#publishPosition(this.#dragging);
 			this.#dragging = undefined;
-			this.#hovering = undefined;
+			if (this.#hovering) {
+				this.#hovering.name.setHovering(false);
+				this.#hovering = undefined;
+			}
 			this.#pinchStartDistance = 0;
 			this.#pinchStartScale = 1;
 		}
@@ -391,6 +437,9 @@ export class Space {
 			...prev,
 			z: ++this.#maxZ,
 		}));
+
+		// Set profile mode for the name display
+		broadcast.name.setProfile(this.profile);
 
 		if (this.lookup.has(id)) {
 			throw new Error(`broadcast already exists: ${id}`);
@@ -449,6 +498,8 @@ export class Space {
 			const name = effect.get(broadcast.source.user.name);
 			if (!name) return;
 
+			if (name.endsWith("(screen)")) return;
+
 			this.sound.tts.joined(name);
 		});
 
@@ -457,6 +508,8 @@ export class Space {
 
 			const name = effect.get(broadcast.source.user.name);
 			if (!name) return;
+
+			if (name.endsWith("(screen)")) return;
 
 			this.sound.tts.left(name);
 		});
@@ -469,6 +522,8 @@ export class Space {
 		if (!broadcast) {
 			throw new Error(`broadcast not found: ${path}`);
 		}
+
+		broadcast.setOnline(false);
 
 		this.lookup.delete(path);
 
@@ -495,15 +550,18 @@ export class Space {
 		return all;
 	}
 
-	#tick(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
+	// Tick physics separately from rendering
+	#tickAll() {
+		const now = performance.now();
+
 		for (const broadcast of this.#rip) {
-			broadcast.tick();
+			broadcast.tick(now);
 		}
 
 		const broadcasts = this.ordered.peek();
 
 		for (const broadcast of broadcasts) {
-			broadcast.tick();
+			broadcast.tick(now);
 		}
 
 		// Check for collisions.
@@ -534,88 +592,51 @@ export class Space {
 				b.velocity = b.velocity.sub(force);
 			}
 		}
-
-		this.#render(ctx, now);
 	}
 
-	#render(ctx: CanvasRenderingContext2D, now: DOMHighResTimeStamp) {
-		// Render the audio click prompt if audio is suspended
-		if (this.sound.suspended.peek() && !this.profile) {
-			this.#renderAudioPrompt(ctx);
-		}
-
+	// Render using WebGL
+	#render(now: DOMHighResTimeStamp) {
 		const broadcasts = this.ordered.peek();
-		for (const broadcast of broadcasts) {
-			broadcast.audio.renderBackground(ctx);
-		}
 
-		for (const broadcast of broadcasts) {
-			broadcast.audio.render(ctx);
-		}
+		// Render in order: black borders (back) -> audio viz (middle) -> videos (front)
+		// This way audio viz shows through overlapping black borders
 
-		// Broadcasts fading out don't have collision so they're in a separate structure.
+		// 1. Render black borders (furthest back)
 		for (const broadcast of this.#rip) {
-			broadcast.video.render(now, ctx);
+			this.#borderRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+		}
+		for (const broadcast of broadcasts) {
+			this.#borderRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
 
+		// 2. Render audio visualizations (middle layer)
+		for (const broadcast of this.#rip) {
+			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+		}
+		for (const broadcast of broadcasts) {
+			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+		}
+
+		// 3. Render video content (front layer)
+		for (const broadcast of this.#rip) {
+			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+		}
+
+		// Render all broadcasts (except dragging)
 		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
-				ctx.save();
-				broadcast.video.render(now, ctx, {
+				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, {
 					hovering: this.#hovering === broadcast || this.profile,
 				});
-				ctx.restore();
 			}
 		}
 
-		// Render the dragging broadcast last so it's always on top.
+		// Render the dragging broadcast last so it's always on top
 		if (this.#dragging) {
-			ctx.save();
-			ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-			this.#dragging.video.render(now, ctx, { dragging: true });
-			ctx.restore();
+			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, {
+				dragging: true,
+			});
 		}
-
-		// Render the locator arrows for our broadcasts on join.
-		for (const broadcast of broadcasts) {
-			if (broadcast.source instanceof Publish.Broadcast) {
-				broadcast.renderLocator(now, ctx);
-			}
-		}
-	}
-
-	#renderAudioPrompt(ctx: CanvasRenderingContext2D) {
-		ctx.save();
-
-		// Use logical dimensions (CSS pixels)
-		const width = ctx.canvas.width / window.devicePixelRatio;
-		const padding = 30;
-		const boxWidth = 400;
-		const height = 80;
-		const y = ctx.canvas.height / window.devicePixelRatio - height - padding;
-		const x = (width - boxWidth) / 2;
-		const borderRadius = 16;
-
-		// Rounded rectangle with thick black border
-		ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
-		ctx.beginPath();
-		ctx.roundRect(x, y, boxWidth, height, borderRadius);
-		ctx.fill();
-
-		// Thick border
-		ctx.strokeStyle = "rgba(0, 0, 0, 1)";
-		ctx.lineWidth = 6;
-		ctx.stroke();
-
-		// Text
-		const fontSize = Math.round(24); // round to avoid busting font caches
-		ctx.font = `${fontSize}px sans-serif`;
-		ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillText("🔊 Click to enable audio", width * 0.5, y + height / 2);
-
-		ctx.restore();
 	}
 
 	#runScale(effect: Effect) {
@@ -641,6 +662,10 @@ export class Space {
 	}
 
 	close() {
+		this.#borderRenderer.close();
+		this.#outlineRenderer.close();
+		this.#broadcastRenderer.close();
+
 		this.#signals.close();
 
 		for (const broadcast of this.ordered.peek()) {

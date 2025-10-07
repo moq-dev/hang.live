@@ -1,5 +1,8 @@
+import solid from "@kixelated/signals/solid";
 import { createEffect, createSignal, type JSX, onCleanup } from "solid-js";
+import AudioPrompt from "./components/audio-prompt";
 import CreateHang from "./components/create";
+import DemoHeader from "./components/demo-header";
 import Layout from "./layout/web";
 import { Canvas } from "./room/canvas";
 import { FakeRoom } from "./room/fake";
@@ -7,8 +10,14 @@ import { FakeRoom } from "./room/fake";
 export function About(): JSX.Element {
 	const canvas = <canvas class="border-3 border-link-hue rounded-lg w-full h-full" id="demo" />;
 
-	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement, { demo: true }));
+	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement));
 	onCleanup(() => room.close());
+
+	const audioSuspended = solid(room.sound.suspended);
+
+	const handleEnableAudio = () => {
+		room.sound.enabled.set(true);
+	};
 
 	const services = ["Meet", "Zoom", "Teams", "Discord", "Skype", "WebEx", "FaceTime", "WhatsApp"];
 	const [currentService, setCurrentService] = createSignal(0);
@@ -109,11 +118,11 @@ export function About(): JSX.Element {
 		() => {},
 		() => {
 			two.user.name.set("omni-chan");
-			two.user.avatar.set("/avatar/omni.jpg");
+			two.show(new URL("/avatar/omni.jpg", import.meta.url));
 		},
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("oops wrong button"),
-		() => two.user.avatar.set("/avatar/43.svg"),
+		() => two.stop(),
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("dude"),
 		() => two.play(new URL("/meme/linus.mp4", import.meta.url)),
@@ -251,17 +260,17 @@ export function About(): JSX.Element {
 					</div>
 				</div>
 
-				<div class="sm:m-8 m-4 h-128 w-full">{canvas}</div>
+				<div class="sm:m-8 m-4 h-128 w-full relative">
+					<DemoHeader />
+					<AudioPrompt show={audioSuspended()} onClick={handleEnableAudio} />
+					{canvas}
+				</div>
 
 				<p>
 					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
 					<a href="https://moq.dev">MoQ</a>. There's more to live than another {services[currentService()]}{" "}
 					clone. <i>Crazy</i>, I know.
 				</p>
-
-				<div class="flex my-18">
-					<img src="/image/we-are/5.svg" alt="we are live" class="max-w-120 w-full" />
-				</div>
 			</div>
 		</Layout>
 	);

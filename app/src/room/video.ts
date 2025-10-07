@@ -1,12 +1,11 @@
 import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import * as Api from "../api";
+import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import { FakeBroadcast } from "./fake";
-import { Vector } from "./geometry";
-import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, type MemeVideoName } from "./meme";
+import { Bounds, Vector } from "./geometry";
 
-export type VideoSource = Watch.Video.Source | Publish.Video.Encoder;
+//export type VideoSource = Watch.Video.Source | Publish.Video.Encoder;
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
@@ -16,29 +15,93 @@ export class Video {
 	// The avatar image.
 	avatar = new Image();
 
-	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
-	avatarTransition = 0;
-
 	// The size of the avatar in pixels.
 	avatarSize = new Signal<Vector | undefined>(undefined);
-
-	// The current video frame.
-	frame?: CanvasImageSource;
 
 	// The desired size of the video in pixels.
 	targetSize = new Signal<Vector>(Vector.create(128, 128));
 
-	// The opacity from 0 to 1, where 0 is offline and 1 is online.
-	online = 0;
+	// Time-based transition tracking (in milliseconds)
+	#memeTransition: DOMHighResTimeStamp = 0; // When meme started appearing/disappearing
+	#frameTransition: DOMHighResTimeStamp = 0;
+	frameActive: boolean = false;
 
-	#memeOpacity = 0;
-	#nameOpacity = 0;
+	// Computed opacity values (calculated once per frame instead of per pixel)
+	frameOpacity: number = 0;
+	memeOpacity: number = 0;
+
+	// Signal that updates when meme video dimensions are loaded
+	#memeSize = new Signal<Vector | undefined>(undefined);
+
+	// Cached meme bounds (x_offset, y_offset, width_scale, height_scale)
+	memeBounds?: Bounds;
+	memeActive: Signal<boolean> = new Signal<boolean>(false);
+
+	// WebGL textures for this broadcast
+	frameTexture: WebGLTexture; // Video texture
+	avatarTexture: WebGLTexture; // Avatar texture
+	memeTexture: WebGLTexture; // Meme texture
+	#gl: WebGL2RenderingContext;
+
+	// Render avatars and emojis at this size
+	#renderSize = new Signal<number>(128);
+
+	// Whether to flip the video horizontally (for self-preview)
+	flip = new Signal<boolean>(false);
 
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
+
+		this.#gl = broadcast.canvas.gl;
+
+		// Create the textures
+		this.frameTexture = this.#gl.createTexture();
+		this.avatarTexture = this.#gl.createTexture();
+		this.memeTexture = this.#gl.createTexture();
+
+		// Initialize textures with 1x1 transparent pixel to make them renderable
+		const emptyPixel = new Uint8Array([0, 0, 0, 0]);
+		for (const texture of [this.frameTexture, this.avatarTexture, this.memeTexture]) {
+			this.#gl.bindTexture(this.#gl.TEXTURE_2D, texture);
+			this.#gl.texImage2D(
+				this.#gl.TEXTURE_2D,
+				0,
+				this.#gl.RGBA,
+				1,
+				1,
+				0,
+				this.#gl.RGBA,
+				this.#gl.UNSIGNED_BYTE,
+				emptyPixel,
+			);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_S, this.#gl.CLAMP_TO_EDGE);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_T, this.#gl.CLAMP_TO_EDGE);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MIN_FILTER, this.#gl.LINEAR);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MAG_FILTER, this.#gl.LINEAR);
+		}
+		this.#gl.bindTexture(this.#gl.TEXTURE_2D, null);
+
+		// Set up texture upload effects
+		this.broadcast.signals.effect(this.#runFrame.bind(this));
+		this.broadcast.signals.effect(this.#runMeme.bind(this));
+		this.broadcast.signals.effect(this.#runMemeBounds.bind(this));
 		this.broadcast.signals.effect(this.#runAvatar.bind(this));
 		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
-		this.broadcast.signals.effect(this.#runFrame.bind(this));
+		this.broadcast.signals.effect(this.#runMemeTransition.bind(this));
+		this.broadcast.signals.effect(this.#runFlip.bind(this));
+
+		this.broadcast.signals.effect(this.#runRenderSize.bind(this));
+	}
+
+	#runFlip(effect: Effect) {
+		// Flipping is a mess because there's no way to encode a flipped frame, only to decode it flipped.
+		if (this.broadcast.source instanceof Publish.Broadcast) {
+			const flip = effect.get(this.broadcast.source.video.hd.config)?.flip ?? false;
+			this.flip.set(flip);
+		} else if (this.broadcast.source instanceof Watch.Broadcast) {
+			const flip = effect.get(this.broadcast.source.video.active)?.config.flip ?? false;
+			this.flip.set(flip);
+		}
 	}
 
 	#runAvatar(effect: Effect) {
@@ -53,14 +116,51 @@ export class Video {
 
 		// TODO only set the avatar if it successfully loads
 		const newAvatar = new Image();
+
+		// Enable CORS for external avatar images
+		newAvatar.crossOrigin = "anonymous";
+
+		// For SVGs, load at higher resolution to avoid pixelation
+		// Set a reasonable size (e.g., 512x512) for better quality
+		if (avatar.endsWith(".svg")) {
+			const size = effect.get(this.#renderSize);
+			newAvatar.width = size;
+			newAvatar.height = size;
+		}
+
 		newAvatar.src = avatar;
 
-		const load = () => {
-			this.avatar = newAvatar;
-			this.avatarSize.set(Vector.create(newAvatar.width, newAvatar.height));
-		};
+		// Once the avatar loads, upload it to the texture
+		effect.event(newAvatar, "load", () => {
+			const avatarSize = Vector.create(
+				newAvatar.naturalWidth || newAvatar.width,
+				newAvatar.naturalHeight || newAvatar.height,
+			);
+			effect.set(this.avatarSize, avatarSize);
 
-		effect.event(newAvatar, "load", load);
+			effect.effect((effect) => {
+				const size = effect.get(this.#renderSize);
+				this.#imageToTexture(newAvatar, this.avatarTexture, size);
+			});
+		});
+	}
+
+	#imageToTexture(src: HTMLImageElement, dst: WebGLTexture, size: number) {
+		const canvas = document.createElement("canvas");
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) throw new Error("Failed to get context");
+		ctx.drawImage(src, 0, 0, size, size);
+
+		const gl = this.#gl;
+		gl.bindTexture(gl.TEXTURE_2D, dst);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
 	#runTargetSize(effect: Effect) {
@@ -89,268 +189,237 @@ export class Video {
 	}
 
 	#runFrame(effect: Effect) {
-		if (this.broadcast.source instanceof FakeBroadcast) {
-			// TODO FakeBroadcast should return a VideoFrame instead of a HTMLVideoElement.
-			this.frame = effect.get(this.broadcast.source.video.frame);
-		} else {
-			const frame = effect.get(this.broadcast.source.video.frame)?.clone();
-			effect.cleanup(() => frame?.close());
-			this.frame = frame;
+		const frame = effect.get(this.broadcast.source.video.frame);
+
+		if (!!frame !== this.frameActive) {
+			this.#frameTransition = performance.now();
+			this.frameActive = !!frame;
+		}
+
+		if (frame) this.#frameToTexture(frame, this.frameTexture);
+	}
+
+	#runMeme(effect: Effect) {
+		const meme = effect.get(this.broadcast.meme);
+		if (!meme) {
+			this.memeActive.set(false);
+			return;
+		}
+
+		const element = meme.element;
+
+		effect.event(element, "ended", () => {
+			this.memeActive.set(false);
+		});
+
+		if (element instanceof HTMLVideoElement) {
+			this.#videoToTexture(effect, element, this.memeTexture);
+
+			// Listen for loadedmetadata event to update meme size when dimensions are available
+			const updateSize = () => {
+				if (element.videoWidth > 0 && element.videoHeight > 0) {
+					this.memeActive.set(true);
+					effect.set(this.#memeSize, Vector.create(element.videoWidth, element.videoHeight));
+				}
+			};
+
+			// Check if already loaded
+			if (element.readyState >= 1) {
+				updateSize();
+			}
+
+			// Listen for metadata load
+			effect.event(element, "loadedmetadata", updateSize);
+		} else if ("emoji" in meme.source) {
+			const emoji = meme.source.emoji;
+
+			effect.effect((effect) => {
+				// Audio meme - render emoji to texture
+				const size = effect.get(this.#renderSize);
+				this.#emojiToTexture(emoji, size);
+			});
+
+			this.memeActive.set(true);
 		}
 	}
 
-	tick() {
-		if (this.frame) {
-			this.avatarTransition = Math.min(this.avatarTransition + 0.05, 1);
-		} else {
-			this.avatarTransition = Math.max(this.avatarTransition - 0.05, 0);
-		}
-
-		if (this.broadcast.visible.peek()) {
-			this.online += (1 - this.online) * 0.1;
-		} else {
-			this.online += (0 - this.online) * 0.1;
-		}
-
-		/*
-		const ZOOM_SPEED = 0.005;
-		this.#zoom = this.#zoom.lerp(this.#zoomTarget, ZOOM_SPEED);
-		*/
+	#runMemeTransition(effect: Effect) {
+		effect.get(this.memeActive);
+		this.#memeTransition = performance.now();
 	}
 
-	// Try to avoid any mutations in this function; do it in tick instead.
-	render(
-		_now: DOMHighResTimeStamp,
-		ctx: CanvasRenderingContext2D,
-		modifiers?: {
-			dragging?: boolean;
-			hovering?: boolean;
-		},
-	) {
-		ctx.save();
+	#runMemeBounds(effect: Effect) {
+		const meme = effect.get(this.broadcast.meme);
+		if (!meme) return;
 
-		const bounds = this.broadcast.bounds.peek();
-		const scale = this.broadcast.zoom.peek();
+		// Wait until meme dimensions are available
+		const memeSize = effect.get(this.#memeSize);
+		if (!memeSize) return;
 
-		ctx.translate(bounds.position.x, bounds.position.y);
-		ctx.globalAlpha *= this.online;
-		ctx.fillStyle = "#000";
+		// Also react to bounds changes
+		const bounds = effect.get(this.broadcast.bounds);
 
-		ctx.save();
+		const fit = meme.source.fit || "cover";
+		const position = meme.source.position || "center";
 
-		// Add a drop shadow
-		ctx.shadowColor = "rgba(0, 0, 0, 1.0)";
-		ctx.shadowBlur = 16 * scale;
-		ctx.shadowOffsetX = 0;
-		ctx.shadowOffsetY = 4 * scale;
+		// Calculate meme bounds based on fit and position
+		const aspectRatio = memeSize.x / memeSize.y;
+		const boundsAspectRatio = bounds.size.x / bounds.size.y;
+		let width: number;
+		let height: number;
 
-		// Create a rounded rectangle path
-		const radius = 12 * scale;
-		const w = bounds.size.x;
-		const h = bounds.size.y;
-
-		ctx.beginPath();
-		ctx.moveTo(radius, 0);
-		ctx.lineTo(w - radius, 0);
-		ctx.quadraticCurveTo(w, 0, w, radius);
-		ctx.lineTo(w, h - radius);
-		ctx.quadraticCurveTo(w, h, w - radius, h);
-		ctx.lineTo(radius, h);
-		ctx.quadraticCurveTo(0, h, 0, h - radius);
-		ctx.lineTo(0, radius);
-		ctx.quadraticCurveTo(0, 0, radius, 0);
-		ctx.closePath();
-
-		ctx.fillStyle = "#000"; // just needed to apply the shadow
-		ctx.fill();
-
-		ctx.shadowColor = "transparent";
-
-		// Clip and draw the image
-		ctx.clip();
-
-		// Apply an opacity to the image.
-		if (modifiers?.dragging) {
-			ctx.globalAlpha *= 0.7;
-		}
-
-		if (this.frame && this.avatarTransition > 0) {
-			ctx.save();
-			ctx.globalAlpha *= this.avatarTransition;
-
-			// Apply horizontal flip when rendering the preview.
-			const flip =
-				this.broadcast.source instanceof Publish.Broadcast &&
-				this.broadcast.source.video.hd.config.peek()?.flip;
-
-			if (flip) {
-				ctx.save();
-				ctx.scale(-1, 1);
-				ctx.translate(-bounds.size.x, 0);
-				ctx.drawImage(this.frame, 0, 0, bounds.size.x, bounds.size.y);
-				ctx.restore();
+		if (fit === "contain") {
+			// Fit entire video within bounds
+			if (aspectRatio > boundsAspectRatio) {
+				width = 1.0;
+				height = boundsAspectRatio / aspectRatio;
 			} else {
-				ctx.drawImage(this.frame, 0, 0, bounds.size.x, bounds.size.y);
+				height = 1.0;
+				width = aspectRatio / boundsAspectRatio;
 			}
-			ctx.restore();
-		}
-
-		if (this.avatarTransition < 1) {
-			ctx.save();
-			ctx.globalAlpha *= 1 - this.avatarTransition;
-
-			if (this.avatar.complete) {
-				ctx.drawImage(this.avatar, 0, 0, bounds.size.x, bounds.size.y);
+		} else {
+			// cover: fill the bounds (may crop)
+			if (aspectRatio > boundsAspectRatio) {
+				height = 1.0;
+				width = aspectRatio / boundsAspectRatio;
 			} else {
-				ctx.fillRect(0, 0, bounds.size.x, bounds.size.y);
+				width = 1.0;
+				height = boundsAspectRatio / aspectRatio;
 			}
-
-			ctx.restore();
 		}
 
-		const meme = this.broadcast.meme.peek();
-		if (meme) {
-			if (meme.currentTime > 0) {
-				ctx.save();
-				ctx.globalAlpha *= this.#memeOpacity;
+		// Parse position string
+		let xPos = 0.5;
+		let yPos = 0.5;
 
-				if (meme instanceof HTMLVideoElement) {
-					// Get the meme configuration
-					const memeName = this.broadcast.memeName.peek();
-					let fit: "contain" | "cover" = "cover"; // default
-					let position = "center"; // default
-
-					if (memeName) {
-						// Remove hyphens for lookup if needed
-						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
-						const memeKey = MEME_VIDEO_LOOKUP[lookupKey] || memeName;
-						const memeData = MEME_VIDEO[memeKey as MemeVideoName];
-						if (memeData) {
-							fit = memeData.fit || "cover";
-							position = memeData.position || "center";
-						}
-					}
-
-					const aspectRatio = meme.videoWidth / meme.videoHeight;
-					const boundsAspectRatio = bounds.size.x / bounds.size.y;
-					let width: number;
-					let height: number;
-
-					if (fit === "contain") {
-						// Fit entire video within bounds (may have letterbox/pillarbox)
-						if (aspectRatio > boundsAspectRatio) {
-							// Video is wider than bounds - fit by width
-							width = bounds.size.x;
-							height = width / aspectRatio;
-						} else {
-							// Video is taller than bounds - fit by height
-							height = bounds.size.y;
-							width = height * aspectRatio;
-						}
-					} else {
-						// cover: fill the bounds (may crop)
-						if (aspectRatio > boundsAspectRatio) {
-							// Video is wider than bounds - use height to fill
-							height = bounds.size.y;
-							width = height * aspectRatio;
-						} else {
-							// Video is taller than bounds - use width to fill
-							width = bounds.size.x;
-							height = width / aspectRatio;
-						}
-					}
-
-					// Parse position string (e.g., "center", "bottom", "bottom left", "50% 75%")
-					let xPos = 0.5; // default center
-					let yPos = 0.5; // default center
-
-					const positionParts = position.toLowerCase().split(/\s+/);
-					for (const part of positionParts) {
-						if (part === "left") xPos = 0;
-						else if (part === "right") xPos = 1;
-						else if (part === "top") yPos = 0;
-						else if (part === "bottom") yPos = 1;
-						else if (part === "center") {
-							// Keep defaults
-						} else if (part.endsWith("%")) {
-							const value = parseFloat(part) / 100;
-							// Determine if this is x or y based on what we've seen
-							if (positionParts.length === 1) {
-								xPos = value; // Single value applies to x
-							} else if (positionParts.indexOf(part) === 0) {
-								xPos = value; // First value is x
-							} else {
-								yPos = value; // Second value is y
-							}
-						}
-					}
-
-					// Calculate position based on alignment
-					const x = (bounds.size.x - width) * xPos;
-					const y = (bounds.size.y - height) * yPos;
-
-					// Add a pixel in each direction to account for any rounding errors.
-					ctx.drawImage(meme, x - 1, y - 1, width + 2, height + 2);
+		const positionParts = position.toLowerCase().split(/\s+/);
+		for (const part of positionParts) {
+			if (part === "left") xPos = 0;
+			else if (part === "right") xPos = 1;
+			else if (part === "top") yPos = 0;
+			else if (part === "bottom") yPos = 1;
+			else if (part === "center") {
+				// Keep defaults
+			} else if (part.endsWith("%")) {
+				const value = parseFloat(part) / 100;
+				if (positionParts.length === 1) {
+					xPos = value;
+				} else if (positionParts.indexOf(part) === 0) {
+					xPos = value;
 				} else {
-					// Get the emoji for this audio meme
-					const memeName = this.broadcast.memeName.peek();
-					let emoji = "🔊"; // Default speaker emoji
-
-					if (memeName) {
-						// Remove hyphens for lookup if needed
-						const lookupKey = memeName.toLowerCase().replace(/-/g, "");
-						const memeKey = MEME_AUDIO_LOOKUP[lookupKey] || memeName;
-						const memeData = MEME_AUDIO[memeKey as keyof typeof MEME_AUDIO];
-						if (memeData) {
-							emoji = memeData.emoji;
-						}
-					}
-
-					const fontSize = Math.round(32 + 32 * scale); // round to avoid busting font caches
-					// Draw the emoji for this audio meme
-					ctx.font = `bold ${fontSize}px Arial`;
-					ctx.fillStyle = "white";
-					// Render it at the bottom center of the bounds.
-					ctx.fillText(emoji, bounds.size.x / 2 - fontSize / 2, bounds.size.y - fontSize / 2);
+					yPos = value;
 				}
-
-				ctx.restore();
-			}
-
-			if (meme.ended || (meme.paused && meme.currentTime > 0)) {
-				this.#memeOpacity += -this.#memeOpacity * 0.1;
-				if (this.#memeOpacity <= 0) {
-					this.broadcast.meme.set(undefined);
-					this.broadcast.memeName.set(undefined);
-				}
-			} else {
-				this.#memeOpacity += (1 - this.#memeOpacity) * 0.1;
 			}
 		}
 
-		// Cancel the clip
-		ctx.restore();
+		// Calculate offset in texture coordinates (0-1 range)
+		this.memeBounds = new Bounds(
+			Vector.create((1.0 - width) * xPos, (1.0 - height) * yPos),
+			Vector.create(width, height),
+		);
 
-		// Render the display name when hovering.
-		const targetOpacity = modifiers?.hovering ? 1 : 0;
-		this.#nameOpacity += (targetOpacity - this.#nameOpacity) * 0.1;
+		effect.cleanup(() => {
+			this.memeBounds = undefined;
+		});
+	}
 
-		const name = this.broadcast.source.user.name.peek();
+	#frameToTexture(src: VideoFrame, dst: WebGLTexture) {
+		const gl = this.#gl;
+		gl.bindTexture(gl.TEXTURE_2D, dst);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
 
-		if (this.#nameOpacity > 0 && name) {
-			const fontSize = Math.round(Math.max(14 * scale, 10));
-			ctx.save();
-			ctx.globalAlpha *= this.#nameOpacity;
-			ctx.font = `bold ${fontSize}px Arial`;
-			ctx.fillStyle = "white";
-			ctx.strokeStyle = "black";
-			ctx.lineWidth = 2 * scale;
-			const offset = 12 * scale;
-			ctx.strokeText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
-			ctx.fillText(name, offset, 2 * offset, bounds.size.x - 2 * offset);
-			ctx.restore();
+	#videoToTexture(effect: Effect, src: HTMLVideoElement, dst: WebGLTexture) {
+		const gl = this.#gl;
+
+		let cancel: number;
+		const onFrame = () => {
+			gl.bindTexture(gl.TEXTURE_2D, dst);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+			gl.bindTexture(gl.TEXTURE_2D, null);
+
+			if (!src.paused && !src.ended) {
+				cancel = src.requestVideoFrameCallback(onFrame);
+			}
+		};
+
+		cancel = src.requestVideoFrameCallback(onFrame);
+
+		effect.cleanup(() => src.cancelVideoFrameCallback(cancel));
+	}
+
+	#emojiToTexture(emoji: string, size: number) {
+		const gl = this.#gl;
+
+		// Create offscreen canvas
+		const canvas = document.createElement("canvas");
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) throw new Error("Failed to get context");
+
+		// Render emoji centered
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.font = `${size * 0.5}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+		// Shift down slightly to compensate for emoji baseline issues
+		ctx.fillText(emoji, size / 2, size * 0.56);
+
+		// Upload to texture
+		gl.bindTexture(gl.TEXTURE_2D, this.memeTexture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+
+		// Set meme size for bounds calculation
+		this.#memeSize.set(Vector.create(size, size));
+	}
+
+	#runRenderSize(effect: Effect) {
+		const scale = effect.get(Settings.render.scale);
+		const target = effect.get(this.broadcast.bounds).size;
+		const size = Math.sqrt(target.x * target.y) * scale;
+		// Increase to the nearest power of 2
+		const power = Math.ceil(Math.log2(size));
+		this.#renderSize.set(Math.min(2 ** power, 512 * scale));
+	}
+
+	// Update opacity values based on current time (called once per frame)
+	tick(now: DOMHighResTimeStamp) {
+		const TRANSITION_DURATION = 300; // ms
+
+		// Calculate frame opacity
+		const frameElapsed = now - this.#frameTransition;
+		if (this.frameActive) {
+			this.frameOpacity = Math.min(1, Math.max(0, frameElapsed / TRANSITION_DURATION));
+		} else {
+			this.frameOpacity = Math.max(0, 1 - frameElapsed / TRANSITION_DURATION);
 		}
 
-		ctx.restore();
+		// Calculate meme opacity
+		const memeElapsed = now - this.#memeTransition;
+		if (this.memeActive.peek()) {
+			this.memeOpacity = Math.min(1, Math.max(0, memeElapsed / TRANSITION_DURATION));
+		} else {
+			this.memeOpacity = Math.max(0, 1 - memeElapsed / TRANSITION_DURATION);
+		}
+	}
+
+	close() {
+		this.#gl.deleteTexture(this.frameTexture);
+		this.#gl.deleteTexture(this.avatarTexture);
+		this.#gl.deleteTexture(this.memeTexture);
 	}
 }
