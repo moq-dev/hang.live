@@ -20,15 +20,12 @@ export class BroadcastRenderer {
 	#u_radius: Uniform1f;
 	#u_size: Uniform2f;
 	#u_opacity: Uniform1f;
-	#u_frameTransition: Uniform1f;
+	#u_frameOpacity: Uniform1f;
 	#u_frameTexture: Uniform1i;
-	#u_frameActive: Uniform1i;
 	#u_avatarTexture: Uniform1i;
 	#u_avatarActive: Uniform1i;
 	#u_memeTexture: Uniform1i;
-	#u_memeActive: Uniform1i;
-	#u_now: Uniform1f;
-	#u_memeTransition: Uniform1f;
+	#u_memeOpacity: Uniform1f;
 	#u_memeBounds: Uniform4f;
 
 	// Typed attributes
@@ -46,15 +43,12 @@ export class BroadcastRenderer {
 		this.#u_radius = this.#program.createUniform1f("u_radius");
 		this.#u_size = this.#program.createUniform2f("u_size");
 		this.#u_opacity = this.#program.createUniform1f("u_opacity");
-		this.#u_frameTransition = this.#program.createUniform1f("u_frameTransition");
+		this.#u_frameOpacity = this.#program.createUniform1f("u_frameOpacity");
 		this.#u_frameTexture = this.#program.createUniform1i("u_frameTexture");
-		this.#u_frameActive = this.#program.createUniform1i("u_frameActive");
 		this.#u_avatarTexture = this.#program.createUniform1i("u_avatarTexture");
 		this.#u_avatarActive = this.#program.createUniform1i("u_avatarActive");
 		this.#u_memeTexture = this.#program.createUniform1i("u_memeTexture");
-		this.#u_memeActive = this.#program.createUniform1i("u_memeActive");
-		this.#u_now = this.#program.createUniform1f("u_now");
-		this.#u_memeTransition = this.#program.createUniform1f("u_memeTransition");
+		this.#u_memeOpacity = this.#program.createUniform1f("u_memeOpacity");
 		this.#u_memeBounds = this.#program.createUniform4f("u_memeBounds");
 
 		// Initialize typed attributes
@@ -135,15 +129,12 @@ export class BroadcastRenderer {
 		broadcast: Broadcast,
 		camera: Camera,
 		maxZ: number,
-		now: number,
 		modifiers?: {
 			dragging?: boolean;
 			hovering?: boolean;
 		},
 	) {
 		this.#program.use();
-
-		this.#u_now.set(now);
 
 		const gl = this.#canvas.gl;
 		const bounds = broadcast.bounds.peek();
@@ -167,17 +158,20 @@ export class BroadcastRenderer {
 		this.#u_size.set(bounds.size.x, bounds.size.y);
 
 		// Set opacity
-		let opacity = broadcast.video.online;
+		let opacity = broadcast.opacity;
 		if (modifiers?.dragging) {
 			opacity *= 0.7;
 		}
+
 		this.#u_opacity.set(opacity);
+
+		// Set pre-computed opacity values
+		this.#u_frameOpacity.set(broadcast.video.frameOpacity);
+		this.#u_memeOpacity.set(broadcast.video.memeOpacity);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, broadcast.video.frameTexture);
 		this.#u_frameTexture.set(0);
-		this.#u_frameTransition.set(broadcast.video.frameTransition);
-		this.#u_frameActive.set(broadcast.video.frameActive ? 1 : 0);
 
 		// Bind avatar texture if available
 		gl.activeTexture(gl.TEXTURE1);
@@ -188,13 +182,10 @@ export class BroadcastRenderer {
 		// Bind meme texture if available
 		const memeTexture = broadcast.video.memeTexture;
 		const memeBounds = broadcast.video.memeBounds;
-		const memeTransition = broadcast.video.memeTransition;
 
 		gl.activeTexture(gl.TEXTURE2);
 		gl.bindTexture(gl.TEXTURE_2D, memeTexture);
 		this.#u_memeTexture.set(2);
-		this.#u_memeActive.set(broadcast.video.memeActive.peek() ? 1 : 0);
-		this.#u_memeTransition.set(memeTransition);
 
 		if (memeBounds) {
 			this.#u_memeBounds.set(memeBounds.position.x, memeBounds.position.y, memeBounds.size.x, memeBounds.size.y);

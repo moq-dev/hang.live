@@ -498,6 +498,8 @@ export class Space {
 			const name = effect.get(broadcast.source.user.name);
 			if (!name) return;
 
+			if (name.endsWith("(screen)")) return;
+
 			this.sound.tts.joined(name);
 		});
 
@@ -506,6 +508,8 @@ export class Space {
 
 			const name = effect.get(broadcast.source.user.name);
 			if (!name) return;
+
+			if (name.endsWith("(screen)")) return;
 
 			this.sound.tts.left(name);
 		});
@@ -518,6 +522,8 @@ export class Space {
 		if (!broadcast) {
 			throw new Error(`broadcast not found: ${path}`);
 		}
+
+		broadcast.setOnline(false);
 
 		this.lookup.delete(path);
 
@@ -546,14 +552,16 @@ export class Space {
 
 	// Tick physics separately from rendering
 	#tickAll() {
+		const now = performance.now();
+
 		for (const broadcast of this.#rip) {
-			broadcast.tick();
+			broadcast.tick(now);
 		}
 
 		const broadcasts = this.ordered.peek();
 
 		for (const broadcast of broadcasts) {
-			broadcast.tick();
+			broadcast.tick(now);
 		}
 
 		// Check for collisions.
@@ -616,13 +624,13 @@ export class Space {
 
 		// 3. Render video content (front layer)
 		for (const broadcast of this.#rip) {
-			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
 
 		// Render all broadcasts (except dragging)
 		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
-				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now, {
+				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, {
 					hovering: this.#hovering === broadcast || this.profile,
 				});
 			}
@@ -630,7 +638,7 @@ export class Space {
 
 		// Render the dragging broadcast last so it's always on top
 		if (this.#dragging) {
-			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, now, {
+			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, {
 				dragging: true,
 			});
 		}

@@ -55,7 +55,7 @@ export class Canvas {
 		const resize = (entries: ResizeObserverEntry[]) => {
 			for (const entry of entries) {
 				// Get device pixel dimensions using the user's configured ratio
-				const dpr = Settings.rendering.devicePixelRatio.peek();
+				const dpr = Settings.render.scale.peek();
 
 				// Always use contentBoxSize and multiply by our custom ratio
 				// to ensure we respect the user's setting
@@ -104,7 +104,7 @@ export class Canvas {
 		this.#signals.event(document, "visibilitychange", visible);
 
 		// Trigger resize when devicePixelRatio setting changes
-		this.#signals.subscribe(Settings.rendering.devicePixelRatio, () => {
+		this.#signals.subscribe(Settings.render.scale, () => {
 			// Force a resize by temporarily disconnecting and reconnecting
 			resizeObserver.disconnect();
 			resizeObserver.observe(this.#canvas, { box: "content-box" });

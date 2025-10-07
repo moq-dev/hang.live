@@ -119,8 +119,7 @@ export class BorderRenderer {
 		this.#u_size.set(bounds.size.x + border * 2, bounds.size.y + border * 2);
 
 		// Set opacity
-		const opacity = broadcast.video.online;
-		this.#u_opacity.set(opacity);
+		this.#u_opacity.set(broadcast.opacity);
 
 		// Draw
 		gl.bindVertexArray(this.#vao);

@@ -6,6 +6,7 @@ import { Captions } from "./captions";
 import { Chat } from "./chat";
 import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
+import { Meme } from "./meme";
 import { Name } from "./name";
 import { Sound } from "./sound";
 import { Video } from "./video";
@@ -63,11 +64,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	position: Signal<Position>;
 
 	// The meme video/audio we're rendering, if any.
-	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
-	memeName = new Signal<string | undefined>(undefined);
+	meme = new Signal<Meme | undefined>(undefined);
 
 	scale: Signal<number>; // room scale, 1 is 100%
 	zoom = new Signal<number>(1.0); // local zoom, 1 is 100%
+
+	online = new Signal<boolean>(true); // false is offline, true is online
+	#onlineTransition: DOMHighResTimeStamp = 0;
+
+	// Computed opacity based on online fade-in/fade-out (0-1)
+	opacity: number = 1;
 
 	signals = new Effect();
 
@@ -152,11 +158,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const meme = this.audio.sound.meme(memeName);
 			if (meme) {
 				this.meme.update((prev) => {
-					prev?.pause();
+					prev?.element.pause();
 					return meme;
 				});
-				this.memeName.set(memeName);
-
 				return;
 			}
 		}
@@ -192,9 +196,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 	}
 
-	tick() {
-		this.video.tick();
+	tick(now: DOMHighResTimeStamp) {
 		this.audio.tick();
+		this.video.tick(now);
+
+		// Update opacity based on online status
+		const fadeTime = 300; // ms
+		const elapsed = now - this.#onlineTransition;
+		this.opacity = this.online.peek() ? Math.min(1, elapsed / fadeTime) : Math.max(0, 1 - elapsed / fadeTime);
 
 		const bounds = this.bounds.peek();
 		const viewport = this.canvas.viewport.peek();
@@ -279,6 +288,12 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 
 		return false;
+	}
+
+	// Called when online status changes to trigger fade transition
+	setOnline(online: boolean) {
+		this.online.set(online);
+		this.#onlineTransition = performance.now();
 	}
 
 	close() {

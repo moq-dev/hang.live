@@ -132,7 +132,15 @@ export class Sound {
 	}
 }
 
-import { MEME_AUDIO, MEME_AUDIO_LOOKUP, MEME_VIDEO, MEME_VIDEO_LOOKUP, MemeAudioName, MemeVideoName } from "./meme";
+import {
+	MEME_AUDIO,
+	MEME_AUDIO_LOOKUP,
+	MEME_VIDEO,
+	MEME_VIDEO_LOOKUP,
+	Meme,
+	MemeAudioName,
+	MemeVideoName,
+} from "./meme";
 
 export class PannedNotifications {
 	#parent: Sound;
@@ -183,7 +191,7 @@ export class PannedNotifications {
 
 	// NOTE: We don't cache elements because the browser will.
 	// Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
-	meme(name: string): HTMLAudioElement | HTMLVideoElement | undefined {
+	meme(name: string): Meme | undefined {
 		// Make the name lowercase and remove hyphens for lookup
 		const lower = name.toLowerCase();
 		const lookupKey = lower.replace(/-/g, "");
@@ -192,13 +200,13 @@ export class PannedNotifications {
 		const videoKey = MEME_VIDEO_LOOKUP[lookupKey] || (lower as MemeVideoName);
 		const audioKey = MEME_AUDIO_LOOKUP[lookupKey] || (lower as MemeAudioName);
 
-		const videoData = MEME_VIDEO[videoKey];
-		const audioData = MEME_AUDIO[audioKey];
+		const videoSource = MEME_VIDEO[videoKey];
+		const audioSource = MEME_AUDIO[audioKey];
 
 		// Use the video if it's available
-		if (videoData) {
+		if (videoSource) {
 			const video = document.createElement("video") as HTMLVideoElement;
-			video.src = `/meme/${videoData.file}`;
+			video.src = `/meme/${videoSource.file}`;
 
 			if (this.#parent.suspended.peek()) {
 				video.muted = true; // so we can start loading
@@ -210,14 +218,14 @@ export class PannedNotifications {
 			video.autoplay = true;
 			video.load();
 			video.play();
-			return video;
+			return { element: video, source: videoSource };
 		}
 
-		if (audioData) {
-			const audio = new Audio(`/meme/${audioData.file}`);
+		if (audioSource) {
+			const audio = new Audio(`/meme/${audioSource.file}`);
 			audio.autoplay = true;
 			audio.load();
-			return audio;
+			return { element: audio, source: audioSource };
 		}
 
 		return undefined;

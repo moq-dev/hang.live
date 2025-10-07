@@ -23,6 +23,7 @@ export class OutlineRenderer {
 	#u_border: Uniform1f;
 	#u_color: Uniform3f;
 	#u_time: Uniform1f;
+	#u_finalAlpha: Uniform1f;
 
 	// Typed attributes
 	#a_position: Attribute;
@@ -42,6 +43,7 @@ export class OutlineRenderer {
 		this.#u_border = this.#program.createUniform1f("u_border");
 		this.#u_color = this.#program.createUniform3f("u_color");
 		this.#u_time = this.#program.createUniform1f("u_time");
+		this.#u_finalAlpha = this.#program.createUniform1f("u_finalAlpha");
 
 		// Initialize typed attributes
 		this.#a_position = this.#program.createAttribute("a_position");
@@ -138,7 +140,7 @@ export class OutlineRenderer {
 		this.#u_size.set(bounds.size.x + maxExpansion * 2, bounds.size.y + maxExpansion * 2);
 
 		// Apply opacity based on volume and video online status
-		const opacity = broadcast.video.online ? Math.min(10 * volume, 1) : 0;
+		const opacity = Math.min(10 * volume, 1) * broadcast.opacity;
 		this.#u_opacity.set(opacity);
 
 		// Set volume (smoothed, from 0-1)
@@ -146,6 +148,10 @@ export class OutlineRenderer {
 
 		// Set border size
 		this.#u_border.set(border);
+
+		// Compute final alpha once in TypeScript instead of per pixel
+		const finalAlpha = 0.3 + volume * 0.4;
+		this.#u_finalAlpha.set(finalAlpha);
 
 		// Set color based on volume using HSL from old implementation
 		// hue = 180 + volume * 120

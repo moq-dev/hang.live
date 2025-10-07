@@ -73,10 +73,10 @@ export const Settings = {
 	},
 
 	// Rendering settings
-	rendering: {
-		devicePixelRatio: new Signal<number>(
+	render: {
+		scale: new Signal<number>(
 			(() => {
-				const stored = localStorage.getItem("settings.rendering.devicePixelRatio");
+				const stored = localStorage.getItem("settings.render.scale");
 				if (stored) {
 					const parsed = Number.parseFloat(stored);
 					if (!Number.isNaN(parsed) && parsed > 0 && parsed <= window.devicePixelRatio) {
@@ -206,8 +206,8 @@ effect.subscribe(Settings.tutorial.step, (step) => {
 	localStorage.setItem("settings.tutorial.step", step.toString());
 });
 
-effect.subscribe(Settings.rendering.devicePixelRatio, (ratio) => {
-	localStorage.setItem("settings.rendering.devicePixelRatio", ratio.toString());
+effect.subscribe(Settings.render.scale, (ratio) => {
+	localStorage.setItem("settings.render.scale", ratio.toString());
 });
 
 // Mostly just to avoid console warnings about signals not being closed
@@ -221,7 +221,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const tts = createSelector(solid(Settings.audio.tts));
 	const webGPUSupported = supportsWebGPU();
-	const devicePixelRatio = solid(Settings.rendering.devicePixelRatio);
+	const devicePixelRatio = solid(Settings.render.scale);
 	const maxDevicePixelRatio = window.devicePixelRatio;
 
 	// Calculate available pixel ratio options (0.5x, 1x, 2x, 4x, 8x)
@@ -385,7 +385,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 								"bg-blue-500 text-white shadow-sm": isSelectedRatio(ratio),
 								"text-white/60 hover:text-white/80 hover:bg-white/5": !isSelectedRatio(ratio),
 							}}
-							onClick={() => Settings.rendering.devicePixelRatio.set(ratio)}
+							onClick={() => Settings.render.scale.set(ratio)}
 						>
 							{ratio}x
 						</button>

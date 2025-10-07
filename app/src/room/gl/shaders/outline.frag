@@ -10,6 +10,7 @@ uniform float u_volume; // Audio volume 0-1 (smoothed)
 uniform float u_border; // Border size in pixels
 uniform vec3 u_color; // RGB color for the volume indicator
 uniform float u_time; // Time in seconds for animation
+uniform float u_finalAlpha; // Pre-computed final alpha (0.3 + volume * 0.4)
 
 out vec4 fragColor;
 
@@ -80,7 +81,6 @@ void main() {
 
 	// In the colored region
 	vec3 finalColor = u_color;
-	float finalAlpha = 0.3 + u_volume * 0.4;
 
 	// Create a sharp line with AA on edges, inset from video boundary
 	float innerEdge = videoDist + lineInset; // Offset inward
@@ -98,5 +98,5 @@ void main() {
 	// Combine: AA at inner edge, full in middle, AA at outer edge
 	float aa = innerAA * mix(outerAA, 1.0, lineMask);
 
-	fragColor = vec4(finalColor, finalAlpha * aa * u_opacity);
+	fragColor = vec4(finalColor, u_finalAlpha * aa * u_opacity);
 }

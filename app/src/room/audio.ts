@@ -44,7 +44,7 @@ export class Audio {
 			const meme = effect.get(this.broadcast.meme);
 			if (!meme) return;
 
-			const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: meme });
+			const source = new MediaElementAudioSourceNode(this.sound.context, { mediaElement: meme.element });
 
 			// Use the existing notifications context so we don't need to create our own panner/volume.
 			this.sound.connect(source);

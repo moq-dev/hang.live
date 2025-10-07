@@ -208,18 +208,6 @@ export class Local {
 		});
 		*/
 
-		// Say hi when the user joins
-		this.#signals.effect((effect) => {
-			const name = effect.get(Settings.account.name);
-			if (!name) return;
-
-			// This is enabled on join.
-			const enabled = effect.get(this.camera.enabled);
-			if (!enabled) return;
-
-			this.sound.tts.joined(name);
-		});
-
 		// Use the provided camera and screen broadcasts
 		this.camera.signals.effect((effect) => {
 			if (effect.get(this.camera.video.source) || effect.get(this.camera.audio.source)) {
