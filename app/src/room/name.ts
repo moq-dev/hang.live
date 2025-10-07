@@ -55,8 +55,15 @@ export class Name {
 			const offset = 12;
 
 			// Clamp position to stay within canvas bounds
-			const left = Math.round(Math.max(canvasRect.left + offset, Math.min(pageBounds.x + offset, canvasRect.right - offset)));
-			const top = Math.round(Math.max(canvasRect.top + offset, Math.min(pageBounds.y + offset, canvasRect.bottom - fontSize - offset)));
+			const left = Math.round(
+				Math.max(canvasRect.left + offset, Math.min(pageBounds.x + offset, canvasRect.right - offset)),
+			);
+			const top = Math.round(
+				Math.max(
+					canvasRect.top + offset,
+					Math.min(pageBounds.y + offset, canvasRect.bottom - fontSize - offset),
+				),
+			);
 
 			root.style.left = `${left}px`;
 			root.style.top = `${top}px`;
@@ -82,11 +89,16 @@ export class Name {
 		});
 
 		// Update position when window scrolls
-		effect.event(window, "scroll", () => {
-			const bounds = this.broadcast.bounds.peek();
-			const viewport = this.broadcast.canvas.viewport.peek();
-			updatePosition(bounds, viewport);
-		}, { passive: true });
+		effect.event(
+			window,
+			"scroll",
+			() => {
+				const bounds = this.broadcast.bounds.peek();
+				const viewport = this.broadcast.canvas.viewport.peek();
+				updatePosition(bounds, viewport);
+			},
+			{ passive: true },
+		);
 
 		// Update z-index based on broadcast position
 		effect.effect((effect) => {

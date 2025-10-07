@@ -8,6 +8,7 @@ uniform sampler2D u_frameTexture;
 uniform sampler2D u_avatarTexture;
 uniform sampler2D u_memeTexture;
 uniform bool u_avatarActive;
+uniform bool u_flip; // Whether to flip the frame texture horizontally
 uniform float u_radius;
 uniform vec2 u_size;
 uniform float u_opacity;
@@ -38,8 +39,11 @@ void main() {
 	// Smooth edge antialiasing
 	float alpha = 1.0 - smoothstep(-1.0, 0.0, dist);
 
+	// Calculate texture coordinates (flip horizontally if needed for frame)
+	vec2 frameTexCoord = u_flip ? vec2(1.0 - v_texCoord.x, v_texCoord.y) : v_texCoord;
+
 	// Sample textures using pre-computed opacity values
-	vec4 frameColor = u_frameOpacity > 0.0 ? texture(u_frameTexture, v_texCoord) : vec4(0.0, 0.0, 0.0, 1.0);
+	vec4 frameColor = u_frameOpacity > 0.0 ? texture(u_frameTexture, frameTexCoord) : vec4(0.0, 0.0, 0.0, 1.0);
 	vec4 avatarColor = u_avatarActive && u_frameOpacity < 1.0 ? texture(u_avatarTexture, v_texCoord) : vec4(0.0, 0.0, 0.0, 1.0);
 	vec4 baseColor = mix(avatarColor, frameColor, u_frameOpacity);
 

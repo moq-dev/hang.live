@@ -374,7 +374,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				</div>
 				<div class="flex flex-col gap-0.5 flex-grow">
 					<span class="text-white/90 font-medium">Pixel Ratio</span>
-					<span class="text-xs text-white/50">Decrease for better performance</span>
+					<span class="text-xs text-white/50">Increase for better quality, but worse performance.</span>
 				</div>
 				<div class="inline-flex rounded-lg bg-white/8 p-1">
 					{pixelRatioOptions.map((ratio) => (

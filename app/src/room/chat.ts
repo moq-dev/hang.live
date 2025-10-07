@@ -125,11 +125,16 @@ export class Chat {
 		});
 
 		// Update position when window scrolls
-		effect.event(window, "scroll", () => {
-			const bounds = this.broadcast.bounds.peek();
-			const viewport = this.broadcast.canvas.viewport.peek();
-			updatePosition(bounds, viewport);
-		}, { passive: true });
+		effect.event(
+			window,
+			"scroll",
+			() => {
+				const bounds = this.broadcast.bounds.peek();
+				const viewport = this.broadcast.canvas.viewport.peek();
+				updatePosition(bounds, viewport);
+			},
+			{ passive: true },
+		);
 
 		effect.effect((effect) => {
 			const typing = effect.get(this.broadcast.source.chat.typing.active);

@@ -27,6 +27,7 @@ export class BroadcastRenderer {
 	#u_memeTexture: Uniform1i;
 	#u_memeOpacity: Uniform1f;
 	#u_memeBounds: Uniform4f;
+	#u_flip: Uniform1i;
 
 	// Typed attributes
 	#a_position: Attribute;
@@ -50,6 +51,7 @@ export class BroadcastRenderer {
 		this.#u_memeTexture = this.#program.createUniform1i("u_memeTexture");
 		this.#u_memeOpacity = this.#program.createUniform1f("u_memeOpacity");
 		this.#u_memeBounds = this.#program.createUniform4f("u_memeBounds");
+		this.#u_flip = this.#program.createUniform1i("u_flip");
 
 		// Initialize typed attributes
 		this.#a_position = this.#program.createAttribute("a_position");
@@ -168,6 +170,9 @@ export class BroadcastRenderer {
 		// Set pre-computed opacity values
 		this.#u_frameOpacity.set(broadcast.video.frameOpacity);
 		this.#u_memeOpacity.set(broadcast.video.memeOpacity);
+
+		// Set flip flag
+		this.#u_flip.set(broadcast.video.flip.peek() ? 1 : 0);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, broadcast.video.frameTexture);

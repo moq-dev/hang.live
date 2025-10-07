@@ -1,3 +1,4 @@
+import { Publish, Watch } from "@kixelated/hang";
 import { Effect, Signal } from "@kixelated/signals";
 import * as Api from "../api";
 import Settings from "../settings";
@@ -45,6 +46,9 @@ export class Video {
 	// Render avatars and emojis at this size
 	#renderSize = new Signal<number>(128);
 
+	// Whether to flip the video horizontally (for self-preview)
+	flip = new Signal<boolean>(false);
+
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 
@@ -59,7 +63,17 @@ export class Video {
 		const emptyPixel = new Uint8Array([0, 0, 0, 0]);
 		for (const texture of [this.frameTexture, this.avatarTexture, this.memeTexture]) {
 			this.#gl.bindTexture(this.#gl.TEXTURE_2D, texture);
-			this.#gl.texImage2D(this.#gl.TEXTURE_2D, 0, this.#gl.RGBA, 1, 1, 0, this.#gl.RGBA, this.#gl.UNSIGNED_BYTE, emptyPixel);
+			this.#gl.texImage2D(
+				this.#gl.TEXTURE_2D,
+				0,
+				this.#gl.RGBA,
+				1,
+				1,
+				0,
+				this.#gl.RGBA,
+				this.#gl.UNSIGNED_BYTE,
+				emptyPixel,
+			);
 			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_S, this.#gl.CLAMP_TO_EDGE);
 			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_T, this.#gl.CLAMP_TO_EDGE);
 			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MIN_FILTER, this.#gl.LINEAR);
@@ -74,8 +88,20 @@ export class Video {
 		this.broadcast.signals.effect(this.#runAvatar.bind(this));
 		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
 		this.broadcast.signals.effect(this.#runMemeTransition.bind(this));
+		this.broadcast.signals.effect(this.#runFlip.bind(this));
 
 		this.broadcast.signals.effect(this.#runRenderSize.bind(this));
+	}
+
+	#runFlip(effect: Effect) {
+		// Flipping is a mess because there's no way to encode a flipped frame, only to decode it flipped.
+		if (this.broadcast.source instanceof Publish.Broadcast) {
+			const flip = effect.get(this.broadcast.source.video.hd.config)?.flip ?? false;
+			this.flip.set(flip);
+		} else if (this.broadcast.source instanceof Watch.Broadcast) {
+			const flip = effect.get(this.broadcast.source.video.active)?.config.flip ?? false;
+			this.flip.set(flip);
+		}
 	}
 
 	#runAvatar(effect: Effect) {
@@ -105,21 +131,35 @@ export class Video {
 		newAvatar.src = avatar;
 
 		// Once the avatar loads, upload it to the texture
-		effect.event(newAvatar, "load", this.#uploadAvatar.bind(this, newAvatar));
+		effect.event(newAvatar, "load", () => {
+			const avatarSize = Vector.create(
+				newAvatar.naturalWidth || newAvatar.width,
+				newAvatar.naturalHeight || newAvatar.height,
+			);
+			effect.set(this.avatarSize, avatarSize);
+
+			effect.effect((effect) => {
+				const size = effect.get(this.#renderSize);
+				this.#imageToTexture(newAvatar, this.avatarTexture, size);
+			});
+		});
 	}
 
-	#uploadAvatar(avatar: HTMLImageElement) {
-		this.avatar = avatar;
-		this.avatarSize.set(Vector.create(avatar.naturalWidth || avatar.width, avatar.naturalHeight || avatar.height));
+	#imageToTexture(src: HTMLImageElement, dst: WebGLTexture, size: number) {
+		const canvas = document.createElement("canvas");
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) throw new Error("Failed to get context");
+		ctx.drawImage(src, 0, 0, size, size);
 
 		const gl = this.#gl;
-		gl.bindTexture(gl.TEXTURE_2D, this.avatarTexture);
+		gl.bindTexture(gl.TEXTURE_2D, dst);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, avatar);
-		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
@@ -350,10 +390,10 @@ export class Video {
 	#runRenderSize(effect: Effect) {
 		const scale = effect.get(Settings.render.scale);
 		const target = effect.get(this.broadcast.bounds).size;
-		const size = Math.min(target.x, target.y) * scale;
+		const size = Math.sqrt(target.x * target.y) * scale;
 		// Increase to the nearest power of 2
 		const power = Math.ceil(Math.log2(size));
-		this.#renderSize.set(2 ** power);
+		this.#renderSize.set(Math.min(2 ** power, 512 * scale));
 	}
 
 	// Update opacity values based on current time (called once per frame)

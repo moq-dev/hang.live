@@ -63,8 +63,6 @@ export class FakeBroadcast {
 
 	signals = new Effect();
 
-	#video: HTMLVideoElement | undefined;
-
 	constructor(sound: Sound, props?: FakeBroadcastProps) {
 		this.sound = sound;
 
@@ -114,8 +112,6 @@ export class FakeBroadcast {
 		video.volume = 0.25;
 		video.load();
 		video.play();
-
-		this.#video = video;
 
 		const onFrame = () => {
 			this.video.frame.update((prev) => {
