@@ -1,9 +1,13 @@
-export type MemeAudio = {
+type MemeAudioSource = {
 	file: string;
 	emoji: string;
+
+	// These are not used for audio, but are defined to make it easier to use the same type for both.
+	fit?: "contain";
+	position?: string;
 };
 
-export type MemeVideo = {
+type MemeVideoSource = {
 	file: string;
 	// CSS object-fit: how the video fits within its container
 	// - "contain": scales to fit entirely within container (may have letterbox/pillarbox)
@@ -16,6 +20,18 @@ export type MemeVideo = {
 	// Examples: "center", "bottom", "top left", "50% 75%"
 	position?: string;
 };
+
+export interface MemeVideo {
+	source: MemeVideoSource;
+	element: HTMLVideoElement;
+}
+
+export interface MemeAudio {
+	source: MemeAudioSource;
+	element: HTMLAudioElement;
+}
+
+export type Meme = MemeVideo | MemeAudio;
 
 export const MEME_AUDIO = {
 	"among-us": { file: "among-us.mp3", emoji: "📮" },
@@ -55,7 +71,7 @@ export const MEME_AUDIO = {
 	boom: { file: "boom.mp3", emoji: "💥" },
 	wow: { file: "wow.mp3", emoji: "😮" },
 	yay: { file: "yay.mp3", emoji: "🎉" },
-} as const satisfies Record<string, MemeAudio>;
+} as const satisfies Record<string, MemeAudioSource>;
 
 export const MEME_VIDEO = {
 	"another-one": { file: "another-one.webm", fit: "cover", position: "bottom" },
@@ -92,7 +108,7 @@ export const MEME_VIDEO = {
 	"real-estate": { file: "real-estate.webm", fit: "cover", position: "center" }, // fit height, left/right can letterbox
 	waw: { file: "waw.webm", fit: "cover", position: "bottom" },
 	zzz: { file: "zzz.webm", fit: "cover", position: "center" },
-} as const satisfies Record<string, MemeVideo>;
+} as const satisfies Record<string, MemeVideoSource>;
 
 export type MemeAudioName = keyof typeof MEME_AUDIO;
 export type MemeVideoName = keyof typeof MEME_VIDEO;

@@ -25,7 +25,7 @@ import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
 
 export function Hang(): JSX.Element {
-	const background = (<canvas class="fixed inset-0 w-full h-full" />) as HTMLCanvasElement;
+	const background = (<canvas class="fixed inset-0 w-full h-full bg-black" />) as HTMLCanvasElement;
 	const canvas = new Canvas(background);
 	onCleanup(() => canvas.close());
 

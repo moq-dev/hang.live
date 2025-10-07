@@ -161,3 +161,18 @@ main {
 input[type="range"] {
 	accent-color: hsl(var(--link-hue), 75%, 50%);
 }
+
+/* Locator throb animation */
+@keyframes throb {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.1);
+	}
+}
+
+.animate-throb {
+	animation: throb 2s ease-in-out infinite;
+}

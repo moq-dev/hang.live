@@ -72,6 +72,22 @@ export const Settings = {
 		step: new Signal(Number.parseInt(localStorage.getItem("settings.tutorial.step") ?? "0", 10)),
 	},
 
+	// Rendering settings
+	render: {
+		scale: new Signal<number>(
+			(() => {
+				const stored = localStorage.getItem("settings.render.scale");
+				if (stored) {
+					const parsed = Number.parseFloat(stored);
+					if (!Number.isNaN(parsed) && parsed > 0 && parsed <= window.devicePixelRatio) {
+						return parsed;
+					}
+				}
+				return window.devicePixelRatio;
+			})(),
+		),
+	},
+
 	clear: () => {
 		localStorage.clear();
 		window.location.reload();
@@ -190,6 +206,10 @@ effect.subscribe(Settings.tutorial.step, (step) => {
 	localStorage.setItem("settings.tutorial.step", step.toString());
 });
 
+effect.subscribe(Settings.render.scale, (ratio) => {
+	localStorage.setItem("settings.render.scale", ratio.toString());
+});
+
 // Mostly just to avoid console warnings about signals not being closed
 document.addEventListener("unload", () => {
 	effect.close();
@@ -201,6 +221,16 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const tts = createSelector(solid(Settings.audio.tts));
 	const webGPUSupported = supportsWebGPU();
+	const devicePixelRatio = solid(Settings.render.scale);
+	const maxDevicePixelRatio = window.devicePixelRatio;
+
+	// Calculate available pixel ratio options (0.5x, 1x, 2x, 4x, 8x)
+	const pixelRatioOptions: number[] = [0.5];
+	for (let i = 1; i <= maxDevicePixelRatio; i *= 2) {
+		pixelRatioOptions.push(i);
+	}
+
+	const isSelectedRatio = createSelector(() => devicePixelRatio());
 
 	const progress = solid(props.sound.tts.progress);
 	const [isGenerating, setIsGenerating] = createSignal(false);
@@ -227,7 +257,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
 					<span class="icon-[mdi--text-to-speech] text-lg text-white/70" />
 				</div>
-				<div class="flex flex-col gap-0.5">
+				<div class="flex flex-col gap-0.5 flex-grow">
 					<span class="text-white/90 font-medium">Announce Join/Leave</span>
 					<span class="text-xs text-white/50">
 						{tts("none") && "No voice announcements"}
@@ -261,7 +291,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 						)}
 					</span>
 				</div>
-				<div class="inline-flex rounded-lg bg-white/8 p-1 flex-grow">
+				<div class="inline-flex rounded-lg bg-white/8 p-1">
 					<button
 						type="button"
 						class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
@@ -337,12 +367,37 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				</div>
 			</button>
 			<div class="h-px bg-white/10" />
+			{/* Device Pixel Ratio */}
+			<div class="flex flex-wrap gap-4">
+				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
+					<span class="icon-[mdi--monitor-screenshot] text-lg text-white/70" />
+				</div>
+				<div class="flex flex-col gap-0.5 flex-grow">
+					<span class="text-white/90 font-medium">Pixel Ratio</span>
+					<span class="text-xs text-white/50">Increase for better quality, but worse performance.</span>
+				</div>
+				<div class="inline-flex rounded-lg bg-white/8 p-1">
+					{pixelRatioOptions.map((ratio) => (
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+							classList={{
+								"bg-blue-500 text-white shadow-sm": isSelectedRatio(ratio),
+								"text-white/60 hover:text-white/80 hover:bg-white/5": !isSelectedRatio(ratio),
+							}}
+							onClick={() => Settings.render.scale.set(ratio)}
+						>
+							{ratio}x
+						</button>
+					))}
+				</div>
+			</div>
 			<div class="h-px bg-white/10" />
 			<div class="flex flex-wrap gap-4">
 				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
 					<span class="icon-[mdi--cursor-move] text-lg text-white/70" />
 				</div>
-				<div class="flex flex-col gap-0.5">
+				<div class="flex flex-col gap-0.5 flex-grow">
 					<span class="text-white/90 font-medium">Remote Control</span>
 					<span class="text-xs text-white/50">Allow others to drag/resize your camera</span>
 				</div>
@@ -350,7 +405,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 					type="checkbox"
 					checked={draggable()}
 					onChange={() => Settings.draggable.update((p) => !p)}
-					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors flex-grow"
+					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors w-18"
 				/>
 			</div>
 		</div>

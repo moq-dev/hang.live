@@ -6,6 +6,8 @@ import { Captions } from "./captions";
 import { Chat } from "./chat";
 import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
+import { Meme } from "./meme";
+import { Name } from "./name";
 import { Sound } from "./sound";
 import { Video } from "./video";
 
@@ -42,6 +44,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	video: Video;
 	chat: Chat;
 	captions: Captions;
+	name: Name;
 
 	// The current chat message, if any.
 	message = new Signal<HTMLElement | undefined>(undefined);
@@ -61,14 +64,16 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	position: Signal<Position>;
 
 	// The meme video/audio we're rendering, if any.
-	meme = new Signal<HTMLVideoElement | HTMLAudioElement | undefined>(undefined);
-	memeName = new Signal<string | undefined>(undefined);
+	meme = new Signal<Meme | undefined>(undefined);
 
 	scale: Signal<number>; // room scale, 1 is 100%
 	zoom = new Signal<number>(1.0); // local zoom, 1 is 100%
 
-	// Show a locator arrow for 8 seconds to show our position on join.
-	#locatorStart?: DOMHighResTimeStamp;
+	online = new Signal<boolean>(true); // false is offline, true is online
+	#onlineTransition: DOMHighResTimeStamp = 0;
+
+	// Computed opacity based on online fade-in/fade-out (0-1)
+	opacity: number = 1;
 
 	signals = new Effect();
 
@@ -93,6 +98,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.audio = new Audio(this, props.sound);
 		this.chat = new Chat(this, props.canvas);
 		this.captions = new Captions(this, props.canvas);
+		this.name = new Name(this, props.canvas);
 
 		const viewport = this.canvas.viewport.peek();
 
@@ -152,11 +158,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			const meme = this.audio.sound.meme(memeName);
 			if (meme) {
 				this.meme.update((prev) => {
-					prev?.pause();
+					prev?.element.pause();
 					return meme;
 				});
-				this.memeName.set(memeName);
-
 				return;
 			}
 		}
@@ -192,9 +196,14 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 	}
 
-	// TODO Also make scale a signal
-	tick() {
-		this.video.tick();
+	tick(now: DOMHighResTimeStamp) {
+		this.audio.tick();
+		this.video.tick(now);
+
+		// Update opacity based on online status
+		const fadeTime = 300; // ms
+		const elapsed = now - this.#onlineTransition;
+		this.opacity = this.online.peek() ? Math.min(1, elapsed / fadeTime) : Math.max(0, 1 - elapsed / fadeTime);
 
 		const bounds = this.bounds.peek();
 		const viewport = this.canvas.viewport.peek();
@@ -281,80 +290,19 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		return false;
 	}
 
-	// Render a locator arrow for our local broadcasts on join
-	renderLocator(now: DOMHighResTimeStamp, ctx: CanvasRenderingContext2D) {
-		if (!this.source.enabled.peek()) return;
-
-		if (!this.visible.peek()) {
-			this.#locatorStart = undefined;
-			return;
-		}
-
-		if (!this.#locatorStart) {
-			this.#locatorStart = now;
-		}
-
-		const elapsed = now - this.#locatorStart;
-		const alpha = Math.min(Math.max((7000 - elapsed) / (10000 - 8000), 0), 1);
-		if (alpha <= 0) {
-			return;
-		}
-
-		const bounds = this.bounds.peek();
-
-		ctx.save();
-		ctx.globalAlpha *= alpha;
-
-		// Calculate arrow position and animation
-		const arrowSize = 12 * this.zoom.peek();
-		const pulseScale = 1 + Math.sin(now / 500) * 0.1; // Subtle pulsing effect
-		const offset = 10 * this.zoom.peek();
-
-		const gap = 2 * (arrowSize + offset);
-
-		const x = Math.min(Math.max(bounds.position.x + bounds.size.x / 2, 0), ctx.canvas.width);
-		const y = Math.min(Math.max(bounds.position.y, 2 * gap), ctx.canvas.height);
-
-		ctx.translate(x, y - gap);
-		ctx.scale(pulseScale, pulseScale);
-
-		ctx.beginPath();
-		ctx.moveTo(0, arrowSize);
-		ctx.lineTo(-arrowSize / 2, 0);
-		ctx.lineTo(arrowSize / 2, 0);
-		ctx.closePath();
-
-		// Style the arrow
-		ctx.lineWidth = 4 * this.zoom.peek();
-		ctx.strokeStyle = "#000"; // Gold color
-		ctx.fillStyle = "#FFD700";
-		ctx.stroke();
-		ctx.fill();
-
-		// Draw "YOU" text
-		const fontSize = Math.round(32 * this.zoom.peek()); // round to avoid busting font caches
-		ctx.font = `bold ${fontSize}px Arial`;
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillStyle = "#FFD700";
-		ctx.strokeText("YOU", 0, -arrowSize - offset);
-		ctx.fillText("YOU", 0, -arrowSize - offset);
-
-		/*
-		// Add a subtle glow effect
-		ctx.shadowColor = "#FFD700";
-		ctx.shadowBlur = 10 * fontScale;
-		ctx.stroke();
-		*/
-
-		ctx.restore();
+	// Called when online status changes to trigger fade transition
+	setOnline(online: boolean) {
+		this.online.set(online);
+		this.#onlineTransition = performance.now();
 	}
 
 	close() {
 		this.signals.close();
 		this.audio.close();
+		this.video.close();
 		this.chat.close();
 		this.captions.close();
+		this.name.close();
 
 		// NOTE: Don't close the source broadcast; we need it for the local preview.
 		// this.source.close();
