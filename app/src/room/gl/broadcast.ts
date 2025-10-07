@@ -20,14 +20,15 @@ export class BroadcastRenderer {
 	#u_radius: Uniform1f;
 	#u_size: Uniform2f;
 	#u_opacity: Uniform1f;
-	#u_avatarTransition: Uniform1f;
-	#u_texture: Uniform1i;
-	#u_hasTexture: Uniform1i;
+	#u_frameTransition: Uniform1f;
+	#u_frameTexture: Uniform1i;
+	#u_frameActive: Uniform1i;
 	#u_avatarTexture: Uniform1i;
-	#u_hasAvatar: Uniform1i;
+	#u_avatarActive: Uniform1i;
 	#u_memeTexture: Uniform1i;
-	#u_hasMeme: Uniform1i;
-	#u_memeOpacity: Uniform1f;
+	#u_memeActive: Uniform1i;
+	#u_now: Uniform1f;
+	#u_memeTransition: Uniform1f;
 	#u_memeBounds: Uniform4f;
 
 	// Typed attributes
@@ -45,14 +46,15 @@ export class BroadcastRenderer {
 		this.#u_radius = this.#program.createUniform1f("u_radius");
 		this.#u_size = this.#program.createUniform2f("u_size");
 		this.#u_opacity = this.#program.createUniform1f("u_opacity");
-		this.#u_avatarTransition = this.#program.createUniform1f("u_avatarTransition");
-		this.#u_texture = this.#program.createUniform1i("u_texture");
-		this.#u_hasTexture = this.#program.createUniform1i("u_hasTexture");
+		this.#u_frameTransition = this.#program.createUniform1f("u_frameTransition");
+		this.#u_frameTexture = this.#program.createUniform1i("u_frameTexture");
+		this.#u_frameActive = this.#program.createUniform1i("u_frameActive");
 		this.#u_avatarTexture = this.#program.createUniform1i("u_avatarTexture");
-		this.#u_hasAvatar = this.#program.createUniform1i("u_hasAvatar");
+		this.#u_avatarActive = this.#program.createUniform1i("u_avatarActive");
 		this.#u_memeTexture = this.#program.createUniform1i("u_memeTexture");
-		this.#u_hasMeme = this.#program.createUniform1i("u_hasMeme");
-		this.#u_memeOpacity = this.#program.createUniform1f("u_memeOpacity");
+		this.#u_memeActive = this.#program.createUniform1i("u_memeActive");
+		this.#u_now = this.#program.createUniform1f("u_now");
+		this.#u_memeTransition = this.#program.createUniform1f("u_memeTransition");
 		this.#u_memeBounds = this.#program.createUniform4f("u_memeBounds");
 
 		// Initialize typed attributes
@@ -133,16 +135,19 @@ export class BroadcastRenderer {
 		broadcast: Broadcast,
 		camera: Camera,
 		maxZ: number,
+		now: number,
 		modifiers?: {
 			dragging?: boolean;
 			hovering?: boolean;
 		},
 	) {
+		this.#program.use();
+
+		this.#u_now.set(now);
+
 		const gl = this.#canvas.gl;
 		const bounds = broadcast.bounds.peek();
 		const scale = broadcast.zoom.peek();
-
-		this.#program.use();
 
 		// Set projection matrix
 		this.#u_projection.set(camera.projection);
@@ -168,51 +173,31 @@ export class BroadcastRenderer {
 		}
 		this.#u_opacity.set(opacity);
 
-		// Set avatar transition (0 = avatar, 1 = video)
-		this.#u_avatarTransition.set(broadcast.video.avatarTransition);
-
-		// Bind video texture if available
-		const texture = broadcast.video.webcamTexture;
-		if (texture) {
-			gl.activeTexture(gl.TEXTURE0);
-			gl.bindTexture(gl.TEXTURE_2D, texture);
-			this.#u_texture.set(0);
-			this.#u_hasTexture.set(1);
-		} else {
-			this.#u_hasTexture.set(0);
-		}
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, broadcast.video.frameTexture);
+		this.#u_frameTexture.set(0);
+		this.#u_frameTransition.set(broadcast.video.frameTransition);
+		this.#u_frameActive.set(broadcast.video.frameActive ? 1 : 0);
 
 		// Bind avatar texture if available
-		const avatarTexture = broadcast.video.avatarTexture;
-		if (avatarTexture) {
-			gl.activeTexture(gl.TEXTURE1);
-			gl.bindTexture(gl.TEXTURE_2D, avatarTexture);
-			this.#u_avatarTexture.set(1);
-			this.#u_hasAvatar.set(1);
-		} else {
-			this.#u_hasAvatar.set(0);
-		}
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, broadcast.video.avatarTexture);
+		this.#u_avatarTexture.set(1);
+		this.#u_avatarActive.set(broadcast.video.avatarSize ? 1 : 0);
 
 		// Bind meme texture if available
-		const meme = broadcast.meme.peek();
 		const memeTexture = broadcast.video.memeTexture;
 		const memeBounds = broadcast.video.memeBounds;
-		if (
-			meme instanceof HTMLVideoElement &&
-			memeTexture &&
-			meme.readyState >= meme.HAVE_CURRENT_DATA &&
-			memeBounds
-		) {
-			gl.activeTexture(gl.TEXTURE2);
-			gl.bindTexture(gl.TEXTURE_2D, memeTexture);
-			this.#u_memeTexture.set(2);
-			this.#u_hasMeme.set(1);
-			this.#u_memeOpacity.set(broadcast.video.memeOpacity);
+		const memeTransition = broadcast.video.memeTransition;
 
-			// Use pre-computed meme bounds from Video class
+		gl.activeTexture(gl.TEXTURE2);
+		gl.bindTexture(gl.TEXTURE_2D, memeTexture);
+		this.#u_memeTexture.set(2);
+		this.#u_memeActive.set(broadcast.video.memeActive.peek() ? 1 : 0);
+		this.#u_memeTransition.set(memeTransition);
+
+		if (memeBounds) {
 			this.#u_memeBounds.set(memeBounds.position.x, memeBounds.position.y, memeBounds.size.x, memeBounds.size.y);
-		} else {
-			this.#u_hasMeme.set(0);
 		}
 
 		// Draw

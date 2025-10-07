@@ -53,7 +53,7 @@ export class FakeBroadcast {
 	};
 
 	video = {
-		frame: new Signal<HTMLVideoElement | undefined>(undefined),
+		frame: new Signal<VideoFrame | undefined>(undefined),
 		catalog: new Signal<Catalog.Video[] | undefined>(undefined),
 		detection: {
 			enabled: new Signal(false),
@@ -115,7 +115,17 @@ export class FakeBroadcast {
 		video.play();
 
 		this.#video = video;
-		this.video.frame.set(video);
+
+		const onFrame = () => {
+			if (!video.paused && !video.ended) {
+				this.video.frame.set(new VideoFrame(video));
+				video.requestVideoFrameCallback(onFrame);
+			} else {
+				this.video.frame.set(undefined);
+			}
+		};
+
+		video.requestVideoFrameCallback(onFrame);
 
 		video.onloadedmetadata = () => {
 			this.video.catalog.set([

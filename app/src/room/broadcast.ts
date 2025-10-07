@@ -192,7 +192,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 	}
 
-	// TODO Also make scale a signal
 	tick() {
 		this.video.tick();
 		this.audio.tick();

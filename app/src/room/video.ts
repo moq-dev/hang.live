@@ -15,9 +15,6 @@ export class Video {
 	// The avatar image.
 	avatar = new Image();
 
-	// 1 when a video frame is fully rendered, 0 when their avatar is fully rendered.
-	avatarTransition = 0;
-
 	// The size of the avatar in pixels.
 	avatarSize = new Signal<Vector | undefined>(undefined);
 
@@ -27,16 +24,20 @@ export class Video {
 	// The opacity from 0 to 1, where 0 is offline and 1 is online.
 	online = 0;
 
-	#memeOpacity = 0;
+	// Time-based transition tracking (in milliseconds)
+	memeTransition: DOMHighResTimeStamp = 0; // When meme started appearing/disappearing
+	frameTransition: DOMHighResTimeStamp = 0;
+	frameActive: boolean = false;
 
 	// Signal that updates when meme video dimensions are loaded
 	#memeSize = new Signal<Vector | undefined>(undefined);
 
 	// Cached meme bounds (x_offset, y_offset, width_scale, height_scale)
 	memeBounds?: Bounds;
+	memeActive: Signal<boolean> = new Signal<boolean>(false);
 
 	// WebGL textures for this broadcast
-	webcamTexture: WebGLTexture; // Video texture
+	frameTexture: WebGLTexture; // Video texture
 	avatarTexture: WebGLTexture; // Avatar texture
 	memeTexture: WebGLTexture; // Meme texture
 	#gl: WebGL2RenderingContext;
@@ -47,16 +48,17 @@ export class Video {
 		this.#gl = broadcast.canvas.gl;
 
 		// Create the textures
-		this.webcamTexture = this.#gl.createTexture();
+		this.frameTexture = this.#gl.createTexture();
 		this.avatarTexture = this.#gl.createTexture();
 		this.memeTexture = this.#gl.createTexture();
 
 		// Set up texture upload effects
-		this.broadcast.signals.effect(this.#runWebcam.bind(this));
+		this.broadcast.signals.effect(this.#runFrame.bind(this));
 		this.broadcast.signals.effect(this.#runMeme.bind(this));
 		this.broadcast.signals.effect(this.#runMemeBounds.bind(this));
 		this.broadcast.signals.effect(this.#runAvatar.bind(this));
 		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
+		this.broadcast.signals.effect(this.#runMemeTransition.bind(this));
 	}
 
 	#runAvatar(effect: Effect) {
@@ -126,31 +128,27 @@ export class Video {
 		this.targetSize.set(Vector.create(128, 128));
 	}
 
-	#runWebcam(effect: Effect) {
-		if (this.broadcast.source instanceof FakeBroadcast) {
-			// TODO FakeBroadcast should return a VideoFrame instead of a HTMLVideoElement.
-			const video = effect.get(this.broadcast.source.video.frame);
-			if (!video) return;
-			this.#videoToTexture(effect, video, this.webcamTexture);
-		} else {
-			const frame = effect.get(this.broadcast.source.video.frame);
-			if (!frame) return;
-			this.#frameToTexture(frame, this.webcamTexture);
+	#runFrame(effect: Effect) {
+		const frame = effect.get(this.broadcast.source.video.frame);
+
+		if (!!frame !== this.frameActive) {
+			this.frameTransition = performance.now();
+			this.frameActive = !!frame;
 		}
+
+		if (frame) this.#frameToTexture(frame, this.frameTexture);
 	}
 
 	#runMeme(effect: Effect) {
 		const meme = effect.get(this.broadcast.meme);
-		if (!meme) return;
-
-		// Only handle video memes (audio memes are just sound effects)
-		if (!(meme instanceof HTMLVideoElement)) return;
+		if (!meme || !(meme instanceof HTMLVideoElement)) return;
 
 		this.#videoToTexture(effect, meme, this.memeTexture);
 
 		// Listen for loadedmetadata event to update meme size when dimensions are available
 		const updateSize = () => {
 			if (meme.videoWidth > 0 && meme.videoHeight > 0) {
+				this.memeActive.set(true);
 				effect.set(this.#memeSize, Vector.create(meme.videoWidth, meme.videoHeight));
 			}
 		};
@@ -162,6 +160,14 @@ export class Video {
 
 		// Listen for metadata load
 		effect.event(meme, "loadedmetadata", updateSize);
+		effect.event(meme, "ended", () => {
+			this.memeActive.set(false);
+		});
+	}
+
+	#runMemeTransition(effect: Effect) {
+		effect.get(this.memeActive);
+		this.memeTransition = performance.now();
 	}
 
 	#runMemeBounds(effect: Effect) {
@@ -286,30 +292,10 @@ export class Video {
 	}
 
 	tick() {
-		if (this.broadcast.source.video.frame.peek()) {
-			this.avatarTransition = Math.min(this.avatarTransition + 0.05, 1);
-		} else {
-			this.avatarTransition = Math.max(this.avatarTransition - 0.05, 0);
-		}
-
 		if (this.broadcast.visible.peek()) {
 			this.online += (1 - this.online) * 0.1;
 		} else {
 			this.online += (0 - this.online) * 0.1;
-		}
-
-		// Update meme opacity
-		const meme = this.broadcast.meme.peek();
-		if (meme) {
-			if (meme.ended || (meme.paused && meme.currentTime > 0)) {
-				this.#memeOpacity += -this.#memeOpacity * 0.1;
-				if (this.#memeOpacity <= 0) {
-					this.broadcast.meme.set(undefined);
-					this.broadcast.memeName.set(undefined);
-				}
-			} else {
-				this.#memeOpacity += (1 - this.#memeOpacity) * 0.1;
-			}
 		}
 
 		/*
@@ -318,12 +304,8 @@ export class Video {
 		*/
 	}
 
-	get memeOpacity(): number {
-		return this.#memeOpacity;
-	}
-
 	close() {
-		this.#gl.deleteTexture(this.webcamTexture);
+		this.#gl.deleteTexture(this.frameTexture);
 		this.#gl.deleteTexture(this.avatarTexture);
 		this.#gl.deleteTexture(this.memeTexture);
 	}

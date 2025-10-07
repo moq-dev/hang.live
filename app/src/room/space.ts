@@ -616,13 +616,13 @@ export class Space {
 
 		// 3. Render video content (front layer)
 		for (const broadcast of this.#rip) {
-			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 
 		// Render all broadcasts (except dragging)
 		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
-				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, {
+				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now, {
 					hovering: this.#hovering === broadcast || this.profile,
 				});
 			}
@@ -630,7 +630,7 @@ export class Space {
 
 		// Render the dragging broadcast last so it's always on top
 		if (this.#dragging) {
-			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, {
+			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, now, {
 				dragging: true,
 			});
 		}
