@@ -26,11 +26,11 @@ deploy platform:
 dev:
 	bun tauri dev
 
-android:
-	bun tauri android dev --host --open
+android *args:
+	bun tauri android dev --host {{args}}
 
-ios:
-	bun tauri ios dev --host
+ios *args:
+	bun tauri ios dev --host {{args}}
 
 # Generate Tauri icons from browser-generated ZIP files
 # Prerequisites: Download all ZIP files from http://localhost:1420/dev/icons to this directory

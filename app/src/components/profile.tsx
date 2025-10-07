@@ -124,7 +124,7 @@ class LocalPreview {
 
 	constructor(element: HTMLCanvasElement, camera: Publish.Broadcast) {
 		// Create a minimal canvas without the background effects
-		this.canvas = new Canvas(element, { demo: false });
+		this.canvas = new Canvas(element);
 
 		// Create a minimal sound context (muted for preview)
 		this.sound = new Sound();

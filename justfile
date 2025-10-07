@@ -53,10 +53,10 @@ dev:
 native:
 	cd native && just dev
 
-# Open the Android Studio project
-android:
-	cd native && just android
+# Run the Android build, using --open to open Android Studio
+android *args:
+	cd native && just android {{args}}
 
-# Open the Xcode project
-ios:
-	cd native && just ios
+# Run the iOS build, using --open to open Xcode
+ios *args:
+	cd native && just ios {{args}}

@@ -83,7 +83,7 @@ export const Settings = {
 						return parsed;
 					}
 				}
-				return Math.max(1, window.devicePixelRatio / 2);
+				return window.devicePixelRatio;
 			})(),
 		),
 	},

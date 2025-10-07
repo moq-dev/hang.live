@@ -1,4 +1,4 @@
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -57,6 +57,7 @@ async fn start_server(window: tauri::Window) -> Result<u16, String> {
 		// Focus the main window
 		#[cfg(desktop)]
 		{
+			use tauri::Manager;
 			let _ = window.get_webview_window("main").expect("no main window").set_focus();
 		}
 	})

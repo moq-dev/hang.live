@@ -1,5 +1,8 @@
+import solid from "@kixelated/signals/solid";
 import { createEffect, createSignal, type JSX, onCleanup } from "solid-js";
+import AudioPrompt from "./components/audio-prompt";
 import CreateHang from "./components/create";
+import DemoHeader from "./components/demo-header";
 import Layout from "./layout/web";
 import { Canvas } from "./room/canvas";
 import { FakeRoom } from "./room/fake";
@@ -7,8 +10,14 @@ import { FakeRoom } from "./room/fake";
 export function About(): JSX.Element {
 	const canvas = <canvas class="border-3 border-link-hue rounded-lg w-full h-full" id="demo" />;
 
-	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement, { demo: true }));
+	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement));
 	onCleanup(() => room.close());
+
+	const audioSuspended = solid(room.sound.suspended);
+
+	const handleEnableAudio = () => {
+		room.sound.enabled.set(true);
+	};
 
 	const services = ["Meet", "Zoom", "Teams", "Discord", "Skype", "WebEx", "FaceTime", "WhatsApp"];
 	const [currentService, setCurrentService] = createSignal(0);
@@ -73,7 +82,7 @@ export function About(): JSX.Element {
 		() => two.chat.message.latest.set("yo"),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("how's life as a simulation?"),
-		() => {},
+		() => { },
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("okay I guess"),
 		() => two.location.window.position.update((prev) => ({ ...prev, s: 1.5 })),
@@ -103,10 +112,10 @@ export function About(): JSX.Element {
 		},
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("hello"),
-		() => {},
+		() => { },
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("try turning your webcam on"),
-		() => {},
+		() => { },
 		() => {
 			two.user.name.set("omni-chan");
 			two.user.avatar.set("/avatar/omni.jpg");
@@ -120,21 +129,21 @@ export function About(): JSX.Element {
 		() => three.location.window.position.set(randomLocation()),
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("omg"),
-		() => {},
-		() => {},
+		() => { },
+		() => { },
 		() => two.stop(),
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("on second thought, maybe not"),
-		() => {},
+		() => { },
 		() => three.chat.typing.active.set(true),
 		() => three.chat.message.latest.set("gotta run"),
 		() => room.remove("3"),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("lame"),
-		() => {},
+		() => { },
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("try typing /huh"),
-		() => {},
+		() => { },
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("/huh"),
 		() => two.location.window.position.set({ x: -0.5, y: 0 }),
@@ -145,7 +154,7 @@ export function About(): JSX.Element {
 		() => one.chat.message.latest.set("and audio panning"),
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("huh?"),
-		() => {},
+		() => { },
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("inviting the squad"),
 		() => {
@@ -162,12 +171,12 @@ export function About(): JSX.Element {
 		() => five.chat.message.latest.set("yo"),
 		() => six.chat.typing.active.set(true),
 		() => six.chat.message.latest.set("poop"),
-		() => {},
-		() => {},
+		() => { },
+		() => { },
 		() => two.chat.typing.active.set(true),
 		() => two.chat.message.latest.set("good lord"),
-		() => {},
-		() => {},
+		() => { },
+		() => { },
 		() => six.chat.typing.active.set(true),
 		() => six.chat.message.latest.set("let's watch something"),
 		() => {
@@ -186,12 +195,12 @@ export function About(): JSX.Element {
 			two.chat.message.latest.set("this shit again");
 		},
 		() => two.location.window.position.set(randomLeft()),
-		() => {},
-		() => {},
-		() => {},
-		() => {},
-		() => {},
-		() => {},
+		() => { },
+		() => { },
+		() => { },
+		() => { },
+		() => { },
+		() => { },
 		() => room.remove("7"),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("okay, that's enough of a demo"),
@@ -200,7 +209,7 @@ export function About(): JSX.Element {
 		() => room.remove("6"),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("there's a lot more, but it's hard to demo"),
-		() => {},
+		() => { },
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("[start a hang](https://hang.live/home)"),
 		() => two.audio.captions.text.set("like automatic captions"),
@@ -210,7 +219,7 @@ export function About(): JSX.Element {
 		() => room.remove("2"),
 		() => one.chat.typing.active.set(true),
 		() => one.chat.message.latest.set("enjoy"),
-		() => {},
+		() => { },
 		() => room.remove("1"),
 	];
 
@@ -251,7 +260,11 @@ export function About(): JSX.Element {
 					</div>
 				</div>
 
-				<div class="sm:m-8 m-4 h-128 w-full">{canvas}</div>
+				<div class="sm:m-8 m-4 h-128 w-full relative">
+					<DemoHeader />
+					<AudioPrompt show={audioSuspended()} onClick={handleEnableAudio} />
+					{canvas}
+				</div>
 
 				<p>
 					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}

@@ -596,11 +596,6 @@ export class Space {
 
 	// Render using WebGL
 	#render(now: DOMHighResTimeStamp) {
-		// TODO: Render the audio click prompt if audio is suspended
-		// if (this.sound.suspended.peek() && !this.profile) {
-		// 	this.#renderAudioPrompt();
-		// }
-
 		const broadcasts = this.ordered.peek();
 
 		// Render in order: black borders (back) -> audio viz (middle) -> videos (front)
@@ -643,11 +638,6 @@ export class Space {
 			});
 		}
 	}
-
-	// TODO: Implement audio prompt with WebGL or DOM overlay
-	// #renderAudioPrompt() {
-	// 	// "🔊 Click to enable audio"
-	// }
 
 	#runScale(effect: Effect) {
 		const broadcasts = effect.get(this.ordered);

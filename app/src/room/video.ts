@@ -55,6 +55,18 @@ export class Video {
 		this.avatarTexture = this.#gl.createTexture();
 		this.memeTexture = this.#gl.createTexture();
 
+		// Initialize textures with 1x1 transparent pixel to make them renderable
+		const emptyPixel = new Uint8Array([0, 0, 0, 0]);
+		for (const texture of [this.frameTexture, this.avatarTexture, this.memeTexture]) {
+			this.#gl.bindTexture(this.#gl.TEXTURE_2D, texture);
+			this.#gl.texImage2D(this.#gl.TEXTURE_2D, 0, this.#gl.RGBA, 1, 1, 0, this.#gl.RGBA, this.#gl.UNSIGNED_BYTE, emptyPixel);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_S, this.#gl.CLAMP_TO_EDGE);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_T, this.#gl.CLAMP_TO_EDGE);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MIN_FILTER, this.#gl.LINEAR);
+			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MAG_FILTER, this.#gl.LINEAR);
+		}
+		this.#gl.bindTexture(this.#gl.TEXTURE_2D, null);
+
 		// Set up texture upload effects
 		this.broadcast.signals.effect(this.#runFrame.bind(this));
 		this.broadcast.signals.effect(this.#runMeme.bind(this));

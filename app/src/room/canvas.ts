@@ -5,10 +5,6 @@ import { BackgroundRenderer } from "./gl/background";
 import { Camera } from "./gl/camera";
 import { GLContext } from "./gl/context";
 
-export type CanvasProps = {
-	demo?: boolean;
-};
-
 export class Canvas {
 	#canvas: HTMLCanvasElement;
 	#glContext: GLContext;
@@ -20,7 +16,6 @@ export class Canvas {
 
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
-	demo: Signal<boolean>;
 
 	#signals = new Effect();
 
@@ -40,10 +35,9 @@ export class Canvas {
 		return this.#camera;
 	}
 
-	constructor(element: HTMLCanvasElement, props?: CanvasProps) {
+	constructor(element: HTMLCanvasElement) {
 		this.#canvas = element;
 
-		this.demo = new Signal(props?.demo ?? false);
 		this.visible = new Signal(false);
 		this.viewport = new Signal(Vector.create(0, 0));
 
@@ -121,7 +115,11 @@ export class Canvas {
 
 			let cancel: number;
 			const render = (now: DOMHighResTimeStamp) => {
-				this.#render(now);
+				try {
+					this.#render(now);
+				} catch (err) {
+					console.error("render error", err);
+				}
 				cancel = requestAnimationFrame(render);
 			};
 
@@ -132,34 +130,17 @@ export class Canvas {
 	}
 
 	#render(now: DOMHighResTimeStamp) {
-		// Update common uniforms for this frame
-		this.#glContext.uniforms.update(now);
-
 		// Clear the screen
 		this.#glContext.clear();
 
 		// Render background with shader
 		this.#backgroundRenderer.render(now);
 
-		// TODO: Render demo text if enabled
-		// if (this.demo.peek()) {
-		// 	this.#renderDemo(now);
-		// }
-
 		// Render broadcasts
 		if (this.onRender) {
-			try {
-				this.onRender(now);
-			} catch (err) {
-				console.error("render error", err);
-			}
+			this.onRender(now);
 		}
 	}
-
-	// TODO: Implement demo text rendering with WebGL
-	// #renderDemo(now: DOMHighResTimeStamp) {
-	// 	// Render "DEMO" text at various positions
-	// }
 
 	toggleFullscreen() {
 		if (document.fullscreenElement) {

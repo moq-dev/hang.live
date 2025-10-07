@@ -4,6 +4,7 @@ import * as Updater from "@tauri-apps/plugin-updater";
 // VERY important that this doesn't throw an error
 async function check() {
 	try {
+		console.log("checking for update");
 		const update = await Updater.check({ allowDowngrades: true });
 		if (!update) return;
 
