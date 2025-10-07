@@ -587,7 +587,7 @@ export class Space {
 	}
 
 	// Render using WebGL
-	#render() {
+	#render(now: DOMHighResTimeStamp) {
 		// TODO: Render the audio click prompt if audio is suspended
 		// if (this.sound.suspended.peek() && !this.profile) {
 		// 	this.#renderAudioPrompt();
@@ -608,10 +608,10 @@ export class Space {
 
 		// 2. Render audio visualizations (middle layer)
 		for (const broadcast of this.#rip) {
-			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 		for (const broadcast of broadcasts) {
-			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 
 		// 3. Render video content (front layer)

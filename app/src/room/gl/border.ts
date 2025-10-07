@@ -19,7 +19,6 @@ export class BorderRenderer {
 	#u_radius: Uniform1f;
 	#u_size: Uniform2f;
 	#u_opacity: Uniform1f;
-	#u_border: Uniform1f;
 
 	// Typed attributes
 	#a_position: Attribute;
@@ -35,7 +34,6 @@ export class BorderRenderer {
 		this.#u_radius = this.#program.createUniform1f("u_radius");
 		this.#u_size = this.#program.createUniform2f("u_size");
 		this.#u_opacity = this.#program.createUniform1f("u_opacity");
-		this.#u_border = this.#program.createUniform1f("u_border");
 
 		// Initialize typed attributes
 		this.#a_position = this.#program.createAttribute("a_position");
@@ -123,9 +121,6 @@ export class BorderRenderer {
 		// Set opacity
 		const opacity = broadcast.video.online;
 		this.#u_opacity.set(opacity);
-
-		// Set border size
-		this.#u_border.set(border);
 
 		// Draw
 		gl.bindVertexArray(this.#vao);

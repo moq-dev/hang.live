@@ -94,13 +94,16 @@ export class OutlineRenderer {
 		gl.bindVertexArray(null);
 	}
 
-	render(broadcast: Broadcast, camera: Camera, maxZ: number) {
+	render(broadcast: Broadcast, camera: Camera, maxZ: number, now: DOMHighResTimeStamp) {
 		const gl = this.#canvas.gl;
 		const bounds = broadcast.bounds.peek();
 		const scale = broadcast.zoom.peek();
 		const volume = broadcast.audio.volume;
 
 		this.#program.use();
+
+		// Set time
+		this.#u_time.set(now);
 
 		// Set projection matrix
 		this.#u_projection.set(camera.projection);
@@ -143,9 +146,6 @@ export class OutlineRenderer {
 
 		// Set border size
 		this.#u_border.set(border);
-
-		// Set time for animation
-		this.#u_time.set(this.#canvas.glContext.uniforms.time);
 
 		// Set color based on volume using HSL from old implementation
 		// hue = 180 + volume * 120

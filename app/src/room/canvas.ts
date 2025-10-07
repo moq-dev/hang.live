@@ -139,7 +139,7 @@ export class Canvas {
 		this.#glContext.clear();
 
 		// Render background with shader
-		this.#backgroundRenderer.render();
+		this.#backgroundRenderer.render(now);
 
 		// TODO: Render demo text if enabled
 		// if (this.demo.peek()) {

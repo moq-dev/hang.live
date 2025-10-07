@@ -35,7 +35,7 @@ export class Name {
 		});
 
 		// Update the position of the name when the broadcast bounds or viewport changes
-		const updatePosition = (bounds: Bounds, viewport: Vector, zoom: number) => {
+		const updatePosition = (bounds: Bounds, viewport: Vector) => {
 			// Get the canvas element's position on the page
 			const canvasRect = this.canvas.element.getBoundingClientRect();
 
@@ -72,8 +72,7 @@ export class Name {
 		effect.effect((effect) => {
 			const bounds = effect.get(this.broadcast.bounds);
 			const viewport = effect.get(this.broadcast.canvas.viewport);
-			const zoom = effect.get(this.broadcast.zoom);
-			updatePosition(bounds, viewport, zoom);
+			updatePosition(bounds, viewport);
 		});
 
 		// Update z-index based on broadcast position
