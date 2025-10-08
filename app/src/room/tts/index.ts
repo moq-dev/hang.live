@@ -133,6 +133,16 @@ export class TTS {
 			// Only start loading the TTS model when enabled.
 			if (!effect.get(this.enabled)) return;
 
+			const quality = effect.get(Settings.audio.tts);
+			if (quality === "low") {
+				// Don't load worker model for low quality (uses SpeechSynthesis instead)
+				this.ready.set(true);
+				this.progress.set(1);
+				return;
+			}
+
+			if (quality !== "high") return;
+
 			const worker = new Worker(new URL("./worker", import.meta.url), { type: "module" });
 			effect.cleanup(() => {
 				worker.terminate();
@@ -141,29 +151,25 @@ export class TTS {
 
 			const tts = Comlink.wrap<TTSWorker>(worker);
 
-			effect.effect((effect) => {
-				const quality = effect.get(Settings.audio.tts);
+			effect.spawn(async () => {
+				await tts.setQuality(quality);
 
-				effect.spawn(async () => {
-					await tts.setQuality(quality);
+				for (;;) {
+					const progress = await Promise.race([tts.progress(), effect.cancel]);
+					if (progress === undefined) break;
 
-					for (;;) {
-						const progress = await Promise.race([tts.progress(), effect.cancel]);
-						if (progress === undefined) break;
+					this.progress.set(progress);
 
-						this.progress.set(progress);
-
-						if (progress === 1) {
-							this.ready.set(true);
-							break;
-						}
+					if (progress === 1) {
+						this.ready.set(true);
+						break;
 					}
-				});
+				}
+			});
 
-				effect.cleanup(() => {
-					this.progress.set(undefined);
-					this.ready.set(false);
-				});
+			effect.cleanup(() => {
+				this.progress.set(undefined);
+				this.ready.set(false);
 			});
 
 			this.#worker = tts;
@@ -174,6 +180,24 @@ export class TTS {
 	}
 
 	async say(text: string) {
+		if (!this.enabled.peek()) return;
+
+		const quality = Settings.audio.tts.peek();
+
+		// Use browser's SpeechSynthesis for low quality
+		if (quality === "low") {
+			return new Promise<void>((resolve) => {
+				const utterance = new SpeechSynthesisUtterance(text);
+				utterance.rate = 1.1;
+
+				utterance.onend = () => resolve();
+				utterance.onerror = () => resolve();
+
+				speechSynthesis.speak(utterance);
+			});
+		}
+
+		// Use worker for high quality
 		if (!this.#worker) return;
 
 		const audioUrl = await this.#worker.generate(text);

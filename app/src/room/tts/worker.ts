@@ -1,14 +1,6 @@
 // Configure transformers.js and ONNX runtime
-import { env } from "@huggingface/transformers";
 import * as Comlink from "comlink";
-import * as Kitten from "./kitten";
 import * as Kokoro from "./kokoro";
-
-// We serve KittenTTS and Onnx locally so they get bundled with the app.
-// Larger and more expensive models get loaded at runtime.
-env.allowLocalModels = true;
-env.allowRemoteModels = true; // Kokoro
-env.localModelPath = "/models";
 
 export type Quality = "none" | "low" | "high";
 
@@ -24,7 +16,7 @@ async function detectWebGPU() {
 const supportsWebGPU = detectWebGPU();
 
 export class TTSWorker {
-	#model: Kitten.TTS | Kokoro.TTS | undefined;
+	#model: Kokoro.TTS | undefined;
 	#quality: Quality;
 
 	constructor(quality: Quality) {
@@ -32,13 +24,13 @@ export class TTSWorker {
 		this.#model = this.#init();
 	}
 
-	#init(): Kitten.TTS | Kokoro.TTS | undefined {
+	#init(): Kokoro.TTS | undefined {
 		if (this.#quality === "none") {
 			return undefined;
 		} else if (this.#quality === "high") {
 			return new Kokoro.TTS();
 		} else if (this.#quality === "low") {
-			return new Kitten.TTS();
+			throw new Error("Low quality TTS cannot be used with the worker");
 		} else {
 			const quality: never = this.#quality;
 			throw new Error(`Invalid quality: ${quality}`);
