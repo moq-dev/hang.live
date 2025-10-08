@@ -206,7 +206,7 @@ export class PannedNotifications {
 		// Use the video if it's available
 		if (videoSource) {
 			const video = document.createElement("video") as HTMLVideoElement;
-			video.src = `/meme/${videoSource.file}`;
+			video.src = new URL(`/meme/${videoSource.file}`, import.meta.env.VITE_APP_URL).toString();
 
 			if (this.#parent.suspended.peek()) {
 				video.muted = true; // so we can start loading
@@ -222,7 +222,7 @@ export class PannedNotifications {
 		}
 
 		if (audioSource) {
-			const audio = new Audio(`/meme/${audioSource.file}`);
+			const audio = new Audio(new URL(`/meme/${audioSource.file}`, import.meta.env.VITE_APP_URL).toString());
 			audio.autoplay = true;
 			audio.load();
 			return { element: audio, source: audioSource };

@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
@@ -42,7 +43,13 @@ export default defineConfig(() => {
 					},
 				],
 			}),
-		],
+			process.env.TAURI_ENV_PLATFORM && {
+				name: "delete-meme",
+				async writeBundle() {
+					await fs.rm("dist/meme", { recursive: true });
+				},
+			},
+		].filter(Boolean),
 
 		resolve: {
 			dedupe: ["solid-js"],

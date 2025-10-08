@@ -1,3 +1,1 @@
 **/.DS_Store
-models/tts/**/*.onnx
-models/tts/**/*.bin
