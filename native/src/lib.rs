@@ -1,5 +1,8 @@
 use tauri::Emitter;
 
+#[cfg(desktop)]
+mod update;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 	let mut t = tauri::Builder::default();
@@ -8,6 +11,15 @@ pub fn run() {
 	{
 		use tauri::Manager;
 		t = t.plugin(tauri_plugin_updater::Builder::new().build());
+
+		// Start background update checker (desktop only)
+		t = t.setup(|app| {
+			let handle = app.handle().clone();
+			tauri::async_runtime::spawn(async move {
+				update::run(handle).await.expect("update loop failed");
+			});
+			Ok(())
+		});
 
 		// Must be before deep link
 		t = t.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
