@@ -1,9 +1,9 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
 import type { Camera } from "./camera";
+import outlineFragSource from "./outline.frag?raw";
+import outlineVertSource from "./outline.vert?raw";
 import { Attribute, Shader, Uniform1f, Uniform2f, Uniform3f, Uniform4f, UniformMatrix4fv } from "./shader";
-import outlineFragSource from "./shaders/outline.frag?raw";
-import outlineVertSource from "./shaders/outline.vert?raw";
 
 export class OutlineRenderer {
 	#canvas: Canvas;

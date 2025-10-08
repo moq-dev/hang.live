@@ -3,8 +3,9 @@ import "@kixelated/hang/support/element";
 
 import * as Tauri from "./tauri";
 
-if (Tauri.ENABLED && Tauri.DESKTOP) {
-	import("./tauri/update").then((module) => module.run());
+// Import update module early if on desktop to ensure it runs even if UI breaks
+if (Tauri.DESKTOP) {
+	import("./tauri/update");
 }
 
 import solid from "@kixelated/signals/solid";
