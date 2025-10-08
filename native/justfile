@@ -19,8 +19,8 @@ fix:
 
 # Build and upload the app for the given platform
 # NOTE: Actually deploying requires extra steps based on the platform
-deploy platform:
-	op run --env-file=".env" -- ./bin/deploy-{{platform}}
+release platform:
+	op run --env-file=".env" -- bash ./bin/release-{{platform}}
 
 # Run the native app in development mode
 dev:

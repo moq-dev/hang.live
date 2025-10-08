@@ -60,3 +60,7 @@ android *args:
 # Run the iOS build, using --open to open Xcode
 ios *args:
 	cd native && just ios {{args}}
+
+# Release the app for the given platform
+release platform:
+	cd native && just release "{{platform}}"
