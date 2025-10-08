@@ -37,6 +37,9 @@ export class Video {
 	memeBounds?: Bounds;
 	memeActive: Signal<boolean> = new Signal<boolean>(false);
 
+	// Chroma key color for the current meme (RGB 0-1 range)
+	memeChroma?: { r: number; g: number; b: number };
+
 	// WebGL textures for this broadcast
 	frameTexture: WebGLTexture; // Video texture
 	avatarTexture: WebGLTexture; // Avatar texture
@@ -206,6 +209,10 @@ export class Video {
 			return;
 		}
 
+		// Set chroma key color from meme source (defaults to pure green)
+		if ("file" in meme.source) {
+		}
+
 		const element = meme.element;
 
 		effect.event(element, "ended", () => {
@@ -213,7 +220,14 @@ export class Video {
 		});
 
 		if (element instanceof HTMLVideoElement) {
-			this.#videoToTexture(effect, element, this.memeTexture);
+			const chromaHex = meme.source.chroma ?? "00FF00";
+			const chroma = {
+				r: parseInt(chromaHex.substring(0, 2), 16) / 255,
+				g: parseInt(chromaHex.substring(2, 4), 16) / 255,
+				b: parseInt(chromaHex.substring(4, 6), 16) / 255,
+			};
+
+			this.#memeToTexture(effect, element, this.memeTexture, chroma);
 
 			// Listen for loadedmetadata event to update meme size when dimensions are available
 			const updateSize = () => {
@@ -230,7 +244,7 @@ export class Video {
 
 			// Listen for metadata load
 			effect.event(element, "loadedmetadata", updateSize);
-		} else if ("emoji" in meme.source) {
+		} else if (meme.source.emoji) {
 			const emoji = meme.source.emoji;
 
 			effect.effect((effect) => {
@@ -334,11 +348,31 @@ export class Video {
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
-	#videoToTexture(effect: Effect, src: HTMLVideoElement, dst: WebGLTexture) {
+	#memeToTexture(
+		effect: Effect,
+		src: HTMLVideoElement,
+		dst: WebGLTexture,
+		chroma: { r: number; g: number; b: number },
+	) {
 		const gl = this.#gl;
+
+		let first = true;
 
 		let cancel: number;
 		const onFrame = () => {
+			if (first) {
+				first = false;
+
+				// Check if the video has an alpha channel
+				// This only fails on Safari currently; no support for VP9+alpha
+				const frame = new VideoFrame(src);
+				if (frame.format?.endsWith("A")) {
+					this.memeChroma = undefined;
+				} else {
+					this.memeChroma = chroma;
+				}
+			}
+
 			gl.bindTexture(gl.TEXTURE_2D, dst);
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -355,6 +389,9 @@ export class Video {
 		cancel = src.requestVideoFrameCallback(onFrame);
 
 		effect.cleanup(() => src.cancelVideoFrameCallback(cancel));
+		effect.cleanup(() => {
+			this.memeChroma = undefined;
+		});
 	}
 
 	#emojiToTexture(emoji: string, size: number) {

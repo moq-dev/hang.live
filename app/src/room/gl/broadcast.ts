@@ -3,7 +3,7 @@ import { Canvas } from "../canvas";
 import broadcastFragSource from "./broadcast.frag?raw";
 import broadcastVertSource from "./broadcast.vert?raw";
 import type { Camera } from "./camera";
-import { Attribute, Shader, Uniform1f, Uniform1i, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
+import { Attribute, Shader, Uniform1f, Uniform1i, Uniform2f, Uniform3f, Uniform4f, UniformMatrix4fv } from "./shader";
 
 export class BroadcastRenderer {
 	#canvas: Canvas;
@@ -27,6 +27,8 @@ export class BroadcastRenderer {
 	#u_memeTexture: Uniform1i;
 	#u_memeOpacity: Uniform1f;
 	#u_memeBounds: Uniform4f;
+	#u_memeChromaKey: Uniform1i;
+	#u_memeChromaColor: Uniform3f;
 	#u_flip: Uniform1i;
 
 	// Typed attributes
@@ -51,6 +53,8 @@ export class BroadcastRenderer {
 		this.#u_memeTexture = this.#program.createUniform1i("u_memeTexture");
 		this.#u_memeOpacity = this.#program.createUniform1f("u_memeOpacity");
 		this.#u_memeBounds = this.#program.createUniform4f("u_memeBounds");
+		this.#u_memeChromaKey = this.#program.createUniform1i("u_memeChromaKey");
+		this.#u_memeChromaColor = this.#program.createUniform3f("u_memeChromaColor");
 		this.#u_flip = this.#program.createUniform1i("u_flip");
 
 		// Initialize typed attributes
@@ -194,6 +198,15 @@ export class BroadcastRenderer {
 
 		if (memeBounds) {
 			this.#u_memeBounds.set(memeBounds.position.x, memeBounds.position.y, memeBounds.size.x, memeBounds.size.y);
+		}
+
+		// Set chroma key color
+		const chroma = broadcast.video.memeChroma;
+		if (chroma) {
+			this.#u_memeChromaKey.set(chroma ? 1 : 0);
+			this.#u_memeChromaColor.set(chroma?.r, chroma?.g, chroma?.b);
+		} else {
+			this.#u_memeChromaKey.set(0);
 		}
 
 		// Draw

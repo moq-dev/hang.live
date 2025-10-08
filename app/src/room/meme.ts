@@ -1,33 +1,32 @@
-type MemeAudioSource = {
+export type MemeSource = {
 	file: string;
-	emoji: string;
 
-	// These are not used for audio, but are defined to make it easier to use the same type for both.
-	fit?: "contain";
-	position?: string;
-};
+	// Rendered for audio memes
+	emoji?: string;
 
-type MemeVideoSource = {
-	file: string;
 	// CSS object-fit: how the video fits within its container
 	// - "contain": scales to fit entirely within container (may have letterbox/pillarbox)
 	// - "cover": scales to cover entire container (may crop)
 	// - "fill": stretches to fill container (distorts aspect ratio - rarely used)
 	// - "scale-down": acts like "contain" but never scales up beyond natural size
-	// - "none": no resizing, uses natural size
-	fit?: "contain" | "cover" | "fill" | "scale-down" | "none";
+	fit?: "contain" | "cover" | "fill" | "scale-down";
+
 	// CSS object-position: where the video is positioned within its container
 	// Examples: "center", "bottom", "top left", "50% 75%"
 	position?: string;
+
+	// Chroma key color for greenscreen removal (hex color without #, e.g., "00FF00")
+	// Defaults to "00FF00" (pure green) if not specified
+	chroma?: string;
 };
 
 export interface MemeVideo {
-	source: MemeVideoSource;
+	source: MemeSource;
 	element: HTMLVideoElement;
 }
 
 export interface MemeAudio {
-	source: MemeAudioSource;
+	source: MemeSource;
 	element: HTMLAudioElement;
 }
 
@@ -71,7 +70,7 @@ export const MEME_AUDIO = {
 	boom: { file: "boom.mp3", emoji: "💥" },
 	wow: { file: "wow.mp3", emoji: "😮" },
 	yay: { file: "yay.mp3", emoji: "🎉" },
-} as const satisfies Record<string, MemeAudioSource>;
+} as const satisfies Record<string, MemeSource>;
 
 export const MEME_VIDEO = {
 	"another-one": { file: "another-one.webm", fit: "cover", position: "bottom" },
@@ -85,7 +84,7 @@ export const MEME_VIDEO = {
 	hackerman: { file: "hackerman.webm", fit: "contain", position: "bottom" },
 	"aww-shit": { file: "aww-shit.webm", fit: "cover", position: "bottom" },
 	error: { file: "error.webm", fit: "cover", position: "center" },
-	huh: { file: "huh.webm", fit: "cover", position: "center" },
+	huh: { file: "huh.webm", fit: "cover", position: "center", chroma: "00b733" },
 	kek: { file: "kekw.webm", fit: "cover", position: "bottom right" },
 	instagram: { file: "instagram.webm", fit: "contain", position: "bottom" },
 	maxwell: { file: "maxwell.webm", fit: "cover", position: "center" },
@@ -108,7 +107,7 @@ export const MEME_VIDEO = {
 	"real-estate": { file: "real-estate.webm", fit: "cover", position: "center" }, // fit height, left/right can letterbox
 	waw: { file: "waw.webm", fit: "cover", position: "bottom" },
 	zzz: { file: "zzz.webm", fit: "cover", position: "center" },
-} as const satisfies Record<string, MemeVideoSource>;
+} as const satisfies Record<string, MemeSource>;
 
 export type MemeAudioName = keyof typeof MEME_AUDIO;
 export type MemeVideoName = keyof typeof MEME_VIDEO;

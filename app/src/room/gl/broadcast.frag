@@ -15,6 +15,8 @@ uniform float u_opacity;
 uniform float u_frameOpacity; // Pre-computed frame opacity (0-1)
 uniform float u_memeOpacity; // Pre-computed meme opacity (0-1)
 uniform vec4 u_memeBounds; // x, y, width, height in texture coordinates
+uniform bool u_memeChromaKey; // Whether the chroma key is enabled
+uniform vec3 u_memeChromaColor; // Chroma key color for greenscreen removal (RGB 0-1)
 
 out vec4 fragColor;
 
@@ -22,6 +24,19 @@ out vec4 fragColor;
 float roundedBoxSDF(vec2 center, vec2 size, float radius) {
 	vec2 q = abs(center) - size + radius;
 	return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius;
+}
+
+// Chroma key removal for greenscreen
+float chromaKey(vec3 color, vec3 keyColor) {
+	// Calculate distance from key color
+	float dist = distance(color, keyColor);
+
+	// Similarity threshold (0.3) and smoothness (0.05) matching ffmpeg settings
+	float similarity = 0.3;
+	float smoothness = 0.05;
+
+	// Return alpha: 0.0 for green pixels, 1.0 for non-green
+	return smoothstep(similarity - smoothness, similarity + smoothness, dist);
 }
 
 void main() {
@@ -57,9 +72,17 @@ void main() {
 			memeTexCoord.y >= 0.0 && memeTexCoord.y <= 1.0) {
 			vec4 memeColor = texture(u_memeTexture, memeTexCoord);
 
+			// Use alpha channel if available, otherwise fall back to chroma key
+			float memeAlpha;
+			if (u_memeChromaKey) {
+				// Fall back to chroma key for greenscreen removal
+				memeAlpha = chromaKey(memeColor.rgb, u_memeChromaColor) * u_memeOpacity;
+			} else {
+				// Use native alpha channel (VP9+alpha support)
+				memeAlpha = memeColor.a * u_memeOpacity;
+			}
+
 			// Blend meme on top using alpha compositing
-			// The meme uses WebM+VP9 with alpha channel for transparency
-			float memeAlpha = memeColor.a * u_memeOpacity;
 			baseColor.rgb = mix(baseColor.rgb, memeColor.rgb, memeAlpha);
 			baseColor.a = max(baseColor.a, memeAlpha);
 		}
