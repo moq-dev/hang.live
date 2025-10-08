@@ -1,9 +1,9 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
+import broadcastFragSource from "./broadcast.frag?raw";
+import broadcastVertSource from "./broadcast.vert?raw";
 import type { Camera } from "./camera";
 import { Attribute, Shader, Uniform1f, Uniform1i, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
-import broadcastFragSource from "./shaders/broadcast.frag?raw";
-import broadcastVertSource from "./shaders/broadcast.vert?raw";
 
 export class BroadcastRenderer {
 	#canvas: Canvas;
