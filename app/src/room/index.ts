@@ -57,7 +57,7 @@ export class Room {
 
 		// After 1 second, start announcing new members.
 		this.#signals.timer(() => {
-			this.space.sound?.tts.enabled.set(true);
+			this.space.sound.tts.enabled.set(true);
 		}, 1000);
 
 		// Manage the locator for the camera broadcast

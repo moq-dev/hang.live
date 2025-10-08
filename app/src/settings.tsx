@@ -265,12 +265,12 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 							<>
 								Low quality TTS with{" "}
 								<a
-									href="https://github.com/KittenML/KittenTTS"
+									href="https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis"
 									target="_blank"
 									rel="noopener noreferrer"
 									class="decoration-yellow-500"
 								>
-									Kitten
+									SpeechSynthesis
 								</a>
 								.
 							</>
@@ -314,20 +314,19 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 					>
 						Low
 					</button>
-					<button
-						type="button"
-						class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
-						classList={{
-							"bg-green-500 text-white shadow-sm": tts("high"),
-							"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("high"),
-							"opacity-40 cursor-not-allowed": !webGPUSupported,
-						}}
-						onClick={() => webGPUSupported && load("high")}
-						disabled={!webGPUSupported}
-						title={!webGPUSupported ? "WebGPU required" : ""}
-					>
-						High{!webGPUSupported ? "*" : ""}
-					</button>
+					{webGPUSupported && (
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+							classList={{
+								"bg-green-500 text-white shadow-sm": tts("high"),
+								"text-white/60 hover:text-white/80 hover:bg-white/5": !tts("high"),
+							}}
+							onClick={() => load("high")}
+						>
+							High
+						</button>
+					)}
 				</div>
 			</div>
 			{/* Progress bar */}
