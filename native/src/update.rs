@@ -8,8 +8,10 @@ const CHECK_AGAIN_INTERVAL: Duration = Duration::from_secs(60 * 60 * 12); // 12 
 // This should be the last resort because it doesn't prompt the user to install the update.
 pub async fn run(app: tauri::AppHandle) -> anyhow::Result<()> {
 	loop {
-		// Check again after interval
-		tokio::time::sleep(CHECK_INTERVAL).await;
+		// Add jitter to avoid thundering herd
+		let jitter = rand::random::<u64>() % (60 * 60); // 0-1 hour jitter
+		let delay = CHECK_INTERVAL + Duration::from_secs(jitter);
+		tokio::time::sleep(delay).await;
 
 		// Catch errors on each individual check
 		if let Err(e) = check(&app).await {

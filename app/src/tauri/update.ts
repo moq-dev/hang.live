@@ -4,6 +4,10 @@ import * as Updater from "@tauri-apps/plugin-updater";
 
 export type Status =
 	| {
+			type: "available";
+			version: string;
+	  }
+	| {
 			type: "downloading";
 			version: string;
 			size?: number;
@@ -30,10 +34,17 @@ const CHECK_INTERVAL = 1000 * 60 * 60 * 24;
 export class Update {
 	status = new Signal<Status | undefined>(undefined);
 
+	#download: Promise<void>;
+	download!: () => void;
+
 	#install: Promise<void>;
 	install!: () => void;
 
 	constructor() {
+		this.#download = new Promise((resolve) => {
+			this.download = resolve;
+		});
+
 		this.#install = new Promise((resolve) => {
 			this.install = resolve;
 		});
@@ -49,6 +60,18 @@ export class Update {
 			if (!update) return;
 
 			console.log(`found update ${update.version} from ${update.date} with notes ${update.body}`);
+
+			this.status.set({
+				type: "available",
+				version: update.version,
+			});
+
+			// Auto-download or auto-install the update if it's been 6/12 hours since we found it.
+			const downloadTimeout = new Promise<void>((resolve) => setTimeout(resolve, CHECK_INTERVAL / 4));
+			const installTimeout = new Promise<void>((resolve) => setTimeout(resolve, CHECK_INTERVAL / 2));
+
+			// Auto-download the update if it's been 6 hours since we found it.
+			await Promise.race([this.#download, downloadTimeout]);
 
 			let size: number | undefined;
 			let progress = 0;
@@ -86,9 +109,7 @@ export class Update {
 				},
 			);
 
-			// Auto-install the update if it's been 12 hours since we downloaded it.
-			const timeout = new Promise<void>((resolve) => setTimeout(resolve, CHECK_INTERVAL / 2));
-			await Promise.race([this.#install, timeout]);
+			await Promise.race([this.#install, installTimeout]);
 
 			this.status.set({ type: "installing", version: update.version });
 

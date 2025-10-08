@@ -1,9 +1,9 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
-import type { Camera } from "./camera";
-import { Attribute, Shader, Uniform1f, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
 import borderFragSource from "./border.frag?raw";
 import borderVertSource from "./border.vert?raw";
+import type { Camera } from "./camera";
+import { Attribute, Shader, Uniform1f, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
 
 export class BorderRenderer {
 	#canvas: Canvas;
