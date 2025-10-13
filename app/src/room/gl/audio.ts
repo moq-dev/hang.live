@@ -1,9 +1,9 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
+import audioFragSource from "./audio.frag";
+import audioVertSource from "./audio.vert";
 import type { Camera } from "./camera";
 import type { MeshBuffer } from "./mesh";
-import outlineFragSource from "./outline.frag?raw";
-import outlineVertSource from "./outline.vert?raw";
 import { Attribute, Shader, Uniform1f, Uniform2f, Uniform3f, Uniform4f, UniformMatrix4fv } from "./shader";
 
 export class AudioRenderer {
@@ -34,7 +34,7 @@ export class AudioRenderer {
 
 	constructor(canvas: Canvas) {
 		this.#canvas = canvas;
-		this.#program = new Shader(canvas.gl, outlineVertSource, outlineFragSource);
+		this.#program = new Shader(canvas.gl, audioVertSource, audioFragSource);
 
 		// Initialize typed uniforms
 		this.#u_projection = this.#program.createUniformMatrix4fv("u_projection");

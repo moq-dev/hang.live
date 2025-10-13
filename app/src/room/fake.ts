@@ -126,7 +126,7 @@ export class FakeBroadcast {
 		video.onloadedmetadata = () => {
 			this.video.catalog.set([
 				{
-					track: "video",
+					track: { name: "video", priority: 0 },
 					config: {
 						codec: "fake",
 						// Required for the correct display size.
@@ -155,7 +155,7 @@ export class FakeBroadcast {
 
 			this.video.catalog.set([
 				{
-					track: "image",
+					track: { name: "image", priority: 0 },
 					config: {
 						codec: "fake",
 						displayAspectWidth: u53(image.width),

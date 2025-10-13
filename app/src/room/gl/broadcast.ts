@@ -1,7 +1,7 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
-import broadcastFragSource from "./broadcast.frag?raw";
-import broadcastVertSource from "./broadcast.vert?raw";
+import broadcastFragSource from "./broadcast.frag";
+import broadcastVertSource from "./broadcast.vert";
 import type { Camera } from "./camera";
 import type { MeshBuffer } from "./mesh";
 import { Attribute, Shader, Uniform1f, Uniform1i, Uniform2f, Uniform3f, Uniform4f, UniformMatrix4fv } from "./shader";

@@ -105,13 +105,13 @@ export class MeshBuffer {
 		const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.#positionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.#texCoordBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.#indexBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
 		this.#isSubdivided = false;
 		this.#vertexCount = 4;
@@ -172,13 +172,13 @@ export class MeshBuffer {
 		}
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.#positionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.#texCoordBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.#indexBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.DYNAMIC_DRAW);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
 		this.#isSubdivided = true;
 		this.#vertexCount = totalVertices;

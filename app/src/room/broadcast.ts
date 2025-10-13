@@ -304,10 +304,18 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.velocity = this.velocity.mult(0.5);
 
 		// Decay the deformation velocity smoothly over time (faster decay than physics velocity)
-		this.deformVelocity = this.deformVelocity.mult(0.85);
+		if (this.deformVelocity.length() > 0.01) {
+			this.deformVelocity = this.deformVelocity.mult(0.85);
+		} else {
+			this.deformVelocity = Vector.create(0, 0);
+		}
 
 		// Decay zoom deformation (set by user interaction in Space)
-		this.zoomDeform *= 0.9;
+		if (Math.abs(this.zoomDeform) > 0.01) {
+			this.zoomDeform *= 0.9;
+		} else {
+			this.zoomDeform = 0;
+		}
 	}
 
 	// Returns true if the broadcaster is locked to a position.

@@ -54,6 +54,7 @@
 		"tsx": "^4.20.5",
 		"typescript": "~5.8.3",
 		"vite": "^6.3.5",
+		"vite-plugin-glsl": "^1.5.4",
 		"vite-plugin-solid": "^2.11.8",
 		"vite-plugin-static-copy": "^2.1.0",
 		"vite-plugin-wrangler": "^0.1.1",

@@ -3,9 +3,9 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
+import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
-import { AudioRenderer } from "./gl/outline";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {

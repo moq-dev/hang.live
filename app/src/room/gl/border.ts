@@ -1,7 +1,7 @@
 import type { Broadcast } from "../broadcast";
 import { Canvas } from "../canvas";
-import borderFragSource from "./border.frag?raw";
-import borderVertSource from "./border.vert?raw";
+import borderFragSource from "./border.frag";
+import borderVertSource from "./border.vert";
 import type { Camera } from "./camera";
 import type { MeshBuffer } from "./mesh";
 import { Attribute, Shader, Uniform1f, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
