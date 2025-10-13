@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
+import glsl from "vite-plugin-glsl";
 import solid from "vite-plugin-solid";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
@@ -29,9 +30,10 @@ export default defineConfig(() => {
 			format: "es" as const,
 		},
 
-		assetsInclude: ["**/*.glsl", "**/*.vert", "**/*.frag"],
-
 		plugins: [
+			glsl({
+				minify: process.env.NODE_ENV === "production",
+			}),
 			solid(),
 			tailwindcss(),
 			viteStaticCopy({

@@ -3,9 +3,9 @@ import { Effect, Signal } from "@kixelated/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
+import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
-import { OutlineRenderer } from "./gl/outline";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {
@@ -35,7 +35,7 @@ export class Space {
 
 	// WebGL renderers
 	#borderRenderer: BorderRenderer;
-	#outlineRenderer: OutlineRenderer;
+	#audioRenderer: AudioRenderer;
 	#broadcastRenderer: BroadcastRenderer;
 
 	// Touch handling for mobile
@@ -52,7 +52,7 @@ export class Space {
 
 		// Initialize WebGL renderers
 		this.#borderRenderer = new BorderRenderer(canvas);
-		this.#outlineRenderer = new OutlineRenderer(canvas);
+		this.#audioRenderer = new AudioRenderer(canvas);
 		this.#broadcastRenderer = new BroadcastRenderer(canvas);
 
 		// Use the new eventListener helper that automatically handles cleanup
@@ -98,6 +98,14 @@ export class Space {
 			return;
 		}
 
+		// Calculate drag point relative to broadcast bounds (0-1)
+		const bounds = broadcast.bounds.peek();
+		const dragPoint = Vector.create(
+			(mouse.x - bounds.position.x) / bounds.size.x,
+			(mouse.y - bounds.position.y) / bounds.size.y,
+		);
+		broadcast.dragPoint.set(dragPoint);
+
 		// Bump the z-index unless we're already at the top.
 		broadcast.position.update((prev) => ({
 			...prev,
@@ -128,6 +136,15 @@ export class Space {
 		const viewport = this.canvas.viewport.peek();
 
 		if (this.#dragging) {
+			// Calculate mouse movement delta
+			const bounds = this.#dragging.bounds.peek();
+			const currentCenter = bounds.middle();
+			const deltaX = mouse.x - currentCenter.x;
+			const deltaY = mouse.y - currentCenter.y;
+
+			// Set deformation velocity based on mouse movement
+			this.#dragging.deformVelocity = Vector.create(deltaX, deltaY);
+
 			// Update the position but don't publish it yet.
 			this.#dragging.position.mutate((position) => {
 				position.x = mouse.x / viewport.x - 0.5;
@@ -173,9 +190,9 @@ export class Space {
 
 	#onMouseWheel(e: WheelEvent) {
 		let broadcast = this.#dragging;
-		if (!broadcast) {
-			const mouse = this.canvas.relative(e.clientX, e.clientY);
+		const mouse = this.canvas.relative(e.clientX, e.clientY);
 
+		if (!broadcast) {
 			broadcast = this.#at(mouse);
 			if (!broadcast) {
 				// Not over a broadcast, so don't do anything.
@@ -205,12 +222,23 @@ export class Space {
 			return;
 		}
 
+		// Calculate zoom center relative to broadcast bounds (0-1)
+		const bounds = broadcast.bounds.peek();
+		const zoomCenter = Vector.create(
+			(mouse.x - bounds.position.x) / bounds.size.x,
+			(mouse.y - bounds.position.y) / bounds.size.y,
+		);
+		broadcast.zoomCenter.set(zoomCenter);
+
 		const scale = -e.deltaY * 0.001;
 		if (scale < 0) {
 			document.body.style.cursor = "zoom-out";
 		} else if (scale > 0) {
 			document.body.style.cursor = "zoom-in";
 		}
+
+		// Set zoom deformation based on scale direction and magnitude
+		broadcast.zoomDeform = scale * 15;
 
 		// Update the scale, publishing it.
 		broadcast.position.update((prev) => ({
@@ -328,10 +356,28 @@ export class Space {
 			const dy = touch2.clientY - touch1.clientY;
 			const currentDistance = Math.sqrt(dx * dx + dy * dy);
 
+			// Calculate pinch center
+			const centerX = (touch1.clientX + touch2.clientX) / 2;
+			const centerY = (touch1.clientY + touch2.clientY) / 2;
+			const center = this.canvas.relative(centerX, centerY);
+
+			// Calculate zoom center relative to broadcast bounds (0-1)
+			const bounds = this.#dragging.bounds.peek();
+			const zoomCenter = Vector.create(
+				(center.x - bounds.position.x) / bounds.size.x,
+				(center.y - bounds.position.y) / bounds.size.y,
+			);
+			this.#dragging.zoomCenter.set(zoomCenter);
+
 			// Calculate scale factor
 			if (this.#pinchStartDistance > 0) {
 				const scaleFactor = currentDistance / this.#pinchStartDistance;
 				const newScale = this.#pinchStartScale * scaleFactor;
+				const oldScale = this.#dragging.position.peek().s ?? 1;
+
+				// Set zoom deformation based on scale delta
+				const scaleDelta = newScale - oldScale;
+				this.#dragging.zoomDeform = scaleDelta * 15;
 
 				// Update the scale
 				this.#dragging.position.update((prev) => ({
@@ -341,9 +387,6 @@ export class Space {
 			}
 
 			// Also update position to the center of the pinch
-			const centerX = (touch1.clientX + touch2.clientX) / 2;
-			const centerY = (touch1.clientY + touch2.clientY) / 2;
-			const center = this.canvas.relative(centerX, centerY);
 			const viewport = this.canvas.viewport.peek();
 
 			this.#dragging.position.update((prev) => ({
@@ -611,10 +654,10 @@ export class Space {
 
 		// 2. Render audio visualizations (middle layer)
 		for (const broadcast of this.#rip) {
-			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			this.#audioRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 		for (const broadcast of broadcasts) {
-			this.#outlineRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			this.#audioRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 
 		// 3. Render video content (front layer)
@@ -663,7 +706,7 @@ export class Space {
 
 	close() {
 		this.#borderRenderer.close();
-		this.#outlineRenderer.close();
+		this.#audioRenderer.close();
 		this.#broadcastRenderer.close();
 
 		this.#signals.close();

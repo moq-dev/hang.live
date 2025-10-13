@@ -1,5 +1,5 @@
-import backgroundFragSource from "./background.frag?raw";
-import backgroundVertSource from "./background.vert?raw";
+import backgroundFragSource from "./background.frag";
+import backgroundVertSource from "./background.vert";
 import type { GLContext } from "./context";
 import { Attribute, Shader, Uniform1f, Uniform2f } from "./shader";
 
