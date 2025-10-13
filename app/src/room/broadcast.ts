@@ -220,8 +220,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.audio.tick();
 		this.video.tick(now);
 
-		// Update mesh based on velocity
-		this.mesh.update(this.velocity);
+		// Update mesh based on deformation velocity and zoom deformation
+		this.mesh.update(this.deformVelocity, this.zoomDeform);
 
 		// Update opacity based on online status
 		const fadeTime = 300; // ms
@@ -311,8 +311,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		}
 
 		// Decay zoom deformation (set by user interaction in Space)
+		// Slower decay than drag to keep mesh subdivided during zoom animation
 		if (Math.abs(this.zoomDeform) > 0.01) {
-			this.zoomDeform *= 0.9;
+			this.zoomDeform *= 0.95;
 		} else {
 			this.zoomDeform = 0;
 		}

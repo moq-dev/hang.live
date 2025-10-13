@@ -5,6 +5,7 @@ import { Vector } from "../geometry";
 export const BORDER_WIDTH = 12;
 export const AUDIO_VIZ_WIDTH = 18; // BORDER_WIDTH * 1.5
 export const DRAG_THRESHOLD = 0.5; // Minimum velocity magnitude to trigger mesh deformation
+export const ZOOM_THRESHOLD = 0.1; // Minimum zoom deformation to trigger mesh subdivision (lower than drag)
 
 export interface MeshConfig {
 	meshSubdivisions: number; // Grid size (e.g., 20 for 20x20 grid)
@@ -64,10 +65,11 @@ export class MeshBuffer {
 		return this.#vertexCount;
 	}
 
-	// Update mesh based on velocity
-	update(velocity: Vector) {
+	// Update mesh based on velocity and zoom deformation
+	update(velocity: Vector, zoomDeform: number) {
 		const velocityMagnitude = velocity.length();
-		const shouldSubdivide = velocityMagnitude > DRAG_THRESHOLD;
+		const zoomMagnitude = Math.abs(zoomDeform);
+		const shouldSubdivide = velocityMagnitude > DRAG_THRESHOLD || zoomMagnitude > ZOOM_THRESHOLD;
 
 		if (shouldSubdivide && !this.#isSubdivided) {
 			this.#generateSubdividedMesh();
