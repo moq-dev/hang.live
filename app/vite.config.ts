@@ -8,6 +8,13 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => {
+	// Optional: Make sure we never bundle Tauri packages just in case tree-shaking doesn't work.
+	const external: (string | RegExp)[] = process.env.TAURI_ENV_PLATFORM ? [] : [/^@tauri-apps\//];
+
+	// Avoid bundling 23MB of WASM for optional AI features.
+	// TODO fix this for MoQ, why isn't it defaulting to using a CDN?
+	external.push("onnxruntime-web");
+
 	return {
 		define: {
 			TAURI: JSON.stringify(!!process.env.TAURI_ENV_PLATFORM),
@@ -18,8 +25,7 @@ export default defineConfig(() => {
 			sourcemap: process.env.NODE_ENV === "production" ? false : ("inline" as const),
 			rollupOptions: {
 				input: "index.html",
-				// Optional: Make sure we never bundle Tauri packages just in case tree-shaking doesn't work.
-				external: process.env.TAURI_ENV_PLATFORM ? [] : [/^@tauri-apps\//],
+				external,
 			},
 		},
 		optimizeDeps: {
@@ -28,6 +34,10 @@ export default defineConfig(() => {
 
 		worker: {
 			format: "es" as const,
+			rollupOptions: {
+				external,
+			},
+			dedup: ["@huggingface/transformers"],
 		},
 
 		plugins: [
@@ -48,7 +58,7 @@ export default defineConfig(() => {
 			process.env.TAURI_ENV_PLATFORM && {
 				name: "delete-meme",
 				async writeBundle() {
-					await fs.rm("dist/meme", { recursive: true });
+					await fs.promises.rm("dist/meme", { recursive: true, force: true });
 				},
 			},
 		].filter(Boolean),
