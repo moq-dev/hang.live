@@ -142,6 +142,7 @@ export class Room {
 			// Download the preview track to receive high-level information about the broadcaster.
 			preview: { enabled: true },
 			audio: {
+				enabled: this.space.sound.enabled,
 				// Download the speaking indicator.
 				speaking: { enabled: true },
 				captions: { enabled: Settings.captions.render },
@@ -153,10 +154,6 @@ export class Room {
 			video: {
 				enabled: this.space.canvas.visible,
 			},
-		});
-
-		watch.signals.effect((effect) => {
-			watch.audio.enabled.set(!effect.get(this.space.sound.suspended));
 		});
 
 		// Request the position we should use from this remote broadcast.

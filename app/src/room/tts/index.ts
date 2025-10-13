@@ -180,7 +180,7 @@ export class TTS {
 	}
 
 	async say(text: string) {
-		if (!this.enabled.peek()) return;
+		if (!this.enabled.peek() || this.context.state === "suspended") return;
 
 		const quality = Settings.audio.tts.peek();
 

@@ -128,7 +128,7 @@ class LocalPreview {
 
 		// Create a minimal sound context (muted for preview)
 		this.sound = new Sound();
-		this.sound.suspended.set(true); // Keep suspended for preview
+		this.sound.enabled.set(false); // Keep muted for preview
 
 		this.space = new Space(this.canvas, this.sound, {
 			// Not elegant, but disable some of the functionality for this profile preview.

@@ -13,8 +13,7 @@ export function About(): JSX.Element {
 	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement));
 	onCleanup(() => room.close());
 
-	const audioSuspended = solid(room.sound.suspended);
-
+	const audioEnabled = solid(room.sound.enabled);
 	const handleEnableAudio = () => {
 		room.sound.enabled.set(true);
 	};
@@ -262,7 +261,7 @@ export function About(): JSX.Element {
 
 				<div class="sm:m-8 m-4 h-128 w-full relative">
 					<DemoHeader />
-					<AudioPrompt show={audioSuspended()} onClick={handleEnableAudio} />
+					<AudioPrompt show={!audioEnabled()} onClick={handleEnableAudio} />
 					{canvas}
 				</div>
 

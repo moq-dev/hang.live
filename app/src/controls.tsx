@@ -224,7 +224,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 									: "none",
 						}}
 					>
-						<Volume room={props.room} />
+						<Volume />
 						<Advanced sound={props.room.space.sound} />
 						<Fullscreen canvas={props.canvas} />
 					</div>
@@ -849,28 +849,16 @@ function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element 
 	);
 }
 
-function Volume(props: { room: Room }): JSX.Element {
+function Volume(): JSX.Element {
 	const [showSlider, setShowSlider] = createSignal(false);
 
 	const toggle = () => {
-		// If we were just suspended due to autoplay policies, then don't toggle mute.
-		// This seems racey but maybe it works.
-		if (props.room.space.sound.suspended.peek()) {
-			props.room.space.sound.suspended.set(false);
-
-			// If we unmuted but appeared to be muted, then don't toggle mute.
-			if (!Settings.audio.muted.peek()) {
-				return;
-			}
-		}
-
 		Settings.audio.muted.update((prev) => !prev);
 	};
 
 	const muted = solid(Settings.audio.muted);
 	const volume = solid(Settings.audio.volume);
 	const opacity = Opacity(() => showSlider());
-	const suspended = solid(props.room.space.sound.suspended);
 
 	const setVolume = (v: number) => {
 		if (v === 0) {
@@ -883,7 +871,7 @@ function Volume(props: { room: Room }): JSX.Element {
 	};
 
 	return (
-		<Tooltip content={muted() || suspended() ? "Enable audio" : "Disable audio"} position="top">
+		<Tooltip content={muted() ? "Enable audio" : "Disable audio"} position="top">
 			<fieldset
 				class="flex flex-col-reverse pointer-events-auto"
 				aria-label="Volume controls"
@@ -899,7 +887,7 @@ function Volume(props: { room: Room }): JSX.Element {
 					aria-checked={!muted()}
 					aria-label="Toggle mute"
 					class="hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
-					classList={{ "text-red-500": muted() || suspended() }}
+					classList={{ "text-red-500": muted() }}
 				>
 					<span class={muted() ? "icon-[mdi--volume-mute]" : "icon-[mdi--volume-high]"} />
 				</button>

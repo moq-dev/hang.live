@@ -37,18 +37,12 @@ export class Sound {
 	#sounds: Map<NotificationSound, Promise<AudioBuffer[]>>;
 	#signals = new Effect();
 
-	suspended: Signal<boolean>;
-
 	constructor(props?: SoundProps) {
 		this.context = new AudioContext({
 			latencyHint: "playback",
 		});
 		this.enabled = Signal.from(props?.enabled ?? false);
 		this.tts = new TTS(this.context, props?.tts);
-
-		if (!this.enabled.peek()) {
-			this.context.suspend();
-		}
 
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
@@ -67,19 +61,12 @@ export class Sound {
 			sounds.set(sound, load);
 		}
 
-		this.suspended = new Signal(this.context.state === "suspended");
-
-		this.context.onstatechange = () => {
-			this.suspended.set(this.context.state === "suspended");
-		};
-
 		this.#signals.effect((effect) => {
 			const enabled = effect.get(this.enabled);
-			const suspended = effect.get(this.suspended);
 
-			if (enabled && suspended) {
+			if (enabled) {
 				this.context.resume();
-			} else if (!enabled && !suspended) {
+			} else if (!enabled) {
 				this.context.suspend();
 			}
 		});
@@ -112,7 +99,7 @@ export class Sound {
 	}
 
 	async play(sound: NotificationSound) {
-		if (this.suspended.peek()) return;
+		if (!this.enabled.peek()) return;
 
 		const buffer = await this.load(sound);
 		const source = new AudioBufferSourceNode(this.context, { buffer });
@@ -176,7 +163,7 @@ export class PannedNotifications {
 	}
 
 	async notification(sound: NotificationSound) {
-		if (this.#parent.suspended.peek()) return;
+		if (!this.#parent.enabled.peek()) return;
 
 		const buffer = await this.#parent.load(sound);
 
@@ -208,10 +195,10 @@ export class PannedNotifications {
 			const video = document.createElement("video") as HTMLVideoElement;
 			video.src = new URL(`/meme/${videoSource.file}`, import.meta.env.VITE_APP_URL).toString();
 
-			if (this.#parent.suspended.peek()) {
-				video.muted = true; // so we can start loading
+			if (!this.#parent.enabled.peek()) {
+				video.muted = true;
 				this.#signals.effect((effect) => {
-					video.muted = effect.get(this.#parent.suspended); // unmute when the context is unsuspended
+					video.muted = !effect.get(this.#parent.enabled);
 				});
 			}
 
@@ -224,6 +211,10 @@ export class PannedNotifications {
 		if (audioSource) {
 			const audio = new Audio(new URL(`/meme/${audioSource.file}`, import.meta.env.VITE_APP_URL).toString());
 			audio.autoplay = true;
+			audio.muted = !this.#parent.enabled.peek();
+			this.#signals.effect((effect) => {
+				audio.muted = !effect.get(this.#parent.enabled);
+			});
 			audio.load();
 			return { element: audio, source: audioSource };
 		}

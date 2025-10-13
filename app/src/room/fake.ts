@@ -100,10 +100,10 @@ export class FakeBroadcast {
 		const video = document.createElement("video");
 		video.src = src.toString();
 
-		if (this.sound.suspended.peek()) {
+		if (!this.sound.enabled.peek()) {
 			video.muted = true;
 			this.signals.effect((effect) => {
-				video.muted = effect.get(this.sound.suspended);
+				video.muted = !effect.get(this.sound.enabled);
 			});
 		}
 
