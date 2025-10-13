@@ -117,7 +117,12 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 		setPlayingAudioMeme(null);
 
 		if (type === "audio") {
-			const audio = new Audio(new URL(`/meme/${MEME_AUDIO[memeName as keyof typeof MEME_AUDIO].file}`, import.meta.env.VITE_APP_URL).toString());
+			const audio = new Audio(
+				new URL(
+					`/meme/${MEME_AUDIO[memeName as keyof typeof MEME_AUDIO].file}`,
+					import.meta.env.VITE_APP_URL,
+				).toString(),
+			);
 			audio.volume = 0.5; // Lower volume for preview
 			audio.play();
 			setPreviewAudio(audio);
@@ -131,7 +136,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 		} else {
 			// For video, play with sound
 			const video = document.createElement("video");
-			video.src = new URL(`/meme/${MEME_VIDEO[memeName as keyof typeof MEME_VIDEO].file}`, import.meta.env.VITE_APP_URL).toString();
+			video.src = new URL(
+				`/meme/${MEME_VIDEO[memeName as keyof typeof MEME_VIDEO].file}`,
+				import.meta.env.VITE_APP_URL,
+			).toString();
 			video.volume = 0.5;
 			video.style.display = "none";
 			document.body.appendChild(video);
@@ -310,7 +318,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 									<div class="group relative bg-white/10 hover:bg-white/20 rounded overflow-hidden transition-colors cursor-pointer aspect-video basis-42 flex-grow">
 										{/* Thumbnail background */}
 										<img
-											src={new URL(`/meme/${thumbnailName}`, import.meta.env.VITE_APP_URL).toString()}
+											src={new URL(
+												`/meme/${thumbnailName}`,
+												import.meta.env.VITE_APP_URL,
+											).toString()}
 											alt={meme}
 											class="absolute inset-0 w-full h-full opacity-30"
 											style={{
@@ -321,7 +332,10 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 										{/* Video preview when playing */}
 										<Show when={isPlaying()}>
 											<video
-												src={new URL(`/meme/${memeData.file}`, import.meta.env.VITE_APP_URL).toString()}
+												src={new URL(
+													`/meme/${memeData.file}`,
+													import.meta.env.VITE_APP_URL,
+												).toString()}
 												autoplay
 												muted
 												class="absolute inset-0 w-full h-full opacity-70"
