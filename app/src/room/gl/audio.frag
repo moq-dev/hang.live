@@ -14,11 +14,7 @@ uniform float u_finalAlpha; // Pre-computed final alpha (0.3 + volume * 0.4)
 
 out vec4 fragColor;
 
-// Signed distance function for rounded rectangle
-float roundedBoxSDF(vec2 center, vec2 size, float radius) {
-	vec2 q = abs(center) - size + radius;
-	return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius;
-}
+#include "./util/sdf.glsl"
 
 void main() {
 	if (u_opacity <= 0.01) {

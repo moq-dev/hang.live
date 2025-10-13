@@ -20,24 +20,8 @@ uniform vec3 u_memeChromaColor; // Chroma key color for greenscreen removal (RGB
 
 out vec4 fragColor;
 
-// Signed distance function for rounded rectangle
-float roundedBoxSDF(vec2 center, vec2 size, float radius) {
-	vec2 q = abs(center) - size + radius;
-	return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius;
-}
-
-// Chroma key removal for greenscreen
-float chromaKey(vec3 color, vec3 keyColor) {
-	// Calculate distance from key color
-	float dist = distance(color, keyColor);
-
-	// Similarity threshold (0.3) and smoothness (0.05) matching ffmpeg settings
-	float similarity = 0.3;
-	float smoothness = 0.05;
-
-	// Return alpha: 0.0 for green pixels, 1.0 for non-green
-	return smoothstep(similarity - smoothness, similarity + smoothness, dist);
-}
+#include "./util/sdf.glsl"
+#include "./util/effects.glsl"
 
 void main() {
 	// Calculate position from center
