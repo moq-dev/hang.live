@@ -285,7 +285,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 												e.stopPropagation();
 												previewMeme(meme, "audio");
 											}}
-											class="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-white/20 hover:bg-white/30 rounded transition-opacity cursor-pointer"
+											class="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-white/20 hover:bg-white/30 rounded transition-opacity cursor-pointer [@media(pointer:coarse)]:opacity-100"
 											classList={{
 												"opacity-100": isPlaying(),
 												"opacity-0 group-hover:opacity-100": !isPlaying(),
@@ -361,7 +361,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 												e.stopPropagation();
 												previewMeme(meme, "video");
 											}}
-											class="absolute right-2 bottom-2 z-20 p-1 bg-white/20 hover:bg-white/30 rounded transition-opacity cursor-pointer"
+											class="absolute right-2 bottom-2 z-20 p-1 bg-white/20 hover:bg-white/30 rounded transition-opacity cursor-pointer [@media(pointer:coarse)]:opacity-100"
 											classList={{
 												"opacity-100": isPlaying(),
 												"opacity-0 group-hover:opacity-100": !isPlaying(),

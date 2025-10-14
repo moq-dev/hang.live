@@ -276,6 +276,14 @@ export class Space {
 
 			const viewport = this.canvas.viewport.peek();
 
+			// Calculate drag point relative to broadcast bounds (0-1)
+			const bounds = broadcast.bounds.peek();
+			const dragPoint = Vector.create(
+				(mouse.x - bounds.position.x) / bounds.size.x,
+				(mouse.y - bounds.position.y) / bounds.size.y,
+			);
+			broadcast.dragPoint.set(dragPoint);
+
 			// Bump the z-index unless we're already at the top.
 			broadcast.position.update((prev) => ({
 				...prev,
@@ -337,6 +345,15 @@ export class Space {
 			const touch = e.touches[0];
 			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
 			const viewport = this.canvas.viewport.peek();
+
+			// Calculate touch movement delta for deformation
+			const bounds = this.#dragging.bounds.peek();
+			const currentCenter = bounds.middle();
+			const deltaX = mouse.x - currentCenter.x;
+			const deltaY = mouse.y - currentCenter.y;
+
+			// Set deformation velocity based on touch movement
+			this.#dragging.deformVelocity = Vector.create(deltaX, deltaY);
 
 			// Update the position but don't publish it yet.
 			this.#dragging.position.update((prev) => ({
