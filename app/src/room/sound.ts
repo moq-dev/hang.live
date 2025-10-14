@@ -193,6 +193,7 @@ export class PannedNotifications {
 		// Use the video if it's available
 		if (videoSource) {
 			const video = document.createElement("video") as HTMLVideoElement;
+			video.crossOrigin = "anonymous";
 			video.src = new URL(`/meme/${videoSource.file}`, import.meta.env.VITE_APP_URL).toString();
 
 			if (!this.#parent.enabled.peek()) {
@@ -203,6 +204,7 @@ export class PannedNotifications {
 			}
 
 			video.autoplay = true;
+			video.playsInline = true;
 			video.load();
 			video.play();
 			return { element: video, source: videoSource };

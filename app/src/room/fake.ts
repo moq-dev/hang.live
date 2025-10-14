@@ -98,6 +98,7 @@ export class FakeBroadcast {
 	// Plays a video file.
 	play(src: URL) {
 		const video = document.createElement("video");
+		video.crossOrigin = "anonymous";
 		video.src = src.toString();
 
 		if (!this.sound.enabled.peek()) {

@@ -136,6 +136,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 		} else {
 			// For video, play with sound
 			const video = document.createElement("video");
+			video.crossOrigin = "anonymous";
 			video.src = new URL(
 				`/meme/${MEME_VIDEO[memeName as keyof typeof MEME_VIDEO].file}`,
 				import.meta.env.VITE_APP_URL,
@@ -143,6 +144,7 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 			video.volume = 0.5;
 			video.style.display = "none";
 			document.body.appendChild(video);
+			video.playsInline = true;
 			video.play();
 			setPreviewVideo(video);
 			setPlayingVideoMeme(memeName);
