@@ -438,6 +438,5 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 }
 
 export function supportsWebGPU() {
-	// @ts-expect-error Not typed yet.
 	return !!navigator.gpu;
 }

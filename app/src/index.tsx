@@ -1,5 +1,6 @@
 //import "tauri-plugin-web-transport";
-import "@moq/hang/support/element";
+import "@moq/watch/support/element";
+import "@moq/publish/support/element";
 
 import * as Tauri from "./tauri";
 

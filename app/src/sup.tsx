@@ -15,7 +15,8 @@ import { Room } from "./room";
 import { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
 
-import "@kixelated/hang/support/element";
+import "@moq/watch/support/element";
+import "@moq/publish/support/element";
 import { Sound } from "./room/sound";
 import Settings from "./settings";
 
@@ -50,8 +51,8 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 		connection.url.set(new URL(data.url));
 
-		local.camera.path.set(Moq.Path.from(data.path, "camera"));
-		local.share.path.set(Moq.Path.from(data.path, "screen"));
+		local.camera.name.set(Moq.Path.from(data.path, "camera"));
+		local.share.name.set(Moq.Path.from(data.path, "screen"));
 
 		// Save the guest account settings
 		Settings.account.guest.set(data.guest);
@@ -110,7 +111,7 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 		<WebLayout>
 			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
-			<hang-support class="text-2xl" prop:show="none" />
+			<moq-watch-support class="text-2xl" prop:show="never" />
 
 			{/* Join Button */}
 			<div class="mb-12 flex justify-center">

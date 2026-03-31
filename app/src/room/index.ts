@@ -105,7 +105,7 @@ export class Room {
 			const update = await announced.next();
 			if (!update) break;
 
-			if (update.path === this.local.camera.path.peek()) {
+			if (update.path === this.local.camera.name.peek()) {
 				if (update.active) {
 					const broadcast = this.space.add(update.path, this.local.camera);
 					this.#cameraBroadcast.set(broadcast as Broadcast<Publish.Broadcast>);
@@ -117,7 +117,7 @@ export class Room {
 				continue;
 			}
 
-			if (update.path === this.local.share.path.peek()) {
+			if (update.path === this.local.share.name.peek()) {
 				if (update.active) {
 					const broadcast = this.space.add(update.path, this.local.share);
 					this.#shareBroadcast.set(broadcast as Broadcast<Publish.Broadcast>);
@@ -141,7 +141,7 @@ export class Room {
 		const watch = new WatchBroadcast({
 			connection: this.connection.established,
 			enabled: true,
-			path,
+			name: path,
 			reload: false,
 			location: {
 				window: { enabled: true },
