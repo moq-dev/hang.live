@@ -19,10 +19,10 @@ export class Context {
 		this.#env = env;
 	}
 	// Returns the path/token to join the room
-	async sign(room: Name, account: string): Promise<string> {
+	async sign(room: Name): Promise<string> {
 		const root = `${this.#env.RELAY_PREFIX}/${room}`;
 		// TODO add a field to force publishing, preventing someone from lurking.
-		const token = await Token.sign(this.#key, { root, get: "", put: account });
+		const token = await Token.sign(this.#key, { root, get: "", put: "" });
 		return `${root}/?jwt=${token}`;
 	}
 
@@ -53,7 +53,7 @@ export const router = rpc
 			const ctx = c.var.ctx;
 			const room = c.req.valid("param").room;
 			const path = c.var.account_id ?? c.req.valid("json").guest ?? `guest/${Uuid.v4()}`;
-			const token = await ctx.room.sign(room, path);
+			const token = await ctx.room.sign(room);
 			const url = new URL(token, ctx.env.RELAY_URL);
 			return c.json({ url, path, guest: !c.var.account_id ? path : undefined });
 		},

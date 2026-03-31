@@ -20,8 +20,10 @@
 		"deploy": "bun --filter '*' run deploy"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.4.10",
 		"concurrently": "^9.2.1",
-		"wrangler": "^4.33.0"
+		"typescript": "^6.0.2",
+		"wrangler": "^4.79.0"
 	},
 	"packageManager": "bun@1.1.38"
 }

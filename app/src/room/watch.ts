@@ -1,7 +1,7 @@
 import { Catalog } from "@moq/hang";
-import * as Watch from "@moq/watch";
 import type * as Moq from "@moq/lite";
 import { Effect, type Getter, Signal } from "@moq/signals";
+import * as Watch from "@moq/watch";
 
 // Props for creating a WatchBroadcast
 export interface WatchBroadcastProps {

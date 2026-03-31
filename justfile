@@ -12,7 +12,7 @@ check:
 	set -euo pipefail
 	bun install --frozen-lockfile
 	if tty -s; then
-		bun run --filter='*' --elide-lines=0 check
+		bun run --filter='*' check
 	else
 		bun run --filter='*' check
 	fi
@@ -21,7 +21,7 @@ check:
 # Automatically fix some issues.
 fix:
 	bun install
-	bun run --filter='*' --elide-lines=0 fix
+	bun run --filter='*' fix
 	cd native && just fix
 
 # Upgrade any tooling
@@ -33,10 +33,10 @@ upgrade:
 # Build the packages
 build:
 	bun install --frozen-lockfile
-	bun run --filter='*' --elide-lines=0 build
+	bun run --filter='*' build
 
 prod: build
-	bun run --filter='*' --elide-lines=0 prod
+	bun run --filter='*' prod
 
 deploy env="staging":
 	cd api && just deploy "{{env}}"

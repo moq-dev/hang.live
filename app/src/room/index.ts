@@ -1,5 +1,5 @@
-import * as Publish from "@moq/publish";
 import * as Moq from "@moq/lite";
+import * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
