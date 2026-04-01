@@ -44,11 +44,11 @@ deploy env="staging":
 
 dev:
 	bun install
-	@cd moq/rs && just auth-token
-	bun concurrently --kill-others --names api,app,moq --prefix-colors auto \
+	@cd dev/relay && just auth-token
+	bun concurrently --kill-others --names api,app,relay --prefix-colors auto \
 		"cd api && just dev" \
 		"cd app && just dev" \
-		"cd moq && just root"
+		"cd dev/relay && just root"
 
 native:
 	cd native && just dev

@@ -11,9 +11,7 @@ Hang combines a closed-source application layer with an [open-source media strea
 - **app** — Web frontend built with SolidJS, Vite, and Tailwind CSS v4
 - **api** — Backend running on Cloudflare Workers with Hono and Drizzle ORM
 - **native** — Desktop/mobile app using Tauri v2
-- **moq** — Open-source media streaming library using WebTransport and QUIC (git submodule)
-
-The frontend and backend share types via Hono RPC. Real-time media is streamed over WebTransport using the MOQ protocol, handled by the `moq/` submodule.
+The frontend and backend share types via Hono RPC. Real-time media is streamed over WebTransport using the [MOQ protocol](https://github.com/moq-dev/moq), consumed as published npm packages (`@moq/*`).
 
 ## Project Structure
 
@@ -21,7 +19,7 @@ The frontend and backend share types via Hono RPC. Real-time media is streamed o
 app/        Web frontend (SolidJS + Vite)
 api/        Backend API (Cloudflare Workers + Hono)
 native/     Desktop/mobile app (Tauri v2)
-moq/        Media over QUIC libraries (git submodule → github.com/kixelated/moq)
+dev/relay/  Local relay server config
 ```
 
 ## Prerequisites
@@ -29,17 +27,17 @@ moq/        Media over QUIC libraries (git submodule → github.com/kixelated/mo
 **Required:**
 - [bun](https://bun.sh) — package manager and runtime
 - [just](https://github.com/casey/just) — command runner
-- [Rust](https://rustup.rs) — for the native app and MOQ relay
+- [Rust](https://rustup.rs) — for the native app
 
 **Recommended:**
 - [Nix](https://nixos.org) + [direnv](https://direnv.net) — handles all dependencies automatically via `flake.nix`
 
 ## Getting Started
 
-Clone the repo with submodules:
+Clone the repo:
 
 ```sh
-git clone --recurse-submodules https://github.com/moq-dev/hang.live.git
+git clone https://github.com/moq-dev/hang.live.git
 cd hang.live
 ```
 
@@ -61,7 +59,7 @@ just dev
 
 - **api** — Cloudflare Workers dev server (via wrangler)
 - **app** — Vite dev server on port 1420
-- **moq** — MOQ relay server
+- **relay** — MOQ relay server
 
 ## Commands
 
@@ -76,7 +74,7 @@ just dev
 
 ## MOQ (Media over QUIC)
 
-The `moq/` directory is a git submodule containing [moq](https://github.com/kixelated/moq) — an open-source library for real-time media streaming over WebTransport and QUIC. It provides the protocol implementation and relay server that Hang uses for low-latency audio/video delivery. See the [moq README](moq/README.md) and [moq.dev](https://moq.dev) for full documentation.
+Hang uses [moq](https://github.com/moq-dev/moq) — an open-source library for real-time media streaming over WebTransport and QUIC. The `@moq/*` npm packages provide the protocol implementation, and the `moq-relay` binary (via nix flake) runs the local relay server. See [moq.dev](https://moq.dev) for full documentation.
 
 ## License
 

@@ -1,0 +1,23 @@
+set fallback
+
+# Run a localhost root relay server with authentication.
+root: auth-key
+	moq-relay root.toml
+
+# Generate a random secret key for authentication.
+auth-key:
+	@if [ ! -f "root.jwk" ]; then \
+		rm -f *.jwt; \
+		moq-token-cli --key "root.jwk" generate; \
+	fi
+
+# Generate authentication tokens for local development.
+auth-token: auth-key
+	@if [ ! -f "root.jwt" ]; then \
+		moq-token-cli --key "root.jwk" sign \
+			--root "" \
+			--subscribe "" \
+			--publish "" \
+			--cluster \
+			> root.jwt ; \
+	fi

@@ -47,7 +47,4 @@ locals {
       type   = "g6-nanode-1"
     }
   }
-
-  # Path to moq-rs repository (relative to this directory)
-  moq_rs_path = "../moq/rs"
 }

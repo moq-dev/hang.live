@@ -13,11 +13,8 @@ Hang is a real-time communication platform that combines **closed-source applica
 
 ### Open Source vs Closed Source
 
-This repository contains:
 - **Closed Source**: The `hang` application (opinionated conferencing UI and business logic)
-- **Open Source**: The `moq/` submodule (generic media streaming libraries)
-
-The `moq` submodule contains generic, reusable libraries for media streaming that should remain framework-agnostic and broadly applicable.
+- **Open Source**: [moq](https://github.com/moq-dev/moq) (generic media streaming libraries, consumed as npm packages)
 
 ## Essential Commands
 
@@ -36,12 +33,10 @@ just fix
 
 ## Architecture
 
-### MOQ Submodule (`/moq/`) - **Open Source**
-Generic media streaming libraries linked as a git submodule:
-- **Location**: Git submodule from https://github.com/kixelated/moq (moq-preview branch)
-- **Purpose**: Generic, framework-agnostic media streaming over WebTransport/QUIC
-- **Languages**: TypeScript and Rust implementations
-- **Packages**: `@kixelated/moq`, `@kixelated/hang`, `@kixelated/signals`, `@kixelated/moq-token`
+### MOQ Libraries — **Open Source**
+Published npm packages from [moq](https://github.com/moq-dev/moq):
+- **Packages**: `@moq/lite`, `@moq/hang`, `@moq/signals`, `@moq/publish`, `@moq/watch`, `@moq/token`
+- **Relay**: `moq-relay` binary provided via nix flake for local development (`dev/relay/`)
 
 ### Frontend (`/app`) - **Closed Source**
 Hang-specific conferencing UI and application logic:
@@ -68,7 +63,7 @@ Hang-specific server and business logic:
 2. **WebTransport Rooms**: Real-time media streaming via MOQ protocol
 3. **OAuth Flow**: Authentication with Google/Discord through popup windows
 4. **Edge-first**: All backend services run on Cloudflare's edge network
-5. **Submodule Linking**: MOQ libraries linked via git submodule and bun workspaces
+5. **MOQ Libraries**: Published npm packages from the open-source moq project
 
 ## Development Tips
 
@@ -77,15 +72,10 @@ Hang-specific server and business logic:
 - `just check` runs linting, TypeScript, and Rust checks
 - `just fix` fixes formatting and linting issues across all languages
 
-### Working with the MOQ Submodule
-- **Location**: `./moq/` (git submodule)
-- **Branch**: `moq-preview`
-- **Dependencies**: Automatically linked via bun workspace configuration
-- **Updates**: Use `git submodule update --remote` to sync with upstream
-
 ### Working with Media over QUIC
-- Generic MOQ implementation in the `moq/` submodule
+- MOQ libraries are installed from npm (`@moq/*` packages)
 - Hang-specific integration in `app/room/` folder
+- Local relay server config in `dev/relay/` (uses `moq-relay` from nix flake)
 - Uses WebTransport and QUIC under the hood
 
 ## Code Style
