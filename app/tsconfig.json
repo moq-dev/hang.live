@@ -15,5 +15,5 @@
 		"resolveJsonModule": true,
 		"types": ["vite/client", "vite-plugin-glsl/ext", "../api/worker-configuration.d.ts"]
 	},
-	"include": ["src"]
+	"include": ["src", "../moq/js/common/worklet.d.ts"]
 }
