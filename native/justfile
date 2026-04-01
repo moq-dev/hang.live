@@ -8,8 +8,13 @@ default:
 
 # Run the CI checks
 check:
-	cargo check
-	cargo clippy -- -D warnings
+	#!/usr/bin/env bash
+	set -euo pipefail
+	# cargo check/clippy require system GTK/WebKit libraries on Linux
+	if [[ "$(uname)" != "Linux" ]]; then
+		cargo check
+		cargo clippy -- -D warnings
+	fi
 	cargo fmt -- --check
 
 # Automatically fix some issues
