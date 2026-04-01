@@ -25,5 +25,9 @@ dist-ssr
 
 /target
 /.direnv
+
+# Generated relay keys/tokens
+*.jwk
+*.jwt
 .terraform
 .wrangler

@@ -8,7 +8,7 @@
 		"dev": "bunx --bun vite --open",
 		"build": "bunx --bun vite build",
 		"check": "tsc --noEmit && biome check && bun run check:shaders",
-		"check:shaders": "glslangValidator src/room/gl/shaders/*.vert src/room/gl/shaders/*.frag",
+		"check:shaders": "glslangValidator src/room/gl/*.vert src/room/gl/*.frag",
 		"fix": "biome check --fix",
 		"tauri": "tauri"
 	},
