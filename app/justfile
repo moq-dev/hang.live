@@ -8,10 +8,12 @@ upgrade:
 	bun outdated
 
 # Build the packages
-# NOTE: `bun --bun` auto-loads .env.development into process.env, which overrides
-# Vite's --mode-based env loading. Use plain `bun` so Vite (via node) controls env.
+# NOTE: NODE_ENV=production prevents Bun's auto-dotenv from loading
+# .env.development into process.env, which would otherwise shadow Vite's
+# --mode-based env resolution. Vite itself sets NODE_ENV=production for all
+# `vite build` invocations regardless of mode, so this just matches.
 build env="development":
-	bun vite build --mode "{{env}}"
+	NODE_ENV=production bun --bun vite build --mode "{{env}}"
 
 # Deploy the site to Cloudflare Pages
 deploy env="staging":
