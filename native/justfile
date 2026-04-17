@@ -2,6 +2,9 @@
 
 set fallback
 
+# Default: run the native app in development mode
+default: dev
+
 # Run the CI checks
 check:
 	#!/usr/bin/env bash

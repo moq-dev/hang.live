@@ -8,8 +8,12 @@ upgrade:
 	bun outdated
 
 # Build the packages
+# NOTE: NODE_ENV=production prevents Bun's auto-dotenv from loading
+# .env.development into process.env, which would otherwise shadow Vite's
+# --mode-based env resolution. Vite itself sets NODE_ENV=production for all
+# `vite build` invocations regardless of mode, so this just matches.
 build env="development":
-	bun vite build --mode "{{env}}"
+	NODE_ENV=production bun --bun vite build --mode "{{env}}"
 
 # Deploy the site to Cloudflare Pages
 deploy env="staging":
@@ -18,7 +22,7 @@ deploy env="staging":
 
 # Run the app in development mode
 dev:
-	bun vite dev
+	bun --bun vite dev
 
 # Amazing tool to visualize the app bundle size
 bundle:
