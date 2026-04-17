@@ -103,7 +103,7 @@
 
 				"R2_PUBLIC_URL": "https://public.hang.now",
 
-				"RELAY_URL": "https://cdn.moq.dev",
+				"RELAY_URL": "https://cdn.moq.wtf",
 				"RELAY_PREFIX": "staging"
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
 			}
