@@ -8,6 +8,8 @@ upgrade:
 	bun outdated
 
 # Build the packages
+# NOTE: `bun --bun` auto-loads .env.development into process.env, which overrides
+# Vite's --mode-based env loading. Use plain `bun` so Vite (via node) controls env.
 build env="development":
 	bun vite build --mode "{{env}}"
 
@@ -18,7 +20,7 @@ deploy env="staging":
 
 # Run the app in development mode
 dev:
-	bun vite dev
+	bun --bun vite dev
 
 # Amazing tool to visualize the app bundle size
 bundle:

@@ -4,7 +4,7 @@
 
 mod api
 mod app
-mod dev
+mod relay "dev"
 mod native
 mod infra
 
@@ -50,15 +50,11 @@ deploy env="staging":
 
 dev:
 	bun install
-	@just dev auth-token
+	@just relay auth-token
 	bun concurrently --kill-others --names api,app,relay --prefix-colors auto \
 		"just api dev" \
 		"just app dev" \
-		"just dev root"
-
-# Run the native app in development mode
-native:
-	just native dev
+		"just relay root"
 
 # Run the Android build, using --open to open Android Studio
 android *args:
