@@ -7,9 +7,14 @@ import { GLContext } from "./gl/context";
 
 export class Canvas {
 	#canvas: HTMLCanvasElement;
-	#glContext: GLContext;
-	#camera: Camera;
-	#backgroundRenderer: BackgroundRenderer;
+	#glContext?: GLContext;
+	#camera?: Camera;
+	#backgroundRenderer?: BackgroundRenderer;
+
+	// True when a WebGL2 context was successfully created.
+	// Some browsers (or privacy configurations) disable WebGL entirely, in which
+	// case we degrade gracefully instead of crashing the whole app.
+	readonly supported: boolean;
 
 	// Use a callback to render after the background.
 	onRender?: (now: DOMHighResTimeStamp) => void;
@@ -24,14 +29,17 @@ export class Canvas {
 	}
 
 	get gl(): WebGL2RenderingContext {
+		if (!this.#glContext) throw new Error("WebGL2 not supported");
 		return this.#glContext.gl;
 	}
 
 	get glContext(): GLContext {
+		if (!this.#glContext) throw new Error("WebGL2 not supported");
 		return this.#glContext;
 	}
 
-	get camera() {
+	get camera(): Camera {
+		if (!this.#camera) throw new Error("WebGL2 not supported");
 		return this.#camera;
 	}
 
@@ -41,10 +49,17 @@ export class Canvas {
 		this.visible = new Signal(false);
 		this.viewport = new Signal(Vector.create(0, 0));
 
-		// Initialize WebGL2 context
-		this.#glContext = new GLContext(this.#canvas, this.viewport);
-		this.#camera = new Camera();
-		this.#backgroundRenderer = new BackgroundRenderer(this.#glContext);
+		// Initialize WebGL2 context. This can fail when WebGL is disabled by the
+		// browser or a privacy extension; in that case we keep the app running
+		// without the GL-rendered background instead of throwing.
+		try {
+			this.#glContext = new GLContext(this.#canvas, this.viewport);
+			this.#camera = new Camera();
+			this.#backgroundRenderer = new BackgroundRenderer(this.#glContext);
+		} catch (err) {
+			console.warn("WebGL2 unavailable, disabling canvas rendering", err);
+		}
+		this.supported = this.#glContext !== undefined;
 
 		const resize = (entries: ResizeObserverEntry[]) => {
 			for (const entry of entries) {
@@ -68,14 +83,14 @@ export class Canvas {
 				this.#canvas.height = newHeight;
 
 				// Update WebGL viewport
-				this.#glContext.resize(newWidth, newHeight);
+				this.#glContext?.resize(newWidth, newHeight);
 
 				// The internal logic ignores devicePixelRatio because we automatically scale when rendering.
 				const viewport = Vector.create(newWidth / dpr, newHeight / dpr);
 				this.viewport.set(viewport);
 
 				// Update camera projection
-				this.#camera.updateOrtho(viewport);
+				this.#camera?.updateOrtho(viewport);
 
 				// Render immediately to avoid black flicker during resize
 				if (this.visible.peek()) {
@@ -108,8 +123,10 @@ export class Canvas {
 			resizeObserver.disconnect();
 		});
 
-		// Only render the canvas when it's visible.
+		// Only render the canvas when it's visible (and WebGL is available).
 		this.#signals.effect((effect) => {
+			if (!this.#glContext) return;
+
 			const visible = effect.get(this.visible);
 			if (!visible) return;
 
@@ -130,6 +147,8 @@ export class Canvas {
 	}
 
 	#render(now: DOMHighResTimeStamp) {
+		if (!this.#glContext || !this.#backgroundRenderer) return;
+
 		// Clear the screen
 		this.#glContext.clear();
 
@@ -169,6 +188,6 @@ export class Canvas {
 
 	close() {
 		this.#signals.close();
-		this.#backgroundRenderer.cleanup();
+		this.#backgroundRenderer?.cleanup();
 	}
 }
