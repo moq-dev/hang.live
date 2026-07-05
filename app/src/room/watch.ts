@@ -2,6 +2,7 @@ import { Catalog } from "@moq/hang";
 import type * as Moq from "@moq/lite";
 import { Effect, type Getter, Signal } from "@moq/signals";
 import * as Watch from "@moq/watch";
+import { type BroadcastChat, type BroadcastLocation, createWatchMetadata } from "./metadata";
 
 // Props for creating a WatchBroadcast
 export interface WatchBroadcastProps {
@@ -40,19 +41,13 @@ export class WatchBroadcast {
 	#videoDecoder: Watch.Video.Decoder;
 	#audioSource: Watch.Audio.Source;
 	#audioDecoder: Watch.Audio.Decoder;
-	#preview: Watch.Preview;
-
 	// Location (public - accessed directly)
-	location: Watch.Location.Root;
+	location: BroadcastLocation;
 
 	// Chat (public - accessed directly)
-	chat: Watch.Chat.Chat;
+	chat: BroadcastChat;
 
-	// User info extracted from catalog
-	#userId = new Signal<string | undefined>(undefined);
-	#userName = new Signal<string | undefined>(undefined);
-	#userAvatar = new Signal<string | undefined>(undefined);
-	#userColor = new Signal<string | undefined>(undefined);
+	#metadata: ReturnType<typeof createWatchMetadata>;
 
 	// Video flip flag derived from catalog
 	#flip = new Signal<boolean>(false);
@@ -121,23 +116,9 @@ export class WatchBroadcast {
 			enabled: props?.audio?.enabled,
 		});
 
-		// Create Location
-		this.location = new Watch.Location.Root(this.#active, this.#catalog, props?.location);
-
-		// Create Chat
-		this.chat = new Watch.Chat.Chat(this.#active, this.#catalog, props?.chat);
-
-		// Create Preview
-		this.#preview = new Watch.Preview(this.#active, this.#catalog, props?.preview);
-
-		// Extract user info from catalog
-		this.signals.effect((effect) => {
-			const catalog = effect.get(this.#catalog);
-			this.#userId.set(catalog?.user?.id);
-			this.#userName.set(catalog?.user?.name);
-			this.#userAvatar.set(catalog?.user?.avatar);
-			this.#userColor.set(catalog?.user?.color);
-		});
+		this.#metadata = createWatchMetadata(this.#broadcast, props);
+		this.location = this.#metadata.location;
+		this.chat = this.#metadata.chat;
 
 		// Derive flip from video catalog
 		this.signals.effect((effect) => {
@@ -162,10 +143,10 @@ export class WatchBroadcast {
 		};
 
 		this.user = {
-			id: this.#userId,
-			name: this.#userName,
-			avatar: this.#userAvatar,
-			color: this.#userColor,
+			id: this.#metadata.user.id,
+			name: this.#metadata.user.name,
+			avatar: this.#metadata.user.avatar,
+			color: this.#metadata.user.color,
 		};
 	}
 
@@ -176,9 +157,7 @@ export class WatchBroadcast {
 		this.#videoSource.close();
 		this.#audioDecoder.close();
 		this.#audioSource.close();
-		this.location.close();
-		this.chat.close();
-		this.#preview.close();
+		this.#metadata.close();
 		this.#broadcast.close();
 	}
 }

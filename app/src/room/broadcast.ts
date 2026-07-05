@@ -1,4 +1,3 @@
-import * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import { Audio } from "./audio";
 import { Canvas } from "./canvas";
@@ -8,12 +7,13 @@ import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
 import { MeshBuffer } from "./gl/mesh";
 import * as Meme from "./meme";
+import type { HangPublishBroadcast } from "./metadata";
 import { Name } from "./name";
 import { Sound } from "./sound";
 import { Video } from "./video";
 import { WatchBroadcast } from "./watch";
 
-export type BroadcastSource = WatchBroadcast | Publish.Broadcast | FakeBroadcast;
+export type BroadcastSource = WatchBroadcast | HangPublishBroadcast | FakeBroadcast;
 
 export type ChatMessage = {
 	audio?: HTMLAudioElement;

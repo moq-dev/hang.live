@@ -19,6 +19,7 @@ import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
+import type { HangPublishBroadcast } from "./room/metadata";
 import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Tauri from "./tauri";
@@ -738,7 +739,7 @@ export function Visualize(props: { audio: Publish.Audio.Encoder }): JSX.Element 
 	);
 }
 
-function Chat(props: { broadcast: Publish.Broadcast; room: Room }): JSX.Element {
+function Chat(props: { broadcast: HangPublishBroadcast; room: Room }): JSX.Element {
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
 	const [showMemeSelector, setShowMemeSelector] = createSignal(false);

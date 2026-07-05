@@ -5,6 +5,7 @@ import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Local } from "./local";
 import { Locator } from "./locator";
+import type { HangPublishBroadcast } from "./metadata";
 import { Sound } from "./sound";
 import { Space } from "./space";
 import { WatchBroadcast } from "./watch";
@@ -28,8 +29,8 @@ export class Room {
 	// The physics space for the room.
 	space: Space;
 
-	#cameraBroadcast = new Signal<Broadcast<Publish.Broadcast> | undefined>(undefined);
-	#shareBroadcast = new Signal<Broadcast<Publish.Broadcast> | undefined>(undefined);
+	#cameraBroadcast = new Signal<Broadcast<HangPublishBroadcast> | undefined>(undefined);
+	#shareBroadcast = new Signal<Broadcast<HangPublishBroadcast> | undefined>(undefined);
 
 	#signals = new Effect();
 
@@ -108,7 +109,7 @@ export class Room {
 			if (update.path === this.local.camera.name.peek()) {
 				if (update.active) {
 					const broadcast = this.space.add(update.path, this.local.camera);
-					this.#cameraBroadcast.set(broadcast as Broadcast<Publish.Broadcast>);
+					this.#cameraBroadcast.set(broadcast as Broadcast<HangPublishBroadcast>);
 				} else {
 					this.space.remove(update.path);
 					this.#cameraBroadcast.set(undefined);
@@ -120,7 +121,7 @@ export class Room {
 			if (update.path === this.local.share.name.peek()) {
 				if (update.active) {
 					const broadcast = this.space.add(update.path, this.local.share);
-					this.#shareBroadcast.set(broadcast as Broadcast<Publish.Broadcast>);
+					this.#shareBroadcast.set(broadcast as Broadcast<HangPublishBroadcast>);
 				} else {
 					this.space.remove(update.path);
 					this.#shareBroadcast.set(undefined);

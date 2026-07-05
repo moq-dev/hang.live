@@ -1,12 +1,13 @@
 import { Catalog } from "@moq/hang";
 import { Effect, Signal } from "@moq/signals";
 import { Canvas } from "./canvas";
+import type { Position, User } from "./metadata";
 import { Sound } from "./sound";
 import { Space } from "./space";
 
 export type FakeBroadcastProps = {
-	position?: Catalog.Position;
-	user?: Catalog.User;
+	position?: Position;
+	user?: User;
 };
 
 export class FakeBroadcast {
@@ -16,7 +17,7 @@ export class FakeBroadcast {
 
 	location = {
 		window: {
-			position: new Signal<Catalog.Position | undefined>(undefined),
+			position: new Signal<Position | undefined>(undefined),
 			handle: new Signal<string | undefined>(undefined),
 		},
 	};
