@@ -48,18 +48,6 @@ deploy env="staging":
 	just api deploy "{{env}}"
 	just app deploy "{{env}}"
 
-dev:
-	bun install
-	@just dev auth-token
-	bun concurrently --kill-others --names api,app,relay --prefix-colors auto \
-		"just api dev" \
-		"just app dev" \
-		"just dev root"
-
-# Run the native app in development mode
-native:
-	just native dev
-
 # Run the Android build, using --open to open Android Studio
 android *args:
 	just native android {{args}}

@@ -1,16 +1,16 @@
-import type * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
 import { Bounds, Vector } from "./geometry";
+import type { HangPublishBroadcast } from "./metadata";
 
 export class Locator {
-	broadcast: Broadcast<Publish.Broadcast>;
+	broadcast: Broadcast<HangPublishBroadcast>;
 	signals = new Effect();
 
 	#visible = new Signal(true);
 
-	constructor(broadcast: Broadcast<Publish.Broadcast>) {
+	constructor(broadcast: Broadcast<HangPublishBroadcast>) {
 		this.broadcast = broadcast;
 
 		this.signals.effect(this.#render.bind(this));

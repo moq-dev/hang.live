@@ -2,6 +2,14 @@
 
 set fallback
 
+default:
+	bun install
+	@just dev auth-token
+	bun concurrently --kill-others --names api,app,relay --prefix-colors auto \
+		"just api dev" \
+		"just app dev" \
+		"just dev root"
+
 # Run a localhost root relay server with authentication.
 root: auth-key
 	moq-relay root.toml

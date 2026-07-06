@@ -1,4 +1,3 @@
-import * as Publish from "@moq/publish";
 import { Effect } from "@moq/signals";
 import solid from "@moq/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
@@ -6,6 +5,7 @@ import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
 import { Canvas } from "../room/canvas";
 import { Local } from "../room/local";
+import type { HangPublishBroadcast } from "../room/metadata";
 import { Sound } from "../room/sound";
 import { Space } from "../room/space";
 import Settings from "../settings";
@@ -122,7 +122,7 @@ class LocalPreview {
 
 	signals = new Effect();
 
-	constructor(element: HTMLCanvasElement, camera: Publish.Broadcast) {
+	constructor(element: HTMLCanvasElement, camera: HangPublishBroadcast) {
 		// Create a minimal canvas without the background effects
 		this.canvas = new Canvas(element);
 

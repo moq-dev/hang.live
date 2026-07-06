@@ -1,7 +1,8 @@
-import * as Hang from "@moq/hang";
+import { Catalog } from "@moq/hang";
+import * as Json from "@moq/json";
 import type * as Moq from "@moq/lite";
-import * as Zod from "@moq/lite/zod";
 import { Effect, Signal } from "@moq/signals";
+import type { PreviewInfo, PreviewValue } from "../metadata";
 
 export type MemberProps = {
 	enabled?: boolean | Signal<boolean>;
@@ -10,7 +11,8 @@ export type MemberProps = {
 export class Member {
 	broadcast: Moq.Broadcast;
 	enabled: Signal<boolean>;
-	info: Signal<Hang.Catalog.Preview | undefined>;
+	info: Signal<PreviewInfo | undefined>;
+	#previewTrack = new Signal<string | undefined>(undefined);
 
 	active = new Signal<boolean>(false);
 
@@ -19,22 +21,45 @@ export class Member {
 	constructor(broadcast: Moq.Broadcast, props?: MemberProps) {
 		this.broadcast = broadcast;
 		this.enabled = Signal.from(props?.enabled ?? false);
-		this.info = new Signal<Hang.Catalog.Preview | undefined>(undefined);
+		this.info = new Signal<PreviewInfo | undefined>(undefined);
 
 		this.signals.effect((effect) => {
 			if (!effect.get(this.enabled)) return;
 
-			// Subscribe to the preview.json track directly
-			const track = this.broadcast.subscribe("preview.json", 0);
+			const track = this.broadcast.subscribe("catalog.json", Catalog.PRIORITY.catalog);
 			effect.cleanup(() => track.close());
 
 			effect.spawn(async () => {
 				try {
+					const consumer = new Catalog.Consumer<ExtendedCatalog>(track);
 					for (;;) {
-						const frame = await Zod.read(track, Hang.Catalog.PreviewSchema);
-						if (!frame) break;
+						const catalog = await Promise.race([effect.cancel, consumer.next()]);
+						if (!catalog) break;
 
-						this.info.set(frame);
+						this.#previewTrack.set(catalog.hang?.preview?.track);
+					}
+				} finally {
+					this.#previewTrack.set(undefined);
+					this.info.set(undefined);
+				}
+			});
+		});
+
+		this.signals.effect((effect) => {
+			const previewTrack = effect.get(this.#previewTrack);
+			if (!previewTrack) return;
+
+			const track = this.broadcast.subscribe(previewTrack, 0);
+			effect.cleanup(() => track.close());
+
+			effect.spawn(async () => {
+				try {
+					const consumer = new Json.Consumer<PreviewValue>(track);
+					for (;;) {
+						const preview = await Promise.race([effect.cancel, consumer.next()]);
+						if (!preview) break;
+
+						this.info.set(preview.info);
 					}
 				} finally {
 					this.info.set(undefined);
@@ -53,3 +78,11 @@ export class Member {
 		this.broadcast.close();
 	}
 }
+
+type ExtendedCatalog = Catalog.Root & {
+	hang?: {
+		preview?: {
+			track: string;
+		};
+	};
+};

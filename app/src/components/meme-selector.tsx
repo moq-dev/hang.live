@@ -1,14 +1,14 @@
-import type * as Publish from "@moq/publish";
 import solid from "@moq/signals/solid";
 import { createEffect, createSignal, For, onCleanup, onMount, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Meme from "../room/meme";
+import type { HangPublishBroadcast } from "../room/metadata";
 import Settings from "../settings";
 
 export type Tab = "emoji" | "audio" | "video";
 
 export type MemeSelectorProps = {
-	broadcast: Publish.Broadcast;
+	broadcast: HangPublishBroadcast;
 	chatInput: HTMLInputElement | undefined;
 	chatMessage: string;
 	setChatMessage: Setter<string>;

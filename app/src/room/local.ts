@@ -2,6 +2,7 @@ import type * as Moq from "@moq/lite";
 import * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
+import { createPublishBroadcast, type HangPublishBroadcast } from "./metadata";
 
 export interface LocalProps {
 	connection?: Signal<Moq.Connection.Established | undefined> | Moq.Connection.Established;
@@ -15,11 +16,11 @@ export interface LocalProps {
 export class Local {
 	connection: Signal<Moq.Connection.Established | undefined>;
 
-	camera: Publish.Broadcast;
+	camera: HangPublishBroadcast;
 	microphone: Publish.Source.Microphone;
 	webcam: Publish.Source.Camera;
 
-	share: Publish.Broadcast;
+	share: HangPublishBroadcast;
 	screen: Publish.Source.Screen;
 
 	// Name and avatar signals that can be overridden
@@ -65,7 +66,7 @@ export class Local {
 		this.#signals.cleanup(() => this.microphone.close());
 
 		// Create the camera broadcast
-		this.camera = new Publish.Broadcast({
+		this.camera = createPublishBroadcast({
 			enabled: Local.join,
 			connection: this.connection,
 			user: {
@@ -139,7 +140,7 @@ export class Local {
 		this.#signals.cleanup(() => this.screen.close());
 
 		// Create the screen broadcast
-		this.share = new Publish.Broadcast({
+		this.share = createPublishBroadcast({
 			connection: this.connection,
 			audio: {
 				enabled: this.screen.enabled,
