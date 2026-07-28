@@ -62,8 +62,23 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 	return (
 		<Show when={publish()} fallback={<Preview room={props.room} local={local} connection={connection} />}>
-			<App connection={connection} canvas={props.canvas} room={props.room} sound={sound} local={local} />
+			<Show when={props.canvas.supported} fallback={<WebGLUnsupported />}>
+				<App connection={connection} canvas={props.canvas} room={props.room} sound={sound} local={local} />
+			</Show>
 		</Show>
+	);
+}
+
+function WebGLUnsupported(): JSX.Element {
+	return (
+		<WebLayout>
+			<h1 class="text-2xl font-bold mb-4">WebGL is required</h1>
+			<p class="mb-4">
+				This room needs WebGL to render video, but your browser has it disabled. Some browsers and privacy
+				extensions block WebGL by default to prevent fingerprinting.
+			</p>
+			<p>Please enable WebGL (for this site) and reload the page.</p>
+		</WebLayout>
 	);
 }
 
