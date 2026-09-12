@@ -39,9 +39,9 @@ export class Audio {
 
 		this.sound = new PannedSound(sound, this.pan);
 
-		this.#signals.effect(this.#runMeme.bind(this));
+		this.#signals.run(this.#runMeme.bind(this));
 
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			const root = effect.get(this.broadcast.source.audio.root);
 			if (!root) return;
 
@@ -57,7 +57,7 @@ export class Audio {
 			});
 		});
 
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			const panner = effect.get(this.#panner);
 			if (!panner) return;
 
@@ -67,7 +67,7 @@ export class Audio {
 			panner.pan.linearRampToValueAtTime(pan, panner.context.currentTime + FADE_TIME);
 		});
 
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			const gain = effect.get(this.#gain);
 			if (!gain) return;
 
@@ -86,7 +86,7 @@ export class Audio {
 
 		// Don't output to the speakers if we're publishing the broadcast.
 		if (!(this.broadcast.source instanceof Publish.Broadcast)) {
-			this.#signals.effect(this.#runOutput.bind(this));
+			this.#signals.run(this.#runOutput.bind(this));
 		}
 	}
 
@@ -102,7 +102,7 @@ export class Audio {
 	}
 
 	#runMemeVideo(effect: Effect, meme: Meme.Video) {
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			// Toggle the muted state
 			meme.element.muted = effect.get(this.sound.parent.suspended);
 		});

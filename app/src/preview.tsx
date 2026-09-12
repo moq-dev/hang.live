@@ -1,4 +1,4 @@
-import * as Moq from "@moq/lite";
+import * as Moq from "@moq/net";
 import solid from "@moq/signals/solid";
 import { createEffect, For, onCleanup, Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
@@ -10,7 +10,7 @@ export function PreviewRoomCompact(props: {
 	setMemberCount: Setter<number>;
 }): JSX.Element {
 	const room = new Preview.Room({
-		connection: props.connection.established,
+		connection: props.connection,
 		path: props.path ? Moq.Path.from(props.path) : undefined,
 		enabled: true,
 	});
@@ -34,7 +34,7 @@ export function PreviewRoomCompact(props: {
 }
 
 function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
-	const info = solid(props.member.info);
+	const info = solid(props.member.preview);
 
 	return (
 		<Show when={info()}>
@@ -74,7 +74,7 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 
 export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: string }): JSX.Element {
 	const room = new Preview.Room({
-		connection: props.connection.established,
+		connection: props.connection,
 		path: props.name ? Moq.Path.from(props.name) : undefined,
 		enabled: true,
 	});
@@ -108,7 +108,7 @@ export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: s
 }
 
 function PreviewMember(props: { member: Preview.Member }): JSX.Element {
-	const info = solid(props.member.info);
+	const info = solid(props.member.preview);
 	return (
 		<Show
 			when={info()}

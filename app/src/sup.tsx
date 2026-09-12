@@ -1,4 +1,4 @@
-import * as Moq from "@moq/lite";
+import * as Moq from "@moq/net";
 import solid from "@moq/signals/solid";
 import { createEffect, createSelector, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
@@ -51,8 +51,7 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 		connection.url.set(new URL(data.url));
 
-		local.camera.name.set(Moq.Path.from(data.path, "camera"));
-		local.share.name.set(Moq.Path.from(data.path, "screen"));
+		local.identity.set(Moq.Path.from(data.path));
 
 		// Save the guest account settings
 		Settings.account.guest.set(data.guest);

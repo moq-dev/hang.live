@@ -2,18 +2,18 @@ import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
 import { Bounds, Vector } from "./geometry";
-import type { HangPublishBroadcast } from "./metadata";
+import type { HangLocalSource } from "./local";
 
 export class Locator {
-	broadcast: Broadcast<HangPublishBroadcast>;
+	broadcast: Broadcast<HangLocalSource>;
 	signals = new Effect();
 
 	#visible = new Signal(true);
 
-	constructor(broadcast: Broadcast<HangPublishBroadcast>) {
+	constructor(broadcast: Broadcast<HangLocalSource>) {
 		this.broadcast = broadcast;
 
-		this.signals.effect(this.#render.bind(this));
+		this.signals.run(this.#render.bind(this));
 
 		// Start fading out after 7 seconds
 		this.signals.timer(() => {
@@ -78,20 +78,20 @@ export class Locator {
 		};
 
 		// Update position when bounds or viewport change
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const bounds = effect.get(this.broadcast.bounds);
 			const viewport = effect.get(this.broadcast.canvas.viewport);
 			updatePosition(bounds, viewport);
 		});
 
 		// Set z-index based on broadcast z-index
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const z = effect.get(this.broadcast.position).z;
 			root.style.zIndex = `${100 + z}`;
 		});
 
 		// Control opacity based on visible signal
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const visible = effect.get(this.#visible);
 			root.style.opacity = visible ? "1" : "0";
 		});

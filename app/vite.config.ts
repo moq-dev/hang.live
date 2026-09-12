@@ -91,6 +91,7 @@ export default defineConfig(() => {
 					path.resolve("../node_modules"),
 					// Allow fetching MoQ workers and worklets
 					path.resolve("../moq"),
+					path.resolve("../../../.grok/worktrees/work-moq/2026-09-12-6f47947f"),
 				],
 			},
 		},

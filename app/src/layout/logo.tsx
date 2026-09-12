@@ -1,4 +1,4 @@
-import * as Moq from "@moq/lite";
+import * as Moq from "@moq/net";
 import solid from "@moq/signals/solid";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 

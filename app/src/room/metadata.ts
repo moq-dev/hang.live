@@ -1,15 +1,24 @@
+/**
+ * hang.live catalog extras: location and JSON chat.
+ *
+ * User/preview are served by `@moq/room`. This module adds `hang/location.json`
+ * and `hang/chat.json` on the same catalog `hang` section.
+ */
+
 import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
-import type * as Moq from "@moq/lite";
-import * as Publish from "@moq/publish";
-import { Effect, type Getter, Signal } from "@moq/signals";
-import * as Watch from "@moq/watch";
+import type * as Moq from "@moq/net";
+import type * as Publish from "@moq/publish";
+import { type Preview, TRACK as ROOM_TRACK, type User } from "@moq/room";
+import { Effect, Signal } from "@moq/signals";
+import type * as Watch from "@moq/watch";
+
+export type { Preview, User };
+export { ROOM_TRACK };
 
 const TRACKS = {
-	user: "hang/user.json",
 	location: "hang/location.json",
 	chat: "hang/chat.json",
-	preview: "hang/preview.json",
 } as const;
 
 const HANG_PRIORITY = 90;
@@ -19,13 +28,6 @@ export type Position = {
 	y?: number;
 	z?: number;
 	s?: number;
-};
-
-export type User = {
-	id?: string;
-	name?: string;
-	avatar?: string;
-	color?: string;
 };
 
 export type LocationValue = {
@@ -43,292 +45,186 @@ export type ChatValue = {
 	typing?: boolean;
 };
 
-export type PreviewInfo = {
-	audio?: boolean;
-	video?: boolean;
-	chat?: boolean;
-	typing?: boolean;
-	screen?: boolean;
-	name?: string;
-	avatar?: string;
+export type HangCatalog = {
+	user?: { track: string };
+	preview?: { track: string };
+	location?: { track: string };
+	chat?: { track: string };
 };
 
-export type PreviewValue = {
-	info?: PreviewInfo;
-};
-
-type TrackRef = {
-	track: string;
-};
-
-type HangCatalog = {
-	user?: TrackRef;
-	location?: TrackRef;
-	chat?: TrackRef;
-	preview?: TrackRef;
-};
-
-type ExtendedCatalog = CatalogRoot & {
+export type ExtendedCatalog = CatalogRoot & {
 	hang?: HangCatalog;
 };
 
-export type MetadataProps = {
-	user?: {
-		enabled?: boolean | Signal<boolean>;
-		id?: string | Signal<string | undefined>;
-		name?: string | Signal<string | undefined>;
-		avatar?: string | Signal<string | undefined>;
-		color?: string | Signal<string | undefined>;
-	};
-	location?: {
-		window?: {
-			enabled?: boolean | Signal<boolean>;
-			position?: Position | Signal<Position | undefined>;
-			handle?: string | Signal<string | undefined>;
-		};
-		peers?: {
-			enabled?: boolean | Signal<boolean>;
-			positions?: Record<string, Position> | Signal<Record<string, Position> | undefined>;
-		};
-	};
-	chat?: {
-		message?: {
-			enabled?: boolean | Signal<boolean>;
-			latest?: string | Signal<string | undefined>;
-		};
-		typing?: {
-			enabled?: boolean | Signal<boolean>;
-			active?: boolean | Signal<boolean | undefined>;
-		};
-	};
-	preview?: {
-		enabled?: boolean | Signal<boolean>;
-		info?: PreviewInfo | Signal<PreviewInfo>;
-	};
-};
-
-export type Metadata = {
-	user: {
-		id: Signal<string | undefined>;
-		name: Signal<string | undefined>;
-		avatar: Signal<string | undefined>;
-		color: Signal<string | undefined>;
-	};
-	location: {
-		window: {
-			enabled: Signal<boolean>;
-			position: Signal<Position | undefined>;
-			handle: Signal<string | undefined>;
-		};
-		peers: {
-			enabled: Signal<boolean>;
-			positions: Signal<Record<string, Position> | undefined>;
-		};
-	};
-	chat: {
-		message: {
-			enabled: Signal<boolean>;
-			latest: Signal<string | undefined>;
-		};
-		typing: {
-			enabled: Signal<boolean>;
-			active: Signal<boolean | undefined>;
-		};
-	};
-	preview: {
+export type LocationFields = {
+	window: {
 		enabled: Signal<boolean>;
-		info: Signal<PreviewInfo>;
+		position: Signal<Position | undefined>;
+		handle: Signal<string | undefined>;
+	};
+	peers: {
+		enabled: Signal<boolean>;
+		positions: Signal<Record<string, Position> | undefined>;
 	};
 };
 
-export type HangPublishBroadcast = Publish.Broadcast & Metadata;
+export type ChatFields = {
+	message: {
+		enabled: Signal<boolean>;
+		latest: Signal<string | undefined>;
+	};
+	typing: {
+		enabled: Signal<boolean>;
+		active: Signal<boolean | undefined>;
+	};
+};
 
-function fromOptional<T>(value: T | Signal<T | undefined> | undefined): Signal<T | undefined> {
-	return Signal.from(value);
-}
-
-function fromBoolean(value: boolean | Signal<boolean> | undefined, fallback = false): Signal<boolean> {
-	return Signal.from(value ?? fallback);
-}
-
-function createMetadata(props?: MetadataProps): Metadata {
+export function locationFields(): LocationFields {
 	return {
-		user: {
-			id: fromOptional(props?.user?.id),
-			name: fromOptional(props?.user?.name),
-			avatar: fromOptional(props?.user?.avatar),
-			color: fromOptional(props?.user?.color),
+		window: {
+			enabled: new Signal(true),
+			position: new Signal<Position | undefined>(undefined),
+			handle: new Signal<string | undefined>(Math.random().toString(36).substring(2, 15)),
 		},
-		location: {
-			window: {
-				enabled: fromBoolean(props?.location?.window?.enabled),
-				position: fromOptional(props?.location?.window?.position),
-				handle: fromOptional(props?.location?.window?.handle),
-			},
-			peers: {
-				enabled: fromBoolean(props?.location?.peers?.enabled),
-				positions: fromOptional(props?.location?.peers?.positions),
-			},
-		},
-		chat: {
-			message: {
-				enabled: fromBoolean(props?.chat?.message?.enabled),
-				latest: fromOptional(props?.chat?.message?.latest),
-			},
-			typing: {
-				enabled: fromBoolean(props?.chat?.typing?.enabled),
-				active: fromOptional(props?.chat?.typing?.active),
-			},
-		},
-		preview: {
-			enabled: fromBoolean(props?.preview?.enabled),
-			info: Signal.from(props?.preview?.info ?? {}),
+		peers: {
+			enabled: new Signal(true),
+			positions: new Signal<Record<string, Position> | undefined>(undefined),
 		},
 	};
 }
 
-export function createPublishBroadcast(props?: Publish.BroadcastProps & MetadataProps): HangPublishBroadcast {
-	const broadcast = new Publish.Broadcast(props);
-	const metadata = createMetadata(props);
-	const extended = Object.assign(broadcast, metadata) as HangPublishBroadcast;
-
-	extended.location.window.handle.set(
-		extended.location.window.handle.peek() ?? Math.random().toString(36).substring(2, 15),
-	);
-
-	const user = new Json.Producer<User>({ initial: {} });
-	const location = new Json.Producer<LocationValue>({ initial: {} });
-	const chat = new Json.Producer<ChatValue>({ initial: {} });
-	const preview = new Json.Producer<PreviewValue>({ initial: {} });
-
-	const unpublish = [
-		extended.publishTrack(TRACKS.user, (track, effect) => user.serve(track, effect)),
-		extended.publishTrack(TRACKS.location, (track, effect) => location.serve(track, effect)),
-		extended.publishTrack(TRACKS.chat, (track, effect) => chat.serve(track, effect)),
-		extended.publishTrack(TRACKS.preview, (track, effect) => preview.serve(track, effect)),
-	];
-
-	extended.catalog.mutate((catalog: ExtendedCatalog) => {
-		catalog.hang = {
-			user: { track: TRACKS.user },
-			location: { track: TRACKS.location },
-			chat: { track: TRACKS.chat },
-			preview: { track: TRACKS.preview },
-		};
-	});
-
-	extended.signals.effect((effect) => {
-		user.update({
-			id: effect.get(extended.user.id),
-			name: effect.get(extended.user.name),
-			avatar: effect.get(extended.user.avatar),
-			color: effect.get(extended.user.color),
-		});
-	});
-
-	extended.signals.effect((effect) => {
-		location.update({
-			window: {
-				position: effect.get(extended.location.window.position),
-				handle: effect.get(extended.location.window.handle),
-			},
-			peers: {
-				positions: effect.get(extended.location.peers.positions),
-			},
-		});
-	});
-
-	extended.signals.effect((effect) => {
-		chat.update({
-			message: effect.get(extended.chat.message.latest),
-			typing: effect.get(extended.chat.typing.active),
-		});
-	});
-
-	extended.signals.effect((effect) => {
-		preview.update({
-			info: effect.get(extended.preview.info),
-		});
-	});
-
-	extended.signals.cleanup(() => {
-		for (const stop of unpublish) stop();
-		user.finish();
-		location.finish();
-		chat.finish();
-		preview.finish();
-	});
-
-	return extended;
+export function chatFields(): ChatFields {
+	return {
+		message: {
+			enabled: new Signal(true),
+			latest: new Signal<string | undefined>(undefined),
+		},
+		typing: {
+			enabled: new Signal(true),
+			active: new Signal<boolean | undefined>(undefined),
+		},
+	};
 }
 
-export function createWatchMetadata(
-	broadcast: Watch.Broadcast,
-	props?: MetadataProps,
-): Metadata & { close: () => void } {
-	const metadata = createMetadata(props);
+/** Publish location and chat tracks on a `@moq/room` camera/screen broadcast. */
+export function serveExtras(
+	broadcast: Publish.Broadcast,
+	location: LocationFields,
+	chat: ChatFields,
+	effect: Effect,
+): void {
+	broadcast.catalog.mutate((catalog) => {
+		const extended = catalog as ExtendedCatalog;
+		extended.hang ??= {};
+		extended.hang.location = { track: TRACKS.location };
+		extended.hang.chat = { track: TRACKS.chat };
+	});
+
+	effect.cleanup(() => {
+		broadcast.catalog.mutate((catalog) => {
+			const hang = (catalog as ExtendedCatalog).hang;
+			if (!hang) return;
+			delete hang.location;
+			delete hang.chat;
+		});
+	});
+
+	serveSnapshot(broadcast, TRACKS.location, effect, (effect) => ({
+		window: {
+			position: effect.get(location.window.position),
+			handle: effect.get(location.window.handle),
+		},
+		peers: {
+			positions: effect.get(location.peers.positions),
+		},
+	}));
+
+	serveSnapshot(broadcast, TRACKS.chat, effect, (effect) => ({
+		message: effect.get(chat.message.latest),
+		typing: effect.get(chat.typing.active),
+	}));
+}
+
+function serveSnapshot<T>(
+	broadcast: Publish.Broadcast,
+	name: string,
+	effect: Effect,
+	value: (effect: Effect) => T,
+): void {
+	effect.run((effect) => {
+		const net = effect.get(broadcast.net);
+		if (!net) return;
+
+		const track = net.createTrack(name, { latencyMax: 86_400_000, priority: HANG_PRIORITY });
+		effect.cleanup(() => track.close());
+
+		const producer = new Json.Snapshot.Producer<T>({ track, initial: value(effect) });
+		effect.cleanup(() => producer.finish());
+
+		effect.run((effect) => {
+			producer.update(value(effect));
+		});
+	});
+}
+
+export type ConsumedExtras = {
+	location: LocationFields;
+	chat: ChatFields;
+	close: () => void;
+};
+
+/** Subscribe to location and chat on a watched broadcast. */
+export function consumeExtras(broadcast: Watch.Broadcast): ConsumedExtras {
+	const location = locationFields();
+	const chat = chatFields();
 	const signals = new Effect();
 
-	signals.effect((effect) => {
-		const catalog = effect.get(broadcast.catalog) as ExtendedCatalog | undefined;
+	signals.run((effect) => {
+		const catalog = effect.get(broadcast.out.catalog) as ExtendedCatalog | undefined;
 		const hang = catalog?.hang;
-		if (!hang) return;
-
-		if (hang.user) {
-			subscribeJson<User>(broadcast, hang.user.track, effect, (value) => {
-				metadata.user.id.set(value.id);
-				metadata.user.name.set(value.name);
-				metadata.user.avatar.set(value.avatar);
-				metadata.user.color.set(value.color);
-			});
-		}
+		const active = effect.get(broadcast.out.active);
+		if (!active || !hang) return;
 
 		if (hang.location) {
-			subscribeJson<LocationValue>(broadcast, hang.location.track, effect, (value) => {
-				metadata.location.window.position.set(value.window?.position);
-				metadata.location.window.handle.set(value.window?.handle);
-				metadata.location.peers.positions.set(value.peers?.positions);
+			subscribeJson<LocationValue>(active, hang.location.track, effect, (value) => {
+				location.window.position.set(value.window?.position);
+				location.window.handle.set(value.window?.handle);
+				location.peers.positions.set(value.peers?.positions);
 			});
 		}
 
 		if (hang.chat) {
-			subscribeJson<ChatValue>(broadcast, hang.chat.track, effect, (value) => {
-				metadata.chat.message.latest.set(value.message);
-				metadata.chat.typing.active.set(value.typing);
-			});
-		}
-
-		if (hang.preview) {
-			subscribeJson<PreviewValue>(broadcast, hang.preview.track, effect, (value) => {
-				metadata.preview.info.set(value.info ?? {});
+			subscribeJson<ChatValue>(active, hang.chat.track, effect, (value) => {
+				chat.message.latest.set(value.message);
+				chat.typing.active.set(value.typing);
 			});
 		}
 	});
 
 	return {
-		...metadata,
+		location,
+		chat,
 		close: () => signals.close(),
 	};
 }
 
-function subscribeJson<T>(broadcast: Watch.Broadcast, name: string, effect: Effect, update: (value: T) => void): void {
-	const unsubscribe = broadcast.subscribeTrack(name, HANG_PRIORITY, (track, trackEffect) => {
-		const consumer = new Json.Consumer<T>(track);
-		trackEffect.spawn(async () => {
-			for (;;) {
-				const value = await Promise.race([trackEffect.cancel, consumer.next()]);
-				if (value === undefined) break;
+function subscribeJson<T>(
+	broadcast: Moq.Broadcast.Consumer,
+	name: string,
+	effect: Effect,
+	update: (value: T) => void,
+): void {
+	const track = broadcast.track(name).subscribe({ priority: HANG_PRIORITY });
+	effect.cleanup(() => track.close());
 
-				update(value);
-			}
-		});
+	const consumer = new Json.Snapshot.Consumer<T>(track);
+	effect.spawn(async () => {
+		for (;;) {
+			const value = await Promise.race([effect.cancel, consumer.next()]);
+			if (value === undefined) break;
+			update(value);
+		}
 	});
-
-	effect.cleanup(unsubscribe);
 }
 
-export type BroadcastUser = Metadata["user"];
-export type BroadcastLocation = Metadata["location"];
-export type BroadcastChat = Metadata["chat"];
-export type BroadcastPreview = Metadata["preview"];
-export type BroadcastActive = Getter<Moq.Broadcast | undefined>;
+export type PreviewInfo = Preview;

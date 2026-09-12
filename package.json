@@ -18,5 +18,17 @@
 		"typescript": "^6.0.2",
 		"wrangler": "^4.79.0"
 	},
-	"packageManager": "bun@1.1.38"
+	"packageManager": "bun@1.1.38",
+	"overrides": {
+		"@moq/flate": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/flate",
+		"@moq/hang": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/hang",
+		"@moq/json": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/json",
+		"@moq/loc": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/loc",
+		"@moq/msf": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/msf",
+		"@moq/net": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/net",
+		"@moq/publish": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/publish",
+		"@moq/room": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/room",
+		"@moq/signals": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/signals",
+		"@moq/watch": "file:../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/watch"
+	}
 }
