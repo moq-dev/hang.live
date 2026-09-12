@@ -69,26 +69,32 @@ export class Room {
 			});
 		});
 
+		const members = new Map<Moq.Path.Valid, { remote: import("@moq/room").Remote; scope: Effect }>();
+		this.#signals.cleanup(() => {
+			for (const { scope } of members.values()) scope.close();
+			members.clear();
+		});
 		this.#signals.run((effect) => {
-			if (!effect.get(Local.join)) return;
 			const remotes = effect.get(this.#roster.remotes);
-			for (const remote of remotes.values()) {
-				effect.run((effect) => {
-					const camera = effect.get(remote.camera);
-					if (!camera) return;
-					this.#addRemote(camera.path);
-					effect.cleanup(() => {
-						void this.space.remove(camera.path);
+			for (const [id, member] of members) {
+				if (remotes.get(id) === member.remote) continue;
+				member.scope.close();
+				members.delete(id);
+			}
+			for (const [id, remote] of remotes) {
+				if (members.has(id)) continue;
+				const scope = new Effect();
+				members.set(id, { remote, scope });
+				for (const slot of [remote.camera, remote.screen]) {
+					scope.run((effect) => {
+						const member = effect.get(slot);
+						if (!member) return;
+						this.#addRemote(member.path);
+						effect.cleanup(() => {
+							void this.space.remove(member.path);
+						});
 					});
-				});
-				effect.run((effect) => {
-					const screen = effect.get(remote.screen);
-					if (!screen) return;
-					this.#addRemote(screen.path);
-					effect.cleanup(() => {
-						void this.space.remove(screen.path);
-					});
-				});
+				}
 			}
 		});
 

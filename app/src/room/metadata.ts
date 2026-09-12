@@ -9,12 +9,11 @@ import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
 import type * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
-import { type Preview, TRACK as ROOM_TRACK, type User } from "@moq/room";
+import type { Preview, User } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import type * as Watch from "@moq/watch";
 
 export type { Preview, User };
-export { ROOM_TRACK };
 
 const TRACKS = {
 	location: "hang/location.json",
@@ -108,7 +107,7 @@ export function chatFields(): ChatFields {
 
 /** Publish location and chat tracks on a `@moq/room` camera/screen broadcast. */
 export function serveExtras(
-	broadcast: Publish.Broadcast,
+	broadcast: { net: Publish.Broadcast["net"]; catalog: Pick<Publish.Broadcast["catalog"], "mutate"> },
 	location: LocationFields,
 	chat: ChatFields,
 	effect: Effect,
@@ -146,7 +145,7 @@ export function serveExtras(
 }
 
 function serveSnapshot<T>(
-	broadcast: Publish.Broadcast,
+	broadcast: { net: Publish.Broadcast["net"]; catalog: Pick<Publish.Broadcast["catalog"], "mutate"> },
 	name: string,
 	effect: Effect,
 	value: (effect: Effect) => T,
@@ -158,7 +157,7 @@ function serveSnapshot<T>(
 		const track = net.createTrack(name, { latencyMax: 86_400_000, priority: HANG_PRIORITY });
 		effect.cleanup(() => track.close());
 
-		const producer = new Json.Snapshot.Producer<T>({ track, initial: value(effect) });
+		const producer = new Json.Snapshot.Producer<T>({ track });
 		effect.cleanup(() => producer.finish());
 
 		effect.run((effect) => {
@@ -174,7 +173,7 @@ export type ConsumedExtras = {
 };
 
 /** Subscribe to location and chat on a watched broadcast. */
-export function consumeExtras(broadcast: Watch.Broadcast): ConsumedExtras {
+export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "catalog" | "active"> }): ConsumedExtras {
 	const location = locationFields();
 	const chat = chatFields();
 	const signals = new Effect();
@@ -183,6 +182,13 @@ export function consumeExtras(broadcast: Watch.Broadcast): ConsumedExtras {
 		const catalog = effect.get(broadcast.out.catalog) as ExtendedCatalog | undefined;
 		const hang = catalog?.hang;
 		const active = effect.get(broadcast.out.active);
+		effect.cleanup(() => {
+			location.window.position.set(undefined);
+			location.window.handle.set(undefined);
+			location.peers.positions.set(undefined);
+			chat.message.latest.set(undefined);
+			chat.typing.active.set(undefined);
+		});
 		if (!active || !hang) return;
 
 		if (hang.location) {

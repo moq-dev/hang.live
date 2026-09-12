@@ -9,7 +9,8 @@
 		"build": "bunx --bun vite build",
 		"check": "tsc --noEmit && biome check",
 		"fix": "biome check --fix",
-		"tauri": "tauri"
+		"tauri": "tauri",
+		"test": "bun test src/room/metadata.test.ts"
 	},
 	"license": "MIT",
 	"dependencies": {
@@ -17,13 +18,13 @@
 		"@fontsource-variable/montserrat": "^5.2.6",
 		"@hang/api": "workspace:*",
 		"@huggingface/transformers": "^4.0.0",
-		"@moq/hang": "0.4.3",
-		"@moq/json": "0.3.3",
-		"@moq/net": "0.3.5",
-		"@moq/publish": "0.4.7",
-		"@moq/room": "0.1.0",
-		"@moq/signals": "0.2.3",
-		"@moq/watch": "0.5.4",
+		"@moq/hang": "workspace:*",
+		"@moq/json": "workspace:*",
+		"@moq/net": "workspace:*",
+		"@moq/publish": "workspace:*",
+		"@moq/room": "workspace:*",
+		"@moq/signals": "workspace:*",
+		"@moq/watch": "workspace:*",
 		"@solidjs/router": "^0.15.3",
 		"@tailwindcss/vite": "^4.1.12",
 		"@tauri-apps/api": "^2.8.0",
@@ -62,7 +63,8 @@
 		"vite-plugin-solid": "^2.11.8",
 		"vite-plugin-static-copy": "^4.0.0",
 		"vite-plugin-wrangler": "^0.1.1",
-		"wrangler": "^4.33.0"
+		"wrangler": "^4.33.0",
+		"@types/bun": "^1.4.0"
 	},
 	"packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }

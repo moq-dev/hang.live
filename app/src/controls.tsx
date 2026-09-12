@@ -1,5 +1,5 @@
 import type { Getter } from "@moq/signals";
-import solid from "@moq/signals/solid";
+import { createAccessor as solid } from "@moq/signals/solid";
 import {
 	type Accessor,
 	createEffect,

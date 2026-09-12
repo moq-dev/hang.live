@@ -1,20 +1,6 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"paths": {
-			"@moq/net": ["./node_modules/@moq/net/src/index.ts"],
-			"@moq/hang": ["./node_modules/@moq/hang/src/index.ts"],
-			"@moq/hang/*": ["./node_modules/@moq/hang/src/*"],
-			"@moq/json": ["./node_modules/@moq/json/src/index.ts"],
-			"@moq/json/*": ["./node_modules/@moq/json/src/*"],
-			"@moq/publish": ["./node_modules/@moq/publish/src/index.ts"],
-			"@moq/publish/*": ["./node_modules/@moq/publish/src/*"],
-			"@moq/watch": ["./node_modules/@moq/watch/src/index.ts"],
-			"@moq/watch/*": ["./node_modules/@moq/watch/src/*"],
-			"@moq/signals": ["./node_modules/@moq/signals/src/index.ts"],
-			"@moq/signals/*": ["./node_modules/@moq/signals/src/*"],
-			"@moq/room": ["./node_modules/@moq/room/src/index.ts"]
-		},
 		"lib": ["esnext", "dom"],
 		"outDir": "./dist",
 		"allowImportingTsExtensions": true,
@@ -27,7 +13,7 @@
 		"noUncheckedIndexedAccess": false,
 		"erasableSyntaxOnly": true,
 		"resolveJsonModule": true,
-		"types": ["vite/client", "vite-plugin-glsl/ext", "../api/worker-configuration.d.ts"]
+		"types": ["vite/client", "vite-plugin-glsl/ext", "../api/worker-configuration.d.ts", "bun"]
 	},
-	"include": ["src", "../../../.grok/worktrees/work-moq/2026-09-12-6f47947f/js/common/worklet.d.ts"]
+	"include": ["src", "../moq/js/common/worklet.d.ts"]
 }
