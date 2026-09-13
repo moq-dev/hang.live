@@ -51,6 +51,13 @@ export class Local {
 			this.core.webcam.device.preferred.set(effect.get(Settings.camera.device));
 			this.core.microphone.device.preferred.set(effect.get(Settings.microphone.device));
 		});
+		this.#signals.run((effect) => {
+			Settings.camera.device.set(effect.get(this.core.webcam.device.preferred));
+			Settings.microphone.device.set(effect.get(this.core.microphone.device.preferred));
+		});
+		this.#signals.run((effect) => {
+			this.core.cameraAudio.volume.set(effect.get(Settings.microphone.gain));
+		});
 
 		this.camera = new HangLocalSource({
 			broadcast: this.core.camera,
