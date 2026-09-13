@@ -79,3 +79,10 @@ Hang uses [moq](https://github.com/moq-dev/moq) — an open-source library for r
 ## License
 
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.
+
+## MoQ source dependency
+
+This migration pins MoQ as the `moq` submodule until the room package is released.
+Clone with `git clone --recurse-submodules`, or run `git submodule update --init`
+in an existing checkout, then `bun install --frozen-lockfile`.
+The app uses the submodule's MoQ workspaces, so CI and local builds use the same source.

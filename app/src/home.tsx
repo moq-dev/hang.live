@@ -1,5 +1,5 @@
-import * as Moq from "@moq/lite";
-import solid from "@moq/signals/solid";
+import * as Moq from "@moq/net";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";

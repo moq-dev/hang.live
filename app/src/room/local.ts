@@ -1,279 +1,212 @@
-import type * as Moq from "@moq/lite";
-import * as Publish from "@moq/publish";
-import { Effect, Signal } from "@moq/signals";
+import * as Moq from "@moq/net";
+import type * as Publish from "@moq/publish";
+import { Local as RoomLocal } from "@moq/room";
+import { Effect, type Getter, Signal } from "@moq/signals";
 import Settings from "../settings";
-import { createPublishBroadcast, type HangPublishBroadcast } from "./metadata";
+import { type ChatFields, chatFields, type LocationFields, locationFields, serveExtras } from "./metadata";
 
 export interface LocalProps {
 	connection?: Signal<Moq.Connection.Established | undefined> | Moq.Connection.Established;
+	identity?: Signal<Moq.Path.Valid> | Moq.Path.Valid;
 	name?: Signal<string | undefined> | string;
 	avatar?: Signal<string | undefined> | string;
 }
+
 /**
- * LocalBroadcasts manages the local camera and screen broadcasts.
- * It creates them early (before joining) and can optionally render a preview.
+ * Local camera and screen, wrapping `@moq/room` Local and adding hang.live
+ * location/chat catalog extras plus the 3D-layer source shape.
  */
 export class Local {
-	connection: Signal<Moq.Connection.Established | undefined>;
+	readonly core: RoomLocal;
+	readonly identity: Signal<Moq.Path.Valid>;
 
-	camera: HangPublishBroadcast;
-	microphone: Publish.Source.Microphone;
-	webcam: Publish.Source.Camera;
+	readonly camera: HangLocalSource;
+	readonly share: HangLocalSource;
 
-	share: HangPublishBroadcast;
-	screen: Publish.Source.Screen;
+	readonly name: Signal<string | undefined>;
+	readonly avatar: Signal<string | undefined>;
 
-	// Name and avatar signals that can be overridden
-	name: Signal<string | undefined>;
-	avatar: Signal<string | undefined>;
-
-	// Set to true to join the room immediately.
-	// This is static because I'm lazy.
 	static join = new Signal<boolean>(false);
 
 	#signals = new Effect();
 
 	constructor(props?: LocalProps) {
-		this.connection = Signal.from(props?.connection);
-
-		// Use provided name/avatar or fall back to Settings
+		this.identity = Signal.from(props?.identity ?? Moq.Path.from("pending"));
 		this.name = Signal.from(props?.name ?? Settings.account.name);
 		this.avatar = Signal.from(props?.avatar ?? Settings.account.avatar);
 
-		this.webcam = new Publish.Source.Camera({
-			enabled: Settings.camera.enabled,
-			device: { preferred: Settings.camera.device },
-			constraints: {
-				width: { ideal: 640 },
-				height: { ideal: 640 },
-				frameRate: { ideal: 60 },
-				facingMode: { ideal: "user" },
-				resizeMode: "none",
-			},
-		});
-		this.#signals.cleanup(() => this.webcam.close());
-
-		this.microphone = new Publish.Source.Microphone({
-			enabled: Settings.microphone.enabled,
-			device: { preferred: Settings.microphone.device },
-			constraints: {
-				channelCount: { ideal: 1, max: 2 },
-				autoGainControl: { ideal: true },
-				noiseSuppression: { ideal: true },
-				echoCancellation: { ideal: true },
-			},
-		});
-		this.#signals.cleanup(() => this.microphone.close());
-
-		// Create the camera broadcast
-		this.camera = createPublishBroadcast({
+		this.core = new RoomLocal({
+			connection: Signal.from(props?.connection),
+			identity: this.identity,
 			enabled: Local.join,
-			connection: this.connection,
+			cameraEnabled: Settings.camera.enabled,
+			microphoneEnabled: Settings.microphone.enabled,
 			user: {
-				enabled: true,
 				name: this.name,
 				avatar: this.avatar,
 			},
-			video: {
-				source: this.webcam.source,
-				hd: {
-					enabled: Settings.camera.enabled,
-					config: {
-						maxPixels: 640 * 640,
-					},
-				},
-				sd: {
-					enabled: Settings.camera.enabled,
-					config: {
-						maxPixels: 320 * 320,
-					},
-				},
-				flip: true,
-			},
-			audio: {
-				enabled: Settings.microphone.enabled,
-				volume: Settings.microphone.gain,
-				source: this.microphone.source,
-			},
-			location: {
-				window: {
-					enabled: true,
-					//position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-					handle: Math.random().toString(36).substring(2, 15),
-				},
-				peers: {
-					enabled: true,
-				},
-			},
-			chat: {
-				message: {
-					enabled: true,
-				},
-				typing: {
-					enabled: true,
-				},
-			},
-			preview: {
-				enabled: true,
-				info: {
-					chat: false,
-					typing: false,
-					screen: false,
-				},
-			},
+		});
+		this.#signals.cleanup(() => this.core.close());
+		this.#signals.run((effect) => {
+			this.core.webcam.device.preferred.set(effect.get(Settings.camera.device));
+			this.core.microphone.device.preferred.set(effect.get(Settings.microphone.device));
+		});
+		this.#signals.run((effect) => {
+			Settings.camera.device.set(effect.get(this.core.webcam.device.preferred));
+			Settings.microphone.device.set(effect.get(this.core.microphone.device.preferred));
+		});
+		this.#signals.run((effect) => {
+			this.core.cameraAudio.volume.set(effect.get(Settings.microphone.gain));
 		});
 
-		this.screen = new Publish.Source.Screen({
-			video: {
-				frameRate: { ideal: 60 },
-				resizeMode: "none",
-				width: { max: 1920 },
-				height: { max: 1920 },
-			},
-			audio: {
-				channelCount: { ideal: 2, max: 2 },
-				autoGainControl: { ideal: false },
-				echoCancellation: { ideal: false },
-				noiseSuppression: { ideal: false },
-			},
+		this.camera = new HangLocalSource({
+			broadcast: this.core.camera,
+			frame: this.core.cameraCapture.out.frame,
+			display: this.core.cameraCapture.out.display,
+			audioRoot: this.core.cameraAudio.out.root,
+			videoSource: this.core.webcam.out.source,
+			audioSource: this.core.microphone.out.source,
+			user: this.core.user,
+			flip: true,
+			enabled: this.core.enabled,
 		});
-		this.#signals.cleanup(() => this.screen.close());
+		this.#signals.cleanup(() => this.camera.close());
 
-		// Create the screen broadcast
-		this.share = createPublishBroadcast({
-			connection: this.connection,
-			audio: {
-				enabled: this.screen.enabled,
+		const shareName = new Signal<string | undefined>(undefined);
+		this.share = new HangLocalSource({
+			broadcast: this.core.screen,
+			frame: this.core.screenCapture.out.frame,
+			display: this.core.screenCapture.out.display,
+			audioRoot: this.core.screenAudio.out.root,
+			videoSource: new Signal<unknown>(undefined),
+			audioSource: new Signal<unknown>(undefined),
+			user: {
+				id: this.core.user.id,
+				name: shareName,
+				avatar: this.core.user.avatar,
+				color: this.core.user.color,
 			},
-			video: {
-				hd: {
-					enabled: this.screen.enabled,
-					config: {
-						maxPixels: 1200 * 1200,
-						bitrateScale: 0.08,
-					},
-				},
-				// TODO only enable for large enough screen
-				sd: {
-					enabled: this.screen.enabled,
-					config: {
-						maxPixels: 600 * 600,
-						bitrateScale: 0.06,
-					},
-				},
-			},
-			location: {
-				window: {
-					enabled: true,
-					position: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
-					handle: Math.random().toString(36).substring(2, 15),
-				},
-				peers: {
-					enabled: Settings.draggable,
-				},
-			},
+			flip: false,
+			enabled: this.core.screenEnabled,
+		});
+		this.#signals.cleanup(() => this.share.close());
+
+		this.#signals.run((effect) => {
+			const source = effect.get(this.core.share.out.source);
+			(this.share.video.source as Signal<unknown>).set(source?.video);
+			(this.share.audio.source as Signal<unknown>).set(source?.audio);
 		});
 
-		this.#signals.effect((effect) => {
-			const source = effect.get(this.screen.source);
-			if (!source) return;
-
-			effect.set(this.share.audio.source, source.audio);
-			effect.set(this.share.video.source, source.video);
-			effect.set(this.share.enabled, true, false); // only enable once there is a stream
-		});
-
-		// Enable transcription when the setting is enabled
-		// TEMPORARILY DISABLED - Caption generation disabled
-		/*
-		this.camera.signals.effect((effect) => {
-			// Only enable vad/transcription if audio is enabled
-			const enabled = effect.get(this.camera.audio.enabled);
-			if (!enabled) return;
-
-			// Only enable transcription if the setting is enabled
-			const captions = effect.get(Settings.captureCaptions);
-			effect.set(this.camera.audio.captions.enabled, captions, false);
-		});
-		*/
-
-		this.camera.signals.effect((effect) => {
+		this.camera.signals.run((effect) => {
 			const message = effect.get(this.camera.chat.message.latest);
-			this.camera.preview.info.update((prev) => ({
-				...prev,
-				chat: !!message,
-			}));
-		});
-
-		this.camera.signals.effect((effect) => {
-			const message = effect.get(this.camera.chat.message.latest);
+			this.core.chatting.set(!!message);
 			if (!message) return;
-
-			// Clear the message after 10 seconds.
 			effect.timer(() => {
 				this.camera.chat.message.latest.set("");
 			}, 10000);
 		});
 
-		this.camera.signals.effect((effect) => {
-			const video = effect.get(this.camera.video.source);
-			const audio = effect.get(this.camera.audio.source);
-
-			this.camera.preview.info.update((prev) => ({
-				...prev,
-				video: !!video,
-				audio: !!audio,
-			}));
-		});
-
-		// Update the screen sharing status
-		this.share.signals.effect((effect) => {
-			const video = effect.get(this.share.video.source);
-			const audio = effect.get(this.share.audio.source);
-
-			this.camera.preview.info.update((prev) => ({
-				...prev,
-				screen: !!video || !!audio,
-			}));
-		});
-
-		// Enable the screen when a media device is selected.
-		this.share.signals.effect((effect) => {
-			const join = effect.get(Local.join);
-			if (!join) return;
-
-			const active = !!effect.get(this.share.video.source) || !!effect.get(this.share.audio.source);
-			if (!active) return;
-
-			effect.set(this.share.enabled, true, false);
-			effect.cleanup(() => this.share.enabled.set(false));
-		});
-
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			const name = effect.get(Settings.account.name);
 			if (!name) return;
-
-			if (name.endsWith("s")) {
-				this.share.user.name.set(`${name}' Screen`);
-			} else {
-				this.share.user.name.set(`${name}'s Screen`);
-			}
+			shareName.set(`${name.endsWith("s") ? `${name}' Screen` : `${name}'s Screen`} (screen)`);
 		});
+	}
 
-		this.#signals.effect((effect) => {
-			const name = effect.get(Settings.account.name);
-			this.camera.preview.info.update((prev) => ({ ...prev, name }));
-		});
+	get webcam() {
+		return this.core.webcam;
+	}
 
-		this.#signals.effect((effect) => {
-			const avatar = effect.get(Settings.account.avatar);
-			this.camera.preview.info.update((prev) => ({ ...prev, avatar }));
-		});
+	get microphone() {
+		return this.core.microphone;
+	}
+
+	get screen() {
+		return this.core.share;
 	}
 
 	close() {
 		this.#signals.close();
-		this.camera.close();
-		this.share.close();
+	}
+}
+
+export interface HangLocalSourceProps {
+	broadcast: Publish.Broadcast;
+	frame: Getter<VideoFrame | undefined>;
+	display: Getter<{ width: number; height: number } | undefined>;
+	audioRoot: Getter<AudioNode | undefined>;
+	videoSource: Getter<unknown>;
+	audioSource: Getter<unknown>;
+	user: {
+		id: Getter<string | undefined>;
+		name: Signal<string | undefined>;
+		avatar: Getter<string | undefined>;
+		color: Getter<string | undefined>;
+	};
+	flip: boolean;
+	enabled: Getter<boolean>;
+}
+
+/** Publish-side source the 3D layer reads: room Local plus location/chat. */
+export class HangLocalSource {
+	readonly role = "publish" as const;
+	readonly broadcast: Publish.Broadcast;
+	readonly location: LocationFields;
+	readonly chat: ChatFields;
+	readonly user: HangLocalSourceProps["user"];
+	readonly video: {
+		frame: Getter<VideoFrame | undefined>;
+		display: Getter<{ width: number; height: number } | undefined>;
+		flip: Getter<boolean>;
+		source: Getter<unknown>;
+		catalog: Getter<undefined>;
+		target: Signal<undefined>;
+		active: Getter<undefined>;
+	};
+	readonly audio: {
+		root: Getter<AudioNode | undefined>;
+		source: Getter<unknown>;
+		catalog: Getter<undefined>;
+		active: Getter<undefined>;
+	};
+	readonly enabled: Getter<boolean>;
+	readonly signals = new Effect();
+
+	constructor(props: HangLocalSourceProps) {
+		this.broadcast = props.broadcast;
+		this.enabled = props.enabled;
+		this.location = locationFields();
+		this.chat = chatFields();
+		this.user = props.user;
+
+		this.video = {
+			frame: props.frame,
+			display: props.display,
+			flip: new Signal(props.flip),
+			source: props.videoSource,
+			catalog: new Signal(undefined),
+			target: new Signal(undefined),
+			active: new Signal(undefined),
+		};
+		this.audio = {
+			root: props.audioRoot,
+			source: props.audioSource,
+			catalog: new Signal(undefined),
+			active: new Signal(undefined),
+		};
+
+		this.signals.run((effect) => {
+			this.location.peers.enabled.set(effect.get(Settings.draggable));
+		});
+
+		serveExtras(this.broadcast, this.location, this.chat, this.signals);
+	}
+
+	get name(): Getter<Moq.Path.Valid> {
+		return this.broadcast.in.name;
+	}
+
+	close() {
+		this.signals.close();
 	}
 }

@@ -11,6 +11,7 @@ export type FakeBroadcastProps = {
 };
 
 export class FakeBroadcast {
+	readonly role = "fake" as const;
 	sound: Sound;
 
 	enabled = new Signal(false);
@@ -43,6 +44,8 @@ export class FakeBroadcast {
 	audio = {
 		root: new Signal<AudioNode | undefined>(undefined),
 		catalog: new Signal<Catalog.Audio | undefined>(undefined),
+		source: new Signal<undefined>(undefined),
+		active: new Signal<undefined>(undefined),
 	};
 
 	video = {
@@ -50,6 +53,9 @@ export class FakeBroadcast {
 		display: new Signal<{ width: number; height: number } | undefined>(undefined),
 		flip: new Signal<boolean>(false),
 		catalog: new Signal<Catalog.Video | undefined>(undefined),
+		source: new Signal<undefined>(undefined),
+		target: new Signal<undefined>(undefined),
+		active: new Signal<undefined>(undefined),
 	};
 
 	signals = new Effect();
@@ -65,7 +71,7 @@ export class FakeBroadcast {
 		this.location.window.position.set(props?.position);
 		this.location.window.handle.set(Math.random().toString(36).substring(2, 15));
 
-		this.signals.effect((effect) => {
+		this.signals.run((effect) => {
 			const message = effect.get(this.chat.message.latest);
 			if (!message) return;
 
@@ -73,7 +79,7 @@ export class FakeBroadcast {
 		});
 
 		// A helper to automatically unset the typing indicator when the message is sent.
-		this.signals.effect((effect) => {
+		this.signals.run((effect) => {
 			const message = effect.get(this.chat.message.latest);
 			if (message) this.chat.typing.active.set(false);
 		});
@@ -182,8 +188,8 @@ export class FakeRoom {
 	}
 
 	remove(path: string) {
-		this.space.remove(path).then((broadcast) => {
-			broadcast.close();
+		this.space.remove(path).then((source) => {
+			source?.close();
 		});
 	}
 

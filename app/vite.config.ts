@@ -6,6 +6,8 @@ import glsl from "vite-plugin-glsl";
 import solid from "vite-plugin-solid";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
+import { workletInline } from "../moq/js/common/vite-plugin-worklet.ts";
+
 // https://vitejs.dev/config/
 export default defineConfig(() => {
 	// Optional: Make sure we never bundle Tauri packages just in case tree-shaking doesn't work.
@@ -41,6 +43,7 @@ export default defineConfig(() => {
 		},
 
 		plugins: [
+			workletInline(),
 			glsl({
 				minify: process.env.NODE_ENV === "production",
 			}),

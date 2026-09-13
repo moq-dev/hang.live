@@ -109,7 +109,7 @@ export class Canvas {
 		});
 
 		// Only render the canvas when it's visible.
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			const visible = effect.get(this.visible);
 			if (!visible) return;
 

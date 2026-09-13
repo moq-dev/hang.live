@@ -129,7 +129,7 @@ export class TTS {
 		this.context = context;
 		this.enabled = Signal.from(props?.enabled ?? false);
 
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			// Only start loading the TTS model when enabled.
 			if (!effect.get(this.enabled)) return;
 

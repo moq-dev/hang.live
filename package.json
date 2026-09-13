@@ -4,19 +4,30 @@
 	"type": "module",
 	"workspaces": [
 		"app",
-		"api"
+		"api",
+		"moq/js/flate",
+		"moq/js/hang",
+		"moq/js/json",
+		"moq/js/loc",
+		"moq/js/msf",
+		"moq/js/net",
+		"moq/js/publish",
+		"moq/js/room",
+		"moq/js/signals",
+		"moq/js/watch"
 	],
 	"scripts": {
-		"build": "bun --filter '*' run build",
+		"build": "bun run --cwd api build && bun run --cwd app build",
 		"dev": "concurrently --kill-others --names app,api --prefix-colors auto \"bun --filter @hang/live run dev\" \"bun --filter @hang/api-server run dev\"",
-		"check": "bun --filter '*' run check",
-		"deploy": "bun --filter '*' run deploy"
+		"check": "bun run --cwd api check && bun run --cwd app check",
+		"deploy": "just deploy"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.10",
 		"concurrently": "^9.2.1",
 		"typescript": "^6.0.2",
-		"wrangler": "^4.79.0"
+		"wrangler": "^4.79.0",
+		"esbuild": "^0.28.2"
 	},
 	"packageManager": "bun@1.1.38"
 }

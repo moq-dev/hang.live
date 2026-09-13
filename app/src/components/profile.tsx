@@ -1,11 +1,11 @@
 import { Effect } from "@moq/signals";
-import solid from "@moq/signals/solid";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
 import { Canvas } from "../room/canvas";
+import type { HangLocalSource } from "../room/local";
 import { Local } from "../room/local";
-import type { HangPublishBroadcast } from "../room/metadata";
 import { Sound } from "../room/sound";
 import { Space } from "../room/space";
 import Settings from "../settings";
@@ -122,7 +122,7 @@ class LocalPreview {
 
 	signals = new Effect();
 
-	constructor(element: HTMLCanvasElement, camera: HangPublishBroadcast) {
+	constructor(element: HTMLCanvasElement, camera: HangLocalSource) {
 		// Create a minimal canvas without the background effects
 		this.canvas = new Canvas(element);
 
@@ -137,7 +137,7 @@ class LocalPreview {
 		const broadcast = this.space.add("local", camera);
 		this.signals.cleanup(() => this.space.remove("local"));
 
-		this.signals.effect((effect: Effect) => {
+		this.signals.run((effect: Effect) => {
 			const position = effect.get(broadcast.position);
 			if (position.x === 0 && position.y === 0 && position.s === 1) return;
 

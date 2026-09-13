@@ -17,17 +17,15 @@ check:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	bun install --frozen-lockfile
-	if tty -s; then
-		bun run --filter='*' check
-	else
-		bun run --filter='*' check
-	fi
+	bun run check
+	bun run --cwd app test
 	just native check
 
 # Automatically fix some issues.
 fix:
 	bun install
-	bun run --filter='*' fix
+	bun run --cwd api fix
+	bun run --cwd app fix
 	just native fix
 
 # Upgrade any tooling
@@ -39,10 +37,10 @@ upgrade:
 # Build the packages
 build:
 	bun install --frozen-lockfile
-	bun run --filter='*' build
+	bun run build
 
 prod: build
-	bun run --filter='*' prod
+	bun run --filter='@hang/*' prod
 
 deploy env="staging":
 	just api deploy "{{env}}"

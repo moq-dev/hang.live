@@ -78,14 +78,14 @@ export class Video {
 		this.#gl.bindTexture(this.#gl.TEXTURE_2D, null);
 
 		// Set up texture upload effects
-		this.broadcast.signals.effect(this.#runFrame.bind(this));
-		this.broadcast.signals.effect(this.#runMeme.bind(this));
-		this.broadcast.signals.effect(this.#runMemeBounds.bind(this));
-		this.broadcast.signals.effect(this.#runAvatar.bind(this));
-		this.broadcast.signals.effect(this.#runTargetSize.bind(this));
-		this.broadcast.signals.effect(this.#runMemeTransition.bind(this));
+		this.broadcast.signals.run(this.#runFrame.bind(this));
+		this.broadcast.signals.run(this.#runMeme.bind(this));
+		this.broadcast.signals.run(this.#runMemeBounds.bind(this));
+		this.broadcast.signals.run(this.#runAvatar.bind(this));
+		this.broadcast.signals.run(this.#runTargetSize.bind(this));
+		this.broadcast.signals.run(this.#runMemeTransition.bind(this));
 
-		this.broadcast.signals.effect(this.#runRenderSize.bind(this));
+		this.broadcast.signals.run(this.#runRenderSize.bind(this));
 	}
 
 	#runAvatar(effect: Effect) {
@@ -122,7 +122,7 @@ export class Video {
 			);
 			effect.set(this.avatarSize, avatarSize);
 
-			effect.effect((effect) => {
+			effect.run((effect) => {
 				const size = effect.get(this.#renderSize);
 				this.#imageToTexture(newAvatar, this.avatarTexture, size);
 			});
@@ -205,7 +205,7 @@ export class Video {
 
 		const gl = this.#gl;
 
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			if (effect.get(paused)) return; // Gate everything on the pause state
 
 			let first = true;
@@ -344,7 +344,7 @@ export class Video {
 
 		this.memeChroma = false;
 
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			// Audio meme - render emoji to texture
 			const size = effect.get(this.#renderSize);
 			const gl = this.#gl;

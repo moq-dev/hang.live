@@ -1,5 +1,5 @@
-import type * as Publish from "@moq/publish";
-import solid from "@moq/signals/solid";
+import type { Getter } from "@moq/signals";
+import { createAccessor as solid } from "@moq/signals/solid";
 import {
 	type Accessor,
 	createEffect,
@@ -18,8 +18,8 @@ import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
+import type { HangLocalSource } from "./room/local";
 import { Local } from "./room/local";
-import type { HangPublishBroadcast } from "./room/metadata";
 import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Tauri from "./tauri";
@@ -42,8 +42,8 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 	// Check if any publish source is active
 	const micActive = solid(props.local.camera.audio.root);
-	const cameraActive = solid(props.local.webcam.source);
-	const screenActive = solid(props.local.screen.source);
+	const cameraActive = solid(props.local.webcam.out.source);
+	const screenActive = solid(props.local.screen.out.source);
 	const anySourceActive = createMemo(() => !!micActive() || !!cameraActive() || !!screenActive());
 
 	// Close expanded sections when clicking outside (mobile only)
@@ -252,7 +252,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 export function Microphone(props: { local: Local }): JSX.Element {
 	const toggle = () => {
-		props.local.microphone.enabled.update((prev: boolean) => !prev);
+		props.local.core.microphoneEnabled.update((prev: boolean) => !prev);
 	};
 	const root = solid(props.local.camera.audio.root);
 
@@ -263,10 +263,10 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Use device signals from the Device API
 	const device = props.local.microphone.device;
-	const enabled = solid(props.local.microphone.enabled);
-	const available = solid(device.available);
-	const requested = createSelector(solid(device.requested));
-	const active = createSelector(solid(device.active));
+	const enabled = solid(props.local.core.microphoneEnabled);
+	const available = solid(device.out.available);
+	const requested = createSelector(solid(device.out.requested));
+	const active = createSelector(solid(device.out.active));
 
 	// Watch for device changes and trigger indicator
 	let previousDeviceCount = available()?.length ?? 0;
@@ -315,14 +315,14 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (root() && (deviceId === device.active.peek() || deviceId === device.requested.peek())) {
+		if (root() && (deviceId === device.out.active.peek() || deviceId === device.out.requested.peek())) {
 			// Same device selected and mic is enabled - disable it
-			props.local.microphone.enabled.set(false);
+			props.local.core.microphoneEnabled.set(false);
 			device.preferred.set(undefined);
 		} else {
 			// Different device or mic is disabled - enable it
 			device.preferred.set(deviceId);
-			props.local.microphone.enabled.set(true);
+			props.local.core.microphoneEnabled.set(true);
 		}
 	};
 
@@ -424,7 +424,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 							<Match when={available()}>
 								{(devices) => (
 									<>
-										{devices().map((dev) => (
+										{devices().map((dev: MediaDeviceInfo) => (
 											<button
 												type="button"
 												onClick={() => selectDevice(dev.deviceId)}
@@ -463,9 +463,9 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.webcam.enabled.update((prev: boolean) => !prev);
+		props.local.core.cameraEnabled.update((prev: boolean) => !prev);
 	};
-	const media = solid(props.local.webcam.source);
+	const media = solid(props.local.webcam.out.source);
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -473,9 +473,9 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	// Use device signals from the Device API
 	const device = props.local.webcam.device;
-	const available = solid(device.available);
-	const requested = createSelector(solid(device.requested));
-	const active = createSelector(solid(device.active));
+	const available = solid(device.out.available);
+	const requested = createSelector(solid(device.out.requested));
+	const active = createSelector(solid(device.out.active));
 
 	// Watch for device changes and trigger indicator
 	let previousDeviceCount = available()?.length ?? 0;
@@ -525,14 +525,14 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (media() && (deviceId === device.active.peek() || deviceId === device.requested.peek())) {
+		if (media() && (deviceId === device.out.active.peek() || deviceId === device.out.requested.peek())) {
 			// Same device selected and camera is enabled - disable it
-			props.local.webcam.enabled.set(false);
+			props.local.core.cameraEnabled.set(false);
 			device.preferred.set(undefined);
 		} else {
 			// Different device or camera is disabled - enable it
 			device.preferred.set(deviceId);
-			props.local.webcam.enabled.set(true);
+			props.local.core.cameraEnabled.set(true);
 		}
 	};
 
@@ -605,7 +605,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 								<Match when={available()}>
 									{(devices) => (
 										<>
-											{devices().map((dev) => (
+											{devices().map((dev: MediaDeviceInfo) => (
 												<button
 													type="button"
 													onClick={() => selectDevice(dev.deviceId)}
@@ -645,9 +645,9 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 function Screen(props: { local: Local; room: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.screen.enabled.update((prev: boolean) => !prev);
+		props.local.core.screenEnabled.update((prev: boolean) => !prev);
 	};
-	const media = solid(props.local.screen.source);
+	const media = solid(props.local.screen.out.source);
 
 	// Check if getDisplayMedia is supported
 	const supportsScreenShare = "mediaDevices" in navigator && "getDisplayMedia" in navigator.mediaDevices;
@@ -675,7 +675,7 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 }
 
 // Renders a volume meter in the background of an element.
-export function Visualize(props: { audio: Publish.Audio.Encoder }): JSX.Element {
+export function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
@@ -739,7 +739,7 @@ export function Visualize(props: { audio: Publish.Audio.Encoder }): JSX.Element 
 	);
 }
 
-function Chat(props: { broadcast: HangPublishBroadcast; room: Room }): JSX.Element {
+function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
 	const [showMemeSelector, setShowMemeSelector] = createSignal(false);
@@ -747,10 +747,7 @@ function Chat(props: { broadcast: HangPublishBroadcast; room: Room }): JSX.Eleme
 	// Update typing status in preview
 	createEffect(() => {
 		const hasText = message().length > 0;
-		props.broadcast.preview.info.update((prev) => ({
-			...prev,
-			typing: hasText,
-		}));
+		props.room.local.core.typing.set(hasText);
 	});
 
 	const keydown = (e: KeyboardEvent) => {
@@ -793,6 +790,7 @@ function Chat(props: { broadcast: HangPublishBroadcast; room: Room }): JSX.Eleme
 
 		// Use a function to avoid the dequal check.
 		props.broadcast.chat.message.latest.update(() => m);
+		props.room.local.core.chatting.set(true);
 
 		setMessage("");
 	};

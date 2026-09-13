@@ -1,6 +1,6 @@
 import * as Api from "@hang/api/client";
 import { Effect, Signal } from "@moq/signals";
-import solid from "@moq/signals/solid";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { createSelector, createSignal, Match, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";

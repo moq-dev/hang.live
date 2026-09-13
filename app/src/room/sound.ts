@@ -81,7 +81,7 @@ export class Sound {
 
 		this.#notifications = notifications;
 
-		this.#signals.effect(this.#runGain.bind(this));
+		this.#signals.run(this.#runGain.bind(this));
 	}
 
 	#runGain(effect: Effect) {
@@ -160,7 +160,7 @@ export class PannedSound {
 		this.#panner.connect(analyser);
 		this.analyser = analyser;
 
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			effect.cleanup(() => this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime));
 
 			const pan = Math.max(-1, Math.min(1, effect.get(this.pan) * 2));

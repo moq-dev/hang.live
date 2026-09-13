@@ -7,6 +7,9 @@ interface ViteTypeOptions {
 interface ImportMetaEnv {
 	readonly VITE_API_URL: string;
 	readonly VITE_APP_URL: string;
+	readonly NODE_ENV?: string;
+	readonly MODE?: string;
+	readonly DEV?: boolean;
 
 	readonly TAURI_ENV_PLATFORM: "windows" | "darwin" | "linux" | "android" | "ios" | undefined;
 	readonly TAURI_ENV_ARCH: string | undefined;

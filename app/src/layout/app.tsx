@@ -1,5 +1,5 @@
-import * as Moq from "@moq/lite";
-import solid from "@moq/signals/solid";
+import * as Moq from "@moq/net";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { createResource, createSignal, JSX, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
@@ -244,16 +244,13 @@ function FavoriteButton(props: { room: string }) {
 
 		setIsToggling(true);
 		try {
-			let response: Response;
-			if (isFavorite()) {
-				response = await Api.client.routes.fave[":room"].remove.$post({
-					param: { room: props.room },
-				});
-			} else {
-				response = await Api.client.routes.fave[":room"].add.$post({
-					param: { room: props.room },
-				});
-			}
+			const response = isFavorite()
+				? await Api.client.routes.fave[":room"].remove.$post({
+						param: { room: props.room },
+					})
+				: await Api.client.routes.fave[":room"].add.$post({
+						param: { room: props.room },
+					});
 			if (response.ok) {
 				refetch();
 			}
