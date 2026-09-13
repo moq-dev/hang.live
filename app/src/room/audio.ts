@@ -1,4 +1,3 @@
-import * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
@@ -85,7 +84,7 @@ export class Audio {
 		});
 
 		// Don't output to the speakers if we're publishing the broadcast.
-		if (!(this.broadcast.source instanceof Publish.Broadcast)) {
+		if (this.broadcast.source.role !== "publish") {
 			this.#signals.run(this.#runOutput.bind(this));
 		}
 	}

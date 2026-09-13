@@ -102,7 +102,7 @@ export class Local {
 		this.#signals.run((effect) => {
 			const name = effect.get(Settings.account.name);
 			if (!name) return;
-			shareName.set(name.endsWith("s") ? `${name}' Screen` : `${name}'s Screen`);
+			shareName.set(`${name.endsWith("s") ? `${name}' Screen` : `${name}'s Screen`} (screen)`);
 		});
 	}
 

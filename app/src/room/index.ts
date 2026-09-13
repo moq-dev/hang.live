@@ -91,7 +91,7 @@ export class Room {
 						if (!member) return;
 						this.#addRemote(member.path);
 						effect.cleanup(() => {
-							void this.space.remove(member.path);
+							void this.space.remove(member.path).then((source) => source?.close());
 						});
 					});
 				}

@@ -20,7 +20,7 @@
 		"build": "bun run --cwd api build && bun run --cwd app build",
 		"dev": "concurrently --kill-others --names app,api --prefix-colors auto \"bun --filter @hang/live run dev\" \"bun --filter @hang/api-server run dev\"",
 		"check": "bun run --cwd api check && bun run --cwd app check",
-		"deploy": "bun run --cwd api deploy && bun run --cwd app deploy"
+		"deploy": "just deploy"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.10",
