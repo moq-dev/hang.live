@@ -149,7 +149,7 @@
 				"R2_PUBLIC_URL": "https://public.hang.live",
 
 				"RELAY_URL": "https://cdn.moq.dev",
-				"RELAY_PREFIX": "live"
+				"RELAY_PREFIX": "hang"
 				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env live
 			}
 		}
