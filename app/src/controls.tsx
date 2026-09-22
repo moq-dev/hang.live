@@ -315,13 +315,13 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (root() && (deviceId === device.out.active.peek() || deviceId === device.out.requested.peek())) {
+		if (root() && deviceId === Settings.microphone.device.peek()) {
 			// Same device selected and mic is enabled - disable it
 			props.local.core.microphoneEnabled.set(false);
-			device.preferred.set(undefined);
+			Settings.microphone.device.set(undefined);
 		} else {
 			// Different device or mic is disabled - enable it
-			device.preferred.set(deviceId);
+			Settings.microphone.device.set(deviceId);
 			props.local.core.microphoneEnabled.set(true);
 		}
 	};
@@ -466,6 +466,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 		props.local.core.cameraEnabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.webcam.out.source);
+	const enabled = solid(props.local.core.cameraEnabled);
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -474,6 +475,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	// Use device signals from the Device API
 	const device = props.local.webcam.device;
 	const available = solid(device.out.available);
+	const noCamera = createMemo(() => enabled() && available()?.length === 0 && !media());
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
@@ -525,20 +527,31 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (media() && (deviceId === device.out.active.peek() || deviceId === device.out.requested.peek())) {
+		if (media() && deviceId === Settings.camera.device.peek()) {
 			// Same device selected and camera is enabled - disable it
 			props.local.core.cameraEnabled.set(false);
-			device.preferred.set(undefined);
+			Settings.camera.device.set(undefined);
 		} else {
 			// Different device or camera is disabled - enable it
-			device.preferred.set(deviceId);
+			Settings.camera.device.set(deviceId);
 			props.local.core.cameraEnabled.set(true);
 		}
 	};
 
 	return (
 		<div class="flex items-start pointer-events-auto relative">
-			<Tooltip content={media() ? "Disable camera" : "Enable camera"} position="top">
+			<Show when={noCamera()}>
+				<div
+					role="status"
+					class="absolute bottom-full mb-2 left-0 w-56 rounded border border-white/30 bg-black/90 p-2 text-sm leading-snug text-white shadow-lg"
+				>
+					No camera found. Connect a webcam to turn on video.
+				</div>
+			</Show>
+			<Tooltip
+				content={noCamera() ? "No camera found" : media() ? "Disable camera" : "Enable camera"}
+				position="top"
+			>
 				<button
 					type="button"
 					onClick={toggle}
