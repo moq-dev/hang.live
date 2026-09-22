@@ -1,5 +1,5 @@
 import type * as Catalog from "@moq/hang/catalog";
-import type * as Moq from "@moq/net";
+import * as Moq from "@moq/net";
 import { consume } from "@moq/room";
 import { Effect, type Getter, Signal } from "@moq/signals";
 import * as Watch from "@moq/watch";
@@ -83,7 +83,7 @@ export class WatchBroadcast {
 		});
 
 		this.#sync = new Watch.Sync({
-			latency: "real-time",
+			latency: Moq.Time.Milli(100),
 			connection: props?.connection,
 			video: this.#videoSource.out.jitter,
 			audio: this.#audioSource.out.jitter,

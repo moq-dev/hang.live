@@ -49,11 +49,11 @@ export class Local {
 		this.#signals.cleanup(() => this.core.close());
 		this.#signals.run((effect) => {
 			this.core.webcam.device.preferred.set(effect.get(Settings.camera.device));
-			this.core.microphone.device.preferred.set(effect.get(Settings.microphone.device));
-		});
-		this.#signals.run((effect) => {
-			Settings.camera.device.set(effect.get(this.core.webcam.device.preferred));
-			Settings.microphone.device.set(effect.get(this.core.microphone.device.preferred));
+			// Pin the resolved OS default for the mic so capture matches the user's default input.
+			// An explicit choice still wins, and an unresolvable default stays browser-managed.
+			this.core.microphone.device.preferred.set(
+				effect.get(Settings.microphone.device) ?? effect.get(this.core.microphone.device.out.default),
+			);
 		});
 		this.#signals.run((effect) => {
 			this.core.cameraAudio.volume.set(effect.get(Settings.microphone.gain));
