@@ -69,7 +69,7 @@ just dev
 | `just check` | Run linting and type checks |
 | `just fix` | Auto-fix formatting and lint issues |
 | `just build` | Build all packages |
-| `just deploy <env>` | Deploy API and app to Cloudflare |
+| `just deploy` | Deploy the live API and app to Cloudflare |
 | `just native` | Run the native desktop app |
 
 ## MOQ (Media over QUIC)

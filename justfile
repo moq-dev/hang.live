@@ -42,9 +42,9 @@ build:
 prod: build
 	bun run --filter='@hang/*' prod
 
-deploy env="staging":
-	just api deploy "{{env}}"
-	just app deploy "{{env}}"
+deploy:
+	just api deploy
+	just app deploy
 
 # Run the Android build, using --open to open Android Studio
 android *args:

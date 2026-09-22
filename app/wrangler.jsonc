@@ -17,17 +17,7 @@
 		"port": 1420
 	},
 
-	// Staging environment configuration
 	"env": {
-		"staging": {
-			"name": "hang-now",
-			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
-			"route": {
-				"pattern": "hang.now",
-				"custom_domain": true
-			}
-		},
-
 		// Production environment configuration
 		"live": {
 			"name": "hang-live",

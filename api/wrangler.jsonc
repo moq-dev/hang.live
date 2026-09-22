@@ -62,52 +62,7 @@
 		// "RELAY_SECRET": <stored in .dev.vars, set dynamically>
 	},
 
-	// Staging environment overrides
 	"env": {
-		"staging": {
-			"name": "api-hang-now",
-			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
-			"route": {
-				"pattern": "api.hang.now",
-				"custom_domain": true
-			},
-			"d1_databases": [
-				{
-					"binding": "DB",
-					"database_name": "db-hang-now",
-					"database_id": "6b0a56ab-3475-463d-8025-2e0e42779895"
-				}
-			],
-			"r2_buckets": [
-				{
-					"binding": "PUBLIC",
-					"bucket_name": "public-hang-now"
-				}
-			],
-			"vars": {
-				"API_URL": "https://api.hang.now",
-				"APP_URL": "https://hang.now",
-
-				// "AUTH_SECRET": npx wrangler secret put AUTH_SECRET --env staging
-
-				"GOOGLE_CLIENT_ID": "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com",
-				// "GOOGLE_CLIENT_SECRET": npx wrangler secret put GOOGLE_CLIENT_SECRET --env staging
-
-				"DISCORD_CLIENT_ID": "1392629623812259940",
-				// "DISCORD_CLIENT_SECRET": npx wrangler secret put DISCORD_CLIENT_SECRET --env staging
-
-				"APPLE_CLIENT_ID": "now.hang.api",
-				"APPLE_TEAM_ID": "D7D5SDDB5Z",
-				"APPLE_KEY_ID": "7BQ2ZQY943",
-				// "APPLE_CLIENT_SECRET": npx wrangler secret put APPLE_CLIENT_SECRET --env staging
-
-				"R2_PUBLIC_URL": "https://public.hang.now",
-
-				"RELAY_URL": "https://cdn.moq.dev",
-				"RELAY_PREFIX": "staging"
-				// "RELAY_SECRET": npx wrangler secret put RELAY_SECRET --env staging
-			}
-		},
 		// Live/production environment overrides
 		"live": {
 			"name": "api-hang-live",
