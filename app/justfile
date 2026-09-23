@@ -11,10 +11,10 @@ upgrade:
 build env="development":
 	bun vite build --mode "{{env}}"
 
-# Deploy the site to Cloudflare Pages
-deploy env="staging":
-	just build "{{env}}"
-	bun wrangler deploy --env "{{env}}"
+# Deploy the site to Cloudflare Workers
+deploy:
+	just build live
+	bun wrangler deploy --env live
 
 # Run the app in development mode
 dev:
