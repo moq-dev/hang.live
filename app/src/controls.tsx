@@ -6,6 +6,7 @@ import {
 	createMemo,
 	createSelector,
 	createSignal,
+	createUniqueId,
 	Match,
 	onCleanup,
 	onMount,
@@ -253,16 +254,22 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 function CaptureStatus(props: {
 	kind: "Camera" | "Microphone";
 	pending: boolean;
+	unavailable: boolean;
 	error: Error | undefined;
 	retry: () => void;
 }): JSX.Element {
+	const status = createUniqueId();
 	return (
 		<>
-			<Show when={props.pending}>
-				<span role="status" class="sr-only">
-					Starting {props.kind.toLowerCase()}…
-				</span>
-			</Show>
+			<span id={status} role="status" class="sr-only" aria-atomic="true">
+				{props.error
+					? `${props.kind} could not start. ${props.error.message}`
+					: props.unavailable
+						? `No ${props.kind.toLowerCase()} found.`
+						: props.pending
+							? `Starting ${props.kind.toLowerCase()}…`
+							: ""}
+			</span>
 			<Show when={props.error}>
 				{(error) => (
 					<button
@@ -271,10 +278,8 @@ function CaptureStatus(props: {
 						title={`${props.kind} could not start. ${error().message}`}
 						class="self-center text-xs text-red-300 underline cursor-pointer"
 						aria-label={`Retry ${props.kind.toLowerCase()}`}
+						aria-describedby={status}
 					>
-						<span role="status" class="sr-only">
-							{props.kind} could not start. {error().message}
-						</span>
 						Retry
 					</button>
 				)}
@@ -299,8 +304,18 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	// Use device signals from the Device API
 	const device = props.local.microphone.device;
 	const enabled = solid(props.local.core.microphoneEnabled);
-	const state = createMemo(() => (!enabled() ? "off" : error() ? "failed" : source() ? "live" : "pending"));
 	const available = solid(device.out.available);
+	const state = createMemo(() =>
+		!enabled()
+			? "off"
+			: error()
+				? "failed"
+				: source()
+					? "live"
+					: available()?.length === 0
+						? "unavailable"
+						: "pending",
+	);
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
@@ -351,8 +366,8 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (root() && deviceId === Settings.microphone.device.peek()) {
-			// Same device selected and mic is enabled - disable it
+		if (enabled() && deviceId === Settings.microphone.device.peek()) {
+			// Selecting the requested device again disables even a pending capture.
 			props.local.core.microphoneEnabled.set(false);
 			Settings.microphone.device.set(undefined);
 		} else {
@@ -367,6 +382,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 			<CaptureStatus
 				kind="Microphone"
 				pending={state() === "pending"}
+				unavailable={state() === "unavailable"}
 				error={enabled() ? error() : undefined}
 				retry={() => props.local.microphone.retry()}
 			/>
@@ -522,7 +538,6 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const media = solid(props.local.webcam.out.source);
 	const enabled = solid(props.local.core.cameraEnabled);
 	const error = solid(props.local.webcam.out.error);
-	const state = createMemo(() => (!enabled() ? "off" : error() ? "failed" : media() ? "live" : "pending"));
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -532,6 +547,9 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const device = props.local.webcam.device;
 	const available = solid(device.out.available);
 	const noCamera = createMemo(() => enabled() && available()?.length === 0 && !media());
+	const state = createMemo(() =>
+		!enabled() ? "off" : error() ? "failed" : noCamera() ? "unavailable" : media() ? "live" : "pending",
+	);
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
@@ -583,8 +601,8 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (media() && deviceId === Settings.camera.device.peek()) {
-			// Same device selected and camera is enabled - disable it
+		if (enabled() && deviceId === Settings.camera.device.peek()) {
+			// Selecting the requested device again disables even a pending capture.
 			props.local.core.cameraEnabled.set(false);
 			Settings.camera.device.set(undefined);
 		} else {
@@ -607,6 +625,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 			<CaptureStatus
 				kind="Camera"
 				pending={state() === "pending" && !noCamera()}
+				unavailable={state() === "unavailable"}
 				error={enabled() ? error() : undefined}
 				retry={() => props.local.webcam.retry()}
 			/>

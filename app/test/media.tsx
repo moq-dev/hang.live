@@ -1,10 +1,11 @@
 import * as Moq from "@moq/net";
 import * as Publish from "@moq/publish";
-import { Effect } from "@moq/signals";
+import * as Signals from "@moq/signals";
 import * as Watch from "@moq/watch";
-import { render } from "solid-js/web";
-import { Camera, Microphone } from "../src/controls";
-import { Local } from "../src/room/local";
+import * as SolidWeb from "solid-js/web";
+import * as Controls from "../src/controls";
+import * as Room from "../src/room/local";
+import * as Settings from "../src/settings";
 
 type Kind = "camera" | "microphone";
 type Mode = "live" | "hold" | "deny";
@@ -12,8 +13,16 @@ type CodecStage = "support" | "flush";
 const params = new URLSearchParams(location.search);
 const connection = new Moq.Connection({ url: new URL(params.get("relay") ?? ""), share: false });
 
+if (params.has("missing")) {
+	const enumerate = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
+	navigator.mediaDevices.enumerateDevices = async () =>
+		(await enumerate()).filter(
+			(device) => device.kind !== (params.get("missing") === "camera" ? "videoinput" : "audioinput"),
+		);
+}
 const native = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 const modes: Record<Kind, Mode> = { camera: "live", microphone: "live" };
+if (params.has("missing")) modes[params.get("missing") === "camera" ? "camera" : "microphone"] = "hold";
 const tracks: MediaStreamTrack[] = [];
 const held: (() => void)[] = [];
 const hold = () => new Promise<void>((resolve) => held.push(resolve));
@@ -54,24 +63,24 @@ const player = params.has("viewer")
 			},
 		})
 	: undefined;
-const local = player ? undefined : new Local({ connection, identity: Moq.Path.from("alice") });
+const local = player ? undefined : new Room.Local({ connection, identity: Moq.Path.from("alice") });
 let dispose: (() => void) | undefined;
 if (local) {
-	Local.join.set(true);
+	Room.Local.join.set(true);
 	local.core.microphone.constraints.set({ echoCancellation: false, noiseSuppression: false, autoGainControl: false });
 	const controls = document.getElementById("controls");
 	if (!controls) throw new Error("Missing controls");
-	dispose = render(
+	dispose = SolidWeb.render(
 		() => (
 			<>
-				<Camera local={local} />
-				<Microphone local={local} />
+				<Controls.Camera local={local} />
+				<Controls.Microphone local={local} />
 			</>
 		),
 		controls,
 	);
 }
-const effects = new Effect();
+const effects = new Signals.Effect();
 let analyser: AnalyserNode | undefined;
 if (player)
 	effects.run((effect) => {
@@ -107,7 +116,8 @@ const harness = {
 		const device = kind === "camera" ? local?.webcam.device : local?.microphone.device;
 		const id = device?.out.available.peek()?.[0]?.deviceId;
 		if (!device || !id) throw new Error("Missing capture device");
-		device.preferred.set(device.preferred.peek() === id ? undefined : id);
+		const preferred = Settings.default[kind].device;
+		preferred.set(preferred.peek() === id ? undefined : id);
 	},
 	end(kind: Kind) {
 		const active = track(kind);
@@ -123,6 +133,9 @@ const harness = {
 		return {
 			rms,
 			camera: track("camera")?.id,
+			selectedMicrophone: local?.microphone.device.out.available
+				.peek()
+				?.find((device) => device.deviceId === Settings.default.microphone.device.peek())?.label,
 			microphone: track("microphone")?.id,
 			liveTracks: tracks.filter((track) => track.readyState === "live").length,
 			held: held.length,
