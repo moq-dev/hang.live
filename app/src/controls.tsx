@@ -616,7 +616,6 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 		<div class="flex items-start pointer-events-auto relative">
 			<Show when={noCamera() && !error()}>
 				<div
-					role="status"
 					class="absolute bottom-full mb-2 left-0 w-56 rounded border border-white/30 bg-black/90 p-2 text-sm leading-snug text-white shadow-lg"
 				>
 					No camera found. Connect a webcam to turn on video.
