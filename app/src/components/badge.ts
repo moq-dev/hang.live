@@ -6,16 +6,16 @@ let pending = Promise.resolve();
 
 async function set(count: number): Promise<void> {
 	if (Tauri.Api) {
-		const success = await Tauri.Api.window
-			.getCurrentWindow()
-			.setBadgeCount(count || undefined)
+		const success = await Promise.resolve()
+			.then(() => Tauri.Api?.window.getCurrentWindow().setBadgeCount(count || undefined))
 			.then(() => true)
 			.catch(() => false);
 		if (success) return;
 	}
 
 	if (count ? navigator.setAppBadge : navigator.clearAppBadge) {
-		const success = await (count ? navigator.setAppBadge(count) : navigator.clearAppBadge())
+		const success = await Promise.resolve()
+			.then(() => (count ? navigator.setAppBadge(count) : navigator.clearAppBadge()))
 			.then(() => true)
 			.catch(() => false);
 		if (success) return;

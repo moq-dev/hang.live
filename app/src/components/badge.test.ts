@@ -56,3 +56,29 @@ test("closing a badge clears it after its pending update and before a new owner'
 	await flush();
 	expect(calls).toEqual([2, "clear", 1, "clear"]);
 });
+
+test("a synchronous platform failure does not stop later badge updates or clears", async () => {
+	const calls: (number | "clear")[] = [];
+	Object.defineProperty(navigator, "setAppBadge", {
+		configurable: true,
+		value: (count: number) => {
+			if (count === 2) throw new Error("platform unavailable");
+			calls.push(count);
+			return Promise.resolve();
+		},
+	});
+	Object.defineProperty(navigator, "clearAppBadge", {
+		configurable: true,
+		value: async () => {
+			calls.push("clear");
+		},
+	});
+	badge = new Badge();
+	badge.set(2);
+	badge.set(3);
+	badge.close();
+	badge = new Badge();
+	badge.set(1);
+	await flush();
+	expect(calls).toEqual([3, "clear", 1]);
+});

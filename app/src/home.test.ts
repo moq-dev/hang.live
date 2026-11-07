@@ -7,22 +7,20 @@ import { render } from "solid-js/web";
 
 // Exercise the real Home, favorite cards, and preview rosters without API or relay I/O.
 const origin = new Moq.Origin.Producer();
-const connection = new Moq.Connection({ enabled: false });
-Object.defineProperty(connection, "origin", { value: new Signal(origin) });
 const authenticated = new Signal(true);
 let favorites = [
 	{ room: "room", created_at: 0 },
 	{ room: "roommate", created_at: 0 },
 ];
-const badgeCounts: (number | undefined)[] = [];
+const badgeCounts: (number | "clear" | "flag")[] = [];
 Object.defineProperty(navigator, "setAppBadge", {
 	configurable: true,
 	value: async (count?: number) => {
-		badgeCounts.push(count);
+		badgeCounts.push(count ?? "flag");
 	},
 });
 const clearBadge = mock(async () => {
-	badgeCounts.push(undefined);
+	badgeCounts.push("clear");
 });
 Object.defineProperty(navigator, "clearAppBadge", {
 	configurable: true,
@@ -72,9 +70,10 @@ const originalConnection = Moq.Connection;
 mock.module("@moq/net", () => ({
 	...Moq,
 	Connection: class extends originalConnection {
+		override readonly origin = new Signal<Moq.Origin.Table | undefined>(origin);
+
 		constructor() {
 			super({ enabled: false });
-			Object.defineProperty(this, "origin", { value: connection.origin });
 		}
 	},
 }));
@@ -103,7 +102,6 @@ afterEach(async () => {
 	for (const catalog of catalogs) catalog.finish();
 	for (const route of routes) route.close();
 	origin.close();
-	connection.close();
 	await flush();
 	document.body.replaceChildren();
 });
@@ -125,7 +123,17 @@ test("favorites scope sibling rooms and balance the badge through joins, leaves,
 	expect(counts()).toEqual(["1", "1"]);
 	expect(badgeCounts.at(-1)).toBe(2);
 
+	badgeCounts.length = 0;
+	const secondRoomRoute = announce("room/carol/camera.hang");
+	await flush();
+	expect(counts()).toEqual(["2", "1"]);
+	expect(badgeCounts).toEqual([3]);
+
 	roomRoute.close();
+	await flush();
+	expect(counts()).toEqual(["1", "1"]);
+	expect(badgeCounts.at(-1)).toBe(2);
+	secondRoomRoute.close();
 	await flush();
 	expect(counts()).toEqual(["0", "1"]);
 	expect(badgeCounts.at(-1)).toBe(1);
@@ -135,14 +143,14 @@ test("favorites scope sibling rooms and balance the badge through joins, leaves,
 	remove.click();
 	await flush();
 	expect(cards()).toHaveLength(1);
-	expect(badgeCounts.at(-1)).toBeUndefined();
+	expect(badgeCounts.at(-1)).toBe("clear");
 	expect(clearBadge).toHaveBeenCalled();
 
-	announce("room/carol/camera.hang");
+	announce("room/dave/camera.hang");
 	await flush();
 	expect(badgeCounts.at(-1)).toBe(1);
 	dispose();
 	dispose = undefined;
 	await flush();
-	expect(badgeCounts.at(-1)).toBeUndefined();
+	expect(badgeCounts.at(-1)).toBe("clear");
 });
