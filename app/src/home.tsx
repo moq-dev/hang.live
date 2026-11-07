@@ -167,13 +167,16 @@ function FavoriteRoom(props: {
 }): JSX.Element {
 	const [removing, setRemoving] = createSignal(false);
 	const [memberCount, setMemberCount] = createSignal(0);
+	let contribution = 0;
 
 	createEffect(() => {
 		const count = memberCount();
-		props.badge.increment(count);
-		return () => {
-			props.badge.decrement(count);
-		};
+		if (count === contribution) return;
+		props.badge.increment(count - contribution);
+		contribution = count;
+	});
+	onCleanup(() => {
+		if (contribution) props.badge.decrement(contribution);
 	});
 
 	const handleRemove = async (e: MouseEvent) => {
@@ -216,7 +219,7 @@ function FavoriteRoom(props: {
 					</button>
 				</div>
 			</div>
-			<PreviewRoomCompact connection={props.connection} setMemberCount={setMemberCount} />
+			<PreviewRoomCompact connection={props.connection} path={props.room} setMemberCount={setMemberCount} />
 		</div>
 	);
 }

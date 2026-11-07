@@ -1,6 +1,6 @@
 import * as Moq from "@moq/net";
 import { createAccessor as solid } from "@moq/signals/solid";
-import { createEffect, For, onCleanup, Setter, Show } from "solid-js";
+import { createEffect, For, onCleanup, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Preview from "./room/preview";
 
