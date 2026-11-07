@@ -13,4 +13,3 @@ verified presence and volume bugs. Each child is independently shippable.
 ## Required
 
 - [Recover media toggles](/quest/m0/media-toggles.md) - audio and video resume without reloading
-- [Correct favorite presence](/quest/m0/favorite-presence.md) - each room and the app badge show current participants
