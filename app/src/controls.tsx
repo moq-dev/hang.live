@@ -22,6 +22,7 @@ import type { HangLocalSource } from "./room/local";
 import { Local } from "./room/local";
 import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
+import * as Speaker from "./speaker";
 import * as Tauri from "./tauri";
 import { isMobile } from "./util/mobile";
 
@@ -860,16 +861,6 @@ function Volume(): JSX.Element {
 	const volume = solid(Settings.audio.volume);
 	const opacity = Opacity(() => showSlider());
 
-	const setVolume = (v: number) => {
-		if (v === 0) {
-			Settings.audio.enabled.set(false);
-			Settings.audio.volume.set(1.0);
-		} else {
-			Settings.audio.enabled.set(true);
-			Settings.audio.volume.set(v);
-		}
-	};
-
 	return (
 		<Tooltip content={enabled() ? "Disable audio" : "Enable audio"} position="top">
 			<fieldset
@@ -894,11 +885,11 @@ function Volume(): JSX.Element {
 				<Show when={opacity() > 0}>
 					<input
 						type="range"
-						min="0"
-						step="0.01"
-						max="2"
+						min={Speaker.VOLUME_RANGE.min}
+						step={Speaker.VOLUME_RANGE.step}
+						max={Speaker.VOLUME_RANGE.max}
 						value={enabled() ? volume() : 0}
-						onInput={(e) => setVolume(Number(e.currentTarget.value))}
+						onInput={(e) => Settings.audio.setVolume(Number(e.currentTarget.value))}
 						class="cursor-pointer backdrop-blur-sm bg-transparent rounded py-1 px-2 outline-none"
 						aria-label="Output Volume"
 						style={{

@@ -6,6 +6,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
 import { Tab } from "./components/meme-selector";
 import { Sound } from "./room/sound";
+import * as Speaker from "./speaker";
 
 const ttsSchema = z.enum(["none", "low", "high"]);
 type TTS = z.infer<typeof ttsSchema>;
@@ -25,13 +26,13 @@ function loadTTS() {
 }
 
 const guest = Api.guestSchema.safeParse(localStorage.getItem("settings.account.guest"));
+const effect = new Effect();
 
 export const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 
 	audio: {
-		enabled: new Signal(localStorage.getItem("settings.audio.enabled") !== "false"),
-		volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.audio.volume") ?? "1")),
+		...Speaker.load(localStorage, effect),
 		tts: new Signal<TTS>(loadTTS()),
 	},
 
@@ -101,23 +102,8 @@ export const Settings = {
 	},
 };
 
-const volume = Settings.audio.volume.peek();
-if (Number.isNaN(volume) || volume < 0 || volume > 1) {
-	Settings.audio.volume.set(1);
-}
-
-const effect = new Effect();
-
 effect.subscribe(Settings.draggable, (draggable) => {
 	localStorage.setItem("settings.draggable", draggable.toString());
-});
-
-effect.subscribe(Settings.audio.volume, (volume) => {
-	localStorage.setItem("settings.audio.volume", volume.toString());
-});
-
-effect.subscribe(Settings.audio.enabled, (enabled) => {
-	localStorage.setItem("settings.audio.enabled", enabled.toString());
 });
 
 effect.subscribe(Settings.microphone.gain, (gain) => {
