@@ -59,25 +59,27 @@ export default function Profile(props: { local: Local }): JSX.Element {
 
 			{/* Avatar/Video Preview */}
 
-			<div class="relative text-center">
-				<div class="h-64 rounded-3xl flex items-center justify-center">{canvas}</div>
-			</div>
+			<Show when={local.canvas.supported} fallback={<p>Camera preview needs WebGL2.</p>}>
+				<div class="relative text-center">
+					<div class="h-64 rounded-3xl flex items-center justify-center">{canvas}</div>
+				</div>
 
-			{/* Media Controls */}
-			<div class="flex gap-3 justify-center mb-6">
-				<Microphone local={props.local} />
-				<Camera local={props.local} />
-				<Show when={authenticated()}>
-					<Tooltip content="Edit your profile" position="top">
-						<a
-							href="/account"
-							class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
-						>
-							<span class="icon-[mdi--account-edit]" />
-						</a>
-					</Tooltip>
-				</Show>
-			</div>
+				{/* Media Controls */}
+				<div class="flex gap-3 justify-center mb-6">
+					<Microphone local={props.local} />
+					<Camera local={props.local} />
+					<Show when={authenticated()}>
+						<Tooltip content="Edit your profile" position="top">
+							<a
+								href="/account"
+								class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
+							>
+								<span class="icon-[mdi--account-edit]" />
+							</a>
+						</Tooltip>
+					</Show>
+				</div>
+			</Show>
 
 			<Show when={!authenticated()}>
 				<div class="flex gap-3">
@@ -117,25 +119,27 @@ export default function Profile(props: { local: Local }): JSX.Element {
  */
 class LocalPreview {
 	canvas: Canvas;
-	sound: Sound;
-	space: Space;
+	sound?: Sound;
+	space?: Space;
 
 	signals = new Effect();
 
 	constructor(element: HTMLCanvasElement, camera: HangLocalSource) {
 		// Create a minimal canvas without the background effects
 		this.canvas = new Canvas(element);
+		if (!this.canvas.supported) return;
 
 		// Create a minimal sound context (muted for preview)
 		this.sound = new Sound();
 
-		this.space = new Space(this.canvas, this.sound, {
+		const space = new Space(this.canvas, this.sound, {
 			// Not elegant, but disable some of the functionality for this profile preview.
 			profile: true,
 		});
+		this.space = space;
 
-		const broadcast = this.space.add("local", camera);
-		this.signals.cleanup(() => this.space.remove("local"));
+		const broadcast = space.add("local", camera);
+		this.signals.cleanup(() => space.remove("local"));
 
 		this.signals.run((effect: Effect) => {
 			const position = effect.get(broadcast.position);
@@ -155,8 +159,8 @@ class LocalPreview {
 
 	close() {
 		this.signals.close();
-		this.space.close();
+		this.space?.close();
 		this.canvas.close();
-		this.sound.close();
+		this.sound?.close();
 	}
 }

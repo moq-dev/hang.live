@@ -21,6 +21,8 @@ import { Sound } from "./room/sound";
 import Settings from "./settings";
 
 export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
+	if (!props.canvas.supported) return <WebGLUnsupported />;
+
 	const connection = new Moq.Connection.Reload({ enabled: true });
 	onCleanup(() => connection.close());
 
@@ -61,9 +63,7 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 	return (
 		<Show when={publish()} fallback={<Preview room={props.room} local={local} connection={connection} />}>
-			<Show when={props.canvas.supported} fallback={<WebGLUnsupported />}>
-				<App connection={connection} canvas={props.canvas} room={props.room} sound={sound} local={local} />
-			</Show>
+			<App connection={connection} canvas={props.canvas} room={props.room} sound={sound} local={local} />
 		</Show>
 	);
 }
@@ -71,12 +71,9 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 function WebGLUnsupported(): JSX.Element {
 	return (
 		<WebLayout>
-			<h1 class="text-2xl font-bold mb-4">WebGL is required</h1>
-			<p class="mb-4">
-				This room needs WebGL to render video, but your browser has it disabled. Some browsers and privacy
-				extensions block WebGL by default to prevent fingerprinting.
-			</p>
-			<p>Please enable WebGL (for this site) and reload the page.</p>
+			<h1 class="text-2xl font-bold mb-4">WebGL2 is required</h1>
+			<p class="mb-4">This room needs WebGL2 to render video, but it is unavailable in your browser.</p>
+			<p>Use a browser with WebGL2 enabled and reload the page.</p>
 		</WebLayout>
 	);
 }

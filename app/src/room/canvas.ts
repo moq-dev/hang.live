@@ -11,9 +11,7 @@ export class Canvas {
 	#camera?: Camera;
 	#backgroundRenderer?: BackgroundRenderer;
 
-	// True when a WebGL2 context was successfully created.
-	// Some browsers (or privacy configurations) disable WebGL entirely, in which
-	// case we degrade gracefully instead of crashing the whole app.
+	/** Whether this canvas can render with WebGL2. */
 	readonly supported: boolean;
 
 	// Use a callback to render after the background.
@@ -49,17 +47,14 @@ export class Canvas {
 		this.visible = new Signal(false);
 		this.viewport = new Signal(Vector.create(0, 0));
 
-		// Initialize WebGL2 context. This can fail when WebGL is disabled by the
-		// browser or a privacy extension; in that case we keep the app running
-		// without the GL-rendered background instead of throwing.
-		try {
-			this.#glContext = new GLContext(this.#canvas, this.viewport);
-			this.#camera = new Camera();
-			this.#backgroundRenderer = new BackgroundRenderer(this.#glContext);
-		} catch (err) {
-			console.warn("WebGL2 unavailable, disabling canvas rendering", err);
-		}
-		this.supported = this.#glContext !== undefined;
+		const glContext = GLContext.create(this.#canvas, this.viewport);
+		this.#glContext = glContext;
+		this.supported = glContext !== undefined;
+		if (!glContext) return;
+
+		const camera = new Camera();
+		this.#camera = camera;
+		this.#backgroundRenderer = new BackgroundRenderer(glContext);
 
 		const resize = (entries: ResizeObserverEntry[]) => {
 			for (const entry of entries) {
@@ -83,14 +78,14 @@ export class Canvas {
 				this.#canvas.height = newHeight;
 
 				// Update WebGL viewport
-				this.#glContext?.resize(newWidth, newHeight);
+				glContext.resize(newWidth, newHeight);
 
 				// The internal logic ignores devicePixelRatio because we automatically scale when rendering.
 				const viewport = Vector.create(newWidth / dpr, newHeight / dpr);
 				this.viewport.set(viewport);
 
 				// Update camera projection
-				this.#camera?.updateOrtho(viewport);
+				camera.updateOrtho(viewport);
 
 				// Render immediately to avoid black flicker during resize
 				if (this.visible.peek()) {
@@ -123,10 +118,8 @@ export class Canvas {
 			resizeObserver.disconnect();
 		});
 
-		// Only render the canvas when it's visible (and WebGL is available).
+		// Only render the canvas when it's visible.
 		this.#signals.run((effect) => {
-			if (!this.#glContext) return;
-
 			const visible = effect.get(this.visible);
 			if (!visible) return;
 
