@@ -8,17 +8,6 @@ import { Canvas } from "./room/canvas";
 import { FakeRoom } from "./room/fake";
 
 export function About(): JSX.Element {
-	const canvas = <canvas class="border-3 border-link-hue rounded-lg w-full h-full" id="demo" />;
-
-	const room = new FakeRoom(new Canvas(canvas as HTMLCanvasElement));
-	onCleanup(() => room.close());
-
-	const audioEnabled = solid(room.sound.enabled);
-	const enableAudio = () => {
-		room.sound.enabled.set(true);
-		room.sound.tts.enabled.set(true);
-	};
-
 	const services = ["Meet", "Zoom", "Teams", "Discord", "Skype", "WebEx", "FaceTime", "WhatsApp"];
 	const [currentService, setCurrentService] = createSignal(0);
 
@@ -29,6 +18,68 @@ export function About(): JSX.Element {
 
 		onCleanup(() => clearInterval(interval));
 	});
+
+	return (
+		<Layout>
+			<div class="flex flex-wrap gap-4 w-full prose-invert lg:prose-lg justify-center">
+				<div class="basis-md grow">
+					<p>
+						I built <a href="/">hang.live</a> because the internet forgot how to hang out. We forgot how to
+						be <b>weird</b>.
+					</p>
+					<p>
+						So here's a fun (and free) place to hang out with friends. Spend your free time with{" "}
+						<i>real people</i>, not doomscrolling feeds of AI slop. Unless you're into that.
+					</p>
+				</div>
+				<div class="grow basis-sm">
+					<div class="rounded-2xl border border-gray-800 p-6">
+						<div class="flex items-center justify-between mb-4">
+							<div class="flex items-center gap-2">
+								<span class="icon-[mdi--play] text-green-500" />
+								<span class="text-xl font-semibold underline decoration-green-500/80 underline-offset-2">
+									Start a hang
+								</span>
+							</div>
+						</div>
+
+						<CreateHang />
+					</div>
+				</div>
+
+				<div class="sm:m-8 m-4 h-128 w-full relative">
+					<Demo />
+				</div>
+
+				<p>
+					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
+					<a href="https://moq.dev">MoQ</a>. There's more to live than another {services[currentService()]}{" "}
+					clone. <i>Crazy</i>, I know.
+				</p>
+			</div>
+		</Layout>
+	);
+}
+
+function Demo(): JSX.Element {
+	const canvas = document.createElement("canvas");
+	canvas.className = "border-3 border-link-hue rounded-lg w-full h-full";
+	canvas.id = "demo";
+	const renderer = new Canvas(canvas);
+	onCleanup(() => renderer.close());
+	if (!renderer.supported) return <p>Interactive demo needs WebGL2.</p>;
+
+	const room = new FakeRoom(renderer);
+	onCleanup(() => {
+		room.close();
+		room.sound.close();
+	});
+
+	const audioEnabled = solid(room.sound.enabled);
+	const enableAudio = () => {
+		room.sound.enabled.set(true);
+		room.sound.tts.enabled.set(true);
+	};
 
 	const random = () => (Math.random() > 0.5 ? -0.5 : 0.5) * (Math.random() * Math.random());
 	const randomLocation = () => ({ x: random(), y: random() });
@@ -231,45 +282,10 @@ export function About(): JSX.Element {
 	});
 
 	return (
-		<Layout>
-			<div class="flex flex-wrap gap-4 w-full prose-invert lg:prose-lg justify-center">
-				<div class="basis-md grow">
-					<p>
-						I built <a href="/">hang.live</a> because the internet forgot how to hang out. We forgot how to
-						be <b>weird</b>.
-					</p>
-					<p>
-						So here's a fun (and free) place to hang out with friends. Spend your free time with{" "}
-						<i>real people</i>, not doomscrolling feeds of AI slop. Unless you're into that.
-					</p>
-				</div>
-				<div class="grow basis-sm">
-					<div class="rounded-2xl border border-gray-800 p-6">
-						<div class="flex items-center justify-between mb-4">
-							<div class="flex items-center gap-2">
-								<span class="icon-[mdi--play] text-green-500" />
-								<span class="text-xl font-semibold underline decoration-green-500/80 underline-offset-2">
-									Start a hang
-								</span>
-							</div>
-						</div>
-
-						<CreateHang />
-					</div>
-				</div>
-
-				<div class="sm:m-8 m-4 h-128 w-full relative">
-					<DemoHeader />
-					<AudioPrompt show={!audioEnabled()} onClick={enableAudio} />
-					{canvas}
-				</div>
-
-				<p>
-					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
-					<a href="https://moq.dev">MoQ</a>. There's more to live than another {services[currentService()]}{" "}
-					clone. <i>Crazy</i>, I know.
-				</p>
-			</div>
-		</Layout>
+		<>
+			<DemoHeader />
+			<AudioPrompt show={!audioEnabled()} onClick={enableAudio} />
+			{canvas}
+		</>
 	);
 }

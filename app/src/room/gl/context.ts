@@ -6,7 +6,8 @@ export class GLContext {
 	canvas: HTMLCanvasElement;
 	viewport: Signal<Vector>;
 
-	constructor(canvas: HTMLCanvasElement, viewport: Signal<Vector>) {
+	/** Create a context when the browser supports WebGL2. */
+	static create(canvas: HTMLCanvasElement, viewport: Signal<Vector>): GLContext | undefined {
 		const gl = canvas.getContext("webgl2", {
 			alpha: false,
 			antialias: true,
@@ -14,10 +15,11 @@ export class GLContext {
 			premultipliedAlpha: false,
 		});
 
-		if (!gl) {
-			throw new Error("WebGL2 not supported");
-		}
+		if (!gl) return;
+		return new GLContext(canvas, viewport, gl);
+	}
 
+	private constructor(canvas: HTMLCanvasElement, viewport: Signal<Vector>, gl: WebGL2RenderingContext) {
 		this.gl = gl;
 		this.canvas = canvas;
 		this.viewport = viewport;
