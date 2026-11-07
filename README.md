@@ -6,12 +6,12 @@ Try it at [hang.live](https://hang.live).
 
 ## Architecture
 
-Hang combines a closed-source application layer with an [open-source media streaming library](https://github.com/kixelated/moq):
+Hang combines a closed-source application layer with an [open-source media streaming library](https://github.com/moq-dev/moq):
 
 - **app** — Web frontend built with SolidJS, Vite, and Tailwind CSS v4
 - **api** — Backend running on Cloudflare Workers with Hono and Drizzle ORM
 - **native** — Desktop/mobile app using Tauri v2
-The frontend and backend share types via Hono RPC. Real-time media is streamed over WebTransport using the [MOQ protocol](https://github.com/moq-dev/moq), consumed as published npm packages (`@moq/*`).
+The frontend and backend share types via Hono RPC. Real-time media is streamed over WebTransport using the [MOQ protocol](https://github.com/moq-dev/moq), consumed as Bun workspaces from the pinned `moq/` submodule.
 
 ## Project Structure
 
@@ -37,7 +37,7 @@ dev/        Local relay server config
 Clone the repo:
 
 ```sh
-git clone https://github.com/moq-dev/hang.live.git
+git clone --recurse-submodules https://github.com/moq-dev/hang.live.git
 cd hang.live
 ```
 
@@ -45,26 +45,29 @@ cd hang.live
 
 ```sh
 direnv allow
+just install
 just dev
 ```
 
 **Without Nix:**
 
 ```sh
-bun install
+just install
 just dev
 ```
 
-`just dev` starts three services concurrently:
+`just dev` starts four services concurrently:
 
 - **api** — Cloudflare Workers dev server (via wrangler)
 - **app** — Vite dev server on port 1420
 - **relay** — MOQ relay server
+- **auth** — Local token verification service
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
+| `just install` | Install workspaces, decoder assets, and API declarations |
 | `just dev` | Run all dev servers |
 | `just check` | Run linting and type checks |
 | `just fix` | Auto-fix formatting and lint issues |
@@ -84,5 +87,10 @@ Dual-licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your 
 
 This migration pins MoQ as the `moq` submodule until the room package is released.
 Clone with `git clone --recurse-submodules`, or run `git submodule update --init`
-in an existing checkout, then `bun install --frozen-lockfile`.
+in an existing checkout, then `just install`.
 The app uses the submodule's MoQ workspaces, so CI and local builds use the same source.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks, and the Quest workflow.
+The [quest backlog](quest/README.md) tracks planned bugs and improvements.

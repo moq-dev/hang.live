@@ -12,12 +12,20 @@ mod infra
 default:
   just --list
 
+# Install workspaces and prepare decoder assets and API declarations.
+install:
+	bun install --frozen-lockfile
+	bun run --cwd moq/js/libav build
+	bun run --cwd api build
+
 # Run the CI checks
 check:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	bun install --frozen-lockfile
+	quest check
 	bun run check
+	bun run --cwd api test
 	bun run --cwd app test
 	just native check
 
@@ -36,7 +44,7 @@ upgrade:
 
 # Build the packages
 build:
-	bun install --frozen-lockfile
+	just install
 	bun run build
 
 prod: build

@@ -43,7 +43,8 @@
 		"solid-js": "^1.9.9",
 		"tailwindcss": "^4.1.12",
 		"tauri-plugin-web-transport": "^0.1.0",
-		"zod": "^4.1.3"
+		"zod": "^4.1.3",
+		"@moq/clock": "workspace:*"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.3",
@@ -64,7 +65,8 @@
 		"vite-plugin-static-copy": "^4.0.0",
 		"vite-plugin-wrangler": "^0.1.1",
 		"wrangler": "^4.33.0",
-		"@types/bun": "^1.4.0"
+		"@types/bun": "^1.4.0",
+		"rolldown": "^1.2.15"
 	},
-	"packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
+	"packageManager": "bun@1.4.2"
 }

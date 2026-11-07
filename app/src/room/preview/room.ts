@@ -3,7 +3,7 @@ import { Room as MoqRoom, type Remote } from "@moq/room";
 import type { Getter } from "@moq/signals";
 
 export interface RoomProps {
-	connection: Moq.Connection.Reload;
+	connection: Moq.Connection;
 	path?: Moq.Path.Valid;
 	enabled?: boolean;
 }

@@ -1,3 +1,4 @@
+import { Milli, Nano } from "@moq/clock";
 import { Catalog } from "@moq/hang";
 import { Effect, Signal } from "@moq/signals";
 import { Canvas } from "./canvas";
@@ -75,7 +76,7 @@ export class FakeBroadcast {
 			const message = effect.get(this.chat.message.latest);
 			if (!message) return;
 
-			effect.timer(() => this.chat.message.latest.set(undefined), 10000);
+			effect.timer(() => this.chat.message.latest.set(undefined), Nano.fromMilli(Milli(10000)));
 		});
 
 		// A helper to automatically unset the typing indicator when the message is sent.

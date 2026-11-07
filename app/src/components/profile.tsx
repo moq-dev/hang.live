@@ -1,3 +1,4 @@
+import { Milli, Nano } from "@moq/clock";
 import { Effect } from "@moq/signals";
 import { createAccessor as solid } from "@moq/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
@@ -142,14 +143,17 @@ class LocalPreview {
 			if (position.x === 0 && position.y === 0 && position.s === 1) return;
 
 			// Reset the position after 2 seconds.
-			effect.timer(() => {
-				broadcast.position.set({
-					x: 0,
-					y: 0,
-					z: 0,
-					s: 1,
-				});
-			}, 2000);
+			effect.timer(
+				() => {
+					broadcast.position.set({
+						x: 0,
+						y: 0,
+						z: 0,
+						s: 1,
+					});
+				},
+				Nano.fromMilli(Milli(2000)),
+			);
 		});
 	}
 

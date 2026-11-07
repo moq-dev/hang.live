@@ -6,7 +6,7 @@ import glsl from "vite-plugin-glsl";
 import solid from "vite-plugin-solid";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
-import { workletInline } from "../moq/js/common/vite-plugin-worklet.ts";
+import { worklet } from "../moq/js/common/vite-plugin-worklet.ts";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => {
@@ -31,7 +31,7 @@ export default defineConfig(() => {
 			},
 		},
 		optimizeDeps: {
-			exclude: ["@libav.js/variant-opus-af"],
+			exclude: ["@moq/libav"],
 		},
 
 		worker: {
@@ -43,7 +43,7 @@ export default defineConfig(() => {
 		},
 
 		plugins: [
-			workletInline(),
+			worklet(),
 			glsl({
 				minify: process.env.NODE_ENV === "production",
 			}),

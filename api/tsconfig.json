@@ -1,8 +1,12 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
+		"rootDir": "./src",
 		"outDir": "./dist",
-		"types": ["./worker-configuration.d.ts"]
+		"types": ["./worker-configuration.d.ts"],
+		"paths": {
+			"@moq/*": ["../moq/js/*/dist/index.d.ts"]
+		}
 	},
 	"include": ["src"],
 	"exclude": ["src/client"]

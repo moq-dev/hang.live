@@ -21,14 +21,14 @@ import { Sound } from "./room/sound";
 import Settings from "./settings";
 
 export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
-	const connection = new Moq.Connection.Reload({ enabled: true });
+	const connection = new Moq.Connection({ enabled: true });
 	onCleanup(() => connection.close());
 
 	const sound = new Sound({ enabled: Settings.audio.enabled });
 	onCleanup(() => sound.close());
 
 	// Create the local broadcasts (camera and screen)
-	const local = new Local({ connection: connection.established });
+	const local = new Local({ connection });
 	onCleanup(() => local.close());
 
 	// Leave the room when the component is unmounted for whatever reason
@@ -67,7 +67,7 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 }
 
 function App(props: {
-	connection: Moq.Connection.Reload;
+	connection: Moq.Connection;
 	canvas: Canvas;
 	sound: Sound;
 	room: string;
@@ -102,7 +102,7 @@ function App(props: {
 	);
 }
 
-function Preview(props: { room: string; local: Local; connection: Moq.Connection.Reload }): JSX.Element {
+function Preview(props: { room: string; local: Local; connection: Moq.Connection }): JSX.Element {
 	const status = createSelector(solid(props.connection.status));
 	const authenticated = solid(Api.client.authenticated);
 
