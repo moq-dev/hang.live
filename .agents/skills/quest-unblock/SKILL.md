@@ -4,4 +4,4 @@ description: Walk the maintainer through every quest and draft PR waiting on the
 ---
 
 Run `quest skill unblock` and follow its output.
-If `quest` is not on `PATH`, enter the pinned development shell with `nix develop` first.
+If `quest` is not on `PATH`, run `nix develop --command quest skill unblock` instead; prefix later Quest commands with `nix develop --command` too.

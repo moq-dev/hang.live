@@ -4,4 +4,4 @@ description: Scope and create quests through an interactive interview. Use when 
 ---
 
 Run `quest skill plan` and follow its output.
-If `quest` is not on `PATH`, enter the pinned development shell with `nix develop` first.
+If `quest` is not on `PATH`, run `nix develop --command quest skill plan` instead; prefix later Quest commands with `nix develop --command` too.

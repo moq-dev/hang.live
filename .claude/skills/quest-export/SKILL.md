@@ -4,4 +4,4 @@ description: Turn active quests into GitHub issues before leaving Quest. Use whe
 ---
 
 Run `quest skill export` and follow its output.
-If `quest` is not on `PATH`, enter the pinned development shell with `nix develop` first.
+If `quest` is not on `PATH`, run `nix develop --command quest skill export` instead; prefix later Quest commands with `nix develop --command` too.

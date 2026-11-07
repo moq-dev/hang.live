@@ -6,7 +6,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"${CLAUDE_PROJECT_DIR}/moq/.claude/hooks/direnv.sh\""
+						"command": "if [ -n \"${CLAUDE_PROJECT_DIR:-}\" ]; then \"${CLAUDE_PROJECT_DIR}/.claude/hooks/direnv.sh\"; fi"
 					}
 				]
 			}

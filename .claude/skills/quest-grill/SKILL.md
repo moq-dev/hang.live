@@ -4,4 +4,4 @@ description: Settle open decisions through an interactive interview with the use
 ---
 
 Run `quest skill grill` and follow its output.
-If `quest` is not on `PATH`, enter the pinned development shell with `nix develop` first.
+If `quest` is not on `PATH`, run `nix develop --command quest skill grill` instead; prefix later Quest commands with `nix develop --command` too.
