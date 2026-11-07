@@ -13,11 +13,6 @@ interview: reliability bugs join m0, with the reported capture-toggle hang first
 These plans describe remaining work after the source upgrade; the upgrade alone
 does not prove that the reported hang is fixed.
 
-Existing work to assess before starting overlapping changes:
-[moq-dev/hang.live#26](https://github.com/moq-dev/hang.live/pull/26) handles missing
-WebGL2, and [moq-dev/hang.live#24](https://github.com/moq-dev/hang.live/pull/24)
-addresses production Vite environment loading. Reuse those changes where applicable.
-
 ## Required
 
 - [Room reliability](/quest/m0/README.md) - capture recovery, accurate presence, and persistent audio settings
