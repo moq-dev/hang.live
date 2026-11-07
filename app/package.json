@@ -11,7 +11,8 @@
 		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",
 		"tauri": "tauri",
-		"test": "bun test src/room/metadata.test.ts"
+		"test": "bun test src/room/metadata.test.ts",
+		"test:media": "bun run deps && tsc --project test/tsconfig.json && bun test ./test/media.browser.ts"
 	},
 	"license": "MIT",
 	"dependencies": {
@@ -67,7 +68,8 @@
 		"vite-plugin-wrangler": "^0.1.1",
 		"wrangler": "^4.33.0",
 		"@types/bun": "^1.4.0",
-		"rolldown": "^1.2.15"
+		"rolldown": "^1.2.15",
+		"playwright": "1.64.1"
 	},
 	"packageManager": "bun@1.4.2"
 }

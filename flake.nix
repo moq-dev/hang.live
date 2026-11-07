@@ -10,7 +10,7 @@
   };
 
   inputs = {
-    moq.url = "github:moq-dev/moq/1feb24e3ca98e687b7111ae6c2533ae19dac33a5";
+    moq.url = "github:moq-dev/moq/18dbfe0f1a9c92566012976f2eb2573fb795258b";
     nixpkgs.follows = "moq/nixpkgs";
     flake-utils.follows = "moq/flake-utils";
     rust-overlay.follows = "moq/rust-overlay";
@@ -37,6 +37,7 @@
       in
       {
         devShells.default = pkgs.mkShell {
+          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
           nativeBuildInputs = with pkgs; [
             cargo-sort
             cargo-shear
