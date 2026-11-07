@@ -1,11 +1,27 @@
 import * as Test from "bun:test";
 import * as Path from "node:path";
 import * as Process from "node:process";
+import * as Util from "node:util";
 import * as Playwright from "playwright";
 import * as Vite from "vite";
 
 type Kind = "camera" | "microphone";
 const app = Path.resolve(import.meta.dir, "..");
+
+function relayAddress(log: string): string | undefined {
+	return /listening addr=(127\.0\.0\.1:\d+) kind="http"/.exec(Util.stripVTControlCharacters(log))?.[1];
+}
+
+Test.test("relay readiness accepts terminal styling in CI logs", () => {
+	const record = 'INFO moq_relay::web: listening addr=127.0.0.1:60669 kind="http"';
+	Test.expect(relayAddress(record)).toBe("127.0.0.1:60669");
+	const colored = record
+		.replace("addr=", "\u001b[3maddr\u001b[0m\u001b[2m=\u001b[0m")
+		.replace("kind=", "\u001b[3mkind\u001b[0m\u001b[2m=\u001b[0m");
+	Test.expect(relayAddress(colored)).toBe("127.0.0.1:60669");
+	Test.expect(relayAddress('listening addr=127.0.0.1:444 kind="quic"')).toBeUndefined();
+});
+
 Test.test(
 	"input controls recover capture and remote decoded media",
 	async () => {
@@ -44,7 +60,7 @@ Test.test(
 					const decoder = new TextDecoder();
 					for await (const chunk of stderr) {
 						relayLog += decoder.decode(chunk, { stream: true });
-						const address = /listening addr=(127\.0\.0\.1:\d+) kind="http"/.exec(relayLog)?.[1];
+						const address = relayAddress(relayLog);
 						if (address) ready.resolve(`ws://${address}`);
 					}
 					ready.reject(new Error(`Relay exited before listening: ${relayLog}`));

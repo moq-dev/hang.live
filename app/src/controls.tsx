@@ -14,6 +14,7 @@ import {
 	Switch,
 } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import * as Capture from "./capture";
 import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
@@ -289,6 +290,16 @@ function CaptureStatus(props: {
 }
 
 export function Microphone(props: { local: Local }): JSX.Element {
+	const retry = new Capture.Retry({
+		enabled: props.local.core.microphoneEnabled,
+		error: props.local.microphone.out.error,
+		settings: [
+			Settings.microphone.device,
+			props.local.microphone.device.preferred,
+			props.local.microphone.constraints,
+		],
+	});
+	onCleanup(() => retry.close());
 	const toggle = () => {
 		props.local.core.microphoneEnabled.update((prev: boolean) => !prev);
 	};
@@ -384,7 +395,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 				pending={state() === "pending"}
 				unavailable={state() === "unavailable"}
 				error={enabled() ? error() : undefined}
-				retry={() => props.local.microphone.retry()}
+				retry={() => retry.start()}
 			/>
 			<Tooltip content={enabled() ? "Disable microphone" : "Enable microphone"} position="top">
 				<button
@@ -532,6 +543,12 @@ export function Microphone(props: { local: Local }): JSX.Element {
 }
 
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
+	const retry = new Capture.Retry({
+		enabled: props.local.core.cameraEnabled,
+		error: props.local.webcam.out.error,
+		settings: [Settings.camera.device, props.local.webcam.device.preferred, props.local.webcam.constraints],
+	});
+	onCleanup(() => retry.close());
 	const toggle = () => {
 		props.local.core.cameraEnabled.update((prev: boolean) => !prev);
 	};
@@ -624,7 +641,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 				pending={state() === "pending" && !noCamera()}
 				unavailable={state() === "unavailable"}
 				error={enabled() ? error() : undefined}
-				retry={() => props.local.webcam.retry()}
+				retry={() => retry.start()}
 			/>
 			<Tooltip
 				content={noCamera() ? "No camera found" : enabled() ? "Disable camera" : "Enable camera"}
