@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { Effect } from "@moq/signals";
+import * as Signals from "@moq/signals";
 import * as Speaker from "./speaker";
 
 class Storage {
@@ -14,10 +14,10 @@ class Storage {
 	}
 }
 
-const effects: Effect[] = [];
+const effects: Signals.Effect[] = [];
 
 function load(storage: Storage) {
-	const effect = new Effect();
+	const effect = new Signals.Effect();
 	effects.push(effect);
 	return Speaker.load(storage, effect);
 }
