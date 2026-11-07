@@ -15,5 +15,5 @@
 		"resolveJsonModule": true,
 		"types": ["vite/client", "vite-plugin-glsl/ext", "bun"]
 	},
-	"include": ["src", "../moq/js/common/worklet.d.ts"]
+	"include": ["src", "test/setup.ts", "../moq/js/common/worklet.d.ts"]
 }
