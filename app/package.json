@@ -11,7 +11,7 @@
 		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",
 		"tauri": "tauri",
-		"test": "bun test --isolate --conditions=browser src"
+		"test": "bun test --isolate --conditions=browser --preload ./test/setup.ts src"
 	},
 	"license": "MIT",
 	"dependencies": {
