@@ -1,4 +1,3 @@
-import * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import { Broadcast, BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
@@ -7,7 +6,6 @@ import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
 import type { Sound } from "./sound";
-import { WatchBroadcast } from "./watch";
 
 export type SpaceProps = {
 	profile?: boolean;
@@ -68,7 +66,7 @@ export class Space {
 		this.#signals.event(canvas.element, "touchend", this.#onTouchEnd.bind(this), { passive: false });
 		this.#signals.event(canvas.element, "touchcancel", this.#onTouchCancel.bind(this), { passive: false });
 
-		this.#signals.effect(this.#runScale.bind(this));
+		this.#signals.run(this.#runScale.bind(this));
 
 		// Register tick and render methods separately
 		this.canvas.onRender = this.#render.bind(this);
@@ -77,7 +75,7 @@ export class Space {
 		});
 
 		// Run tick separately from render at 60fps
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			const interval = setInterval(() => this.#tickAll(), 1000 / 60);
 			effect.cleanup(() => clearInterval(interval));
 		});
@@ -516,7 +514,7 @@ export class Space {
 		broadcast.visible.set(true);
 
 		// Resort the broadcasts when the z-index changes.
-		broadcast.signals.effect((effect) => {
+		broadcast.signals.run((effect) => {
 			// Get our z-index so we resort when it changes.
 			const z = effect.get(broadcast.position).z;
 			if (z > this.#maxZ) {
@@ -533,8 +531,8 @@ export class Space {
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
-		broadcast.signals.effect((effect) => {
-			if (broadcast.source instanceof Publish.Broadcast) {
+		broadcast.signals.run((effect) => {
+			if (broadcast.source.role === "publish") {
 				if (!effect.get(broadcast.source.enabled)) return;
 				if (!effect.get(broadcast.source.video.source) && !effect.get(broadcast.source.audio.source)) return;
 
@@ -545,7 +543,7 @@ export class Space {
 			}
 		});
 
-		broadcast.signals.effect((effect) => {
+		broadcast.signals.run((effect) => {
 			const message = effect.get(broadcast.source.chat.message.latest);
 			if (!message) return;
 
@@ -555,7 +553,7 @@ export class Space {
 			}));
 		});
 
-		broadcast.signals.effect((effect) => {
+		broadcast.signals.run((effect) => {
 			if (!effect.get(broadcast.visible)) return;
 
 			const name = effect.get(broadcast.source.user.name);
@@ -566,7 +564,7 @@ export class Space {
 			this.sound.tts.joined(name);
 		});
 
-		broadcast.signals.effect((effect) => {
+		broadcast.signals.run((effect) => {
 			if (effect.get(broadcast.visible)) return;
 
 			const name = effect.get(broadcast.source.user.name);
@@ -580,11 +578,9 @@ export class Space {
 		return broadcast;
 	}
 
-	async remove(path: string): Promise<BroadcastSource> {
+	async remove(path: string): Promise<BroadcastSource | undefined> {
 		const broadcast = this.lookup.get(path);
-		if (!broadcast) {
-			throw new Error(`broadcast not found: ${path}`);
-		}
+		if (!broadcast) return undefined;
 
 		broadcast.setOnline(false);
 
@@ -748,18 +744,18 @@ export class Space {
 	#publishPosition(broadcast: Broadcast) {
 		const position = broadcast.position.peek();
 
-		if (broadcast.source instanceof Publish.Broadcast) {
+		if (broadcast.source.role === "publish") {
 			broadcast.source.location.window.position.update((old) => ({ ...old, ...position }));
 			return;
 		}
 
-		if (broadcast.source instanceof WatchBroadcast) {
+		if (broadcast.source.role === "watch") {
 			const handle = broadcast.source.location.window.handle.peek();
 			if (!handle) return;
 
 			// TODO optimize this by storing local handles separately.
 			for (const broadcast of this.ordered.peek()) {
-				if (broadcast.source instanceof Publish.Broadcast && broadcast.source.location.peers.enabled.peek()) {
+				if (broadcast.source.role === "publish" && broadcast.source.location.peers.enabled.peek()) {
 					broadcast.source.location.peers.positions.set({ [handle]: position });
 					return;
 				}

@@ -69,7 +69,7 @@ just dev
 | `just check` | Run linting and type checks |
 | `just fix` | Auto-fix formatting and lint issues |
 | `just build` | Build all packages |
-| `just deploy <env>` | Deploy API and app to Cloudflare |
+| `just deploy` | Deploy the live API and app to Cloudflare |
 | `just native` | Run the native desktop app |
 
 ## MOQ (Media over QUIC)
@@ -79,3 +79,10 @@ Hang uses [moq](https://github.com/moq-dev/moq) — an open-source library for r
 ## License
 
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.
+
+## MoQ source dependency
+
+This migration pins MoQ as the `moq` submodule until the room package is released.
+Clone with `git clone --recurse-submodules`, or run `git submodule update --init`
+in an existing checkout, then `bun install --frozen-lockfile`.
+The app uses the submodule's MoQ workspaces, so CI and local builds use the same source.

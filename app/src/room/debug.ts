@@ -1,11 +1,9 @@
-import * as Publish from "@moq/publish";
 import { Effect } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Bounds, Vector } from "./geometry";
-import { WatchBroadcast } from "./watch";
 
 export class Debug {
 	canvas: Canvas;
@@ -17,7 +15,7 @@ export class Debug {
 		this.broadcast = broadcast;
 		this.canvas = canvas;
 
-		this.signals.effect(this.#render.bind(this));
+		this.signals.run(this.#render.bind(this));
 	}
 
 	#render(effect: Effect) {
@@ -51,7 +49,7 @@ export class Debug {
 		};
 
 		// Update video info boxes for each rendition
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const catalog = effect.get(this.broadcast.source.video.catalog);
 
 			if (!catalog) return;
@@ -68,18 +66,14 @@ export class Debug {
 				});
 
 				// Highlight active rendition
-				if (this.broadcast.source instanceof WatchBroadcast) {
+				if (this.broadcast.source.role === "watch") {
 					const active = effect.get(this.broadcast.source.video.active);
 					if (active === name) {
 						box.className += " ring-2 ring-green-500";
 					}
-				} else if (this.broadcast.source instanceof Publish.Broadcast) {
-					if (name === Publish.Video.Root.TRACK_HD && effect.get(this.broadcast.source.video.hd.active)) {
-						box.className += " ring-2 ring-green-500";
-					} else if (
-						name === Publish.Video.Root.TRACK_SD &&
-						effect.get(this.broadcast.source.video.sd.active)
-					) {
+				} else if (this.broadcast.source.role === "publish") {
+					const active = effect.get(this.broadcast.source.video.active);
+					if (active === name) {
 						box.className += " ring-2 ring-green-500";
 					}
 				}
@@ -108,7 +102,7 @@ export class Debug {
 		});
 
 		// Update audio info boxes for each rendition
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const catalog = effect.get(this.broadcast.source.audio.catalog);
 			if (!catalog) return;
 
@@ -124,13 +118,9 @@ export class Debug {
 				});
 
 				// Highlight active rendition
-				if (this.broadcast.source instanceof WatchBroadcast) {
+				if (this.broadcast.source.role === "watch" || this.broadcast.source.role === "publish") {
 					const active = effect.get(this.broadcast.source.audio.active);
 					if (active === name) {
-						box.className += " ring-2 ring-green-500";
-					}
-				} else if (this.broadcast.source instanceof Publish.Broadcast) {
-					if (effect.get(this.broadcast.source.audio.active)) {
 						box.className += " ring-2 ring-green-500";
 					}
 				}
@@ -163,7 +153,7 @@ export class Debug {
 		});
 
 		// Update position when bounds, viewport, or zoom change
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const bounds = effect.get(this.broadcast.bounds);
 			const viewport = effect.get(this.broadcast.canvas.viewport);
 			updatePosition(bounds, viewport);
@@ -182,7 +172,7 @@ export class Debug {
 		);
 
 		// Update z-index based on broadcast position
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const z = effect.get(this.broadcast.position).z;
 			root.style.zIndex = `${100 + z}`;
 		});

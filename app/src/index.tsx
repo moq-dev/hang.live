@@ -9,7 +9,7 @@ if (Tauri.DESKTOP) {
 	import("./tauri/update");
 }
 
-import solid from "@moq/signals/solid";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { Route, Router, useLocation } from "@solidjs/router";
 import { onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";

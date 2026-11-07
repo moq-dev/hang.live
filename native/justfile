@@ -2,6 +2,9 @@
 
 set fallback
 
+default:
+	just native dev
+
 # Run the CI checks
 check:
 	#!/usr/bin/env bash

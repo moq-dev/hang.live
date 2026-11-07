@@ -18,6 +18,6 @@ check:
 fix:
 	bun wrangler types
 
-deploy env="staging": build
-	bun wrangler d1 migrations apply DB --env "{{env}}" --remote
-	bun wrangler deploy --env "{{env}}"
+deploy: build
+	bun wrangler d1 migrations apply DB --env live --remote
+	bun wrangler deploy --env live

@@ -1,4 +1,4 @@
-import solid from "@moq/signals/solid";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createSignal, type JSX, onCleanup } from "solid-js";
 import AudioPrompt from "./components/audio-prompt";
 import CreateHang from "./components/create";

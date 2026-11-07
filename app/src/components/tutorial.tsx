@@ -1,4 +1,4 @@
-import solid from "@moq/signals/solid";
+import { createAccessor as solid } from "@moq/signals/solid";
 import { onCleanup, onMount, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import Settings from "../settings";

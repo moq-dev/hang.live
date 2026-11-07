@@ -17,7 +17,7 @@ export class Name {
 		this.broadcast = broadcast;
 		this.canvas = canvas;
 
-		this.signals.effect(this.#render.bind(this));
+		this.signals.run(this.#render.bind(this));
 	}
 
 	setHovering(hovering: boolean) {
@@ -76,13 +76,13 @@ export class Name {
 		};
 
 		// Update name text
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const name = effect.get(this.broadcast.source.user.name);
 			root.textContent = name || "";
 		});
 
 		// Update position when bounds, viewport, or zoom change
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const bounds = effect.get(this.broadcast.bounds);
 			const viewport = effect.get(this.broadcast.canvas.viewport);
 			updatePosition(bounds, viewport);
@@ -101,13 +101,13 @@ export class Name {
 		);
 
 		// Update z-index based on broadcast position
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const z = effect.get(this.broadcast.position).z;
 			root.style.zIndex = `${100 + z}`;
 		});
 
 		// Control opacity based on hovering or profile mode
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const hovering = effect.get(this.#hovering);
 			const profile = effect.get(this.#profile);
 			root.style.opacity = hovering || profile ? "1" : "0";

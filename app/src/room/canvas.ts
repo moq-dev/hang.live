@@ -124,7 +124,7 @@ export class Canvas {
 		});
 
 		// Only render the canvas when it's visible (and WebGL is available).
-		this.#signals.effect((effect) => {
+		this.#signals.run((effect) => {
 			if (!this.#glContext) return;
 
 			const visible = effect.get(this.visible);

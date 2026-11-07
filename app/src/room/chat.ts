@@ -20,7 +20,7 @@ export class Chat {
 		this.broadcast = broadcast;
 		this.canvas = canvas;
 
-		this.signals.effect(this.#render.bind(this));
+		this.signals.run(this.#render.bind(this));
 	}
 
 	#render(effect: Effect) {
@@ -69,7 +69,7 @@ export class Chat {
 
 		// Save the previous message so we can fade-out.
 		const message = new Signal<Node | undefined>(undefined);
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const current = effect.get(this.broadcast.message)?.cloneNode(true);
 			if (current) {
 				message.set(current);
@@ -91,7 +91,7 @@ export class Chat {
 			}
 		});
 
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			// We're not using DOM.render here so we can immediately adjust the left/top position when inserted
 			const msg = effect.get(message);
 			if (!msg) return;
@@ -102,7 +102,7 @@ export class Chat {
 			updatePosition(this.broadcast.bounds.peek(), this.broadcast.canvas.viewport.peek());
 		});
 
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const message = effect.get(this.broadcast.message); // NOT source.chat.message.latest to ignore /slash commands
 			const typing = effect.get(this.broadcast.source.chat.typing.active);
 			if (!message && !typing) {
@@ -112,13 +112,13 @@ export class Chat {
 			}
 		});
 
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const z = effect.get(this.broadcast.position).z;
 			root.style.zIndex = `${100 + z}`;
 		});
 
 		// Move the chat around to the correct position while there's a message or typing.
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const bounds = effect.get(this.broadcast.bounds);
 			const viewport = effect.get(this.broadcast.canvas.viewport);
 			updatePosition(bounds, viewport);
@@ -136,7 +136,7 @@ export class Chat {
 			{ passive: true },
 		);
 
-		effect.effect((effect) => {
+		effect.run((effect) => {
 			const typing = effect.get(this.broadcast.source.chat.typing.active);
 			DOM.setClass(effect, icon, typing ? "icon-[mdi--chat-typing]" : "icon-[mdi--chat]");
 		});

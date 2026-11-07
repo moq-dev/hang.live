@@ -33,7 +33,7 @@ export class Client {
 		const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 		this.routes = hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
 
-		this.signals.effect((effect: Effect) => {
+		this.signals.run((effect: Effect) => {
 			// TODO async verify the token is valid
 			const token = effect.get(Settings.oauth.token);
 			this.#authenticated.set(!!token);
@@ -43,7 +43,7 @@ export class Client {
 			this.routes = hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
 		});
 
-		this.signals.effect((effect) => {
+		this.signals.run((effect) => {
 			const authenticated = effect.get(this.#authenticated);
 			if (!authenticated) return;
 

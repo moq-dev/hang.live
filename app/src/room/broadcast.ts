@@ -1,4 +1,3 @@
-import * as Publish from "@moq/publish";
 import { Effect, Signal } from "@moq/signals";
 import { Audio } from "./audio";
 import { Canvas } from "./canvas";
@@ -7,13 +6,14 @@ import { Debug } from "./debug";
 import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
 import { MeshBuffer } from "./gl/mesh";
+import type { HangLocalSource } from "./local";
 import * as Meme from "./meme";
 import { Name } from "./name";
 import { Sound } from "./sound";
 import { Video } from "./video";
 import { WatchBroadcast } from "./watch";
 
-export type BroadcastSource = WatchBroadcast | Publish.Broadcast | FakeBroadcast;
+export type BroadcastSource = WatchBroadcast | HangLocalSource | FakeBroadcast;
 
 export type ChatMessage = {
 	audio?: HTMLAudioElement;
@@ -134,9 +134,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize.peek()));
 
-		this.signals.effect(this.#runLocation.bind(this));
-		this.signals.effect(this.#runChat.bind(this));
-		this.signals.effect(this.#runTarget.bind(this));
+		this.signals.run(this.#runLocation.bind(this));
+		this.signals.run(this.#runChat.bind(this));
+		this.signals.run(this.#runTarget.bind(this));
 	}
 
 	// Load the broadcaster's position from the network.
