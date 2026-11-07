@@ -1,11 +1,13 @@
 import * as Signals from "@moq/signals";
 
+/** The speaker slider and stored gain share this range. */
 export const VOLUME_RANGE = { min: 0, max: 2, step: 0.01 };
 
 function validVolume(value: number): boolean {
 	return Number.isFinite(value) && value >= VOLUME_RANGE.min && value <= VOLUME_RANGE.max;
 }
 
+/** Load speaker gain and mute, persisting changes until the effect closes. */
 export function load(
 	storage: Pick<Storage, "getItem" | "setItem">,
 	effect: Signals.Effect,
@@ -14,7 +16,7 @@ export function load(
 	let initial = raw?.trim() ? Number(raw) : 1;
 	if (!validVolume(initial)) initial = 1;
 
-	// A legacy zero gain is muted, with unity gain available when unmuted.
+	// Zero represents mute; keep an audible gain for the next unmute.
 	const enabled = new Signals.Signal(
 		storage.getItem("settings.audio.enabled") !== "false" && initial !== VOLUME_RANGE.min,
 	);
