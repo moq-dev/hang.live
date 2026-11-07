@@ -6,8 +6,9 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite --open",
-		"build": "bunx --bun vite build",
-		"check": "tsc --noEmit && biome check",
+		"build": "bun run deps && bunx --bun vite build",
+		"check": "bun run --cwd ../api build && tsc --noEmit && biome check",
+		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",
 		"tauri": "tauri",
 		"test": "bun test src/room/metadata.test.ts"

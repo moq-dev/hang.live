@@ -15,9 +15,10 @@
 		"dev": "wrangler dev",
 		"check": "bun run build && tsc --project tsconfig.test.json && biome check",
 		"fix": "biome check --fix",
-		"build": "bun run types && tsc --noEmit false --emitDeclarationOnly",
+		"build": "bun run types && tsc --noEmit false --emitDeclarationOnly --incremental --tsBuildInfoFile dist/api.tsbuildinfo",
+		"watch": "tsc --noEmit false --emitDeclarationOnly --incremental --tsBuildInfoFile dist/api.tsbuildinfo --watch",
 		"test": "bun test test/room.test.ts",
-		"types": "for package in clock pattern auth; do bun run --cwd ../moq/js/$package tsc --project tsconfig.build.json --emitDeclarationOnly || exit $?; done"
+		"types": "for package in clock pattern auth; do bun run --cwd ../moq/js/$package tsc --project tsconfig.build.json --emitDeclarationOnly --incremental --tsBuildInfoFile dist/hang.tsbuildinfo || exit $?; done"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.7.2",

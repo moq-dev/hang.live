@@ -5,9 +5,10 @@ set fallback
 default:
 	just install
 	@just dev auth-token
-	bun concurrently --kill-others --names api,app,relay,auth --prefix-colors auto \
+	bun concurrently --kill-others --names api,app,types,relay,auth --prefix-colors auto \
 		"just api dev" \
 		"just app dev" \
+		"bun run --cwd ../api watch" \
 		"just dev root" \
 		"just dev auth"
 

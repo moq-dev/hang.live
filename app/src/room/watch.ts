@@ -82,6 +82,7 @@ export class WatchBroadcast {
 			this.#audioSource.close();
 		});
 
+		// Use MoQ's decoder-measured adaptive delay for audio and video together.
 		this.#sync = new Watch.Sync();
 		this.signals.cleanup(() => this.#sync.close());
 

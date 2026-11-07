@@ -56,10 +56,11 @@ just install
 just dev
 ```
 
-`just dev` starts four services concurrently:
+`just dev` starts five processes concurrently:
 
 - **api** — Cloudflare Workers dev server (via wrangler)
 - **app** — Vite dev server on port 1420
+- **types** — Watch API declarations for frontend RPC types
 - **relay** — MOQ relay server
 - **auth** — Local token verification service
 

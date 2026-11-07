@@ -1,4 +1,4 @@
-import { Milli, Nano } from "@moq/clock";
+import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import { Room as MoqRoom } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
@@ -103,7 +103,7 @@ export class Room {
 			() => {
 				this.space.sound.tts.enabled.set(true);
 			},
-			Nano.fromMilli(Milli(1000)),
+			Clock.Nano.fromMilli(Clock.Milli(1000)),
 		);
 
 		this.#signals.run((effect) => {
@@ -111,7 +111,7 @@ export class Room {
 			if (!cameraBroadcast) return;
 			const locator = new Locator(cameraBroadcast);
 			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Nano.fromMilli(Milli(8000)));
+			effect.timer(() => locator.close(), Clock.Nano.fromMilli(Clock.Milli(8000)));
 		});
 
 		this.#signals.run((effect) => {
@@ -119,7 +119,7 @@ export class Room {
 			if (!shareBroadcast) return;
 			const locator = new Locator(shareBroadcast);
 			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Nano.fromMilli(Milli(8000)));
+			effect.timer(() => locator.close(), Clock.Nano.fromMilli(Clock.Milli(8000)));
 		});
 
 		this.#signals.run((effect) => {

@@ -59,7 +59,7 @@ export const router = rpc
 
 		// Generate a token that allows subscribing to all favorited rooms
 		const token = await ctx.room.signPreview(favorites.map((f) => f.room));
-		const url = new URL(token, ctx.env.RELAY_URL);
+		const url = token ? new URL(token, ctx.env.RELAY_URL) : undefined;
 
 		return c.json({ favorites, url });
 	})

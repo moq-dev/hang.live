@@ -1,4 +1,4 @@
-import { Milli, Nano } from "@moq/clock";
+import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
@@ -21,7 +21,7 @@ export class Locator {
 			() => {
 				this.#visible.set(false);
 			},
-			Nano.fromMilli(Milli(7000)),
+			Clock.Nano.fromMilli(Clock.Milli(7000)),
 		);
 	}
 

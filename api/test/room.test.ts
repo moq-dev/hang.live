@@ -1,14 +1,16 @@
 import { expect, test } from "bun:test";
 import { authorize, Key } from "@moq/auth";
 import { decodeJwt } from "jose";
-import { Context, guestSchema } from "../src/room";
+import { guestSchema } from "../src/client";
+import { Context } from "../src/room";
 
 async function context() {
 	const key = await Key.generate("HS256");
 	return { key, room: new Context({ RELAY_SECRET: JSON.stringify(key), RELAY_PREFIX: "hang" }) };
 }
 
-function jwt(path: string): string {
+function jwt(path: string | undefined): string {
+	if (!path) throw new Error("Missing relay path");
 	const token = new URL(path, "https://relay.example/").searchParams.get("jwt");
 	if (!token) throw new Error("Missing room token");
 	return token;
@@ -34,6 +36,11 @@ test("previews subscribe only to the requested rooms and cannot publish", async 
 	expect(permissions.subscribe.matches("work/guest/bob/camera")).toBe(true);
 	expect(permissions.subscribe.matches("other/guest/alice/camera")).toBe(false);
 	expect(permissions.publish.matches("friends/guest/alice/camera")).toBe(false);
+});
+
+test("no favorites needs no preview grant or relay connection", async () => {
+	const { room } = await context();
+	expect(await room.signPreview([])).toBeUndefined();
 });
 
 test("guest identities cannot become wildcard grants", () => {

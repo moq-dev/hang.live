@@ -1,4 +1,4 @@
-import { Milli, Nano } from "@moq/clock";
+import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import * as Comlink from "comlink";
@@ -80,7 +80,7 @@ export class Chat {
 					(effect) => {
 						DOM.setClass(effect, root, "scale-110");
 					},
-					Nano.fromMilli(Milli(200)),
+					Clock.Nano.fromMilli(Clock.Milli(200)),
 				);
 
 				// Pulse for 2 seconds, a full loop by default.
@@ -88,7 +88,7 @@ export class Chat {
 					(effect) => {
 						DOM.setClass(effect, icon, "animate-pulse");
 					},
-					Nano.fromMilli(Milli(2000)),
+					Clock.Nano.fromMilli(Clock.Milli(2000)),
 				);
 			} else if (message.peek()) {
 				// Clear the message after a short delay.
@@ -96,7 +96,7 @@ export class Chat {
 					() => {
 						message.set(undefined);
 					},
-					Nano.fromMilli(Milli(200)),
+					Clock.Nano.fromMilli(Clock.Milli(200)),
 				);
 			}
 		});

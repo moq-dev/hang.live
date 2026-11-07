@@ -1,4 +1,4 @@
-import { Milli, Nano } from "@moq/clock";
+import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
 import { Local as RoomLocal } from "@moq/room";
@@ -60,14 +60,14 @@ export class Local {
 			);
 		});
 		this.#signals.run((effect) => {
-			this.core.audio.camera.volume.set(effect.get(Settings.microphone.gain));
+			this.core.audio.microphone.volume.set(effect.get(Settings.microphone.gain));
 		});
 
 		this.camera = new HangLocalSource({
 			broadcast: this.core.camera,
 			frame: this.#frame(this.core.cameraCapture),
 			display: this.core.cameraCapture.out.display,
-			audioRoot: this.core.audio.camera.root,
+			audioRoot: this.core.audio.microphone.root,
 			videoSource: this.core.webcam.out.source,
 			audioSource: this.core.microphone.out.source,
 			user: this.core.user,
@@ -109,7 +109,7 @@ export class Local {
 				() => {
 					this.camera.chat.message.latest.set("");
 				},
-				Nano.fromMilli(Milli(10000)),
+				Clock.Nano.fromMilli(Clock.Milli(10000)),
 			);
 		});
 

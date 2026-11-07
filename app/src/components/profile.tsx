@@ -1,4 +1,4 @@
-import { Milli, Nano } from "@moq/clock";
+import * as Clock from "@moq/clock";
 import { Effect } from "@moq/signals";
 import { createAccessor as solid } from "@moq/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
@@ -152,7 +152,7 @@ class LocalPreview {
 						s: 1,
 					});
 				},
-				Nano.fromMilli(Milli(2000)),
+				Clock.Nano.fromMilli(Clock.Milli(2000)),
 			);
 		});
 	}

@@ -23,7 +23,7 @@
 		"moq/js/libav"
 	],
 	"scripts": {
-		"build": "bun run --cwd api build && bun run --cwd app build",
+		"build": "bun run --cwd app build",
 		"dev": "just dev",
 		"check": "bun run --cwd api check && bun run --cwd app check",
 		"deploy": "just deploy"

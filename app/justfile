@@ -9,6 +9,7 @@ upgrade:
 
 # Build the packages
 build env="development":
+	bun run deps
 	bun vite build --mode "{{env}}"
 
 # Deploy the site to Cloudflare Workers

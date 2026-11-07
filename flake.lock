@@ -42,17 +42,17 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1794038581,
-        "narHash": "sha256-gF8z6+sEvcg6hfU15+6Qw6dARKZieQxc8TbO12+JmsA=",
+        "lastModified": 1794039699,
+        "narHash": "sha256-/Ea23xExFej6K0mlGx30/M3N82jh8RESLO1MtZlOLNg=",
         "owner": "moq-dev",
         "repo": "moq",
-        "rev": "c1aca88b65cf7f4a24f2af67759455ce3135b7e0",
+        "rev": "1feb24e3ca98e687b7111ae6c2533ae19dac33a5",
         "type": "github"
       },
       "original": {
         "owner": "moq-dev",
         "repo": "moq",
-        "rev": "c1aca88b65cf7f4a24f2af67759455ce3135b7e0",
+        "rev": "1feb24e3ca98e687b7111ae6c2533ae19dac33a5",
         "type": "github"
       }
     },

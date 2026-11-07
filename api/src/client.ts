@@ -44,6 +44,9 @@ export const isValidRoom = (name: string): boolean => {
 export const accountIdSchema = z.string().brand("AccountId");
 export type AccountId = z.infer<typeof accountIdSchema>;
 
+// One literal path segment beneath guest/, never a wildcard permission.
+export const guestSchema = z.string().regex(/^guest\/[^/*]+$/, "Invalid guest identity");
+
 export const AccountInfoSchema = z.object({
 	id: accountIdSchema,
 	name: z.string().check(z.minLength(4), z.maxLength(100)),

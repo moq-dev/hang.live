@@ -15,8 +15,7 @@ default:
 # Install workspaces and prepare decoder assets and API declarations.
 install:
 	bun install --frozen-lockfile
-	bun run --cwd moq/js/libav build
-	bun run --cwd api build
+	bun run --cwd app deps
 
 # Run the CI checks
 check:
@@ -44,7 +43,7 @@ upgrade:
 
 # Build the packages
 build:
-	just install
+	bun install --frozen-lockfile
 	bun run build
 
 prod: build
