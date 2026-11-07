@@ -15,7 +15,7 @@ export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
 
 	// Connection for live previews
-	const connection = new Moq.Connection.Reload({ enabled: true });
+	const connection = new Moq.Connection({ enabled: true });
 	onCleanup(() => connection.close());
 
 	// Track total member count across all favorites
@@ -35,7 +35,7 @@ export function Home(): JSX.Element {
 		if (!response.ok) throw new Error(`Failed to fetch favorites: ${response.statusText}`);
 
 		const data = await response.json();
-		connection.url.set(new URL(data.url));
+		connection.url.set(data.url ? new URL(data.url) : undefined);
 		return data.favorites;
 	});
 
@@ -162,7 +162,7 @@ function FavoriteRoom(props: {
 	room: string;
 	createdAt: number;
 	onRemove: (room: string) => void;
-	connection: Moq.Connection.Reload;
+	connection: Moq.Connection;
 	badge: Badge;
 }): JSX.Element {
 	const [removing, setRemoving] = createSignal(false);

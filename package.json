@@ -5,20 +5,26 @@
 	"workspaces": [
 		"app",
 		"api",
-		"moq/js/flate",
+		"moq/js/auth",
+		"moq/js/clock",
 		"moq/js/hang",
 		"moq/js/json",
 		"moq/js/loc",
 		"moq/js/msf",
 		"moq/js/net",
+		"moq/js/pattern",
 		"moq/js/publish",
+		"moq/js/qmux",
 		"moq/js/room",
 		"moq/js/signals",
-		"moq/js/watch"
+		"moq/js/ui",
+		"moq/js/video",
+		"moq/js/watch",
+		"moq/js/libav"
 	],
 	"scripts": {
-		"build": "bun run --cwd api build && bun run --cwd app build",
-		"dev": "concurrently --kill-others --names app,api --prefix-colors auto \"bun --filter @hang/live run dev\" \"bun --filter @hang/api-server run dev\"",
+		"build": "bun run --cwd app build",
+		"dev": "just dev",
 		"check": "bun run --cwd api check && bun run --cwd app check",
 		"deploy": "just deploy"
 	},
@@ -29,5 +35,5 @@
 		"wrangler": "^4.79.0",
 		"esbuild": "^0.28.2"
 	},
-	"packageManager": "bun@1.1.38"
+	"packageManager": "bun@1.4.2"
 }

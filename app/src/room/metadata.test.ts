@@ -21,13 +21,16 @@ test("location edits keep an existing subscription alive", async () => {
 			effect,
 		);
 		await flush();
-		const track = net.consume().track("hang/location.json").subscribe();
-		const consumer = new Json.Snapshot.Consumer<{ window: { position?: { x: number } } }>(track);
+		const broadcast = net.consume();
+		const consumer = new Json.Snapshot.Consumer<{ window: { position?: { x: number } } }>({
+			track: broadcast.track("hang/location.json"),
+		});
 		await consumer.next();
 		location.window.position.set({ x: 1 });
 		await flush();
-		expect((await consumer.next())?.window.position).toEqual({ x: 1 });
-		track.close();
+		expect((await consumer.next())?.value.window.position).toEqual({ x: 1 });
+		consumer.close();
+		broadcast.close();
 	} finally {
 		effect.close();
 		net.close();
@@ -39,7 +42,7 @@ test("removed chat catalog entries clear stale messages", async () => {
 	const catalog = new Signal<ExtendedCatalog | undefined>({ hang: { chat: { track: "hang/chat.json" } } });
 	const active = new Signal<Net.Broadcast.Consumer | undefined>(net.consume());
 	const publisher = new Json.Snapshot.Producer({ track: net.createTrack("hang/chat.json") });
-	publisher.update({ message: "hello", typing: true });
+	publisher.update({ value: { message: "hello", typing: true } });
 	const extras = consumeExtras({ out: { catalog, active } });
 	try {
 		await flush();

@@ -1,3 +1,4 @@
+import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import { Room as MoqRoom } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
@@ -10,14 +11,14 @@ import { Space } from "./space";
 import { WatchBroadcast } from "./watch";
 
 export interface RoomProps {
-	connection: Moq.Connection.Reload;
+	connection: Moq.Connection;
 	canvas: Canvas;
 	sound: Sound;
 	local: Local;
 }
 
 export class Room {
-	connection: Moq.Connection.Reload;
+	connection: Moq.Connection;
 	local: Local;
 	space: Space;
 
@@ -98,16 +99,19 @@ export class Room {
 			}
 		});
 
-		this.#signals.timer(() => {
-			this.space.sound.tts.enabled.set(true);
-		}, 1000);
+		this.#signals.timer(
+			() => {
+				this.space.sound.tts.enabled.set(true);
+			},
+			Clock.Nano.fromMilli(Clock.Milli(1000)),
+		);
 
 		this.#signals.run((effect) => {
 			const cameraBroadcast = effect.get(this.#cameraBroadcast);
 			if (!cameraBroadcast) return;
 			const locator = new Locator(cameraBroadcast);
 			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), 8000);
+			effect.timer(() => locator.close(), Clock.Nano.fromMilli(Clock.Milli(8000)));
 		});
 
 		this.#signals.run((effect) => {
@@ -115,7 +119,7 @@ export class Room {
 			if (!shareBroadcast) return;
 			const locator = new Locator(shareBroadcast);
 			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), 8000);
+			effect.timer(() => locator.close(), Clock.Nano.fromMilli(Clock.Milli(8000)));
 		});
 
 		this.#signals.run((effect) => {
@@ -135,7 +139,7 @@ export class Room {
 		if (this.space.lookup.has(path)) return;
 
 		const watch = new WatchBroadcast({
-			connection: this.connection.established,
+			connection: this.connection,
 			enabled: true,
 			name: path,
 			reload: false,

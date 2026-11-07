@@ -12,12 +12,19 @@ mod infra
 default:
   just --list
 
+# Install workspaces and prepare decoder assets and API declarations.
+install:
+	bun install --frozen-lockfile
+	bun run --cwd app deps
+
 # Run the CI checks
 check:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	bun install --frozen-lockfile
+	quest check
 	bun run check
+	bun run --cwd api test
 	bun run --cwd app test
 	just native check
 

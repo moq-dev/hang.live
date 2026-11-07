@@ -155,7 +155,7 @@ export class TTS {
 				await tts.setQuality(quality);
 
 				for (;;) {
-					const progress = await Promise.race([tts.progress(), effect.cancel]);
+					const progress = await effect.race(tts.progress());
 					if (progress === undefined) break;
 
 					this.progress.set(progress);

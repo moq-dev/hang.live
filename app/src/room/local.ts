@@ -1,3 +1,4 @@
+import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
 import { Local as RoomLocal } from "@moq/room";
@@ -6,7 +7,7 @@ import Settings from "../settings";
 import { type ChatFields, chatFields, type LocationFields, locationFields, serveExtras } from "./metadata";
 
 export interface LocalProps {
-	connection?: Signal<Moq.Connection.Established | undefined> | Moq.Connection.Established;
+	connection?: Moq.Connection;
 	identity?: Signal<Moq.Path.Valid> | Moq.Path.Valid;
 	name?: Signal<string | undefined> | string;
 	avatar?: Signal<string | undefined> | string;
@@ -35,8 +36,11 @@ export class Local {
 		this.name = Signal.from(props?.name ?? Settings.account.name);
 		this.avatar = Signal.from(props?.avatar ?? Settings.account.avatar);
 
+		const connection = props?.connection ?? new Moq.Connection({ enabled: false });
+		if (!props?.connection) this.#signals.cleanup(() => connection.close());
+
 		this.core = new RoomLocal({
-			connection: Signal.from(props?.connection),
+			connection,
 			identity: this.identity,
 			enabled: Local.join,
 			cameraEnabled: Settings.camera.enabled,
@@ -56,14 +60,14 @@ export class Local {
 			);
 		});
 		this.#signals.run((effect) => {
-			this.core.cameraAudio.volume.set(effect.get(Settings.microphone.gain));
+			this.core.audio.microphone.volume.set(effect.get(Settings.microphone.gain));
 		});
 
 		this.camera = new HangLocalSource({
 			broadcast: this.core.camera,
-			frame: this.core.cameraCapture.out.frame,
+			frame: this.#frame(this.core.cameraCapture),
 			display: this.core.cameraCapture.out.display,
-			audioRoot: this.core.cameraAudio.out.root,
+			audioRoot: this.core.audio.microphone.root,
 			videoSource: this.core.webcam.out.source,
 			audioSource: this.core.microphone.out.source,
 			user: this.core.user,
@@ -75,9 +79,9 @@ export class Local {
 		const shareName = new Signal<string | undefined>(undefined);
 		this.share = new HangLocalSource({
 			broadcast: this.core.screen,
-			frame: this.core.screenCapture.out.frame,
+			frame: this.#frame(this.core.screenCapture),
 			display: this.core.screenCapture.out.display,
-			audioRoot: this.core.screenAudio.out.root,
+			audioRoot: this.core.audio.screen.root,
 			videoSource: new Signal<unknown>(undefined),
 			audioSource: new Signal<unknown>(undefined),
 			user: {
@@ -101,9 +105,12 @@ export class Local {
 			const message = effect.get(this.camera.chat.message.latest);
 			this.core.chatting.set(!!message);
 			if (!message) return;
-			effect.timer(() => {
-				this.camera.chat.message.latest.set("");
-			}, 10000);
+			effect.timer(
+				() => {
+					this.camera.chat.message.latest.set("");
+				},
+				Clock.Nano.fromMilli(Clock.Milli(10000)),
+			);
 		});
 
 		this.#signals.run((effect) => {
@@ -111,6 +118,39 @@ export class Local {
 			if (!name) return;
 			shareName.set(`${name.endsWith("s") ? `${name}' Screen` : `${name}'s Screen`} (screen)`);
 		});
+	}
+
+	// Keep one owned frame for the spatial renderer, following MoQ's preview pump.
+	#frame(capture: Publish.Video.Capture): Getter<VideoFrame | undefined> {
+		const latest = new Signal<VideoFrame | undefined>(undefined);
+		this.#signals.run((effect) => {
+			const frames = effect.get(capture.out.frames);
+			if (!frames) return;
+
+			const reader = frames.subscribe(effect, 1).getReader();
+			effect.cleanup(() => reader.cancel().catch(() => {}));
+			effect.cleanup(() => {
+				latest.update((previous) => {
+					previous?.close();
+					return undefined;
+				});
+			});
+			effect.spawn(async () => {
+				for (;;) {
+					const { value: frame } = await reader.read();
+					if (!frame) break;
+					if (effect.abort.aborted) {
+						frame.close();
+						break;
+					}
+					latest.update((previous) => {
+						previous?.close();
+						return frame;
+					});
+				}
+			});
+		});
+		return latest;
 	}
 
 	get webcam() {

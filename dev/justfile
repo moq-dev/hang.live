@@ -4,30 +4,36 @@ set fallback
 
 default:
 	bun install
+	bun run --cwd ../app deps
 	@just dev auth-token
-	bun concurrently --kill-others --names api,app,relay --prefix-colors auto \
+	bun concurrently --kill-others --names api,app,types,relay,auth --prefix-colors auto \
 		"just api dev" \
 		"just app dev" \
-		"just dev root"
+		"bun run --cwd ../api watch" \
+		"just dev root" \
+		"just dev auth"
 
 # Run a localhost root relay server with authentication.
 root: auth-key
 	moq-relay root.toml
 
+# Verify local room tokens and allow anonymous anon/** development rooms.
+auth: auth-key
+	moq auth serve --listen 127.0.0.1:4440 --key root.jwk --public-publish 'anon/**' --public-subscribe 'anon/**'
+
 # Generate a random secret key for authentication.
 auth-key:
 	@if [ ! -f "root.jwk" ]; then \
 		rm -f *.jwt; \
-		moq-token-cli --key "root.jwk" generate; \
+		moq auth generate --out "root.jwk"; \
 	fi
 
 # Generate authentication tokens for local development.
 auth-token: auth-key
 	@if [ ! -f "root.jwt" ]; then \
-		moq-token-cli --key "root.jwk" sign \
+		moq auth sign --key "root.jwk" \
 			--root "" \
-			--subscribe "" \
-			--publish "" \
-			--cluster \
+			--subscribe '**' \
+			--publish '**' \
 			> root.jwt ; \
 	fi

@@ -6,7 +6,7 @@ import * as Watch from "@moq/watch";
 import { type ChatFields, consumeExtras, type LocationFields } from "./metadata";
 
 export interface WatchBroadcastProps {
-	connection?: Moq.Connection.Established | Signal<Moq.Connection.Established | undefined>;
+	connection: Moq.Connection;
 	enabled?: boolean | Signal<boolean>;
 	name?: Moq.Path.Valid | Signal<Moq.Path.Valid>;
 	reload?: boolean | Signal<boolean>;
@@ -59,12 +59,12 @@ export class WatchBroadcast {
 
 	readonly signals = new Effect();
 
-	constructor(props?: WatchBroadcastProps) {
+	constructor(props: WatchBroadcastProps) {
 		this.#broadcast = new Watch.Broadcast({
-			connection: props?.connection,
+			origin: props.connection.origin,
 			enabled: props?.enabled,
 			name: props?.name,
-			reload: props?.reload,
+			follow: props.reload,
 		});
 		this.signals.cleanup(() => this.#broadcast.close());
 
@@ -82,18 +82,18 @@ export class WatchBroadcast {
 			this.#audioSource.close();
 		});
 
-		this.#sync = new Watch.Sync({
-			latency: Moq.Time.Milli(100),
-			connection: props?.connection,
-			video: this.#videoSource.out.jitter,
-			audio: this.#audioSource.out.jitter,
-		});
+		// Use MoQ's decoder-measured adaptive delay for audio and video together.
+		this.#sync = new Watch.Sync();
 		this.signals.cleanup(() => this.#sync.close());
 
-		this.#videoDecoder = new Watch.Video.Decoder(this.#videoSource, this.#sync, {
+		this.#videoDecoder = new Watch.Video.Decoder({
+			source: this.#videoSource,
+			sync: this.#sync,
 			enabled: props?.video?.enabled,
 		});
-		this.#audioDecoder = new Watch.Audio.Decoder(this.#audioSource, this.#sync, {
+		this.#audioDecoder = new Watch.Audio.Decoder({
+			source: this.#audioSource,
+			sync: this.#sync,
 			enabled: props?.audio?.enabled,
 		});
 		this.signals.cleanup(() => {

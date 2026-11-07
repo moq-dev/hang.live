@@ -24,6 +24,8 @@ function loadTTS() {
 	return "low";
 }
 
+const guest = Api.guestSchema.safeParse(localStorage.getItem("settings.account.guest"));
+
 export const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 
@@ -49,10 +51,10 @@ export const Settings = {
 		device: new Signal(localStorage.getItem("settings.camera.device") ?? undefined),
 	},
 
-	// Cached account ID stuff; not validated.
+	// Cached account identity and profile.
 	account: {
 		// A random ID starting with "guest/" that is used to identify ourselves on reload.
-		guest: new Signal<string | undefined>(localStorage.getItem("settings.account.guest") ?? undefined),
+		guest: new Signal<string | undefined>(guest.success ? guest.data : undefined),
 		name: new Signal<string | undefined>(localStorage.getItem("settings.account.name") ?? Api.randomName()),
 		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? Api.randomAvatar()),
 	},

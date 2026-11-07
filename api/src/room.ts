@@ -1,38 +1,37 @@
-import * as Token from "@moq/token";
+import * as MoqAuth from "@moq/auth";
 import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
-import { isValidRoom, ROOM_NAME_ERROR } from "./client";
+import { guestSchema, isValidRoom, ROOM_NAME_ERROR } from "./client";
 import * as rpc from "./rpc";
 
 export const nameSchema = z.string().check(z.minLength(1), z.maxLength(100)).refine(isValidRoom, ROOM_NAME_ERROR);
 export type Name = z.infer<typeof nameSchema>;
 
-// TODO: Add proper type for Env.MOQ_JWK in worker-configuration.d.ts if needed
-
 export class Context {
-	#key: Token.Key;
-	#env: Env;
+	#key: MoqAuth.Key;
+	#env: Pick<Env, "RELAY_SECRET" | "RELAY_PREFIX">;
 
-	constructor(env: Env) {
-		this.#key = Token.load(env.RELAY_SECRET);
+	constructor(env: Pick<Env, "RELAY_SECRET" | "RELAY_PREFIX">) {
+		this.#key = MoqAuth.Key.parse(env.RELAY_SECRET);
 		this.#env = env;
 	}
 	// Returns the path/token to join the room
 	async sign(room: Name, identity: string): Promise<string> {
 		const root = `${this.#env.RELAY_PREFIX}/${room}`;
-		const put = identity.endsWith("/") ? identity : `${identity}/`;
-		const token = await Token.sign(this.#key, { root, get: "", put });
+		const publish = [MoqAuth.Pattern.subtree(identity).text];
+		const token = await MoqAuth.Key.sign(this.#key, { root, subscribe: ["**"], publish });
 		return `${root}/?jwt=${token}`;
 	}
 
 	// Returns a URL to preview a list of rooms
-	async signPreview(rooms: Name[]): Promise<string> {
+	async signPreview(rooms: Name[]): Promise<string | undefined> {
+		if (rooms.length === 0) return undefined;
 		const root = this.#env.RELAY_PREFIX;
-		const token = await Token.sign(this.#key, {
+		const token = await MoqAuth.Key.sign(this.#key, {
 			root,
-			get: rooms,
-			// no put permission
+			subscribe: rooms.map((room) => MoqAuth.Pattern.subtree(room).text),
+			// Preview tokens grant no publishing permission.
 		});
 		return `${root}/?jwt=${token}`;
 	}
@@ -47,7 +46,7 @@ export const router = rpc
 	.post(
 		"/:room/join",
 		rpc.withParam(z.object({ room: nameSchema })),
-		rpc.withJson(z.object({ guest: z.string().startsWith("guest/").optional() })),
+		rpc.withJson(z.object({ guest: guestSchema.optional() })),
 		Auth.optional,
 		async (c) => {
 			const ctx = c.var.ctx;

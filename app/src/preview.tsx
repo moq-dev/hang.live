@@ -5,7 +5,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import * as Preview from "./room/preview";
 
 export function PreviewRoomCompact(props: {
-	connection: Moq.Connection.Reload;
+	connection: Moq.Connection;
 	path?: string;
 	setMemberCount: Setter<number>;
 }): JSX.Element {
@@ -72,7 +72,7 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 	);
 }
 
-export function PreviewRoom(props: { connection: Moq.Connection.Reload; name?: string }): JSX.Element {
+export function PreviewRoom(props: { connection: Moq.Connection; name?: string }): JSX.Element {
 	const room = new Preview.Room({
 		connection: props.connection,
 		path: props.name ? Moq.Path.from(props.name) : undefined,

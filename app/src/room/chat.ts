@@ -1,3 +1,4 @@
+import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import * as Comlink from "comlink";
@@ -75,19 +76,28 @@ export class Chat {
 				message.set(current);
 
 				// Scale up right after a (new) message appears, letting CSS animate it.
-				effect.timeout((effect) => {
-					DOM.setClass(effect, root, "scale-110");
-				}, 200);
+				effect.timeout(
+					(effect) => {
+						DOM.setClass(effect, root, "scale-110");
+					},
+					Clock.Nano.fromMilli(Clock.Milli(200)),
+				);
 
 				// Pulse for 2 seconds, a full loop by default.
-				effect.timeout((effect) => {
-					DOM.setClass(effect, icon, "animate-pulse");
-				}, 2000);
+				effect.timeout(
+					(effect) => {
+						DOM.setClass(effect, icon, "animate-pulse");
+					},
+					Clock.Nano.fromMilli(Clock.Milli(2000)),
+				);
 			} else if (message.peek()) {
 				// Clear the message after a short delay.
-				effect.timeout(() => {
-					message.set(undefined);
-				}, 200);
+				effect.timeout(
+					() => {
+						message.set(undefined);
+					},
+					Clock.Nano.fromMilli(Clock.Milli(200)),
+				);
 			}
 		});
 

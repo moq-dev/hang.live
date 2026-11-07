@@ -1,3 +1,4 @@
+import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
@@ -16,9 +17,12 @@ export class Locator {
 		this.signals.run(this.#render.bind(this));
 
 		// Start fading out after 7 seconds
-		this.signals.timer(() => {
-			this.#visible.set(false);
-		}, 7000);
+		this.signals.timer(
+			() => {
+				this.#visible.set(false);
+			},
+			Clock.Nano.fromMilli(Clock.Milli(7000)),
+		);
 	}
 
 	#render(effect: Effect) {

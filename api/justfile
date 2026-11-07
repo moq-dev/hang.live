@@ -11,9 +11,7 @@ build:
 	bun run build
 
 check:
-	bun exec biome check
-	bun tsc --noEmit
-	#bun exec madge --circular --extensions ts,tsx src
+	bun run check
 
 fix:
 	bun wrangler types

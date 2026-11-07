@@ -8,7 +8,7 @@ import Settings from "../settings";
 import { isMobile } from "../util/mobile";
 import { Logo } from "./logo";
 
-export default function App(props: { children: JSX.Element; connection: Moq.Connection.Reload; room: string }) {
+export default function App(props: { children: JSX.Element; connection: Moq.Connection; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">
 			<Header connection={props.connection} room={props.room} />
@@ -17,7 +17,7 @@ export default function App(props: { children: JSX.Element; connection: Moq.Conn
 	);
 }
 
-function Header(props: { connection: Moq.Connection.Reload; room: string }) {
+function Header(props: { connection: Moq.Connection; room: string }) {
 	const mobile = isMobile();
 	const [showMobileNav, setShowMobileNav] = createSignal(false);
 	const activeStep = solid(Settings.tutorial.step);

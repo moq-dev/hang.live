@@ -154,14 +154,14 @@ function serveSnapshot<T>(
 		const net = effect.get(broadcast.net);
 		if (!net) return;
 
-		const track = net.createTrack(name, { latencyMax: 86_400_000, priority: HANG_PRIORITY });
+		const track = net.createTrack(name, { priority: HANG_PRIORITY, refresh: 8, compress: true });
 		effect.cleanup(() => track.close());
 
 		const producer = new Json.Snapshot.Producer<T>({ track });
 		effect.cleanup(() => producer.finish());
 
 		effect.run((effect) => {
-			producer.update(value(effect));
+			producer.update({ value: value(effect) });
 		});
 	});
 }
@@ -220,15 +220,13 @@ function subscribeJson<T>(
 	effect: Effect,
 	update: (value: T) => void,
 ): void {
-	const track = broadcast.track(name).subscribe({ priority: HANG_PRIORITY });
-	effect.cleanup(() => track.close());
-
-	const consumer = new Json.Snapshot.Consumer<T>(track);
+	const consumer = new Json.Snapshot.Consumer<T>({ track: broadcast.track(name), priority: HANG_PRIORITY });
+	effect.cleanup(() => consumer.close());
 	effect.spawn(async () => {
 		for (;;) {
-			const value = await Promise.race([effect.cancel, consumer.next()]);
+			const value = await effect.race(consumer.next());
 			if (value === undefined) break;
-			update(value);
+			update(value.value);
 		}
 	});
 }
