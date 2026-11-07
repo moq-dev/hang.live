@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { authorize, Key } from "@moq/auth";
+import * as MoqAuth from "@moq/auth";
 import { decodeJwt } from "jose";
 import { guestSchema } from "../src/client";
 import { Context } from "../src/room";
 
 async function context() {
-	const key = await Key.generate("HS256");
+	const key = await MoqAuth.Key.generate("HS256");
 	return { key, room: new Context({ RELAY_SECRET: JSON.stringify(key), RELAY_PREFIX: "hang" }) };
 }
 
@@ -19,11 +19,11 @@ function jwt(path: string | undefined): string {
 test("join grants publishing only beneath the participant identity", async () => {
 	const { key, room } = await context();
 	const token = jwt(await room.sign("friends", "guest/alice"));
-	const claims = await Key.verify(key, token);
+	const claims = await MoqAuth.Key.verify(key, token);
 	expect(claims.root).toBe("hang/friends");
-	expect(authorize(claims, "hang/friends").publish.matches("guest/alice/camera")).toBe(true);
-	expect(authorize(claims, "hang/friends").publish.matches("guest/bob/camera")).toBe(false);
-	expect(authorize(claims, "hang/friends").subscribe.matches("guest/bob/camera")).toBe(true);
+	expect(MoqAuth.authorize(claims, "hang/friends").publish.matches("guest/alice/camera")).toBe(true);
+	expect(MoqAuth.authorize(claims, "hang/friends").publish.matches("guest/bob/camera")).toBe(false);
+	expect(MoqAuth.authorize(claims, "hang/friends").subscribe.matches("guest/bob/camera")).toBe(true);
 	// Prefix-only grants must still work with the deployed relay's legacy JWT claims.
 	expect(decodeJwt(token)).toMatchObject({ root: "hang/friends", put: ["guest/alice"], get: [""] });
 });
@@ -31,7 +31,7 @@ test("join grants publishing only beneath the participant identity", async () =>
 test("previews subscribe only to the requested rooms and cannot publish", async () => {
 	const { key, room } = await context();
 	const token = jwt(await room.signPreview(["friends", "work"]));
-	const permissions = authorize(await Key.verify(key, token), "hang");
+	const permissions = MoqAuth.authorize(await MoqAuth.Key.verify(key, token), "hang");
 	expect(permissions.subscribe.matches("friends/guest/alice/camera")).toBe(true);
 	expect(permissions.subscribe.matches("work/guest/bob/camera")).toBe(true);
 	expect(permissions.subscribe.matches("other/guest/alice/camera")).toBe(false);

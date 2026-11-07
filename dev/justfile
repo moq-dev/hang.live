@@ -3,7 +3,8 @@
 set fallback
 
 default:
-	just install
+	bun install
+	bun run --cwd ../app deps
 	@just dev auth-token
 	bun concurrently --kill-others --names api,app,types,relay,auth --prefix-colors auto \
 		"just api dev" \
