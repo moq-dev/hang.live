@@ -63,23 +63,23 @@ export default function Profile(props: { local: Local }): JSX.Element {
 				<div class="relative text-center">
 					<div class="h-64 rounded-3xl flex items-center justify-center">{canvas}</div>
 				</div>
-
-				{/* Media Controls */}
-				<div class="flex gap-3 justify-center mb-6">
-					<Microphone local={props.local} />
-					<Camera local={props.local} />
-					<Show when={authenticated()}>
-						<Tooltip content="Edit your profile" position="top">
-							<a
-								href="/account"
-								class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
-							>
-								<span class="icon-[mdi--account-edit]" />
-							</a>
-						</Tooltip>
-					</Show>
-				</div>
 			</Show>
+
+			{/* Media Controls */}
+			<div class="flex gap-3 justify-center mb-6">
+				<Microphone local={props.local} />
+				<Camera local={props.local} />
+				<Show when={authenticated()}>
+					<Tooltip content="Edit your profile" position="top">
+						<a
+							href="/account"
+							class="text-gray-400 hover:text-white transition-colors flex center hover:bg-gray-700 p-2 rounded-md"
+						>
+							<span class="icon-[mdi--account-edit]" />
+						</a>
+					</Tooltip>
+				</Show>
+			</div>
 
 			<Show when={!authenticated()}>
 				<div class="flex gap-3">
