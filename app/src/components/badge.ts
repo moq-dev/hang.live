@@ -1,8 +1,10 @@
-let lock = false;
-
 import * as Tauri from "../tauri";
 
-async function set(count: number | undefined) {
+let lock = false;
+// A closed owner's pending writes must finish before the next owner's writes.
+let pending = Promise.resolve();
+
+async function set(count: number): Promise<void> {
 	if (Tauri.Api) {
 		const success = await Tauri.Api.window
 			.getCurrentWindow()
@@ -12,9 +14,8 @@ async function set(count: number | undefined) {
 		if (success) return;
 	}
 
-	if (navigator.setAppBadge) {
-		const success = await navigator
-			.setAppBadge(count || undefined)
+	if (count ? navigator.setAppBadge : navigator.clearAppBadge) {
+		const success = await (count ? navigator.setAppBadge(count) : navigator.clearAppBadge())
 			.then(() => true)
 			.catch(() => false);
 		if (success) return;
@@ -34,7 +35,7 @@ async function set(count: number | undefined) {
 export class Badge {
 	private current: number = 0;
 
-	#p?: Promise<void> = Promise.resolve();
+	#closed = false;
 
 	constructor() {
 		if (lock) throw new Error("Badge is already locked");
@@ -50,9 +51,9 @@ export class Badge {
 	 * @param count - The number to display on the badge, or 0 to clear
 	 */
 	set(count: number): void {
+		if (this.#closed) throw new Error("closed");
 		this.current = count;
-		if (!this.#p) throw new Error("closed");
-		this.#p = this.#p.then(() => set(count));
+		pending = pending.then(() => set(count));
 	}
 
 	/**
@@ -72,8 +73,9 @@ export class Badge {
 	}
 
 	close() {
-		this.current = 0;
-		this.#p = undefined;
+		if (this.#closed) return;
+		this.set(0);
+		this.#closed = true;
 		lock = false;
 	}
 }

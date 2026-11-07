@@ -11,7 +11,7 @@
 		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",
 		"tauri": "tauri",
-		"test": "bun test src/room/metadata.test.ts"
+		"test": "bun test --isolate --conditions=browser src"
 	},
 	"license": "MIT",
 	"dependencies": {
@@ -48,15 +48,22 @@
 		"@moq/clock": "workspace:*"
 	},
 	"devDependencies": {
+		"@babel/core": "7.29.7",
+		"@babel/preset-typescript": "^7.29.0",
 		"@biomejs/biome": "^2.4.3",
+		"@happy-dom/global-registrator": "21.0.4",
 		"@iconify-json/material-symbols": "^1.2.33",
 		"@iconify-json/mdi": "^1.2.3",
 		"@iconify/tailwind4": "^1.0.6",
 		"@tailwindcss/typography": "^0.5.16",
 		"@tauri-apps/cli": "^2.8.4",
+		"@types/babel__core": "7.20.5",
+		"@types/bun": "^1.4.0",
 		"@typescript/lib-dom": "npm:@types/web@^0.0.345",
+		"babel-preset-solid": "1.9.15",
 		"globals": "^17.4.0",
 		"madge": "^8.0.0",
+		"rolldown": "^1.2.15",
 		"ts-expect": "^1.3.0",
 		"tsx": "^4.20.5",
 		"typescript": "^6.0.0",
@@ -65,9 +72,7 @@
 		"vite-plugin-solid": "^2.11.8",
 		"vite-plugin-static-copy": "^4.0.0",
 		"vite-plugin-wrangler": "^0.1.1",
-		"wrangler": "^4.33.0",
-		"@types/bun": "^1.4.0",
-		"rolldown": "^1.2.15"
+		"wrangler": "^4.33.0"
 	},
 	"packageManager": "bun@1.4.2"
 }
