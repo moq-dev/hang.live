@@ -102,6 +102,30 @@ test("input controls recover capture and remote decoded media", async () => {
 			for (const kind of ["camera", "microphone"] as const) await off(kind);
 			await publisher.waitForFunction(() => window.mediaTest.state().liveTracks === 0);
 		}
+		for (const stage of ["support", "flush", "final flush"] as const) {
+			// Hold native codec promises while retaining real encoding, transport, and decoding.
+			console.info(`Recovering from a held native codec ${stage}`);
+			if (stage === "final flush") {
+				await control("camera").click();
+				await live("camera");
+				await decoded("camera");
+				await publisher.evaluate(() => window.mediaTest.codec("flush"));
+				await off("camera");
+			} else {
+				await publisher.evaluate((stage) => window.mediaTest.codec(stage), stage);
+				await control("camera").click();
+				await publisher.waitForFunction(() => window.mediaTest.state().held > 0);
+				await off("camera");
+			}
+			await publisher.waitForFunction(() => window.mediaTest.state().held > 0);
+			await publisher.evaluate(() => window.mediaTest.codec(undefined));
+			await control("camera").click();
+			await live("camera");
+			await decoded("camera");
+			expect(await publisher.evaluate(() => window.mediaTest.state().held)).toBeGreaterThan(0);
+			await publisher.evaluate(() => window.mediaTest.release());
+			await off("camera");
+		}
 		for (const kind of ["camera", "microphone"] as const) {
 			// New intent must win even when the old browser permission request never settles.
 			await publisher.evaluate((kind) => window.mediaTest.mode(kind, "hold"), kind);

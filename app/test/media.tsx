@@ -8,6 +8,7 @@ import { Local } from "../src/room/local";
 
 type Kind = "camera" | "microphone";
 type Mode = "live" | "hold" | "deny";
+type CodecStage = "support" | "flush";
 const params = new URLSearchParams(location.search);
 const connection = new Moq.Connection({ url: new URL(params.get("relay") ?? ""), share: false });
 
@@ -15,6 +16,21 @@ const native = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 const modes: Record<Kind, Mode> = { camera: "live", microphone: "live" };
 const tracks: MediaStreamTrack[] = [];
 const held: (() => void)[] = [];
+const hold = () => new Promise<void>((resolve) => held.push(resolve));
+let codec: CodecStage | undefined;
+const supported = VideoEncoder.isConfigSupported.bind(VideoEncoder);
+VideoEncoder.isConfigSupported = async (config) => {
+	const pending = codec === "support";
+	const result = await supported(config);
+	if (pending) await hold();
+	return result;
+};
+const flush = VideoEncoder.prototype.flush;
+VideoEncoder.prototype.flush = async function (this: VideoEncoder) {
+	const pending = codec === "flush";
+	await flush.call(this);
+	if (pending) await hold();
+};
 navigator.mediaDevices.getUserMedia = async (constraints) => {
 	const kind = constraints?.video ? "camera" : "microphone";
 	const mode = modes[kind];
@@ -22,7 +38,7 @@ navigator.mediaDevices.getUserMedia = async (constraints) => {
 	if (mode === "deny") throw new DOMException("Capture permission denied", "NotAllowedError");
 	const stream = await native(constraints);
 	tracks.push(...stream.getTracks());
-	if (mode === "hold") await new Promise<void>((resolve) => held.push(resolve));
+	if (mode === "hold") await hold();
 	return stream;
 };
 
@@ -30,7 +46,12 @@ const player = params.has("viewer")
 	? new Watch.Player({
 			origin: connection.origin,
 			name: Moq.Path.from("alice/camera.hang"),
-			video: { canvas: document.querySelector("canvas") ?? undefined, visible: "always", backend: "2d" },
+			video: {
+				canvas: document.querySelector("canvas") ?? undefined,
+				visible: "always",
+				backend: "2d",
+				target: { name: "video/hd" },
+			},
 		})
 	: undefined;
 const local = player ? undefined : new Local({ connection, identity: Moq.Path.from("alice") });
@@ -73,6 +94,9 @@ function track(kind: Kind): MediaStreamTrack | undefined {
 	return source && !Publish.Audio.isSampleSource(source) ? Publish.Audio.normalizeSource(source).track : undefined;
 }
 const harness = {
+	codec(stage: CodecStage | undefined) {
+		codec = stage;
+	},
 	mode(kind: Kind, mode: Mode) {
 		modes[kind] = mode;
 	},
