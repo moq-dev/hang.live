@@ -12,5 +12,4 @@ verified presence and volume bugs. Each child is independently shippable.
 
 ## Required
 
-- [Recover media toggles](/quest/m0/media-toggles.md) - audio and video resume without reloading
 - [Preserve speaker gain](/quest/m0/speaker-volume.md) - supported volume survives reload and mute cycles

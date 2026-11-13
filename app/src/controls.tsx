@@ -6,6 +6,7 @@ import {
 	createMemo,
 	createSelector,
 	createSignal,
+	createUniqueId,
 	Match,
 	onCleanup,
 	onMount,
@@ -13,6 +14,7 @@ import {
 	Switch,
 } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
+import * as Capture from "./capture";
 import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
@@ -250,11 +252,60 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 	);
 }
 
+function CaptureStatus(props: {
+	kind: "Camera" | "Microphone";
+	pending: boolean;
+	unavailable: boolean;
+	error: Error | undefined;
+	retry: () => void;
+}): JSX.Element {
+	const status = createUniqueId();
+	return (
+		<>
+			<span id={status} role="status" class="sr-only" aria-atomic="true">
+				{props.error
+					? `${props.kind} could not start. ${props.error.message}`
+					: props.unavailable
+						? `No ${props.kind.toLowerCase()} found.`
+						: props.pending
+							? `Starting ${props.kind.toLowerCase()}…`
+							: ""}
+			</span>
+			<Show when={props.error}>
+				{(error) => (
+					<button
+						type="button"
+						onClick={props.retry}
+						title={`${props.kind} could not start. ${error().message}`}
+						class="self-center text-xs text-red-300 underline cursor-pointer"
+						aria-label={`Retry ${props.kind.toLowerCase()}`}
+						aria-describedby={status}
+					>
+						Retry
+					</button>
+				)}
+			</Show>
+		</>
+	);
+}
+
 export function Microphone(props: { local: Local }): JSX.Element {
+	const retry = new Capture.Retry({
+		enabled: props.local.core.microphoneEnabled,
+		error: props.local.microphone.out.error,
+		settings: [
+			Settings.microphone.device,
+			props.local.microphone.device.preferred,
+			props.local.microphone.constraints,
+		],
+	});
+	onCleanup(() => retry.close());
 	const toggle = () => {
 		props.local.core.microphoneEnabled.update((prev: boolean) => !prev);
 	};
 	const root = solid(props.local.camera.audio.root);
+	const source = solid(props.local.microphone.out.source);
+	const error = solid(props.local.microphone.out.error);
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -265,6 +316,17 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	const device = props.local.microphone.device;
 	const enabled = solid(props.local.core.microphoneEnabled);
 	const available = solid(device.out.available);
+	const state = createMemo(() =>
+		!enabled()
+			? "off"
+			: error()
+				? "failed"
+				: source()
+					? "live"
+					: available()?.length === 0
+						? "unavailable"
+						: "pending",
+	);
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
@@ -315,8 +377,8 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (root() && deviceId === Settings.microphone.device.peek()) {
-			// Same device selected and mic is enabled - disable it
+		if (enabled() && deviceId === Settings.microphone.device.peek()) {
+			// Selecting the requested device again disables even a pending capture.
 			props.local.core.microphoneEnabled.set(false);
 			Settings.microphone.device.set(undefined);
 		} else {
@@ -328,13 +390,22 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	return (
 		<div class="flex items-start pointer-events-auto relative">
-			<Tooltip content={root() ? "Disable microphone" : "Enable microphone"} position="top">
+			<CaptureStatus
+				kind="Microphone"
+				pending={state() === "pending"}
+				unavailable={state() === "unavailable"}
+				error={enabled() ? error() : undefined}
+				retry={() => retry.start()}
+			/>
+			<Tooltip content={enabled() ? "Disable microphone" : "Enable microphone"} position="top">
 				<button
 					type="button"
 					onClick={toggle}
 					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
 					role="switch"
-					aria-checked={!!root()}
+					aria-checked={enabled()}
+					aria-busy={state() === "pending"}
+					data-state={state()}
 					aria-label="Toggle microphone"
 					classList={{
 						"border-white": !!root(),
@@ -343,10 +414,20 @@ export function Microphone(props: { local: Local }): JSX.Element {
 					}}
 				>
 					<Visualize audio={props.local.camera.audio} />
-					<span class={root() ? "icon-[mdi--microphone]" : "icon-[mdi--microphone-off]"} />
+					<span
+						class={
+							state() === "pending"
+								? "icon-[mdi--loading] animate-spin"
+								: state() === "failed"
+									? "icon-[mdi--microphone-message]"
+									: source()
+										? "icon-[mdi--microphone]"
+										: "icon-[mdi--microphone-off]"
+						}
+					/>
 				</button>
 			</Tooltip>
-			<Show when={root()}>
+			<Show when={enabled()}>
 				<Tooltip
 					content={deviceChangeMessage() || "Microphone settings"}
 					position="top"
@@ -462,11 +543,18 @@ export function Microphone(props: { local: Local }): JSX.Element {
 }
 
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
+	const retry = new Capture.Retry({
+		enabled: props.local.core.cameraEnabled,
+		error: props.local.webcam.out.error,
+		settings: [Settings.camera.device, props.local.webcam.device.preferred, props.local.webcam.constraints],
+	});
+	onCleanup(() => retry.close());
 	const toggle = () => {
 		props.local.core.cameraEnabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.webcam.out.source);
 	const enabled = solid(props.local.core.cameraEnabled);
+	const error = solid(props.local.webcam.out.error);
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -476,6 +564,9 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const device = props.local.webcam.device;
 	const available = solid(device.out.available);
 	const noCamera = createMemo(() => enabled() && available()?.length === 0 && !media());
+	const state = createMemo(() =>
+		!enabled() ? "off" : error() ? "failed" : noCamera() ? "unavailable" : media() ? "live" : "pending",
+	);
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
@@ -527,8 +618,8 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
-		if (media() && deviceId === Settings.camera.device.peek()) {
-			// Same device selected and camera is enabled - disable it
+		if (enabled() && deviceId === Settings.camera.device.peek()) {
+			// Selecting the requested device again disables even a pending capture.
 			props.local.core.cameraEnabled.set(false);
 			Settings.camera.device.set(undefined);
 		} else {
@@ -540,16 +631,20 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	return (
 		<div class="flex items-start pointer-events-auto relative">
-			<Show when={noCamera()}>
-				<div
-					role="status"
-					class="absolute bottom-full mb-2 left-0 w-56 rounded border border-white/30 bg-black/90 p-2 text-sm leading-snug text-white shadow-lg"
-				>
+			<Show when={noCamera() && !error()}>
+				<div class="absolute bottom-full mb-2 left-0 w-56 rounded border border-white/30 bg-black/90 p-2 text-sm leading-snug text-white shadow-lg">
 					No camera found. Connect a webcam to turn on video.
 				</div>
 			</Show>
+			<CaptureStatus
+				kind="Camera"
+				pending={state() === "pending" && !noCamera()}
+				unavailable={state() === "unavailable"}
+				error={enabled() ? error() : undefined}
+				retry={() => retry.start()}
+			/>
 			<Tooltip
-				content={noCamera() ? "No camera found" : media() ? "Disable camera" : "Enable camera"}
+				content={noCamera() ? "No camera found" : enabled() ? "Disable camera" : "Enable camera"}
 				position="top"
 			>
 				<button
@@ -557,17 +652,29 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 					onClick={toggle}
 					class="relative border hover:bg-gray-700 transition-all cursor-pointer p-2 backdrop-blur-sm bg-transparent rounded"
 					role="switch"
-					aria-checked={!!media()}
+					aria-checked={enabled()}
+					aria-busy={state() === "pending"}
+					data-state={state()}
 					aria-label="Toggle camera"
 					classList={{
 						"border-white": !!media(),
 						"border-transparent": !media(),
 					}}
 				>
-					<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
+					<span
+						class={
+							state() === "pending"
+								? "icon-[mdi--loading] animate-spin"
+								: state() === "failed"
+									? "icon-[mdi--camera-off-outline]"
+									: media()
+										? "icon-[mdi--camera]"
+										: "icon-[mdi--camera-off]"
+						}
+					/>
 				</button>
 			</Tooltip>
-			<Show when={media() && (available()?.length ?? 0) > 1}>
+			<Show when={enabled() && (available()?.length ?? 0) > 1}>
 				<Tooltip
 					content={deviceChangeMessage() || "Camera settings"}
 					position="top"
