@@ -584,19 +584,24 @@ export class Space {
 
 			// A peer dragging its own window streams where it is.
 			broadcast.signals.run((effect) => {
-				hold(effect, broadcast, effect.get(source.location.live.window));
+				hold(effect, broadcast, broadcast, effect.get(source.location.live.window));
 			});
 
-			// A peer dragging someone's window streams it by the handle that window publishes.
+			// A peer dragging someone's window streams it by the handle that window publishes. Resolved
+			// reactively, since a viewer joining mid-drag may learn the window or its handle after the first
+			// datagram, and a window that locks or rotates its handle mid-drag stops following. Only a new
+			// target reruns the hold, so reordering tiles doesn't replay a stale position.
 			const dragged = broadcast.signals.computed((effect) => effect.get(source.location.live.peer)?.handle);
-			broadcast.signals.run((effect) => {
+			const target = broadcast.signals.computed((effect) => {
 				const handle = effect.get(dragged);
-				if (!handle) return;
-				// Resolved reactively: a viewer joining mid-drag may learn the window or its handle after the
-				// first datagram, and a window that locks or rotates its handle mid-drag stops following.
-				const target = this.#addressed(handle, effect);
-				if (!target) return;
-				effect.run((effect) => hold(effect, target, effect.get(source.location.live.peer)?.position));
+				return handle ? this.#addressed(handle, effect) : undefined;
+			});
+			broadcast.signals.run((effect) => {
+				const window = effect.get(target);
+				if (!window) return;
+				effect.run((effect) =>
+					hold(effect, window, broadcast, effect.get(source.location.live.peer)?.position),
+				);
 			});
 
 			broadcast.signals.run((effect) => {
@@ -716,7 +721,8 @@ export class Space {
 		// Where the window sat before a peer's drag held it.
 		let home: Position | undefined;
 		broadcast.signals.run((effect) => {
-			const live = effect.get(broadcast.held);
+			// The latest sender's hold wins while several drag at once.
+			const live = [...effect.get(broadcast.holds).values()].at(-1);
 			if (live) {
 				home ??= { ...broadcast.position.peek() };
 				if (this.#dragging !== broadcast) broadcast.position.update((prev) => ({ ...prev, ...live }));
@@ -961,18 +967,22 @@ function handleOf(broadcast: Broadcast, effect: Effect): string | undefined {
 	return undefined;
 }
 
-// Hold `target` at `position` for this run, keeping any hold another sender has set since.
-function hold(effect: Effect, target: Broadcast, position: Position | undefined) {
+// Hold `target` at `position` for this run on behalf of `sender`, leaving other senders' holds alone.
+function hold(effect: Effect, target: Broadcast, sender: Broadcast, position: Position | undefined) {
 	if (!position) return;
-	target.held.set(position);
-	effect.cleanup(() => {
-		const held = target.held.peek();
-		if (held && same(held, position)) target.held.set(undefined);
+	// Re-added last, so the sender that moved most recently shows.
+	target.holds.update((prev) => {
+		const next = new Map(prev);
+		next.delete(sender);
+		return next.set(sender, position);
 	});
-}
-
-function same(a: Position, b: Position): boolean {
-	return a.x === b.x && a.y === b.y && a.z === b.z && a.s === b.s;
+	effect.cleanup(() =>
+		target.holds.update((prev) => {
+			const next = new Map(prev);
+			next.delete(sender);
+			return next;
+		}),
+	);
 }
 
 // The WebGL renderers for one live context.

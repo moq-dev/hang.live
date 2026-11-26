@@ -75,8 +75,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// After we learn the real position over the network, we'll replace it.
 	position: Signal<Position>;
 
-	/** Where a peer's drag holds this window right now, streamed over datagrams until the snapshot catches up. */
-	held = new Signal<Metadata.Position | undefined>(undefined);
+	/** Where peers' drags hold this window right now, by sender, streamed over datagrams until the snapshot catches up. */
+	holds = new Signal<ReadonlyMap<object, Metadata.Position>>(new Map());
 
 	// The meme video/audio we're rendering, if any.
 	meme = new Signal<Meme.AV | undefined>(undefined);
