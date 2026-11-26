@@ -23,8 +23,9 @@ boxes) using the diagnostics already built into `moq/`:
 - Plot real-time audio arrival jitter per tile with `@moq/ui`'s `graph` and
   `statCard`. Counter deltas can't show it; take each frame's arrival wall time
   minus its media timestamp from the audio decoder's `stats.arrival`
-  ([`decoder.ts`](/moq/js/watch/src/audio/decoder.ts)) on every update, and
-  plot how far it trails the window's lowest offset.
+  ([`decoder.ts`](/moq/js/watch/src/audio/decoder.ts)) whenever it
+  changes (a stall updates the counters without a new frame), and plot how far
+  it trails the window's lowest offset.
 - Highlight live HD ↔ SD simulcast transitions triggered by dragging/zooming a
   tile (`video.target` + `connection.viewers` downlink grants) so visitors can
   *see* MoQ's per-tile adaptive subscription working in real time.
