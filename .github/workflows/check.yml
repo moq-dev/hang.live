@@ -29,10 +29,6 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      # The browser tests serve these sounds: the room plays one once its camera publishes,
-      # and an LFS pointer in its place fails to decode. Fetch only these few KB of LFS.
-      - run: git lfs pull --include="app/public/notification/*"
-
       - uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # main
         with:
           determinate: false

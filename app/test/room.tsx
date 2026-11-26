@@ -52,6 +52,12 @@ BroadcastRenderer.prototype.render = function (this: BroadcastRenderer, ...args:
 	if (error !== gl.NO_ERROR) errors.push(error);
 };
 
+// The room plays a notification once its camera publishes, but the sounds live in Git LFS,
+// which CI and a clone made without git-lfs hold only as undecodable pointers.
+Sound.prototype.load = async function (this: Sound) {
+	return new AudioBuffer({ length: 1, sampleRate: this.context.sampleRate });
+};
+
 Settings.camera.enabled.set(true);
 const connection = new Moq.Connection({ url: new URL(params.get("relay") ?? ""), share: false });
 const canvas = new Canvas(element);
