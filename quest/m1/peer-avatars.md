@@ -16,11 +16,11 @@ uploads for account avatars, but a peer controls its broadcast directly.
   `/avatar/N.svg`) or the R2 public bucket; otherwise fall back to a bundled
   default. Expose the bucket origin to the app at build time.
 - Provider avatars (Discord and Google CDNs) are the remaining external origins.
-  Recommendation: have the API copy the provider avatar into R2 at account
-  creation, so only the two first-party origins remain and the allowlist stays
-  closed. The alternative, allowlisting `cdn.discordapp.com` and
-  `*.googleusercontent.com`, still leaks IPs to those providers and breaks when
-  they change hosts.
+  Decided 2026-11-25 (maintainer, /quest-run): copy provider avatars into R2 at
+  signup (rejected: allowlist provider CDNs), so only the two first-party origins
+  remain and the allowlist stays closed. Allowlisting `cdn.discordapp.com` and
+  `*.googleusercontent.com` would still leak IPs to those providers and break
+  when they change hosts.
 - Cover the origin check with a unit test.
 
 ## Related
