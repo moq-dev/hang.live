@@ -2,11 +2,6 @@
 
 set fallback
 
-# Upgrade any tooling
-upgrade:
-	bun update
-	bun outdated
-
 # Build the packages
 build env="development":
 	bun run deps
@@ -20,7 +15,3 @@ deploy:
 # Run the app in development mode
 dev:
 	bun vite dev
-
-# Amazing tool to visualize the app bundle size
-bundle:
-	npx vite-bundle-visualizer

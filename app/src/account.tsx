@@ -463,7 +463,7 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 	);
 }
 
-export function LoginPage(): JSX.Element {
+function LoginPage(): JSX.Element {
 	return (
 		<main class="flex items-center justify-center">
 			<div class="w-full max-w-md">

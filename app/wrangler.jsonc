@@ -2,17 +2,16 @@
 	// Check the configuration file schema, the main reason why we're not using TOML.
 	"$schema": "./node_modules/wrangler/config-schema.json",
 
-	// Cloudflare Pages configuration
+	// Cloudflare Workers static assets serving the built app.
 	"name": "hang-dev",
 	"compatibility_date": "2025-07-09",
 
-	// Static asset configuration for Pages
 	"assets": {
 		"directory": "./dist",
 		"not_found_handling": "single-page-application"
 	},
 
-	// Development server configuration
+	// `wrangler dev` previews the built app on Vite's port, the only origin the local API allows.
 	"dev": {
 		"port": 1420
 	},

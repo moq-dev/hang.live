@@ -9,7 +9,7 @@ import type Context from "./context";
 
 export function router() {
 	return new Hono<{
-		Bindings: Context;
+		Bindings: Env;
 		Variables: {
 			ctx: Context;
 		};

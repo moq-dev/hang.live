@@ -9,7 +9,6 @@
 		// Javascript
 		"ms-vscode.vscode-json",
 		"biomejs.biome",
-		"ms-vscode.vscode-pnpm",
 		"bradlc.vscode-tailwindcss"
 	]
 }

@@ -17,11 +17,10 @@
 	"linter": {
 		"rules": {
 			"a11y": {
+				// Meme clips and sound bites ship without caption tracks.
 				"useMediaCaption": "off"
 			},
 			"suspicious": {
-				// Some runtimes need ts-ignore
-				"noTsIgnore": "off",
 				// Type-only cycles are erased at compile time, so only runtime cycles fail.
 				"noImportCycles": {
 					"level": "error",

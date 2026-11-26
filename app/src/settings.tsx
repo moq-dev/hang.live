@@ -44,7 +44,7 @@ const ACCOUNT_KEYS = [
 const guest = Api.guestTokenSchema.safeParse(localStorage.getItem("settings.account.guest"));
 const effect = new Effect();
 
-export const Settings = {
+const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 
 	audio: {
@@ -440,6 +440,6 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 	);
 }
 
-export function supportsWebGPU() {
+function supportsWebGPU() {
 	return !!navigator.gpu;
 }

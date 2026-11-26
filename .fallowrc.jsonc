@@ -7,7 +7,10 @@
 		"concurrently",
 		// api/tsconfig.json maps @moq/* to generated declarations under moq/, which fallow counts as file imports.
 		"@moq/auth",
-		"@moq/clock"
+		"@moq/clock",
+		// @iconify/tailwind4 in app/index.css loads these icon sets by name from `icon-[set--name]` classes.
+		"@iconify-json/material-symbols",
+		"@iconify-json/mdi"
 	],
 	"rules": {
 		// fallow only warns on these by default.
