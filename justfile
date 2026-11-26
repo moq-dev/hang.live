@@ -25,6 +25,7 @@ check:
 	bun run check
 	bun run --cwd api test
 	bun run --cwd app test
+	bun run --cwd app test:media
 	just native check
 
 # Automatically fix some issues.

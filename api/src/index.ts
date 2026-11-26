@@ -12,7 +12,6 @@ export { Account, Avatar, Fave, Health, OAuth, Room };
 const app = rpc
 	.app()
 	.route("/auth", OAuth.router)
-	.route("/avatar", Avatar.router)
 	.route("/account", Account.router)
 	.route("/fave", Fave.router)
 	.route("/health", Health.router)

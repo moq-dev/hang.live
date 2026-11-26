@@ -2,14 +2,15 @@ import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import * as Comlink from "comlink";
-import DOMPurify from "dompurify";
 import type { Broadcast } from "./broadcast";
 import { Canvas } from "./canvas";
 import ChatWorker from "./chat-worker";
 import { Bounds, Vector } from "./geometry";
+import { sanitizer } from "./sanitize";
 
 const worker = new Worker(new URL("./chat-worker.ts", import.meta.url), { type: "module" });
 const parse = Comlink.wrap<typeof ChatWorker>(worker);
+const sanitize = sanitizer(window);
 
 export class Chat {
 	canvas: Canvas;
@@ -152,11 +153,7 @@ export class Chat {
 		const html = await parse(msg);
 
 		// Sanitize HTML on the main thread where DOMPurify has DOM access
-		// ChatGPT says that allowing target is ONLY safe with noopener noreferrer
-		const sanitized = DOMPurify.sanitize(html, {
-			ADD_ATTR: ["target", "rel"],
-			RETURN_DOM_FRAGMENT: true,
-		});
+		const sanitized = sanitize(html);
 
 		// Wrap the fragment in a container element for easier handling
 		const container = document.createElement("span");
