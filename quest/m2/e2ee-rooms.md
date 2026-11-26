@@ -49,12 +49,20 @@ Checked 2026-11-25 against pinned `moq/` (`28d8eb84d6`) and `moq-dev/moq` main
   encrypted track. Private rooms use their own URL route, so a link missing its
   fragment is recognisable and shows a "missing key" warning instead of an
   empty room.
-- Publish each participant broadcast through the upstream encrypted wrapper. A
-  fresh `credential.produce()` runs on every publish, re-publish, and page load,
-  and Hang never caches or persists a generation. `@moq/e2ee` mints the epoch
-  itself and has no explicit-epoch API, so it can't reuse an epoch under one
-  credential. A unit test pins that two publishes under one credential announce
-  different epochs.
+- Keep the fragment out of OAuth. `loginStart` (`app/src/api.ts`) sends
+  `window.location.href`, fragment included, to `api/` and then to the
+  provider in `state`. Strip the fragment there. A guest who signs in from a
+  private room reopens the invite afterwards.
+- Hide favorites in private rooms. A favorite saves only the opaque id and
+  reopens through the public `/@<id>` route, which skips the missing-key
+  warning and could publish plaintext under the same relay room.
+- Publish each participant broadcast through the finished upstream wrapper,
+  not today's draft API (`credential.produce()` and its separate `Epoch` change
+  with `moq-e2ee-01`, which binds the broadcast name and uses the moq-net
+  `Instance`). Every publish, re-publish, and page load takes a fresh producing
+  instance from the wrapper, and Hang never caches or persists one, so no key
+  repeats under one credential. A unit test pins that a republish under one
+  credential announces a new instance and stays decryptable for subscribers.
 - The `location`, chat, and metadata tracks (`app/src/room/metadata.ts`) are
   tracks on that broadcast, so the wrapper encrypts their names and payloads
   with no Hang-side crypto.
