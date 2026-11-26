@@ -41,13 +41,6 @@ export class Badge {
 		pending = pending.then(() => set(count));
 	}
 
-	/**
-	 * Get the current badge count
-	 */
-	get(): number {
-		return this.current;
-	}
-
 	increment(v = 1): void {
 		if (this.current + v < 0) throw new Error("Badge count cannot be negative");
 		this.set(this.current + v);

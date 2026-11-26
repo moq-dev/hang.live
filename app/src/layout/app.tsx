@@ -39,7 +39,6 @@ function Header(props: { connection: Moq.Connection; room: string }) {
 			>
 				<Logo connection={props.connection} />
 			</div>
-			<div id="support" />
 			<nav class="rounded p-3 flex items-center gap-3 transition-all duration-300 ease-in-out">
 				<Show
 					when={!mobile()}

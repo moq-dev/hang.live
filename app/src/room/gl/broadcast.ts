@@ -75,7 +75,6 @@ export class BroadcastRenderer {
 		maxZ: number,
 		modifiers?: {
 			dragging?: boolean;
-			hovering?: boolean;
 		},
 	) {
 		const textures = broadcast.video.textures.peek();

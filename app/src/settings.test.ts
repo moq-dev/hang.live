@@ -8,7 +8,7 @@ localStorage.setItem("settings.oauth.token", "jwt");
 localStorage.setItem("settings.account.guest", "guest/alice");
 localStorage.setItem("settings.account.name", "Alice");
 
-const { Settings } = await import("./settings");
+const { default: Settings } = await import("./settings");
 
 test("an unparseable microphone gain loads as unity", () => {
 	expect(Settings.microphone.gain.peek()).toBe(1);
