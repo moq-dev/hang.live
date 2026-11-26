@@ -17,6 +17,9 @@ that last ran `tofu apply`.
 1. Done 2026-11-25: with `fc0dc04` deployed, a guest joining a fresh
    `hang.live` room was announced to a second tab through `cdn.moq.dev`, so
    `moq.pro` accepts the current `RELAY_SECRET` and no rotation is needed.
+   Camera playback was not checked, because the agent's Chrome has no camera:
+   before step 2, enable the camera in one tab and confirm a second tab plays
+   it.
 2. Tear down the nodes from the machine holding the state:
    `git worktree add ../hang-infra 203de18`, copy `infra/tofu.tfstate`,
    `infra/terraform.tfvars`, and `infra/secrets/` into `../hang-infra/infra/`,
@@ -31,6 +34,6 @@ that last ran `tofu apply`.
 
 ## Waiting
 
-- Maintainer (PC): steps 2-3 above. An agent cannot take them: the OpenTofu
+- Maintainer (PC): step 1's camera check, then steps 2-3 above. An agent cannot take them: the OpenTofu
   state, Linode token, and GCP credentials exist only on the maintainer's
   machine.
