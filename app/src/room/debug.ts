@@ -187,8 +187,8 @@ export class Debug {
 		return latest;
 	}
 
-	// One box per catalog rendition, the selected one ringed: green while playing, amber just after
-	// selection moved to it, red if it failed to decode.
+	// One box per catalog rendition, the selected one ringed: amber just after selection moved to it,
+	// red if it failed to decode, green otherwise.
 	#renditions(
 		parent: Effect,
 		container: HTMLElement,
@@ -212,13 +212,13 @@ export class Debug {
 				let className = PANEL;
 				let content = `${name.split("/").pop()} ${props.describe(rendition)}`;
 				if (name === active) {
+					// The source's selection: the decoder may still show the old rendition until this one arrives.
+					content += " · selected";
 					if (error) {
 						className += " ring-2 ring-red-500";
 						content += ` (${error.message})`;
 					} else if (switched?.to === name) {
-						// The source picked it; the decoder may still show the old one until it arrives.
 						className += " ring-2 ring-amber-400";
-						content += " · selected";
 					} else {
 						className += " ring-2 ring-green-500";
 					}
@@ -288,7 +288,9 @@ export class Debug {
 				? `late ${video.late} · stalls ${video.stalls} (${formatMillis(video.stalled.asMillis())})`
 				: "no video";
 
-			jitterGraph.push(jitter.sample());
+			// Silence sends nothing, so it is left out of the trace rather than drawn as zero jitter.
+			const late = jitter.sample();
+			if (late !== undefined) jitterGraph.push(late);
 			const audio = source.audio.stats.peek();
 			audioCounters.textContent = audio
 				? `late ${audio.late} · underruns ${audio.underruns} · skips ${audio.skips}`
