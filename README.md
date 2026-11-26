@@ -26,7 +26,7 @@ quest/      Planned work (see quest/README.md)
 
 ## Getting Started
 
-Install [Nix](https://nixos.org) and [direnv](https://direnv.net); the dev shell in `flake.nix` provides every tool, including the `moq-relay` and `moq` binaries `just dev` runs.
+Install [Nix](https://nixos.org) with the `nix-command` and `flakes` experimental features enabled, and [direnv](https://direnv.net); the dev shell in `flake.nix` provides every tool, including the `moq-relay` and `moq` binaries `just dev` runs.
 The shell supports Linux and Apple Silicon macOS.
 Without Nix, put the tools that dev shell lists on your `PATH` yourself.
 

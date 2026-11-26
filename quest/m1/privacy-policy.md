@@ -7,11 +7,13 @@
 ## Plan
 
 The m1 docs audit (base `6a3af10`) checked the policy claim by claim.
-Accurate: sign-in providers (Google, Discord, Apple), stored account fields (email, name, avatar), local session storage, account deletion from settings.
+Accurate: sign-in providers (Google, Discord, Apple), stored account fields (email, name, avatar), account deletion from settings.
+Inaccurate: "Session State" says local storage is cleared on logout, but logout forgets only the signed-in identity (`app/src/settings.tsx`); device and UI preferences stay until site storage is cleared.
 Not mentioned:
 
 - Media, chat messages, names, and avatars travel through `moq.pro` relays (`cdn.moq.dev`) since `infra/` was retired, while "Data Sharing" says nothing is shared.
 - High-quality text-to-speech downloads the Kokoro model from Hugging Face (`app/src/room/tts/kokoro.ts`), which sees the browser's IP.
+- Default text-to-speech uses the browser's `speechSynthesis` (`app/src/room/tts/index.ts`), which speaks participant names on join and leave; a remote system voice sends that text to its provider.
 - The app and API run on Cloudflare Workers, with accounts in D1 and avatars in R2.
 
 Bump "Last Updated" with the change.
