@@ -434,6 +434,20 @@ function parseState(raw: string): OauthState {
 	return parsed.data;
 }
 
+// Whether an avatar URL is hosted by the given provider's CDN.
+function avatarFrom(provider: ProviderId, url: string): boolean {
+	const host = URL.parse(url)?.hostname;
+	if (!host) return false;
+	switch (provider) {
+		case "discord":
+			return host === "cdn.discordapp.com";
+		case "google":
+			return host.endsWith(".googleusercontent.com");
+		case "apple":
+			return false;
+	}
+}
+
 export interface User {
 	provider: ProviderId;
 	providerId: string;
@@ -580,8 +594,9 @@ export const router = rpc
 
 			// Accounts from before the copy still point at a provider CDN; move them over as they sign in with one.
 			// Peers refuse the old URL either way, so a provider without an avatar or a failed copy leaves it be.
+			// Only the provider that supplied the legacy avatar replaces it, so a linked account's photo never does.
 			const external = await ctx.account.externalAvatar(user.id);
-			const upload = external ? await copyAvatar() : undefined;
+			const upload = external && avatarFrom(provider.id, external) ? await copyAvatar() : undefined;
 			if (external && upload) {
 				const id = user.id;
 				await ctx.account.replaceExternalAvatar(id, external, upload).catch((err) => {

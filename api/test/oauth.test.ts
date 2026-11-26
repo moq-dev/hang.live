@@ -436,3 +436,13 @@ test("an R2 failure at signup still signs in, on a bundled default", async () =>
 
 	expect((await info(app, await login(app, "discord"))).avatar).toMatch(/^\/avatar\/\d+\.svg$/);
 });
+
+test("only the provider that supplied a legacy avatar replaces it", async () => {
+	const { app, sqlite } = harness();
+	discordWithAvatar(() => new Response(PNG));
+	const token = await login(app, "discord");
+	sqlite.exec("UPDATE accounts SET avatar = 'https://lh3.googleusercontent.com/a/old', avatar_type = 'url'");
+
+	await login(app, "discord");
+	expect((await info(app, token)).avatar).toBe("https://lh3.googleusercontent.com/a/old");
+});
