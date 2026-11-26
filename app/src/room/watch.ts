@@ -71,7 +71,9 @@ export class WatchBroadcast {
 		const visible = new Signal<Watch.Video.Visible>("never");
 		const muted = new Signal(true);
 		this.signals.run((effect) => visible.set(effect.get(props.video) ? "always" : "never"));
-		this.signals.run((effect) => muted.set(!effect.get(props.audio)));
+		// Captions play on the audio's clock, so keep decoding it while a caption track is shown; the
+		// tile's own gain keeps it silent when the room is muted.
+		this.signals.run((effect) => muted.set(!effect.get(props.audio) && !effect.get(text.target)));
 
 		this.#player = new Watch.Player({
 			origin: props.connection.origin,

@@ -202,16 +202,41 @@ const MAX_TEXT = 160;
 // Whisper's markers for audio without words, such as `[BLANK_AUDIO]` or `(music)`.
 const NON_SPEECH = /^[[(][^\])]*[\])]$/;
 
+// Collapse whitespace, and drop Whisper's markers for audio without words.
+function clean(transcript: string): string {
+	const text = transcript.trim().replace(/\s+/g, " ");
+	return NON_SPEECH.test(text) ? "" : text;
+}
+
 /**
- * Turn a transcript into caption text: trimmed, cut to its last {@link MAX_TEXT} characters on a word
- * boundary, and empty when Whisper heard no words.
+ * Turn a transcript into roll-up caption text: cut to its last {@link MAX_TEXT} characters on a word
+ * boundary, since the next partial carries on from it, and empty when Whisper heard no words.
  */
 export function tidy(transcript: string): string {
-	const text = transcript.trim().replace(/\s+/g, " ");
-	if (NON_SPEECH.test(text)) return "";
+	const text = clean(transcript);
 	if (text.length <= MAX_TEXT) return text;
 
 	const tail = text.slice(-MAX_TEXT);
 	const space = tail.indexOf(" ");
 	return `…${space >= 0 ? tail.slice(space + 1) : tail}`;
+}
+
+/**
+ * Split a finished transcript into captions of at most {@link MAX_TEXT} characters on word
+ * boundaries, so none of it is cut when no partial showed the beginning. Empty when Whisper heard no
+ * words.
+ */
+export function split(transcript: string): string[] {
+	const parts: string[] = [];
+	let part = "";
+	for (const word of clean(transcript).split(" ")) {
+		if (!word) continue;
+		if (part && part.length + 1 + word.length > MAX_TEXT) {
+			parts.push(part);
+			part = "";
+		}
+		part = part ? `${part} ${word}` : word.slice(0, MAX_TEXT);
+	}
+	if (part) parts.push(part);
+	return parts;
 }

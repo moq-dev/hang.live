@@ -110,9 +110,12 @@ export class Captioner {
 					}
 					break;
 				case "clear":
-					source.write("", message.at);
-					translation?.write("", message.at);
-					this.text.set(undefined);
+					if (message.track === "source") {
+						source.write("", message.at);
+						this.text.set(undefined);
+					} else {
+						translation?.write("", message.at);
+					}
 					break;
 			}
 		});
@@ -137,6 +140,16 @@ export class Captioner {
 				const node = new AudioWorkletNode(context, "captions", { numberOfInputs: 1, numberOfOutputs: 0 });
 				root.connect(node);
 				inner.cleanup(() => root.disconnect(node));
+				// A muted speaker's caption ends with their audio, and their next words start afresh.
+				inner.cleanup(() => {
+					if (stopped) return;
+					const reset: Request = { type: "reset" };
+					worker.postMessage(reset);
+					const at = Publish.MediaClock.now().asMicros();
+					source.write("", at);
+					translation?.write("", at);
+					this.text.set(undefined);
+				});
 				inner.event(node.port, "message", (event) => {
 					if (stopped) return;
 					const samples = (event as MessageEvent<Float32Array>).data;
