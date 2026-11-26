@@ -801,8 +801,8 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 
 		if (!props.broadcast.chat.message.enabled.peek()) return;
 
-		// Use a function to avoid the dequal check.
-		props.broadcast.chat.message.latest.update(() => m);
+		// Force it, so sending the same message twice replays it and restarts its expiry.
+		props.broadcast.chat.message.latest.set(m, true);
 		props.room.local.core.chatting.set(true);
 
 		setMessage("");
