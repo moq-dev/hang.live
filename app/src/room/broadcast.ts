@@ -126,7 +126,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		this.signals.run(this.#runLocation.bind(this));
 		this.signals.run(this.#runChat.bind(this));
-		this.signals.run(this.#runTarget.bind(this));
+		if (this.source instanceof WatchBroadcast) this.signals.run(this.#runTarget.bind(this, this.source));
 	}
 
 	// Load the broadcaster's position from the network.
@@ -195,10 +195,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	}
 
 	// Decides the simulcast size to use based on the number of pixels.
-	#runTarget(effect: Effect) {
-		if (!(this.source instanceof WatchBroadcast)) return;
-
-		const display = effect.get(this.source.video.display);
+	#runTarget(source: WatchBroadcast, effect: Effect) {
+		const display = effect.get(source.video.display);
 		if (!display) return;
 
 		const pixels = display.height * display.width;
@@ -206,7 +204,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		const zoom = effect.get(this.zoom);
 
 		const scaled = pixels * scale * zoom;
-		effect.set(this.source.video.target, { pixels: scaled });
+		effect.set(source.video.target, { pixels: scaled });
 	}
 
 	// Update the time-based fades for a frame at `now`.

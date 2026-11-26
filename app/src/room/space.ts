@@ -533,17 +533,17 @@ export class Space {
 		});
 
 		// When the media source changes, bump the z-index to the highest known value.
-		broadcast.signals.run((effect) => {
-			if (broadcast.source.role === "publish") {
-				if (!effect.get(broadcast.source.enabled)) return;
-				if (!effect.get(broadcast.source.video.source) && !effect.get(broadcast.source.audio.source)) return;
+		if (source.role === "publish") {
+			broadcast.signals.run((effect) => {
+				if (!effect.get(source.enabled)) return;
+				if (!effect.get(source.video.source) && !effect.get(source.audio.source)) return;
 
 				broadcast.position.update((prev) => ({
 					...prev,
 					z: ++this.#maxZ,
 				}));
-			}
-		});
+			});
+		}
 
 		broadcast.signals.run((effect) => {
 			const message = effect.get(broadcast.source.chat.message.latest);
