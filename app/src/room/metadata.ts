@@ -11,20 +11,15 @@ import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
 import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
-import { Chat, type Preview, type User } from "@moq/room";
+import { Chat, PRIORITY, type HangCatalog as RoomHangCatalog, TRACK, type TrackRef, type User } from "@moq/room";
 import { Effect, type Getter, Signal } from "@moq/signals";
 import type * as Watch from "@moq/watch";
 import * as z from "zod/mini";
 
-export type { Preview, User };
+export type { User };
 
-const TRACKS = {
-	location: "hang/location.json",
-	live: "hang/live.json",
-	chat: "hang/chat.json",
-} as const;
-
-const HANG_PRIORITY = 90;
+/** The datagram track of `LiveValue`s, beside `@moq/room`'s well-known tracks. */
+const LIVE_TRACK = "hang/live.json";
 
 // While a pointer or drag is live, it repeats this often even when still, so viewers can tell a quiet
 // sender from one that vanished without its last datagram.
@@ -63,7 +58,7 @@ export type LiveValue = {
 	peer?: LivePeer;
 };
 
-export type LocationValue = {
+type LocationValue = {
 	window?: {
 		position?: Position;
 		/** Where peers address moves; absent while the publisher refuses them. */
@@ -76,27 +71,23 @@ export type LocationValue = {
 	};
 };
 
-export type ChatValue = {
+type ChatValue = {
 	// Superseded by the `messages` window; still written for readers that predate it.
 	message?: string;
 	typing?: boolean;
 };
 
 // A remote publisher's values are untrusted, so each is validated before it reaches the UI.
-const PositionSchema: z.ZodMiniType<Position> = z.object({
+const PositionShape = {
 	x: z.optional(z.number()),
 	y: z.optional(z.number()),
 	z: z.optional(z.number()),
 	s: z.optional(z.number()),
-});
+};
 
-const RequestSchema: z.ZodMiniType<Request> = z.object({
-	x: z.optional(z.number()),
-	y: z.optional(z.number()),
-	z: z.optional(z.number()),
-	s: z.optional(z.number()),
-	id: z.optional(z.string()),
-});
+const PositionSchema: z.ZodMiniType<Position> = z.object(PositionShape);
+
+const RequestSchema: z.ZodMiniType<Request> = z.object({ ...PositionShape, id: z.optional(z.string()) });
 
 const LocationSchema: z.ZodMiniType<LocationValue> = z.object({
 	window: z.optional(
@@ -124,15 +115,11 @@ const ChatSchema: z.ZodMiniType<ChatValue> = z.object({
 	typing: z.optional(z.boolean()),
 });
 
-export type HangCatalog = {
-	user?: { track: string };
-	preview?: { track: string };
-	location?: { track: string };
+export type HangCatalog = RoomHangCatalog & {
 	/** A datagram track of `LiveValue`s. A broadcast without it updates its window only on release. */
-	live?: { track: string };
-	chat?: { track: string };
+	live?: TrackRef;
 	/** `@moq/room`'s chat message window. A broadcast without it sends messages on `chat` instead. */
-	messages?: { track: string };
+	messages?: TrackRef;
 };
 
 export type ExtendedCatalog = CatalogRoot & {
@@ -160,11 +147,9 @@ export type LocationFields = {
 
 export type ChatFields = {
 	message: {
-		enabled: Signal<boolean>;
 		latest: Signal<string | undefined>;
 	};
 	typing: {
-		enabled: Signal<boolean>;
 		active: Signal<boolean | undefined>;
 	};
 };
@@ -173,7 +158,8 @@ export function locationFields(): LocationFields {
 	return {
 		window: {
 			position: new Signal<Position | undefined>(undefined),
-			handle: new Signal<string | undefined>(Math.random().toString(36).substring(2, 15)),
+			// Unset until a publisher picks one or a watched broadcast's location names it.
+			handle: new Signal<string | undefined>(undefined),
 			movable: new Signal(true),
 			applied: new Signal<string[] | undefined>(undefined),
 		},
@@ -191,11 +177,9 @@ export function locationFields(): LocationFields {
 export function chatFields(): ChatFields {
 	return {
 		message: {
-			enabled: new Signal(true),
 			latest: new Signal<string | undefined>(undefined),
 		},
 		typing: {
-			enabled: new Signal(true),
 			active: new Signal<boolean | undefined>(undefined),
 		},
 	};
@@ -211,9 +195,9 @@ export function serveExtras(
 	broadcast.catalog.mutate((catalog) => {
 		const extended = catalog as ExtendedCatalog;
 		extended.hang ??= {};
-		extended.hang.location = { track: TRACKS.location };
-		extended.hang.live = { track: TRACKS.live };
-		extended.hang.chat = { track: TRACKS.chat };
+		extended.hang.location = { track: TRACK.location };
+		extended.hang.live = { track: LIVE_TRACK };
+		extended.hang.chat = { track: TRACK.chat };
 		extended.hang.messages = { track: Chat.TRACK };
 	});
 
@@ -228,7 +212,7 @@ export function serveExtras(
 		});
 	});
 
-	serveSnapshot(broadcast, TRACKS.location, effect, (effect) => {
+	serveSnapshot(broadcast, TRACK.location, effect, (effect) => {
 		// Peers address moves by handle and show a tile without one as locked.
 		const movable = effect.get(location.window.movable);
 		return {
@@ -246,7 +230,7 @@ export function serveExtras(
 
 	serveLive(broadcast, location.live, effect);
 
-	serveSnapshot(broadcast, TRACKS.chat, effect, (effect) => ({
+	serveSnapshot(broadcast, TRACK.chat, effect, (effect) => ({
 		message: effect.get(chat.message.latest),
 		typing: effect.get(chat.typing.active),
 	}));
@@ -279,7 +263,7 @@ function serveSnapshot<T>(
 		// Timed like `@moq/room`'s own snapshots, so each update opens its group at the write time.
 		const track = net.createTrack(name, {
 			timescale: Moq.Time.Timescale.MILLI,
-			priority: HANG_PRIORITY,
+			priority: PRIORITY,
 			refresh: { ratio: 8 },
 			compression: "deflate",
 		});
@@ -306,11 +290,11 @@ function serveLive(broadcast: { net: Publish.Broadcast["net"] }, live: LocationF
 		if (!net) return;
 
 		// Datagrams reach only viewers whose transport carries them; the rest wait for the snapshot.
-		const track = net.createDatagrams(TRACKS.live, {
+		const track = net.createDatagrams(LIVE_TRACK, {
 			timescale: Moq.Time.Timescale.MILLI,
-			priority: HANG_PRIORITY,
+			priority: PRIORITY,
 		});
-		if (!track) throw new Error(`the datagram track ${TRACKS.live} already exists`);
+		if (!track) throw new Error(`the datagram track ${LIVE_TRACK} already exists`);
 		effect.cleanup(() => track.finish());
 
 		effect.run((effect) => {
@@ -431,7 +415,7 @@ function subscribeJson<T>(
 	effect: Effect,
 	update: (value: T) => void,
 ): void {
-	const consumer = new Json.Snapshot.Consumer<T>({ track: broadcast.track(name), schema, priority: HANG_PRIORITY });
+	const consumer = new Json.Snapshot.Consumer<T>({ track: broadcast.track(name), schema, priority: PRIORITY });
 	effect.cleanup(() => consumer.close());
 	effect.spawn(async () => {
 		// A failed read ends the loop, so release the subscription instead of downloading what nothing reads.
@@ -580,5 +564,3 @@ function subscribeMessages(
 		}
 	});
 }
-
-export type PreviewInfo = Preview;

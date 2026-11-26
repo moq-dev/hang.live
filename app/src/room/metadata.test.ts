@@ -40,10 +40,28 @@ test("location edits keep an existing subscription alive", async () => {
 	}
 });
 
+test("a watched window stays locked until its location arrives", () => {
+	const extras = consumeExtras(
+		{
+			out: {
+				catalog: new Signal<ExtendedCatalog>({}),
+				active: new Signal<Net.Broadcast.Consumer | undefined>(undefined),
+			},
+		},
+		new Signal(true),
+	);
+	try {
+		expect(extras.location.window.handle.peek()).toBeUndefined();
+	} finally {
+		extras.close();
+	}
+});
+
 test("a window peers may not move hides its handle and echoes from them", async () => {
 	const net = new Net.Broadcast.Producer();
 	const catalog = new Signal<ExtendedCatalog>({});
 	const local = locationFields();
+	local.window.handle.set("h1");
 	const effect = new Effect();
 	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, local, chatFields(), effect);
 	const extras = consumeExtras(

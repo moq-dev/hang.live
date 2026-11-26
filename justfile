@@ -21,6 +21,7 @@ check:
 	set -euo pipefail
 	bun install --frozen-lockfile
 	quest check
+	bun fallow dead-code --unused-deps
 	bun run check
 	bun run --cwd api test
 	bun run --cwd app test
@@ -43,9 +44,7 @@ build:
 	bun install --frozen-lockfile
 	bun run build
 
-prod: build
-	bun run --filter='@hang/*' prod
-
+# Deploy the live API and app to Cloudflare.
 deploy:
 	just api deploy
 	just app deploy

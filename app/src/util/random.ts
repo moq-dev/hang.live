@@ -277,22 +277,6 @@ const NOUNS = [
 	"ass",
 ] as const;
 
-function assertNoDuplicates<T extends readonly string[]>(arr: T, name: string): void {
-	const seen = new Set<string>();
-	for (const item of arr) {
-		if (seen.has(item)) {
-			throw new Error(`Duplicate ${name}: ${item}`);
-		}
-		seen.add(item);
-	}
-}
-
-// Check for duplicates at module load time
-if (import.meta.env.DEV) {
-	assertNoDuplicates(ADJECTIVES, "adjective");
-	assertNoDuplicates(NOUNS, "noun");
-}
-
 export function room(): string {
 	const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
 	const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
