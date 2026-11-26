@@ -1,5 +1,3 @@
-import * as Moq from "@moq/net";
-import { parse } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
@@ -12,6 +10,11 @@ import Tooltip from "./tooltip";
 
 type Minted = { external: Stream.External; expires: Date };
 type Choice = { path: string; label: string };
+
+// Whether a watched catalog section lists any rendition, since one without carries no media.
+function live(section: { renditions: Record<string, unknown> } | undefined): boolean {
+	return section !== undefined && Object.keys(section.renditions).length > 0;
+}
 
 // The tokens per room, kept past the button's unmount (the mobile Settings menu closing) so reopening shows the identity
 // OBS was already given; a mint in flight is shared rather than repeated.
@@ -136,23 +139,23 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 
 			const media =
 				source.role === "watch"
-					? (effect.get(source.video.catalog) ?? effect.get(source.audio.catalog))
-					: (effect.get(source.video.source) ?? effect.get(source.audio.source));
+					? live(effect.get(source.video.catalog)) || live(effect.get(source.audio.catalog))
+					: effect.get(source.video.source) !== undefined || effect.get(source.audio.source) !== undefined;
 			if (!media) continue;
 
-			const name = effect.get(source.user.name);
-			const screen = parse(Moq.Path.from(broadcast.path))?.kind === "screen";
-			const label = name ? `${name}${screen ? " (screen)" : ""}` : fallbackName(broadcast.path);
-			choices.push({ path: broadcast.path, label });
+			// A screen share's name already ends in "(screen)".
+			choices.push({ path: broadcast.path, label: effect.get(source.user.name) || fallbackName(broadcast.path) });
 		}
 		listed.set(choices);
 	});
 	const choices = solid(listed);
+	// Options are keyed by path, so a refresh keeps the selected one in place.
+	const paths = createMemo(() => choices().map((choice) => choice.path));
+	const labels = createMemo(() => new Map(choices().map((choice) => [choice.path, choice.label])));
 	const [picked, setPicked] = createSignal<string | undefined>(undefined);
 	const target = createMemo(() => {
 		const pick = picked();
-		const all = choices();
-		return all.find((choice) => choice.path === pick)?.path ?? all[0]?.path;
+		return pick && paths().includes(pick) ? pick : paths()[0];
 	});
 
 	return (
@@ -186,8 +189,12 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 										value={path()}
 										onChange={(e) => setPicked(e.currentTarget.value)}
 									>
-										<For each={choices()}>
-											{(choice) => <option value={choice.path}>{choice.label}</option>}
+										<For each={paths()}>
+											{(each) => (
+												<option value={each} selected={each === path()}>
+													{labels().get(each)}
+												</option>
+											)}
 										</For>
 									</select>
 								</label>
