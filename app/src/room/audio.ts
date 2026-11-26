@@ -134,7 +134,9 @@ export class Audio {
 		const root = effect.get(this.broadcast.source.audio.root);
 		if (!root) return;
 
-		const gain = new GainNode(root.context, { gain: Settings.audio.volume.peek() });
+		const gain = new GainNode(root.context, {
+			gain: Settings.audio.enabled.peek() ? Settings.audio.volume.peek() : 0,
+		});
 		effect.cleanup(() => gain.disconnect());
 
 		this.#gain.set(gain);
