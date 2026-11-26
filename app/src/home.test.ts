@@ -88,8 +88,10 @@ const routes: Moq.Origin.Route[] = [];
 const catalogs: Json.Snapshot.Producer<object>[] = [];
 function announce(path: string): Moq.Origin.Route {
 	const route = origin.route(Moq.Path.from(path), { hidden: true });
-	const catalog = new Json.Snapshot.Producer<object>({ track: route.broadcast.createTrack("catalog.json") });
-	catalog.update({ value: {} });
+	const track = route.broadcast.createTrack("catalog.json", { timescale: Moq.Time.Timescale.MILLI });
+	if (!track) throw new Error("catalog.json already exists");
+	const catalog = new Json.Snapshot.Producer<object>({ track });
+	catalog.update({}, Moq.Time.Timestamp.now());
 	catalogs.push(catalog);
 	routes.push(route);
 	route.announce();

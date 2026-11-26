@@ -1,5 +1,4 @@
 import * as Moq from "@moq/net";
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createSelector, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -14,6 +13,7 @@ import { PreviewRoom } from "./preview";
 import { Room } from "./room";
 import { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
+import { solid } from "./util/solid";
 
 import "@moq/watch/support/element";
 import "@moq/publish/support/element";

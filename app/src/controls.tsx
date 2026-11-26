@@ -1,5 +1,4 @@
 import type { Getter } from "@moq/signals";
-import { createAccessor as solid } from "@moq/signals/solid";
 import {
 	type Accessor,
 	createEffect,
@@ -26,6 +25,7 @@ import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Tauri from "./tauri";
 import { isMobile } from "./util/mobile";
+import { solid } from "./util/solid";
 
 type MobileSection = "publish" | "chat" | "settings" | null;
 
@@ -291,7 +291,7 @@ function CaptureStatus(props: {
 
 export function Microphone(props: { local: Local }): JSX.Element {
 	const retry = new Capture.Retry({
-		enabled: props.local.core.microphoneEnabled,
+		enabled: props.local.core.microphone.enabled,
 		error: props.local.microphone.out.error,
 		settings: [
 			Settings.microphone.device,
@@ -301,7 +301,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	});
 	onCleanup(() => retry.close());
 	const toggle = () => {
-		props.local.core.microphoneEnabled.update((prev: boolean) => !prev);
+		props.local.core.microphone.enabled.update((prev: boolean) => !prev);
 	};
 	const root = solid(props.local.camera.audio.root);
 	const source = solid(props.local.microphone.out.source);
@@ -314,7 +314,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Use device signals from the Device API
 	const device = props.local.microphone.device;
-	const enabled = solid(props.local.core.microphoneEnabled);
+	const enabled = solid(props.local.core.microphone.enabled);
 	const available = solid(device.out.available);
 	const state = createMemo(() =>
 		!enabled()
@@ -379,12 +379,12 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	const selectDevice = (deviceId: string) => {
 		if (enabled() && deviceId === Settings.microphone.device.peek()) {
 			// Selecting the requested device again disables even a pending capture.
-			props.local.core.microphoneEnabled.set(false);
+			props.local.core.microphone.enabled.set(false);
 			Settings.microphone.device.set(undefined);
 		} else {
 			// Different device or mic is disabled - enable it
 			Settings.microphone.device.set(deviceId);
-			props.local.core.microphoneEnabled.set(true);
+			props.local.core.microphone.enabled.set(true);
 		}
 	};
 
@@ -544,16 +544,16 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const retry = new Capture.Retry({
-		enabled: props.local.core.cameraEnabled,
+		enabled: props.local.core.camera.enabled,
 		error: props.local.webcam.out.error,
 		settings: [Settings.camera.device, props.local.webcam.device.preferred, props.local.webcam.constraints],
 	});
 	onCleanup(() => retry.close());
 	const toggle = () => {
-		props.local.core.cameraEnabled.update((prev: boolean) => !prev);
+		props.local.core.camera.enabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.webcam.out.source);
-	const enabled = solid(props.local.core.cameraEnabled);
+	const enabled = solid(props.local.core.camera.enabled);
 	const error = solid(props.local.webcam.out.error);
 
 	const [showMenu, setShowMenu] = createSignal(false);
@@ -620,12 +620,12 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const selectDevice = (deviceId: string) => {
 		if (enabled() && deviceId === Settings.camera.device.peek()) {
 			// Selecting the requested device again disables even a pending capture.
-			props.local.core.cameraEnabled.set(false);
+			props.local.core.camera.enabled.set(false);
 			Settings.camera.device.set(undefined);
 		} else {
 			// Different device or camera is disabled - enable it
 			Settings.camera.device.set(deviceId);
-			props.local.core.cameraEnabled.set(true);
+			props.local.core.camera.enabled.set(true);
 		}
 	};
 
@@ -765,7 +765,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 function Screen(props: { local: Local; room: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.core.screenEnabled.update((prev: boolean) => !prev);
+		props.local.core.screen.enabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.screen.out.source);
 
@@ -908,8 +908,8 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 
 		if (!props.broadcast.chat.message.enabled.peek()) return;
 
-		// Use a function to avoid the dequal check.
-		props.broadcast.chat.message.latest.update(() => m);
+		// Force it, so sending the same message twice replays it and restarts its expiry.
+		props.broadcast.chat.message.latest.set(m, true);
 		props.room.local.core.chatting.set(true);
 
 		setMessage("");

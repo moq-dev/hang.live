@@ -1,4 +1,3 @@
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createSignal, type JSX, onCleanup } from "solid-js";
 import AudioPrompt from "./components/audio-prompt";
 import CreateHang from "./components/create";
@@ -6,6 +5,7 @@ import DemoHeader from "./components/demo-header";
 import Layout from "./layout/web";
 import { Canvas } from "./room/canvas";
 import { FakeRoom } from "./room/fake";
+import { solid } from "./util/solid";
 
 export function About(): JSX.Element {
 	const services = ["Meet", "Zoom", "Teams", "Discord", "Skype", "WebEx", "FaceTime", "WhatsApp"];

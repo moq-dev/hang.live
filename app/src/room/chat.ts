@@ -75,29 +75,20 @@ export class Chat {
 			if (current) {
 				message.set(current);
 
-				// Scale up right after a (new) message appears, letting CSS animate it.
-				effect.timeout(
-					(effect) => {
-						DOM.setClass(effect, root, "scale-110");
-					},
-					Clock.Nano.fromMilli(Clock.Milli(200)),
+				// Scale up for 200ms right after a (new) message appears, letting CSS animate it.
+				effect.timer(
+					effect.run((effect) => DOM.setClass(effect, root, "scale-110")),
+					Clock.Duration.millis(200),
 				);
 
 				// Pulse for 2 seconds, a full loop by default.
-				effect.timeout(
-					(effect) => {
-						DOM.setClass(effect, icon, "animate-pulse");
-					},
-					Clock.Nano.fromMilli(Clock.Milli(2000)),
+				effect.timer(
+					effect.run((effect) => DOM.setClass(effect, icon, "animate-pulse")),
+					Clock.Duration.millis(2000),
 				);
 			} else if (message.peek()) {
-				// Clear the message after a short delay.
-				effect.timeout(
-					() => {
-						message.set(undefined);
-					},
-					Clock.Nano.fromMilli(Clock.Milli(200)),
-				);
+				// Clear the message after a short delay; a new message reruns this and cancels it.
+				effect.timer(() => message.set(undefined), Clock.Duration.millis(200));
 			}
 		});
 

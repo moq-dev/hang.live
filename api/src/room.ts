@@ -19,9 +19,9 @@ export class Context {
 	// Returns the path/token to join the room
 	async sign(room: Name, identity: string): Promise<string> {
 		const root = `${this.#env.RELAY_PREFIX}/${room}`;
-		const publish = [MoqAuth.Pattern.subtree(identity).text];
-		const token = await MoqAuth.Key.sign(this.#key, { root, subscribe: ["**"], publish });
-		return `${root}/?jwt=${token}`;
+		// Each grant is a prefix covering its path and everything beneath; "" is the whole room.
+		const token = await MoqAuth.Key.sign(this.#key, { root, subscribe: [""], publish: [identity] });
+		return `${root}?jwt=${token}`;
 	}
 
 	// Returns a URL to preview a list of rooms
@@ -30,10 +30,10 @@ export class Context {
 		const root = this.#env.RELAY_PREFIX;
 		const token = await MoqAuth.Key.sign(this.#key, {
 			root,
-			subscribe: rooms.map((room) => MoqAuth.Pattern.subtree(room).text),
+			subscribe: rooms,
 			// Preview tokens grant no publishing permission.
 		});
-		return `${root}/?jwt=${token}`;
+		return `${root}?jwt=${token}`;
 	}
 }
 

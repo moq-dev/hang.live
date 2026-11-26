@@ -1,4 +1,3 @@
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -9,6 +8,7 @@ import Profile from "./components/profile";
 import Layout from "./layout/web";
 import { Local } from "./room/local";
 import Settings from "./settings";
+import { solid } from "./util/solid";
 
 export function Account(): JSX.Element {
 	const authenticated = solid(Api.client.authenticated);
