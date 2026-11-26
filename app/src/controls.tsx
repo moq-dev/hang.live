@@ -24,7 +24,6 @@ import { Local } from "./room/local";
 import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Speaker from "./speaker";
-import * as Tauri from "./tauri";
 import { isMobile } from "./util/mobile";
 import { solid } from "./util/solid";
 
@@ -1108,18 +1107,16 @@ function Fullscreen(props: { canvas: Canvas }): JSX.Element {
 	});
 
 	return (
-		<Show when={!Tauri.MOBILE}>
-			<Tooltip content={isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"} position="top">
-				<button
-					type="button"
-					onClick={toggle}
-					aria-label="Toggle fullscreen"
-					class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-				>
-					<span class="icon-[mdi--fullscreen]" />
-				</button>
-			</Tooltip>
-		</Show>
+		<Tooltip content={isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"} position="top">
+			<button
+				type="button"
+				onClick={toggle}
+				aria-label="Toggle fullscreen"
+				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
+			>
+				<span class="icon-[mdi--fullscreen]" />
+			</button>
+		</Tooltip>
 	);
 }
 

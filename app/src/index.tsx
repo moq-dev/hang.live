@@ -1,13 +1,5 @@
-//import "tauri-plugin-web-transport";
 import "@moq/watch/support/element";
 import "@moq/publish/support/element";
-
-import * as Tauri from "./tauri";
-
-// Import update module early if on desktop to ensure it runs even if UI breaks
-if (Tauri.DESKTOP) {
-	import("./tauri/update");
-}
 
 import { Route, Router, useLocation } from "@solidjs/router";
 import { onCleanup, Show } from "solid-js";
@@ -16,7 +8,6 @@ import { render } from "solid-js/web";
 import { About } from "./about";
 import { Account } from "./account";
 import * as Api from "./api";
-import { Download } from "./download";
 import { Home } from "./home";
 import { Icons } from "./icons";
 import { NotFound } from "./not-found";
@@ -41,7 +32,6 @@ export function Hang(): JSX.Element {
 				<Route path="/" component={() => (authenticated() ? <Home /> : <About />)} />
 				<Route path="/about" component={() => <About />} />
 				<Route path="/account" component={() => <Account />} />
-				<Route path="/download" component={() => <Download />} />
 				<Route path="/home" component={() => <Home />} />
 				<Route path="/privacy" component={() => <Privacy />} />
 				<Route path="/oauth/*redirect" component={() => <Oauth />} />

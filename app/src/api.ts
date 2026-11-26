@@ -7,7 +7,6 @@ export * from "@hang/api/client";
 
 import { Effect, Signal } from "@moq/signals";
 import Settings from "./settings";
-import * as Tauri from "./tauri";
 
 export class Client {
 	// TODO Make two separate routes for authenticated and unauthenticated.
@@ -15,18 +14,9 @@ export class Client {
 
 	#authenticated: Signal<boolean>;
 
-	// If a port is provided, then redirect to localhost:port.
-	#redirectPort?: Promise<number | undefined>;
-
 	signals = new Effect();
 
 	constructor() {
-		if (Tauri.ENABLED) {
-			// Kinda awkard that we load tauri deep link handling here.
-			// TODO Split into two parts?
-			this.#redirectPort = import("./tauri/deep_link").then((module) => module.start());
-		}
-
 		const token = Settings.oauth.token.peek();
 
 		this.#authenticated = new Signal(!!token);
@@ -68,35 +58,11 @@ export class Client {
 	// NOTE: Returns when the login is started, not when it's finished.
 	// callback() has to be called to finish the login.
 	async loginStart(provider: Api.OAuth.ProviderId, url = window.location.href) {
-		// Okay this is super annoying.
-		// - Google doesn't support hang:// redirect URLs.
-		// - Apple doesn't support http://localhost redirects
-		//
-		// My hack is to instead redirect to https://hang.live/oauth/<path>?token=<jwt>
-		// OR on desktop platforms, to hang://oauth/<path>?token=<jwt>
-		// Mobile platforms will open the app when https://hang.live is visited.
-		//
-		// The /oauth prefix is removed and the token is grabbed from the query params.
-		//
+		// Redirect back to the current URL with an /oauth prefix, which the Oauth route strips.
 		// NOTE: pathname starts with a slash.
 		const parts = new URL(url);
-
-		const redirectPort = await this.#redirectPort;
-
-		let redirect: string;
-		if (redirectPort) {
-			// Use a localhost server to handle the redirect.
-			// This works for local development and doesn't prompt the user.
-			redirect = `http://localhost:${redirectPort}/oauth${parts.pathname}`;
-		} else if (Tauri.DESKTOP) {
-			// As a fallback, use the deep-link handler.
-			// For some reason, Javascript won't let me set URL.protocol to hang://
-			redirect = `hang://oauth${parts.pathname}`;
-		} else {
-			// For web clients, just redirect to our current URL with the oauth prefix.
-			parts.pathname = `/oauth${parts.pathname}`;
-			redirect = parts.toString();
-		}
+		parts.pathname = `/oauth${parts.pathname}`;
+		const redirect = parts.toString();
 
 		// We encode this random string which gets echoed back to us in the OAuth callback.
 		// If the random is different, then something sus is happening.
@@ -113,17 +79,13 @@ export class Client {
 			},
 			query: {
 				random,
-				redirect: redirect.toString(),
+				redirect,
 			},
 		});
 
 		const data = await response.json();
 
-		if (Tauri.Opener) {
-			await Tauri.Opener.openUrl(data.url);
-		} else {
-			window.location.href = data.url;
-		}
+		window.location.href = data.url;
 	}
 
 	// Parses the OAuth token out of the URL.

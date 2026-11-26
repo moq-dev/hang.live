@@ -10,13 +10,6 @@ interface ImportMetaEnv {
 	readonly NODE_ENV?: string;
 	readonly MODE?: string;
 	readonly DEV?: boolean;
-
-	readonly TAURI_ENV_PLATFORM: "windows" | "darwin" | "linux" | "android" | "ios" | undefined;
-	readonly TAURI_ENV_ARCH: string | undefined;
-	readonly TAURI_ENV_FAMILY: "unix" | "windows" | undefined;
-	readonly TAURI_ENV_PLATFORM_VERSION: string | undefined;
-	readonly TAURI_ENV_PLATFORM_TYPE: string | undefined;
-	readonly TAURI_ENV_DEBUG: boolean | undefined;
 }
 
 interface ImportMeta {
