@@ -16,8 +16,11 @@ const POLL = Duration.millis(250);
 // How long a simulcast switch stays highlighted.
 const SWITCH = Duration.secs(3);
 
-// The smallest on-screen tile, in CSS pixels, that fits the sparklines beside its rendition boxes.
-const ROOMY = { width: 440, height: 240 };
+// The shortest on-screen tile, in CSS pixels, that fits the sparklines below its video renditions.
+const ROOMY = 240;
+
+// CSS pixels of the tile's width the delivery panel and audio renditions leave free: both insets and a gap.
+const MARGIN = 12;
 
 const BOX = "px-2 py-1 rounded font-mono text-[11px] leading-snug whitespace-nowrap";
 const PANEL = `bg-black/75 text-white ${BOX}`;
@@ -89,9 +92,18 @@ export class Debug {
 			root.style.width = `${Math.round(bounds.size.x * scaleX)}px`;
 			root.style.height = `${Math.round(bounds.size.y * scaleY)}px`;
 
-			// A small tile shows only its renditions, so the sparklines don't bury it.
-			const roomy = bounds.size.x * scaleX >= ROOMY.width && bounds.size.y * scaleY >= ROOMY.height;
-			delivery.style.display = roomy ? "" : "none";
+			tall = bounds.size.y * scaleY >= ROOMY;
+			fit();
+		};
+
+		// A small tile shows only its renditions, so the sparklines don't bury it. The delivery panel
+		// shares the bottom edge with the audio renditions, so it shows only when both fit side by side
+		// at their rendered widths, which change with the counters and the active rendition's label.
+		let tall = false;
+		const fit = () => {
+			const wide = delivery.offsetWidth + audio.offsetWidth + MARGIN <= root.clientWidth;
+			// Hidden rather than removed from layout, so its width is still there to measure.
+			delivery.style.visibility = tall && wide ? "" : "hidden";
 		};
 
 		const switched = this.#switches(effect, source);
@@ -131,6 +143,10 @@ export class Debug {
 
 		const delivery = this.#delivery(effect, source);
 		DOM.render(effect, root, delivery);
+
+		const resize = new ResizeObserver(fit);
+		for (const el of [root, audio, delivery]) resize.observe(el);
+		effect.cleanup(() => resize.disconnect());
 
 		// Update position when bounds, viewport, or zoom change
 		effect.run((effect) => {

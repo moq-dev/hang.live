@@ -26,6 +26,9 @@ bump the pin and:
 - Add a publish panel to local tiles from their renditions' stats.
 - Show the grant beside the remote tile's target, so a downgrade reads as
   either the tile shrinking or the downlink running out.
+- Draw the audio jitter sparkline from the decoder's own ingress jitter
+  estimate, which also sees groups that arrive too late to be read, instead of
+  the newest-arrival stats `app/src/room/jitter.ts` derives it from.
 - Keep the zero-overhead rule: nothing subscribed or timed while Debug is off.
 
 ## Waiting
@@ -42,3 +45,7 @@ bump the pin and:
 - moq-dev/moq: expose `Watch.Player`'s downlink grant (the `holdViewer`
   result in `js/watch/src/player.ts`). Check: `grep -n grant
   moq/js/watch/src/player.ts` shows a public output.
+- moq-dev/moq: expose the audio decoder's measured jitter (the private
+  `#measured` in `js/watch/src/audio/decoder.ts`, fed from the container
+  consumer's `spread`). Check: `grep -n measured
+  moq/js/watch/src/audio/decoder.ts` shows a public output.
