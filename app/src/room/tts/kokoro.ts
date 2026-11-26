@@ -1,8 +1,6 @@
 import { KokoroTTS } from "kokoro-js";
 import { Progress } from "./progress";
 
-export type Voice = KokoroTTS extends { voices: infer V } ? keyof V : never;
-
 const modelName = "onnx-community/Kokoro-82M-v1.0-ONNX";
 
 export class TTS {
@@ -19,21 +17,14 @@ export class TTS {
 		});
 	}
 
-	async ready(): Promise<boolean> {
-		return !!(await this.#model);
-	}
-
 	async progress(): Promise<number> {
 		return this.#progress.next();
 	}
 
-	async generate(text: string, props?: { voice?: Voice; speed?: number }): Promise<string> {
+	async generate(text: string): Promise<string> {
 		const model = await this.#model;
 
-		const audio = await model.generate(text, {
-			voice: props?.voice || "af_bella",
-			speed: props?.speed || 1.0,
-		});
+		const audio = await model.generate(text, { voice: "af_bella" });
 		const blob = audio.toBlob();
 		return URL.createObjectURL(blob);
 	}

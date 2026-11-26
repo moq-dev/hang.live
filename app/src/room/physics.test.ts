@@ -14,7 +14,7 @@ beforeEach(() => {
 
 afterEach(() => installed.close());
 
-const square = (x: number, y: number, size = 100) => Bounds.create(Vector.create(x, y), Vector.create(size, size));
+const square = (x: number, y: number, size = 100) => new Bounds(Vector.create(x, y), Vector.create(size, size));
 
 test("a zero vector normalizes to zero instead of NaN", () => {
 	const zero = Vector.create(0, 0).normalize();
