@@ -29,14 +29,13 @@ localStorage.setItem("settings.oauth.token", "stale");
 infoStatus = 401;
 
 const { default: Settings } = await import("./settings");
+// The client checks the stored token as soon as it loads, so wait from before then.
+const dropped = Settings.oauth.token.changed();
 const { client } = await import("./api");
 
-async function settle() {
-	for (let i = 0; i < 10; i++) await new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 test("a rejected token is dropped instead of resent forever", async () => {
-	await settle();
+	expect(await dropped).toBeUndefined();
+	if (client.authenticated.peek()) await client.authenticated.changed();
 	expect(requests.some((r) => r.url.endsWith("/account/info"))).toBe(true);
 	expect(Settings.oauth.token.peek()).toBeUndefined();
 	expect(client.authenticated.peek()).toBe(false);
