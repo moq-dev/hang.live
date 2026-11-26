@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import * as jose from "jose";
 import { z } from "zod";
 import * as Account from "./account";
+import * as Avatar from "./avatar";
 import { OauthState, oauthStateSchema, oauthTokenSchema, oauthProviders as providers } from "./client";
 import * as Database from "./database";
 import * as rpc from "./rpc";
@@ -220,7 +221,8 @@ export class Provider {
 		let avatarUrl: string | undefined;
 		if (user.avatar) {
 			const extension = user.avatar.startsWith("a_") ? "gif" : "png";
-			avatarUrl = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}`;
+			// Ask for the largest size we render, instead of whatever Discord defaults to.
+			avatarUrl = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=512`;
 		}
 		// If avatar is null/undefined, we could construct a default avatar URL, but it's better to leave it undefined
 		// Default Discord avatars: https://cdn.discordapp.com/embed/avatars/{discriminator % 5}.png
@@ -540,6 +542,16 @@ export const router = rpc
 			// Get user info
 			const oauthUser = await provider.getUser(accessToken);
 
+			// Copy the provider's avatar into R2 so peers never fetch from its CDN, which would reveal their IPs to it.
+			// The avatar is cosmetic, so a failed copy logs and leaves the account on a bundled default.
+			const copyAvatar = async () => {
+				if (!oauthUser.avatar) return undefined;
+				return await Avatar.download(oauthUser.avatar).catch((err) => {
+					console.error(`failed to copy ${provider.id} avatar`, err);
+					return undefined;
+				});
+			};
+
 			let user = await ctx.account.getByProvider(oauthUser.provider, oauthUser.providerId);
 			if (!user) {
 				// Matching or claiming an email is only safe when the provider verified it.
@@ -561,9 +573,14 @@ export const router = rpc
 					user = await ctx.account.create({
 						email: oauthUser.email,
 						name: name ?? oauthUser.name,
-						avatar: oauthUser.avatar,
+						avatar: await copyAvatar(),
 					});
 				}
+			}
+
+			// Accounts from before the copy still point at a provider CDN; move them over as they sign in.
+			if (await ctx.account.hasExternalAvatar(user.id)) {
+				user = await ctx.account.update(user.id, { avatar: (await copyAvatar()) ?? Avatar.random() });
 			}
 
 			await provider.link(user.id, oauthUser);

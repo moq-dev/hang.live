@@ -24,13 +24,12 @@ export const infoSchema = z.object({
 
 export type Info = z.infer<typeof infoSchema>;
 
-export const createSchema = z.object({
-	name: nameSchema,
-	email: z.string().check(z.email()),
-	avatar: z.optional(z.string()),
-});
-
-export type Create = z.infer<typeof createSchema>;
+export interface Create {
+	name: string;
+	email: string;
+	// A validated image to store in R2; a random bundled default when absent.
+	avatar?: Avatar.Upload;
+}
 
 export const table = sqliteTable("accounts", {
 	id: text("id").primaryKey(),
@@ -129,17 +128,27 @@ export class Context {
 		const id = Uuid.v4();
 		const now = new Date();
 
+		const avatar = info.avatar ? await this.storage.upload("avatar", info.avatar) : undefined;
+
 		const user: NewRow = {
-			...info,
+			name: info.name,
+			email: info.email,
 			id,
 			// Random avatars are app-relative URLs, not R2 keys.
-			avatarType: "url",
-			avatar: info.avatar ?? Avatar.random(),
+			avatarType: avatar ? "r2" : "url",
+			avatar: avatar ?? Avatar.random(),
 			createdAt: now,
 			updatedAt: now,
 		};
 
-		const row = await this.db.insert(table).values(user).returning();
+		const row = await this.db
+			.insert(table)
+			.values(user)
+			.returning()
+			.catch(async (err) => {
+				if (avatar) await this.storage.delete("avatar", avatar);
+				throw err;
+			});
 		const res = this.#rowToInfo(row.at(0));
 		if (!res) {
 			throw new Error("failed to insert");
@@ -147,20 +156,34 @@ export class Context {
 		return res;
 	}
 
-	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {
+	// Whether the account's avatar is an external URL, from before signup copied provider avatars into R2.
+	async hasExternalAvatar(id: Id): Promise<boolean> {
+		const row = (
+			await this.db
+				.select({ avatar: table.avatar, avatarType: table.avatarType })
+				.from(table)
+				.where(eq(table.id, id))
+				.limit(1)
+		).at(0);
+		return row?.avatarType === "url" && !Avatar.isDefault(row.avatar);
+	}
+
+	// A File is a client upload still to validate; an Upload was already validated, such as a copied provider avatar.
+	async update(id: Id, update: { name?: string; avatar?: File | Avatar.Upload | string }): Promise<Info> {
 		let avatar: string | undefined;
 		let avatarType: Avatar.Type | undefined;
 
 		// Validate and upload before touching the old avatar, so a rejected upload loses nothing.
-		if (update.avatar instanceof File) {
-			avatar = await this.storage.upload("avatar", await Avatar.validate(update.avatar));
-			avatarType = "r2";
-		} else if (update.avatar !== undefined) {
+		if (typeof update.avatar === "string") {
 			if (!Avatar.isDefault(update.avatar)) {
 				throw new HTTPException(400, { message: "Invalid avatar URL" });
 			}
 			avatar = update.avatar;
 			avatarType = "url";
+		} else if (update.avatar) {
+			const upload = update.avatar instanceof File ? await Avatar.validate(update.avatar) : update.avatar;
+			avatar = await this.storage.upload("avatar", upload);
+			avatarType = "r2";
 		}
 
 		const old = avatar

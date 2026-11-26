@@ -62,3 +62,19 @@ export function sanitizer(window: WindowLike): (html: string) => DocumentFragmen
 			RETURN_DOM_FRAGMENT: true,
 		});
 }
+
+// Whether a peer's avatar URL may be loaded: only from the app itself (the bundled defaults) or the public
+// bucket the API copies uploads and provider avatars into. Any other host would learn every viewer's IP.
+export function avatar(url: string, origins: { app: string; public: string }): boolean {
+	let parsed: URL;
+	try {
+		// Relative paths resolve against the app, as an <img> would.
+		parsed = new URL(url, origins.app);
+	} catch {
+		return false;
+	}
+	if (parsed.origin === new URL(origins.app).origin) return true;
+	// Compare the normalized URL against the bucket path, so `public.example.com.evil.com` and `..` don't slip by.
+	const bucket = origins.public.replace(/\/+$/, "");
+	return parsed.href.startsWith(`${bucket}/avatar/`);
+}
