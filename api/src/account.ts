@@ -9,8 +9,8 @@ import { type AccountId, accountIdSchema, nameSchema } from "./client";
 import type * as Database from "./database";
 import type * as OAuth from "./oauth";
 import * as rpc from "./rpc";
-import * as Schema from "./schema";
 import type * as Storage from "./storage";
+import * as Tables from "./tables";
 
 export type Id = AccountId;
 export const idSchema = accountIdSchema;
@@ -32,7 +32,7 @@ export const createSchema = z.object({
 
 export type Create = z.infer<typeof createSchema>;
 
-const table = Schema.accounts;
+const table = Tables.accounts;
 
 export type Row = typeof table.$inferSelect;
 export type NewRow = typeof table.$inferInsert;
@@ -100,8 +100,8 @@ export class Context {
 		const result = await this.db
 			.select()
 			.from(table)
-			.innerJoin(Schema.linked, eq(table.id, Schema.linked.accountId))
-			.where(and(eq(Schema.linked.providerId, provider), eq(Schema.linked.providerUser, providerUser)))
+			.innerJoin(Tables.linked, eq(table.id, Tables.linked.accountId))
+			.where(and(eq(Tables.linked.providerId, provider), eq(Tables.linked.providerUser, providerUser)))
 			.limit(1);
 
 		return this.#rowToInfo(result.at(0)?.accounts);
@@ -214,7 +214,7 @@ export class Context {
 		}
 
 		// Delete OAuth entries
-		await this.db.delete(Schema.linked).where(eq(Schema.linked.accountId, id));
+		await this.db.delete(Tables.linked).where(eq(Tables.linked.accountId, id));
 
 		// Delete account
 		await this.db.delete(table).where(eq(table.id, id));

@@ -6,7 +6,7 @@ import type * as Account from "./account";
 import { type OauthState, oauthStateSchema, oauthTokenSchema, oauthProviders as providers } from "./client";
 import type * as Database from "./database";
 import * as rpc from "./rpc";
-import * as Schema from "./schema";
+import * as Tables from "./tables";
 import { unreachable } from "./util";
 
 export type ProviderId = (typeof providers)[number];
@@ -304,9 +304,9 @@ export class Provider {
 		// The link vouches for the account only when the provider verified the account's own address.
 		const owner = (
 			await this.db
-				.select({ email: Schema.accounts.email })
-				.from(Schema.accounts)
-				.where(eq(Schema.accounts.id, account))
+				.select({ email: Tables.accounts.email })
+				.from(Tables.accounts)
+				.where(eq(Tables.accounts.id, account))
 				.limit(1)
 		).at(0);
 		const emailVerified = user.emailVerified && user.email !== undefined && user.email === owner?.email;
@@ -442,7 +442,7 @@ export interface User {
 	avatar?: string;
 }
 
-const table = Schema.linked;
+const table = Tables.linked;
 
 export type Row = typeof table.$inferSelect;
 export type NewRow = typeof table.$inferInsert;
