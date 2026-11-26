@@ -28,6 +28,8 @@ export class WatchBroadcast {
 	readonly #flip = new Signal(false);
 
 	readonly location: LocationFields;
+	/** Whether the peer publishes where its tile sits; a tile from a tool outside Hang is placed only locally. */
+	readonly located: Getter<boolean>;
 	readonly chat: ChatFields;
 	readonly user: {
 		id: Getter<string | undefined>;
@@ -81,6 +83,7 @@ export class WatchBroadcast {
 		});
 
 		this.location = extras.location;
+		this.located = extras.located;
 		this.chat = extras.chat;
 		this.user = metadata.user;
 

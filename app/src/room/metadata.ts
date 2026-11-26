@@ -12,7 +12,7 @@ import * as Json from "@moq/json";
 import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
 import { Chat, type Preview, type User } from "@moq/room";
-import { Effect, Signal } from "@moq/signals";
+import { Effect, type Getter, Signal } from "@moq/signals";
 import type * as Watch from "@moq/watch";
 import * as z from "zod/mini";
 
@@ -249,6 +249,8 @@ function serveSnapshot<T>(
 
 export type ConsumedExtras = {
 	location: LocationFields;
+	/** Whether the broadcast publishes its location, which a tool outside Hang, such as OBS, does not. */
+	located: Getter<boolean>;
 	chat: ChatFields;
 	close: () => void;
 };
@@ -256,6 +258,8 @@ export type ConsumedExtras = {
 /** Subscribe to location and chat on a watched broadcast. */
 export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "catalog" | "active"> }): ConsumedExtras {
 	const location = locationFields();
+	// Only the peer names its handle; a local one would send moves to a window that never applies them.
+	location.window.handle.set(undefined);
 	const chat = chatFields();
 	const signals = new Effect();
 
@@ -265,6 +269,8 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 	const locationTrack = signals.computed((effect) => effect.get(hang)?.location?.track);
 	const chatTrack = signals.computed((effect) => effect.get(hang)?.chat?.track);
 	const messagesTrack = signals.computed((effect) => effect.get(hang)?.messages?.track);
+	const located = new Signal(false);
+	signals.run((effect) => located.set(effect.get(locationTrack) !== undefined));
 	// A broadcast advertising the window sends messages only there.
 	const windowed = signals.computed((effect) => effect.get(messagesTrack) !== undefined);
 
@@ -314,6 +320,7 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 
 	return {
 		location,
+		located,
 		chat,
 		close: () => signals.close(),
 	};

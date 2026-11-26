@@ -231,3 +231,25 @@ test("a watcher recovers every chat message a delivery gap skipped", async () =>
 		net.close();
 	}
 });
+
+test("a broadcast without Hang's location, as OBS publishes, is placed locally", async () => {
+	const net = new Net.Broadcast.Producer();
+	// A plain `.hang` catalog: media only, no `hang` section.
+	const catalog = new Signal<ExtendedCatalog | undefined>({});
+	const extras = consumeExtras({
+		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+	});
+	try {
+		await flush();
+		expect(extras.located.peek()).toBe(false);
+		expect(extras.location.window.position.peek()).toBeUndefined();
+		expect(extras.location.window.handle.peek()).toBeUndefined();
+
+		catalog.set({ hang: { location: { track: "hang/location.json" } } });
+		await flush();
+		expect(extras.located.peek()).toBe(true);
+	} finally {
+		extras.close();
+		net.close();
+	}
+});
