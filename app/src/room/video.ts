@@ -1,10 +1,12 @@
-import { Effect, Signal } from "@moq/signals";
+import { type Effect, Signal } from "@moq/signals";
 import * as Api from "../api";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
+import { timestamp } from "./canvas";
 import { Bounds, Vector } from "./geometry";
 import type { GLContext } from "./gl/context";
-import * as Meme from "./meme";
+import type * as Meme from "./meme";
+import * as Sanitize from "./sanitize";
 
 /** One tile's textures on a live GL context. */
 export class Textures {
@@ -112,14 +114,17 @@ export class Video {
 	}
 
 	#runAvatar(effect: Effect) {
+		// The peer chose this URL, so load it only from our own origins; anywhere else would learn our IP.
+		const safe = Sanitize.peerAvatar(effect.get(this.broadcast.source.user.avatar));
+
 		// Keep the last avatar while the user details are missing, and pick a random one only for a tile that never had one.
-		const avatar = effect.get(this.broadcast.source.user.avatar) || this.#avatar || Api.randomAvatar();
+		const avatar = safe || this.#avatar || Api.randomAvatar();
 		this.#avatar = avatar;
 
 		// TODO only set the avatar if it successfully loads
 		const newAvatar = new Image();
 
-		// Enable CORS for external avatar images
+		// The public bucket is another origin, and drawing it to a canvas for upload needs CORS.
 		newAvatar.crossOrigin = "anonymous";
 
 		// An SVG may have no intrinsic size, so give it the largest size we render at.
@@ -176,7 +181,7 @@ export class Video {
 		const frame = effect.get(this.broadcast.source.video.frame);
 
 		if (!!frame !== this.frameActive) {
-			this.#frameTransition = performance.now();
+			this.#frameTransition = timestamp();
 			this.frameActive = !!frame;
 		}
 
@@ -377,7 +382,7 @@ export class Video {
 
 	#runMemeTransition(effect: Effect) {
 		effect.get(this.memeActive);
-		this.#memeTransition = performance.now();
+		this.#memeTransition = timestamp();
 	}
 
 	#runRenderSize(effect: Effect) {

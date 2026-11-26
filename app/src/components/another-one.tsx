@@ -1,4 +1,4 @@
-import { Accessor, createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { type Accessor, createEffect, createSignal, onCleanup, Show } from "solid-js";
 
 export default function AnotherOne(props: { clicks: Accessor<number> }) {
 	// Duration breakpoints for the meme video (in seconds)

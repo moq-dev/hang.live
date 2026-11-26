@@ -1,7 +1,7 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"files": {
-		"includes": ["**", "!**/worker-configuration.d.ts", "!**/models/tts/**", "!**/*.svg", "!moq"]
+		"includes": ["**", "!**/worker-configuration.d.ts", "!**/models/tts", "!**/*.svg", "!moq"]
 	},
 	"vcs": {
 		"enabled": true,
@@ -19,15 +19,48 @@
 			"a11y": {
 				"useMediaCaption": "off"
 			},
-			"style": {
-				"useImportType": "off"
-			},
 			"suspicious": {
 				// Some runtimes need ts-ignore
-				"noTsIgnore": "off"
+				"noTsIgnore": "off",
+				// Type-only cycles are erased at compile time, so only runtime cycles fail.
+				"noImportCycles": {
+					"level": "error",
+					"options": {
+						"ignoreTypes": true
+					}
+				}
+			},
+			"nursery": {
+				// A floating promise must be awaited, voided, or caught, and an async callback can't
+				// stand in for a sync one.
+				"noFloatingPromises": "error",
+				"noMisusedPromises": "error"
 			}
 		}
 	},
+	"overrides": [
+		{
+			// Room logic reads time through @moq/clock, so tests drive it with a Manual clock.
+			"includes": ["app/src/room/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedGlobals": {
+							"level": "error",
+							"options": {
+								"deniedGlobals": {
+									"performance": "Use now() from @moq/clock",
+									"Date": "Use wall() from @moq/clock",
+									"setTimeout": "Use sleep() or timeout() from @moq/clock",
+									"setInterval": "Use interval() from @moq/clock"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	],
 	"css": {
 		"parser": {
 			"cssModules": false,
@@ -38,6 +71,17 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
+		}
+	},
+	// Biome 2.6 formats YAML and Markdown by default; keep both off until a deliberate reformat.
+	"yaml": {
+		"formatter": {
+			"enabled": false
+		}
+	},
+	"markdown": {
+		"formatter": {
+			"enabled": false
 		}
 	}
 }

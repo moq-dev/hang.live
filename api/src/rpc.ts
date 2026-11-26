@@ -4,16 +4,8 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
-import { z } from "zod";
-import Context from "./context";
-
-export function app() {
-	return new Hono<{
-		Bindings: Env;
-	}>()
-		.use(withContext)
-		.use(withCors);
-}
+import type { z } from "zod";
+import type Context from "./context";
 
 export function router() {
 	return new Hono<{
@@ -23,18 +15,6 @@ export function router() {
 		};
 	}>();
 }
-
-// Instead of exposing env directly, we wrap it in a context object for easier access
-export const withContext = createMiddleware<{
-	Bindings: Env;
-	Variables: {
-		ctx: Context;
-	};
-}>(async (c, next) => {
-	const ctx = new Context(c.env);
-	c.set("ctx", ctx);
-	return await next();
-});
 
 export const withCors = createMiddleware<{
 	Bindings: Env;

@@ -6,6 +6,7 @@
  * catalog `hang` section.
  */
 
+import * as Clock from "@moq/clock";
 import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
 import * as Moq from "@moq/net";
@@ -356,7 +357,7 @@ const WINDOW_GAPS: Moq.StreamCode[] = [
 ];
 
 // Resolves once the event loop has run every microtask queued so far.
-const nextTask = () => new Promise<true>((resolve) => setTimeout(() => resolve(true), 0));
+const nextTask = () => Clock.yieldNow().then(() => true as const);
 
 /**
  * Show each message the window on `name` pushes, in order, clearing it once it leaves.

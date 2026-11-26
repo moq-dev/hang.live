@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
 import { marked } from "marked";
-import { sanitizer } from "./sanitize";
+import { avatar, sanitizer } from "./sanitize";
 
 // happy-dom's NodeIterator stops at the first removed node, so DOMPurify would pass anything after it.
 // jsdom follows the spec, as browsers do.
@@ -69,4 +69,37 @@ test("scripts and handlers are stripped while formatting stays", () => {
 	expect(html).toContain("<code>code</code>");
 	expect(html).not.toContain("script");
 	expect(html).not.toContain("onclick");
+});
+
+test("peer avatars load only from the app or the public bucket", () => {
+	const origins = { app: "https://hang.test/room/abc", public: "https://public.hang.test" };
+	for (const ok of [
+		"/avatar/12.svg",
+		"https://hang.test/avatar/kixel.svg",
+		"https://public.hang.test/avatar/0b6e7c1e-3c55-4c4e-9f1c-0c3f6a2b9d10.png",
+	]) {
+		expect(avatar(ok, origins)).toBe(true);
+	}
+	for (const bad of [
+		"https://evil.example/pixel.png",
+		"//evil.example/avatar/1.svg",
+		"https://cdn.discordapp.com/avatars/1/abc.png",
+		"https://lh3.googleusercontent.com/a/abc=s96-c",
+		"https://public.hang.test.evil.example/avatar/1.png",
+		"https://public.hang.test@evil.example/avatar/1.png",
+		"https://public.hang.test/avatar/../../evil.png",
+		"https://public.hang.test/other/1.png",
+		"http://public.hang.test/avatar/1.png",
+		"http://hang.test/avatar/1.svg",
+		"data:image/svg+xml,<svg/>",
+		"javascript:alert(1)",
+		"http://[",
+	]) {
+		expect(avatar(bad, origins)).toBe(false);
+	}
+
+	// A bucket served under a path, as the API does locally.
+	const local = { app: "http://localhost:1420/", public: "http://localhost:3000/public" };
+	expect(avatar("http://localhost:3000/public/avatar/a.png", local)).toBe(true);
+	expect(avatar("http://localhost:3000/account/info", local)).toBe(false);
 });

@@ -1,3 +1,4 @@
+import { createMiddleware } from "hono/factory";
 import * as Account from "./account";
 import * as Auth from "./auth";
 import * as Database from "./database";
@@ -24,3 +25,14 @@ export default class Context {
 		this.room = new Room.Context(env);
 	}
 }
+
+// Wraps env in a context object for each request.
+export const withContext = createMiddleware<{
+	Bindings: Env;
+	Variables: {
+		ctx: Context;
+	};
+}>(async (c, next) => {
+	c.set("ctx", new Context(c.env));
+	return await next();
+});

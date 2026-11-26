@@ -2,7 +2,7 @@ import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
-import { Bounds, Vector } from "./geometry";
+import type { Bounds, Vector } from "./geometry";
 import type { HangLocalSource } from "./local";
 
 export class Locator {

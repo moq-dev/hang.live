@@ -1,5 +1,5 @@
 import * as Clock from "@moq/clock";
-import { Bounds, Vector } from "./geometry";
+import { type Bounds, Vector } from "./geometry";
 
 /** One physics step; the tuned constants assume 60 steps per second. */
 export const STEP = Clock.Duration.micros(1_000_000 / 60);

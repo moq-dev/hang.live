@@ -4,7 +4,14 @@ import broadcastVertSource from "./broadcast.vert";
 import type { Camera } from "./camera";
 import type { GLContext } from "./context";
 import { Meshes } from "./mesh";
-import { Shader, Uniform1f, Uniform1i, Uniform2f, Uniform4f, UniformMatrix4fv } from "./shader";
+import {
+	Shader,
+	type Uniform1f,
+	type Uniform1i,
+	type Uniform2f,
+	type Uniform4f,
+	type UniformMatrix4fv,
+} from "./shader";
 
 export class BroadcastRenderer {
 	#context: GLContext;

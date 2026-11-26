@@ -1,9 +1,15 @@
+import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import { Vector } from "./geometry";
 import { BackgroundRenderer } from "./gl/background";
 import { Camera } from "./gl/camera";
 import { GLContext } from "./gl/context";
+
+/** The installed clock's time in the timebase requestAnimationFrame passes, so fades start in step with frames. */
+export function timestamp(): DOMHighResTimeStamp {
+	return Clock.now().since(Clock.Instant.ZERO).asMillis();
+}
 
 export class Canvas {
 	#canvas: HTMLCanvasElement;
@@ -86,7 +92,7 @@ export class Canvas {
 				this.camera.updateOrtho(viewport);
 
 				// Resizing clears the canvas, so draw now to avoid a black flicker.
-				this.#draw?.(performance.now());
+				this.#draw?.(timestamp());
 			}
 		};
 
@@ -148,7 +154,7 @@ export class Canvas {
 
 			// Without a scene, the background is a still frame redrawn only on resize.
 			if (!scene) {
-				draw(performance.now());
+				draw(timestamp());
 				return;
 			}
 

@@ -30,9 +30,9 @@
 		"deploy": "just deploy"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.10",
+		"@biomejs/biome": "^2.6.7",
 		"concurrently": "^9.2.1",
-		"typescript": "^6.0.2",
+		"typescript": "7.0.2",
 		"wrangler": "^4.79.0",
 		"esbuild": "^0.28.2"
 	},

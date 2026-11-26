@@ -4,7 +4,14 @@ import audioVertSource from "./audio.vert";
 import type { Camera } from "./camera";
 import type { GLContext } from "./context";
 import { Meshes } from "./mesh";
-import { Shader, Uniform1f, Uniform2f, Uniform3f, Uniform4f, UniformMatrix4fv } from "./shader";
+import {
+	Shader,
+	type Uniform1f,
+	type Uniform2f,
+	type Uniform3f,
+	type Uniform4f,
+	type UniformMatrix4fv,
+} from "./shader";
 
 export class AudioRenderer {
 	#program: Shader;

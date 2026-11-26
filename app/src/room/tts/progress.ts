@@ -1,4 +1,4 @@
-import { ProgressInfo } from "@huggingface/transformers";
+import type { ProgressInfo } from "@huggingface/transformers";
 
 export class Progress {
 	#models = new Map<string, Map<string, { loaded: number; total: number } | undefined>>();

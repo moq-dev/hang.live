@@ -111,7 +111,7 @@ export class Client {
 		Settings.oauth.token.set(token);
 	}
 
-	async logout(): Promise<void> {
+	logout(): void {
 		Settings.logout();
 	}
 }

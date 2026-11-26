@@ -1,9 +1,9 @@
 import { createMiddleware } from "hono/factory";
 import * as JWT from "jose";
 import { z } from "zod";
-import { Account } from ".";
+import type { Account } from ".";
 import { accountIdSchema, oauthChallenge } from "./client";
-import RootContext from "./context";
+import type RootContext from "./context";
 
 // Use ZOD to validate the payload
 const tokenSchema = z.object({

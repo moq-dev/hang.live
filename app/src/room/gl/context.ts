@@ -1,5 +1,5 @@
-import { Signal } from "@moq/signals";
-import { Vector } from "../geometry";
+import type { Signal } from "@moq/signals";
+import type { Vector } from "../geometry";
 import { Mesh } from "./mesh";
 
 // Cells per side of the mesh a wobbling tile bends on.

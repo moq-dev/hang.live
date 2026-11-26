@@ -1,8 +1,8 @@
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import * as Meme from "./meme";
-import { fade, PannedSound, Sound } from "./sound";
+import type * as Meme from "./meme";
+import { fade, PannedSound, type Sound } from "./sound";
 
 const FADE_TIME = 0.2;
 

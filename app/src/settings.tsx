@@ -3,8 +3,8 @@ import { Effect, Signal } from "@moq/signals";
 import { createSelector, createSignal, Match, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
-import { Tab } from "./components/meme-selector";
-import { Sound } from "./room/sound";
+import type { Tab } from "./components/meme-selector";
+import type { Sound } from "./room/sound";
 import * as Speaker from "./speaker";
 import { solid } from "./util/solid";
 
