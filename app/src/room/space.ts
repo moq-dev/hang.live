@@ -522,8 +522,9 @@ export class Space {
 				this.#maxZ = z;
 			}
 
-			this.ordered.update((prev) =>
-				prev.sort(
+			// Sorts in place, so mutate to notify.
+			this.ordered.mutate((ordered) =>
+				ordered.sort(
 					// Peek at the other broadcasts' z-index to avoid re-sorting every time.
 					(a, b) => a.position.peek().z - b.position.peek().z,
 				),

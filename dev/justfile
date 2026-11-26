@@ -17,9 +17,9 @@ default:
 root: auth-key
 	moq-relay root.toml
 
-# Verify local room tokens and allow anonymous anon/** development rooms.
+# Verify local room tokens and allow anonymous development rooms under anon/.
 auth: auth-key
-	moq auth serve --listen 127.0.0.1:4440 --key root.jwk --public-publish 'anon/**' --public-subscribe 'anon/**'
+	moq auth serve --listen 127.0.0.1:4440 --key root.jwk --public-publish anon --public-subscribe anon
 
 # Generate a random secret key for authentication.
 auth-key:
@@ -33,7 +33,8 @@ auth-token: auth-key
 	@if [ ! -f "root.jwt" ]; then \
 		moq auth sign --key "root.jwk" \
 			--root "" \
-			--subscribe '**' \
-			--publish '**' \
+			--subscribe "" \
+			--publish "" \
+			--unbounded \
 			> root.jwt ; \
 	fi

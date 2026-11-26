@@ -9,7 +9,6 @@ if (Tauri.DESKTOP) {
 	import("./tauri/update");
 }
 
-import { createAccessor as solid } from "@moq/signals/solid";
 import { Route, Router, useLocation } from "@solidjs/router";
 import { onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
@@ -25,6 +24,7 @@ import { Oauth } from "./oauth";
 import Privacy from "./privacy";
 import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
+import { solid } from "./util/solid";
 
 export function Hang(): JSX.Element {
 	const background = (<canvas class="fixed inset-0 w-full h-full bg-black" />) as HTMLCanvasElement;

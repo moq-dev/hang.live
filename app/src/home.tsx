@@ -1,5 +1,4 @@
 import * as Moq from "@moq/net";
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -10,6 +9,7 @@ import Profile from "./components/profile";
 import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
 import { Local } from "./room/local";
+import { solid } from "./util/solid";
 
 export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);

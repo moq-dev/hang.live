@@ -1,5 +1,4 @@
 import type { Getter } from "@moq/signals";
-import { createAccessor as solid } from "@moq/signals/solid";
 import {
 	type Accessor,
 	createEffect,
@@ -24,6 +23,7 @@ import { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Tauri from "./tauri";
 import { isMobile } from "./util/mobile";
+import { solid } from "./util/solid";
 
 type MobileSection = "publish" | "chat" | "settings" | null;
 
@@ -252,7 +252,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 
 export function Microphone(props: { local: Local }): JSX.Element {
 	const toggle = () => {
-		props.local.core.microphoneEnabled.update((prev: boolean) => !prev);
+		props.local.core.microphone.enabled.update((prev: boolean) => !prev);
 	};
 	const root = solid(props.local.camera.audio.root);
 
@@ -263,7 +263,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 	// Use device signals from the Device API
 	const device = props.local.microphone.device;
-	const enabled = solid(props.local.core.microphoneEnabled);
+	const enabled = solid(props.local.core.microphone.enabled);
 	const available = solid(device.out.available);
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
@@ -317,12 +317,12 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	const selectDevice = (deviceId: string) => {
 		if (root() && deviceId === Settings.microphone.device.peek()) {
 			// Same device selected and mic is enabled - disable it
-			props.local.core.microphoneEnabled.set(false);
+			props.local.core.microphone.enabled.set(false);
 			Settings.microphone.device.set(undefined);
 		} else {
 			// Different device or mic is disabled - enable it
 			Settings.microphone.device.set(deviceId);
-			props.local.core.microphoneEnabled.set(true);
+			props.local.core.microphone.enabled.set(true);
 		}
 	};
 
@@ -463,10 +463,10 @@ export function Microphone(props: { local: Local }): JSX.Element {
 
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.core.cameraEnabled.update((prev: boolean) => !prev);
+		props.local.core.camera.enabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.webcam.out.source);
-	const enabled = solid(props.local.core.cameraEnabled);
+	const enabled = solid(props.local.core.camera.enabled);
 
 	const [showMenu, setShowMenu] = createSignal(false);
 	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
@@ -529,12 +529,12 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const selectDevice = (deviceId: string) => {
 		if (media() && deviceId === Settings.camera.device.peek()) {
 			// Same device selected and camera is enabled - disable it
-			props.local.core.cameraEnabled.set(false);
+			props.local.core.camera.enabled.set(false);
 			Settings.camera.device.set(undefined);
 		} else {
 			// Different device or camera is disabled - enable it
 			Settings.camera.device.set(deviceId);
-			props.local.core.cameraEnabled.set(true);
+			props.local.core.camera.enabled.set(true);
 		}
 	};
 
@@ -658,7 +658,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 function Screen(props: { local: Local; room: Room }): JSX.Element {
 	const toggle = () => {
-		props.local.core.screenEnabled.update((prev: boolean) => !prev);
+		props.local.core.screen.enabled.update((prev: boolean) => !prev);
 	};
 	const media = solid(props.local.screen.out.source);
 

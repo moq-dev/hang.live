@@ -41,8 +41,10 @@ test("removed chat catalog entries clear stale messages", async () => {
 	const net = new Net.Broadcast.Producer();
 	const catalog = new Signal<ExtendedCatalog | undefined>({ hang: { chat: { track: "hang/chat.json" } } });
 	const active = new Signal<Net.Broadcast.Consumer | undefined>(net.consume());
-	const publisher = new Json.Snapshot.Producer({ track: net.createTrack("hang/chat.json") });
-	publisher.update({ value: { message: "hello", typing: true } });
+	const track = net.createTrack("hang/chat.json", { timescale: Net.Time.Timescale.MILLI });
+	if (!track) throw new Error("hang/chat.json already exists");
+	const publisher = new Json.Snapshot.Producer({ track });
+	publisher.update({ message: "hello", typing: true }, Net.Time.Timestamp.now());
 	const extras = consumeExtras({ out: { catalog, active } });
 	try {
 		await flush();

@@ -10,7 +10,7 @@
   };
 
   inputs = {
-    moq.url = "github:moq-dev/moq/1feb24e3ca98e687b7111ae6c2533ae19dac33a5";
+    moq.url = "github:moq-dev/moq/28d8eb84d640c2db6b516e1a1115c34400975787";
     nixpkgs.follows = "moq/nixpkgs";
     flake-utils.follows = "moq/flake-utils";
     rust-overlay.follows = "moq/rust-overlay";

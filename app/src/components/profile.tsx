@@ -1,6 +1,5 @@
 import * as Clock from "@moq/clock";
 import { Effect } from "@moq/signals";
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createSignal, JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
@@ -10,6 +9,7 @@ import { Local } from "../room/local";
 import { Sound } from "../room/sound";
 import { Space } from "../room/space";
 import Settings from "../settings";
+import { solid } from "../util/solid";
 import AnotherOne from "./another-one";
 import Tooltip from "./tooltip";
 
@@ -147,17 +147,14 @@ class LocalPreview {
 			if (position.x === 0 && position.y === 0 && position.s === 1) return;
 
 			// Reset the position after 2 seconds.
-			effect.timer(
-				() => {
-					broadcast.position.set({
-						x: 0,
-						y: 0,
-						z: 0,
-						s: 1,
-					});
-				},
-				Clock.Nano.fromMilli(Clock.Milli(2000)),
-			);
+			effect.timer(() => {
+				broadcast.position.set({
+					x: 0,
+					y: 0,
+					z: 0,
+					s: 1,
+				});
+			}, Clock.Duration.millis(2000));
 		});
 	}
 

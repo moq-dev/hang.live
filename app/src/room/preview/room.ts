@@ -20,7 +20,7 @@ export class Room {
 		});
 	}
 
-	get members(): Getter<Map<Moq.Path.Valid, Remote>> {
+	get members(): Getter<ReadonlyMap<Moq.Path.Valid, Remote>> {
 		return this.#roster.remotes;
 	}
 

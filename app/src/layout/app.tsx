@@ -1,11 +1,11 @@
 import * as Moq from "@moq/net";
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createResource, createSignal, JSX, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";
 import Settings from "../settings";
 import { isMobile } from "../util/mobile";
+import { solid } from "../util/solid";
 import { Logo } from "./logo";
 
 export default function App(props: { children: JSX.Element; connection: Moq.Connection; room: string }) {
