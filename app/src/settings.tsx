@@ -40,7 +40,8 @@ const ACCOUNT_KEYS = [
 	"settings.account.avatar",
 ];
 
-const guest = Api.guestSchema.safeParse(localStorage.getItem("settings.account.guest"));
+// A bare guest path stored by an older build proves nothing, so it is dropped for a fresh guest.
+const guest = Api.guestTokenSchema.safeParse(localStorage.getItem("settings.account.guest"));
 const effect = new Effect();
 
 export const Settings = {
@@ -69,7 +70,7 @@ export const Settings = {
 
 	// Cached account identity and profile.
 	account: {
-		// A random ID starting with "guest/" that is used to identify ourselves on reload.
+		// The credential the API issued our random guest/ identity, presented to rejoin as it on reload.
 		guest: new Signal<string | undefined>(guest.success ? guest.data : undefined),
 		name: new Signal<string | undefined>(localStorage.getItem("settings.account.name") ?? Api.randomName()),
 		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? Api.randomAvatar()),

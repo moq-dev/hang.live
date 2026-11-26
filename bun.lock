@@ -18,6 +18,7 @@
       "dependencies": {
         "@hono/zod-validator": "^0.7.2",
         "@moq/auth": "workspace:*",
+        "@moq/clock": "workspace:*",
         "drizzle-orm": "^0.44.5",
         "hono": "^4.9.4",
         "jose": "^6.0.13",
