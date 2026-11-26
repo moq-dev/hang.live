@@ -75,5 +75,8 @@ export type AccountId = z.infer<typeof accountIdSchema>;
 // One literal path segment beneath guest/, never a wildcard permission.
 export const guestSchema = z.string().regex(/^guest\/[^/*]+$/, "Invalid guest identity");
 
+// The credential the API issues a guest, a compact JWT, which the browser keeps to rejoin as the same guest.
+export const guestTokenSchema = z.string().regex(/^[\w-]+\.[\w-]+\.[\w-]+$/, "Invalid guest credential");
+
 // Display names, trimmed so whitespace cannot pad a short name past the minimum.
 export const nameSchema = z.string().trim().check(z.minLength(4), z.maxLength(100));

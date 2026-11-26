@@ -5,7 +5,8 @@ set fallback
 dev:
 	just ../dev/auth-key
 	bun wrangler d1 migrations apply DB --local
-	bun wrangler dev --var "RELAY_SECRET:$(cat ../dev/root.jwk)" --var "RELAY_URL:http://localhost:4443"
+	# Sessions and guest credentials are signed with a secret derived from this checkout's random relay key.
+	bun wrangler dev --var "RELAY_SECRET:$(cat ../dev/root.jwk)" --var "RELAY_URL:http://localhost:4443" --var "AUTH_SECRET:$(sha256sum < ../dev/root.jwk | cut -d' ' -f1)"
 
 build:
 	bun run build

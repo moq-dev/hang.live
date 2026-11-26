@@ -16,7 +16,7 @@ export default defineConfig(() => {
 		build: {
 			target: "esnext",
 			sourcemap: process.env.NODE_ENV === "production" ? false : ("inline" as const),
-			rollupOptions: {
+			rolldownOptions: {
 				input: "index.html",
 				external,
 			},
@@ -27,10 +27,9 @@ export default defineConfig(() => {
 
 		worker: {
 			format: "es" as const,
-			rollupOptions: {
+			rolldownOptions: {
 				external,
 			},
-			dedup: ["@huggingface/transformers"],
 		},
 
 		plugins: [

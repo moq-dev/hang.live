@@ -14,7 +14,6 @@ Found by the m1 `code` audit (2026-11-25). Each item is checked against code, HT
 
 Users lose nothing in the app: no page links these files. Anyone hot-linking one gets a 404.
 
-## Waiting
+Decided 2026-11-26 (maintainer, /quest-run): ✅ (a) delete the `/dev/icons` generator: `icons.tsx`, its route, and `jszip`, since the generated icons are checked in (rejected: (b) keep only the favicon and Discord banner variants, (c) keep it as is).
 
-- Maintainer: decide the icon page. Options: (a) delete `icons.tsx`, its route, and `jszip`, since the generated icons are checked in (recommended); (b) keep only the web favicon and Discord banner variants; (c) keep it as is.
-- Maintainer: decide the unreferenced public assets. Options: (a) delete them all (recommended); (b) delete only the commented-out memes and notification sounds; (c) keep them.
+Decided 2026-11-26 (maintainer, /quest-run): ✅ (a) delete every unreferenced `app/public` file listed above (rejected: (b) delete only the commented-out memes and notification sounds, (c) keep them).
