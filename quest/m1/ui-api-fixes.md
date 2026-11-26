@@ -9,12 +9,9 @@ without crashes, memory leaks, accessibility traps, or broken R2/D1 state.
 
 Fix the verified frontend and API bugs surfaced in the 2026-11-25 audit:
 
-- **Meme selector & audio preview** (`app/src/components/meme-selector.tsx`):
-  clamp `video.element.volume` to `[0, 1]` (or route previews through Web Audio)
-  so previewing video memes does not throw `IndexSizeError` when speaker gain is
-  above 100%; remove the broken `createSignal(() => localStorage.setItem(...))`
-  duplicate persistence; clear the 100ms outside-click listener timer on
-  unmount.
+- **Meme selector** (`app/src/components/meme-selector.tsx`): remove the
+  broken `createSignal(() => localStorage.setItem(...))` duplicate persistence;
+  clear the 100ms outside-click listener timer on unmount.
 - **Account page & API account/favorites fixes** (`app/src/account.tsx`,
   `api/src/account.ts`, `api/src/fave.ts`):
   - Track and revoke the actual object URLs created for uploaded avatar previews

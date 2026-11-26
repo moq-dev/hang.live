@@ -1,19 +1,21 @@
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
+import * as Avatar from "./avatar";
 import * as rpc from "./rpc";
 
 export class Context {
 	#bucket: R2Bucket;
 
-	constructor(env: Env) {
+	constructor(env: Pick<Env, "PUBLIC">) {
 		this.#bucket = env.PUBLIC;
 	}
 
-	async upload(folder: string, file: Uint8Array, extension: string): Promise<string> {
-		const key = `${uuidv4()}.${extension}`;
+	async upload(folder: string, file: Avatar.Upload): Promise<string> {
+		const key = `${uuidv4()}.${file.extension}`;
 		const fullPath = `${folder}/${key}`;
 
-		await this.#bucket.put(fullPath, file);
+		// Store the content type so the public bucket serves the image as an image, never sniffed.
+		await this.#bucket.put(fullPath, file.data, { httpMetadata: { contentType: file.contentType } });
 		return key;
 	}
 
@@ -31,65 +33,35 @@ export class Context {
 		const fullPath = `${folder}/${key}`;
 		await this.#bucket.delete(fullPath);
 	}
-
-	extension(contentType: string): string {
-		const extensions: Record<string, string> = {
-			"image/jpeg": "jpg",
-			"image/png": "png",
-			"image/gif": "gif",
-			"image/webp": "webp",
-			"image/svg+xml": "svg",
-		};
-
-		return extensions[contentType] || "jpg";
-	}
 }
 
-export function validateAvatar(file: File) {
-	const maxSize = 5 * 1024 * 1024; // 5MB
-	const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
-
-	if (file.size > maxSize) {
-		throw new Error("File size too large. Maximum 5MB allowed.");
-	}
-
-	if (!allowedTypes.includes(file.type)) {
-		throw new Error("Invalid file type. Only JPEG, PNG, GIF, SVG, and WebP are allowed.");
-	}
-}
-
+// Serves uploaded avatars where no public bucket domain fronts R2, such as local development.
+// Only keys `upload` could have written, so no other bucket object leaks through the API origin.
 export const router = rpc.router().get(
-	"/:folder/:path{.+}",
+	"/avatar/:key",
 	rpc.withParam(
 		z.object({
-			folder: z.string(),
-			path: z.string(),
+			key: z.string().regex(/^[0-9a-f-]{36}\.[a-z]+$/),
 		}),
 	),
 	async (c) => {
-		const { folder, path } = c.req.valid("param");
+		const { key } = c.req.valid("param");
 
-		const file = await c.var.ctx.storage.get(folder, path);
+		const contentType = Avatar.contentType(key.slice(key.indexOf(".") + 1));
+		if (!contentType) {
+			return c.json({ error: "File not found" }, 404);
+		}
+
+		const file = await c.var.ctx.storage.get("avatar", key);
 		if (!file) {
 			return c.json({ error: "File not found" }, 404);
 		}
 
-		// Determine content type based on file extension
-		const extension = path.split(".").pop()?.toLowerCase();
-		const contentType = extension
-			? {
-					jpg: "image/jpeg",
-					jpeg: "image/jpeg",
-					png: "image/png",
-					gif: "image/gif",
-					webp: "image/webp",
-					svg: "image/svg+xml",
-				}[extension] || "application/octet-stream"
-			: "application/octet-stream";
-
 		return new Response(file, {
 			headers: {
 				"Content-Type": contentType,
+				"Content-Security-Policy": "default-src 'none'; sandbox",
+				"X-Content-Type-Options": "nosniff",
 				"Cache-Control": "public, max-age=2592000",
 			},
 		});

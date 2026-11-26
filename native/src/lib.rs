@@ -53,17 +53,16 @@ pub fn run() {
 
 // Instead of relying on deep links, this oauth plugin spawns a localhost server.
 // It's so stupid but basically:
-// - Google redirects to api.hang.live/oauth/google/callback?token&state
-// - api.hang.live redirects to localhost:8000/oauth/<redirect>?token&state
-// - localhost:8000 tells the JS frontend to redirect to /oauth/<redirect>?token&state
-// - /oauth/<redirect>?token&state parses the token and redirects to /<redirect>
+// - Google redirects to api.hang.live/auth/google/callback?code&state
+// - api.hang.live redirects to localhost:8000/oauth/<redirect>?code
+// - localhost:8000 tells the JS frontend to redirect to /oauth/<redirect>?code
+// - /oauth/<redirect>?code redeems the code with the frontend's verifier and redirects to /<redirect>
 //
 // We could combine the last two steps into one but this way matches the web flow.
 #[tauri::command]
 async fn start_server(window: tauri::Window) -> Result<u16, String> {
 	tauri_plugin_oauth::start(move |url| {
-		// TODO: Because of the unprotected localhost port, you must verify the URL here.
-		// Preferebly send back only the token, or nothing at all if you can handle everything else in Rust.
+		// The localhost port is unprotected, but a code is useless without the verifier only the frontend holds.
 		let _ = window.emit("redirect_uri", url);
 
 		// Focus the main window
