@@ -19,7 +19,7 @@ type Room = {
 // A tile covering a 200x200 square at `x, y`, placed at `position`.
 function tile<S extends Tile["source"]>(source: S, x: number, y: number, position = place(0, 0)): Tile & { source: S } {
 	return {
-		bounds: new Signal(Bounds.create(Vector.create(x, y), Vector.create(200, 200))),
+		bounds: new Signal(new Bounds(Vector.create(x, y), Vector.create(200, 200))),
 		position: new Signal(position),
 		dragPoint: new Signal(Vector.create(0.5, 0.5)),
 		zoomCenter: new Signal(Vector.create(0.5, 0.5)),
