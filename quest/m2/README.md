@@ -5,7 +5,7 @@
 Turn Hang into a compelling live showcase of what Media over QUIC makes easy
 that WebRTC/HLS struggle with: real-time transport/media telemetry, end-to-end
 encryption, external OBS/CLI/studio interoperability, synchronized captions and
-barge-in AI voice, and datagram-driven spatial interactivity / direct P2P.
+barge-in AI voice, and datagram-driven spatial interactivity.
 
 ## Plan
 
@@ -15,3 +15,8 @@ crypto, room, and protocol pieces belong upstream in `moq-dev/moq` and are
 consumed here through the pinned `moq/` submodule.
 
 Each child quest is independently shippable.
+
+## Required
+
+- [m1](/quest/m1/README.md) - the clean, modern baseline the showcase builds on
+  (maintainer, 2026-11-25: m2 runs after m0 and m1)

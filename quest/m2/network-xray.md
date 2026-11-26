@@ -1,4 +1,4 @@
-# [S] MoQ Network X-Ray: health grades and publisher counters
+# [S] MoQ Network X-Ray: health grades, publisher counters, and audio jitter
 
 ## Goal
 
@@ -14,7 +14,8 @@ jitter.
 `app/src/room/debug.ts` already shows, only while Debug is on: each remote
 tile's renditions with the active one ringed, its pixel target, an amber flash
 on every HD ↔ SD switch, sparklines of video bitrate and frame rate with the
-decoders' late, stall, underrun, and skip counters, and a room-wide panel of PROBE round trip, downlink estimate, and PROBE target.
+decoders' late, stall, underrun, and skip counters, and a room-wide panel of
+PROBE round trip, downlink estimate, and PROBE target.
 
 The rest needs APIs the pinned `moq/` lacks (see Waiting). Once they land,
 bump the pin and:
