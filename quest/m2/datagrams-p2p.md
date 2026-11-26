@@ -18,8 +18,9 @@ Showcase MoQ's low-latency non-media transport in Hang's spatial UI with
   clients.
 - Render smooth remote cursor trails and live tile motion during drags
   (instead of waiting until `mouseup`). Decide the path at connect from the
-  session's transport: WebSocket sessions, which carry no datagrams, use
-  mouseup-only snapshots.
+  negotiated session: enable live updates only when it carries unreliable
+  datagrams, and keep every other session, WebSocket included (QMux datagrams
+  there still ride TCP), on mouseup-only snapshots.
 - Direct browser-to-browser P2P is out of scope: `moq-dev/moq` removed
   `@moq/p2p` in [moq-dev/moq#8771](https://github.com/moq-dev/moq/pull/8771),
   and the maintainer is investigating alternatives.

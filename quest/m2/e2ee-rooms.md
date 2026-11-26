@@ -26,6 +26,10 @@ profile exists.
   rules: each publisher instance mints a fresh epoch, announced as the route's
   instance rather than in the path, never reused under one credential across
   runs or restarts. Encrypt media and Hang's `location`/`chat` tracks.
+  Only `moq-lite-07-wip`, which `@moq/net`'s default versions leave out, carries
+  the publisher's instance end to end; older Lite versions resolve their own,
+  so subscribers could not derive keys. Private rooms connect with versions
+  that preserve the instance and refuse a session that negotiates any other.
 - Display a clear lock indicator in the room header and warn users
   if they open an E2EE room link without a key fragment.
 - Verify in tests that relay-visible paths/payloads carry no plaintext room
