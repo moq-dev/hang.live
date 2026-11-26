@@ -34,11 +34,13 @@ Without Nix, put the tools that dev shell lists on your `PATH` yourself.
 git clone --recurse-submodules https://github.com/moq-dev/hang.live.git
 cd hang.live
 direnv allow
+git lfs pull
 just install
 just dev
 ```
 
 In an existing checkout, run `git submodule update --init` first.
+`git lfs pull` fetches the media assets a clone leaves as pointers when Git LFS is only in the dev shell.
 
 `just dev` starts these processes concurrently:
 
@@ -64,7 +66,8 @@ In an existing checkout, run `git submodule update --init` first.
 ## MoQ (Media over QUIC)
 
 Hang uses [moq](https://github.com/moq-dev/moq), an open-source library for real-time media streaming over WebTransport and QUIC.
-The `@moq/*` packages come from the pinned `moq/` submodule as Bun workspaces, never from npm, and the Nix flake builds `moq-relay` and `moq` from the same revision.
+The `@moq/*` packages resolve from the pinned `moq/` submodule as Bun workspaces, and the Nix flake builds `moq-relay`, `moq`, and the `@moq/libav` decoder from the same revision.
+Without Nix, the decoder build downloads that version's published npm tarball instead.
 See [moq.dev](https://moq.dev) for full documentation.
 
 ## Contributing
