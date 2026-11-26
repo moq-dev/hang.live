@@ -57,6 +57,7 @@ export class Space {
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
 		this.#signals.event(canvas.element, "mousemove", this.#onMouseMove.bind(this));
+		// Releasing the button and leaving the canvas both end a drag.
 		this.#signals.event(canvas.element, "mouseup", this.#onMouseRelease.bind(this));
 		this.#signals.event(canvas.element, "mouseleave", this.#onMouseRelease.bind(this));
 		this.#signals.event(canvas.element, "wheel", this.#onMouseWheel.bind(this), { passive: false });
@@ -89,7 +90,6 @@ export class Space {
 		if (broadcast) document.body.style.cursor = Gesture.locked(broadcast) ? "not-allowed" : "grabbing";
 	}
 
-	// Releasing the button and leaving the canvas both end a drag.
 	#onMouseRelease() {
 		if (!this.#gesture.up()) return;
 		this.#hover(undefined);
@@ -388,9 +388,7 @@ export class Space {
 		const dragging = this.#gesture.dragging;
 		for (const broadcast of broadcasts) {
 			if (dragging !== broadcast) {
-				renderers.broadcast.render(broadcast, this.canvas.camera, this.#stack.top, {
-					hovering: this.#hovering === broadcast || this.profile,
-				});
+				renderers.broadcast.render(broadcast, this.canvas.camera, this.#stack.top);
 			}
 		}
 

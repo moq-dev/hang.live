@@ -10,7 +10,7 @@ import * as OAuth from "../src/oauth";
 import * as Storage from "../src/storage";
 
 // An in-memory R2 bucket holding only what the API uses.
-export class Bucket {
+class Bucket {
 	objects = new Map<string, { data: Uint8Array; contentType?: string }>();
 
 	async put(key: string, data: Uint8Array, options?: { httpMetadata?: { contentType?: string } }) {

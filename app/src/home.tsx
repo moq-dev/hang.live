@@ -1,5 +1,6 @@
 import * as Moq from "@moq/net";
-import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
+import { Signal } from "@moq/signals";
+import { createEffect, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
 import { Badge } from "./components/badge";
@@ -8,14 +9,16 @@ import Login from "./components/login";
 import Profile from "./components/profile";
 import Layout from "./layout/web";
 import { PreviewRoomCompact } from "./preview";
+import * as Relay from "./relay";
 import { Local } from "./room/local";
 import { solid } from "./util/solid";
 
 export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
 
-	// Connection for live previews
-	const connection = new Moq.Connection({ enabled: true });
+	// Connection for live previews, its token renewed by fetching the favorites again.
+	const tokens = new Signal<readonly string[]>([]);
+	const connection = new Moq.Connection({ enabled: true, tokens });
 	onCleanup(() => connection.close());
 
 	// Track total member count across all favorites
@@ -28,15 +31,41 @@ export function Home(): JSX.Element {
 
 	const authenticated = solid(Api.client.authenticated);
 
-	const [favorites, { refetch }] = createResource(async () => {
-		if (!authenticated()) return null;
+	// Undefined while loading, and null when signed out.
+	const [favorites, setFavorites] = createSignal<Api.Fave.Info[] | null>();
+	const [reload, setReload] = createSignal(0);
 
-		const response = await Api.client.routes.fave.all.$get();
-		if (!response.ok) throw new Error(`Failed to fetch favorites: ${response.statusText}`);
+	createEffect(() => {
+		reload();
+		if (!authenticated()) {
+			setFavorites(null);
+			return;
+		}
 
-		const data = await response.json();
-		connection.url.set(data.url ? new URL(data.url) : undefined);
-		return data.favorites;
+		const abort = new AbortController();
+		onCleanup(() => abort.abort());
+
+		const sign = async () => {
+			const response = await Api.client.routes.fave.all.$get(undefined, { init: { signal: abort.signal } });
+			if (!response.ok) throw new Error(`Failed to fetch favorites: ${response.statusText}`);
+			const data = await response.json();
+			// No favorites need no preview token to renew.
+			return { ...data, lifetime: data.preview?.lifetime };
+		};
+
+		const load = async () => {
+			for await (const data of Relay.renew(sign, abort.signal)) {
+				tokens.set(data.preview ? [data.preview.token] : []);
+				// An API rolled back past renewal returns only `url`, with the token in its query.
+				const url = data.preview?.relay ?? data.url;
+				connection.url.set(url ? new URL(url) : undefined);
+				setFavorites(data.favorites);
+			}
+		};
+
+		load().catch((err: unknown) => {
+			if (!abort.signal.aborted) console.error("Failed to fetch favorites", err);
+		});
 	});
 
 	const handleRemove = async (room: string) => {
@@ -45,7 +74,7 @@ export function Home(): JSX.Element {
 				param: { room },
 			});
 			if (response.ok) {
-				refetch();
+				setReload((n) => n + 1);
 			}
 		} catch (error) {
 			console.error("Failed to remove favorite:", error);
@@ -80,7 +109,7 @@ export function Home(): JSX.Element {
 							}
 						>
 							<Switch>
-								<Match when={favorites.loading}>
+								<Match when={favorites() === undefined}>
 									<div class="space-y-3">
 										<For each={[1, 2, 3]}>
 											{() => (
@@ -112,7 +141,6 @@ export function Home(): JSX.Element {
 															// Collapsed cards stay mounted so their rooms still count toward the badge.
 															hidden={!showMore() && index() >= 6}
 															room={favorite.room}
-															createdAt={favorite.created_at}
 															onRemove={handleRemove}
 															connection={connection}
 															badge={badge}
@@ -163,7 +191,6 @@ export function Home(): JSX.Element {
 function FavoriteRoom(props: {
 	hidden: boolean;
 	room: string;
-	createdAt: number;
 	onRemove: (room: string) => void;
 	connection: Moq.Connection;
 	badge: Badge;

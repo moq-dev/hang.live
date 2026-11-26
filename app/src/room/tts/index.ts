@@ -52,8 +52,6 @@ const JOIN_ANNOUNCEMENTS = [
 	},
 ] as const;
 
-const JOIN_ANNOUNCEMENTS_WEIGHT = JOIN_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
-
 // Weighted leave announcements with varying rarity
 const LEAVE_ANNOUNCEMENTS = [
 	// Common (70% chance total)
@@ -107,19 +105,23 @@ const LEAVE_ANNOUNCEMENTS = [
 	},
 ];
 
-const LEAVE_ANNOUNCEMENTS_WEIGHT = LEAVE_ANNOUNCEMENTS.reduce((sum, item) => sum + item.weight, 0);
-
-export type TTSProps = {
-	enabled?: boolean | Signal<boolean>;
-};
+// Pick a weighted announcement for the name.
+function pick(announcements: readonly { text: string; weight: number }[], name: string): string | undefined {
+	const total = announcements.reduce((sum, item) => sum + item.weight, 0);
+	let random = Math.random() * total;
+	for (const announcement of announcements) {
+		random -= announcement.weight;
+		if (random <= 0) return announcement.text.replace("{name}", name);
+	}
+	return undefined;
+}
 
 export class TTS {
-	enabled: Signal<boolean>;
+	enabled = new Signal(false);
 	context: AudioContext;
 	#output: AudioNode;
 	#audible: Getter<boolean>;
 
-	ready = new Signal<boolean>(false); // Whether a TTS model is loaded
 	progress = new Signal<number | undefined>(undefined); // From 0 to 1
 
 	#worker: Comlink.Remote<TTSWorker> | undefined;
@@ -128,11 +130,10 @@ export class TTS {
 	#signals = new Effect();
 
 	/** Speak through the owning sound's gain, so its mute and speaker volume apply. */
-	constructor(sound: { context: AudioContext; gain: AudioNode; enabled: Getter<boolean> }, props?: TTSProps) {
+	constructor(sound: { context: AudioContext; gain: AudioNode; enabled: Getter<boolean> }) {
 		this.context = sound.context;
 		this.#output = sound.gain;
 		this.#audible = sound.enabled;
-		this.enabled = Signal.from(props?.enabled ?? false);
 
 		this.#signals.run((effect) => {
 			// Only start loading the TTS model when enabled.
@@ -141,7 +142,6 @@ export class TTS {
 			const quality = effect.get(Settings.audio.tts);
 			if (quality === "low") {
 				// Don't load worker model for low quality (uses SpeechSynthesis instead)
-				this.ready.set(true);
 				this.progress.set(1);
 				return;
 			}
@@ -157,30 +157,18 @@ export class TTS {
 			const tts = Comlink.wrap<TTSWorker>(worker);
 
 			effect.spawn(async () => {
-				await tts.setQuality(quality);
-
 				for (;;) {
 					const progress = await effect.race(tts.progress());
 					if (progress === undefined) break;
 
 					this.progress.set(progress);
-
-					if (progress === 1) {
-						this.ready.set(true);
-						break;
-					}
+					if (progress === 1) break;
 				}
 			});
 
-			effect.cleanup(() => {
-				this.progress.set(undefined);
-				this.ready.set(false);
-			});
+			effect.cleanup(() => this.progress.set(undefined));
 
 			this.#worker = tts;
-			this.#signals.cleanup(() => {
-				this.#worker = undefined;
-			});
 		});
 	}
 
@@ -237,39 +225,11 @@ export class TTS {
 	}
 
 	async joined(name: string) {
-		const random = Math.random() * JOIN_ANNOUNCEMENTS_WEIGHT;
-		let accumulated = 0;
-
-		let text = `${name} joined`;
-		for (const announcement of JOIN_ANNOUNCEMENTS) {
-			accumulated += announcement.weight;
-			if (random <= accumulated) {
-				text = announcement.text.replace("{name}", name);
-				break;
-			}
-		}
-
-		await this.say(text);
+		await this.say(pick(JOIN_ANNOUNCEMENTS, name) ?? `${name} joined`);
 	}
 
 	async left(name: string) {
-		const random = Math.random() * LEAVE_ANNOUNCEMENTS_WEIGHT;
-		let accumulated = 0;
-
-		let text = `${name} left`;
-		for (const announcement of LEAVE_ANNOUNCEMENTS) {
-			accumulated += announcement.weight;
-			if (random <= accumulated) {
-				text = announcement.text.replace("{name}", name);
-				break;
-			}
-		}
-
-		await this.say(text);
-	}
-
-	resume() {
-		this.context.resume();
+		await this.say(pick(LEAVE_ANNOUNCEMENTS, name) ?? `${name} left`);
 	}
 
 	close() {

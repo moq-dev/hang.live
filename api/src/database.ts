@@ -6,5 +6,3 @@ export type Context = ReturnType<typeof drizzle>;
 export function init(env: Env): Context {
 	return drizzle(env.DB);
 }
-
-export default Context;

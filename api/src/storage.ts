@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import * as Avatar from "./avatar";
 import * as rpc from "./rpc";
@@ -11,7 +10,7 @@ export class Context {
 	}
 
 	async upload(folder: string, file: Avatar.Upload): Promise<string> {
-		const key = `${uuidv4()}.${file.extension}`;
+		const key = `${crypto.randomUUID()}.${file.extension}`;
 		const fullPath = `${folder}/${key}`;
 
 		// Store the content type so the public bucket serves the image as an image, never sniffed.

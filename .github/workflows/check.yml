@@ -29,14 +29,11 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      # No GitHub Actions Nix cache: its entries are scoped to each PR, so every PR
+      # uploads the closure again, and the binary caches serve a cold shell faster.
       - uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # main
         with:
           determinate: false
           extra-conf: |
             accept-flake-config = true
-      - uses: DeterminateSystems/magic-nix-cache-action@f69a2d3e148e90223fe63ab6e3f6331f2e7e33dc # main
-        with:
-          use-flakehub: false
-          use-gha-cache: true
-      - uses: DeterminateSystems/flake-checker-action@786422608c7bded2bbc9741ad9f91356842bf520 # main
       - run: nix develop --command bash -c 'just check && just build'
