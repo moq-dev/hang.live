@@ -5,8 +5,9 @@
 	"ignoreDependencies": [
 		// dev/justfile runs it by name.
 		"concurrently",
-		// api/tsconfig.json maps it to generated declarations under moq/, which fallow counts as a file import.
-		"@moq/auth"
+		// api/tsconfig.json maps @moq/* to generated declarations under moq/, which fallow counts as file imports.
+		"@moq/auth",
+		"@moq/clock"
 	],
 	"rules": {
 		// fallow only warns on these by default.
