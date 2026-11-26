@@ -41,13 +41,13 @@ function placed(a: Position, b: Position): boolean {
 	return a.x === b.x && a.y === b.y && a.s === b.s;
 }
 
-/** Stop asking the peer with `handle` to move, such as when it leaves. */
-export function drop(moves: Signal<Moves>, handle: string) {
-	moves.update((prev) => {
-		if (!prev || !(handle in prev)) return prev;
-		const { [handle]: _, ...rest } = prev;
-		return Object.keys(rest).length > 0 ? rest : undefined;
-	});
+/** Stop asking the peer with `handle` to move, such as when it leaves, returning whether a move was pending. */
+export function drop(moves: Signal<Moves>, handle: string): boolean {
+	const prev = moves.peek();
+	if (!prev || !(handle in prev)) return false;
+	const { [handle]: _, ...rest } = prev;
+	moves.set(Object.keys(rest).length > 0 ? rest : undefined);
+	return true;
 }
 
 /** Applies the moves one remote peer asks of one local window, echoing the ID of the one it applied. */

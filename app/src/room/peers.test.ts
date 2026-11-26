@@ -71,8 +71,19 @@ test("an older peer settles once it publishes the position, ignoring stacking or
 	expect(Object.keys(moves.peek() ?? {})).toEqual(["b"]);
 
 	// The last settled move clears the field rather than publishing an empty record.
-	Peers.drop(moves, "b");
+	expect(Peers.drop(moves, "b")).toBe(true);
 	expect(moves.peek()).toBeUndefined();
+});
+
+test("dropping a peer reports whether a move was still pending, so a lock can undo it", () => {
+	const moves = new Signal<Peers.Moves>(undefined);
+	Peers.request(moves, echoing("a"), at(0.1, 0.1));
+	Peers.settle(moves, echoing("a", [idOf(moves, "a")]));
+	expect(Peers.drop(moves, "a")).toBe(false);
+
+	Peers.request(moves, echoing("a"), at(0.2, 0.2));
+	expect(Peers.drop(moves, "a")).toBe(true);
+	expect(Peers.drop(moves, "a")).toBe(false);
 });
 
 test("a later drag of the same peer replaces its earlier move", () => {
