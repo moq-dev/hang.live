@@ -27,11 +27,11 @@
 
   outputs =
     {
-      self,
       nixpkgs,
       flake-utils,
       moq,
       quest,
+      ...
     }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (
       system:
@@ -58,8 +58,6 @@
             moq.packages.${system}.moq
           ];
         };
-
-        devShell = self.devShells.${system}.default;
       }
     );
 }

@@ -576,9 +576,9 @@ function IconCanvas(props: { variant: IconVariant }) {
 						background: "repeating-conic-gradient(#808080 0 25%, #0000 0 50%) 50% / 20px 20px",
 					}}
 				>
-					{/** biome-ignore lint/a11y/useAltText: no */}
 					<img
 						src={svgDataUrl()}
+						alt={`${getVariantDisplayName(props.variant)} preview`}
 						class="border border-zinc-700"
 						style={{
 							width: props.variant === "discord-banner" ? "512px" : "256px",
