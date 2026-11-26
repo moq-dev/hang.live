@@ -43,9 +43,7 @@ build:
 	bun install --frozen-lockfile
 	bun run build
 
-prod: build
-	bun run --filter='@hang/*' prod
-
+# Deploy the live API and app to Cloudflare.
 deploy:
 	just api deploy
 	just app deploy
