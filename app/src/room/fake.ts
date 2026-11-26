@@ -76,7 +76,7 @@ export class FakeBroadcast {
 			const message = effect.get(this.chat.message.latest);
 			if (!message) return;
 
-			effect.timer(() => this.chat.message.latest.set(undefined), Clock.Nano.fromMilli(Clock.Milli(10000)));
+			effect.timer(() => this.chat.message.latest.set(undefined), Clock.Duration.millis(10000));
 		});
 
 		// A helper to automatically unset the typing indicator when the message is sent.

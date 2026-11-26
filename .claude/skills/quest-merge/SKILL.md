@@ -1,7 +1,7 @@
 ---
 name: quest-merge
 description: Queue a PR to land, running /quest-iterate first when it needs work.
+allowed-tools: Bash(quest skill merge) PowerShell(quest skill merge)
 ---
 
-Run `quest skill merge` and follow its output.
-If `quest` is not on `PATH`, run `nix develop --command quest skill merge` instead; prefix later Quest commands with `nix develop --command` too.
+!`quest skill merge; echo "If quest skill merge printed an error instead of instructions, install quest as https://github.com/kixel-ai/quest/blob/main/SETUP.md describes, then run quest skill merge and follow its output."`

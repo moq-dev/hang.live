@@ -7,7 +7,7 @@
 
 import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
-import type * as Moq from "@moq/net";
+import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
 import type { Preview, User } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
@@ -154,14 +154,21 @@ function serveSnapshot<T>(
 		const net = effect.get(broadcast.net);
 		if (!net) return;
 
-		const track = net.createTrack(name, { priority: HANG_PRIORITY, refresh: 8, compress: true });
+		// Timed like `@moq/room`'s own snapshots, so each update opens its group at the write time.
+		const track = net.createTrack(name, {
+			timescale: Moq.Time.Timescale.MILLI,
+			priority: HANG_PRIORITY,
+			refresh: { ratio: 8 },
+			compression: "deflate",
+		});
+		if (!track) throw new Error(`the track ${name} already exists`);
 		effect.cleanup(() => track.close());
 
 		const producer = new Json.Snapshot.Producer<T>({ track });
 		effect.cleanup(() => producer.finish());
 
 		effect.run((effect) => {
-			producer.update({ value: value(effect) });
+			producer.update(value(effect), Json.next(track, Moq.Time.Timestamp.now()));
 		});
 	});
 }

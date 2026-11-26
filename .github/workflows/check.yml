@@ -8,6 +8,11 @@ on:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
 
+# Cancel a superseded run so a newer push to the PR frees its runner.
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Check
