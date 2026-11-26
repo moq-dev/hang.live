@@ -3,7 +3,8 @@
 ## Goal
 
 A viewer who turns on captions sees each remote participant's speech as
-captions on that participant's tile, in sync with their audio. The text comes
+captions on that participant's tile, trailing their audio by no more than
+the transcriber's measured lag. The text comes
 from the transcript rendition moq.pro publishes for each Hang broadcast, not
 from anything running in the speaker's browser. Captions are off by default
 for every viewer, and encrypted rooms have none.
@@ -93,8 +94,10 @@ starts and stops the work.
   `<source>/transcode.hang`, today's tokens already cover it and this item
   clears.) Options: (a) re-root room tokens at `RELAY_PREFIX`, with subscribe
   `<room>` plus wherever moq.pro announces that room's transcripts, and
-  publish `<room>/<identity>`; the join response and the app's paths change
-  together, so tabs still holding an old token keep working until it renews;
+  publish `<room>/<identity>`; version the join contract so a tab already
+  in a call keeps receiving grants under the old room root at renewal (a
+  changed `grant.path` reloads it, `app/src/sup.tsx`), and only updated
+  clients opt into the new root;
   (b) have moq.pro announce transcripts beneath the room root, so today's
   tokens cover them unchanged; (c) a second subscribe-only connection for
   transcripts. Recommendation: (a), since one connection and one token can
