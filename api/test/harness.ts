@@ -46,6 +46,8 @@ export const env = {
 // The real routers over a fresh database with every migration applied.
 export function harness(overrides: Partial<typeof env> = {}) {
 	const sqlite = new Sqlite(":memory:");
+	// D1 enforces foreign keys, so cascades behave as in production.
+	sqlite.exec("PRAGMA foreign_keys = ON;");
 	const dir = new URL("../migrations/", import.meta.url).pathname;
 	for (const file of readdirSync(dir)
 		.filter((file) => file.endsWith(".sql"))

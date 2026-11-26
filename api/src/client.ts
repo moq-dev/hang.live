@@ -76,10 +76,5 @@ export type AccountId = z.infer<typeof accountIdSchema>;
 // One literal path segment beneath guest/, never a wildcard permission.
 export const guestSchema = z.string().regex(/^guest\/[^/*]+$/, "Invalid guest identity");
 
-export const AccountInfoSchema = z.object({
-	id: accountIdSchema,
-	name: z.string().check(z.minLength(4), z.maxLength(100)),
-	avatar: z.string(),
-});
-
-export type AccountInfo = z.infer<typeof AccountInfoSchema>;
+// Display names, trimmed so whitespace cannot pad a short name past the minimum.
+export const nameSchema = z.string().trim().check(z.minLength(4), z.maxLength(100));

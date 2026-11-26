@@ -86,11 +86,11 @@ export default function Tooltip(props: {
 	});
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: Tooltip wrapper needs to work with arbitrary children
+		// A plain wrapper, so the child stays the only focus stop and keeps its own role.
+		// Focus events bubble up from the child as focusin/focusout.
+		// biome-ignore lint/a11y/noStaticElementInteractions: the handlers only observe the interactive child
 		<div
 			class="relative inline-flex"
-			role="button"
-			tabIndex={0}
 			ref={setTriggerEl}
 			onMouseEnter={() => {
 				if (!props.force) {
@@ -104,13 +104,13 @@ export default function Tooltip(props: {
 					setShow(false);
 				}
 			}}
-			onFocus={() => {
+			onFocusIn={() => {
 				if (!props.force) {
 					setShow(true);
 					requestAnimationFrame(updatePosition);
 				}
 			}}
-			onBlur={() => {
+			onFocusOut={() => {
 				if (!props.force) {
 					setShow(false);
 				}
