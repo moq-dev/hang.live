@@ -2,7 +2,6 @@
 precision highp float;
 
 in vec2 a_position;
-in vec2 a_texCoord;
 
 uniform mat4 u_projection;
 uniform vec4 u_bounds; // x, y, width, height
@@ -33,6 +32,6 @@ void main() {
 	// Apply projection
 	gl_Position = u_projection * vec4(pos, u_depth, 1.0);
 
-	v_texCoord = a_texCoord;
+	v_texCoord = a_position;
 	v_pos = a_position;
 }

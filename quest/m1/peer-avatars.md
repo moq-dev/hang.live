@@ -22,7 +22,3 @@ uploads for account avatars, but a peer controls its broadcast directly.
   `*.googleusercontent.com` would still leak IPs to those providers and break
   when they change hosts.
 - Cover the origin check with a unit test.
-
-## Related
-
-- [WebGL fixes](/quest/m1/webgl-physics.md) - also edits avatar loading in `app/src/room/video.ts`

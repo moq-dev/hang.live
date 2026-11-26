@@ -7,38 +7,28 @@ import { GLContext } from "./gl/context";
 
 export class Canvas {
 	#canvas: HTMLCanvasElement;
-	#glContext?: GLContext;
-	#camera?: Camera;
-	#backgroundRenderer?: BackgroundRenderer;
 
 	/** Whether this canvas can render with WebGL2. */
 	readonly supported: boolean;
 
-	// Use a callback to render after the background.
-	onRender?: (now: DOMHighResTimeStamp) => void;
+	/** The live WebGL2 context, unset while the browser has it lost or when unsupported. */
+	readonly context = new Signal<GLContext | undefined>(undefined);
+
+	/** Draws over the background every frame; while unset, the background is drawn once instead of animated. */
+	readonly scene = new Signal<((now: DOMHighResTimeStamp) => void) | undefined>(undefined);
+
+	readonly camera = new Camera();
 
 	visible: Signal<boolean>;
 	viewport: Signal<Vector>;
+
+	// Draws one frame now, while there is a context.
+	#draw?: (now: DOMHighResTimeStamp) => void;
 
 	#signals = new Effect();
 
 	get element() {
 		return this.#canvas;
-	}
-
-	get gl(): WebGL2RenderingContext {
-		if (!this.#glContext) throw new Error("WebGL2 not supported");
-		return this.#glContext.gl;
-	}
-
-	get glContext(): GLContext {
-		if (!this.#glContext) throw new Error("WebGL2 not supported");
-		return this.#glContext;
-	}
-
-	get camera(): Camera {
-		if (!this.#camera) throw new Error("WebGL2 not supported");
-		return this.#camera;
 	}
 
 	constructor(element: HTMLCanvasElement) {
@@ -47,14 +37,22 @@ export class Canvas {
 		this.visible = new Signal(false);
 		this.viewport = new Signal(Vector.create(0, 0));
 
-		const glContext = GLContext.create(this.#canvas, this.viewport);
-		this.#glContext = glContext;
-		this.supported = glContext !== undefined;
-		if (!glContext) return;
+		const context = GLContext.create(this.#canvas, this.viewport);
+		this.supported = context !== undefined;
+		if (!context) return;
+		this.context.set(context);
 
-		const camera = new Camera();
-		this.#camera = camera;
-		this.#backgroundRenderer = new BackgroundRenderer(glContext);
+		// Every GPU object dies with a lost context, so drop it and build everything again once restored.
+		this.#signals.event(this.#canvas, "webglcontextlost", (event) => {
+			// Without this the browser never restores the context.
+			event.preventDefault();
+			this.context.set(undefined);
+		});
+		this.#signals.event(this.#canvas, "webglcontextrestored", () => {
+			const restored = GLContext.create(this.#canvas, this.viewport);
+			if (!restored) throw new Error("WebGL2 context restored without a context");
+			this.context.set(restored);
+		});
 
 		const resize = (entries: ResizeObserverEntry[]) => {
 			for (const entry of entries) {
@@ -78,19 +76,17 @@ export class Canvas {
 				this.#canvas.height = newHeight;
 
 				// Update WebGL viewport
-				glContext.resize(newWidth, newHeight);
+				this.context.peek()?.resize(newWidth, newHeight);
 
 				// The internal logic ignores devicePixelRatio because we automatically scale when rendering.
 				const viewport = Vector.create(newWidth / dpr, newHeight / dpr);
 				this.viewport.set(viewport);
 
 				// Update camera projection
-				camera.updateOrtho(viewport);
+				this.camera.updateOrtho(viewport);
 
-				// Render immediately to avoid black flicker during resize
-				if (this.visible.peek()) {
-					this.#render(performance.now());
-				}
+				// Resizing clears the canvas, so draw now to avoid a black flicker.
+				this.#draw?.(performance.now());
 			}
 		};
 
@@ -118,15 +114,48 @@ export class Canvas {
 			resizeObserver.disconnect();
 		});
 
-		// Only render the canvas when it's visible.
-		this.#signals.run((effect) => {
-			const visible = effect.get(this.visible);
-			if (!visible) return;
+		this.#signals.run(this.#runRender.bind(this));
+
+		// Free the GPU context now instead of at garbage collection, since browsers cap live contexts.
+		this.#signals.cleanup(() => {
+			context.gl.getExtension("WEBGL_lose_context")?.loseContext();
+		});
+	}
+
+	#runRender(effect: Effect) {
+		const context = effect.get(this.context);
+		if (!context) return;
+		effect.cleanup(() => context.close());
+
+		const background = new BackgroundRenderer(context);
+		effect.cleanup(() => background.cleanup());
+
+		effect.run((effect) => {
+			// Only render the canvas when it's visible.
+			if (!effect.get(this.visible)) return;
+
+			const scene = effect.get(this.scene);
+			const draw = (now: DOMHighResTimeStamp) => {
+				context.clear();
+				background.render(now);
+				scene?.(now);
+			};
+
+			this.#draw = draw;
+			effect.cleanup(() => {
+				this.#draw = undefined;
+			});
+
+			// Without a scene, the background is a still frame redrawn only on resize.
+			if (!scene) {
+				draw(performance.now());
+				return;
+			}
 
 			let cancel: number;
 			const render = (now: DOMHighResTimeStamp) => {
 				try {
-					this.#render(now);
+					draw(now);
 				} catch (err) {
 					console.error("render error", err);
 				}
@@ -134,24 +163,8 @@ export class Canvas {
 			};
 
 			cancel = requestAnimationFrame(render);
-
 			effect.cleanup(() => cancelAnimationFrame(cancel));
 		});
-	}
-
-	#render(now: DOMHighResTimeStamp) {
-		if (!this.#glContext || !this.#backgroundRenderer) return;
-
-		// Clear the screen
-		this.#glContext.clear();
-
-		// Render background with shader
-		this.#backgroundRenderer.render(now);
-
-		// Render broadcasts
-		if (this.onRender) {
-			this.onRender(now);
-		}
 	}
 
 	toggleFullscreen() {
@@ -181,6 +194,5 @@ export class Canvas {
 
 	close() {
 		this.#signals.close();
-		this.#backgroundRenderer?.cleanup();
 	}
 }
