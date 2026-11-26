@@ -5,7 +5,6 @@
 mod api
 mod app
 mod dev
-mod infra
 
 # List all of the available commands.
 default:

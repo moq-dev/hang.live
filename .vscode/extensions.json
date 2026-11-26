@@ -10,9 +10,6 @@
 		"ms-vscode.vscode-json",
 		"biomejs.biome",
 		"ms-vscode.vscode-pnpm",
-		"bradlc.vscode-tailwindcss",
-
-		// Terraform
-		"hashicorp.terraform"
+		"bradlc.vscode-tailwindcss"
 	]
 }
