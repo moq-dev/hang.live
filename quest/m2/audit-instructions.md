@@ -20,7 +20,7 @@ Baseline from the first run ([moq-dev/hang.live#60](https://github.com/moq-dev/h
 - Out of scope here: the quest skill stubs and the `Quests:` reference line (kixel-ai/quest), and the user-level dev-shell and quest hooks (dotfiles).
 
 Check first:
-- Claude sessions load `app/AGENTS.md` and `api/AGENTS.md` when they touch those directories; they appear as PostToolUse hook context in transcripts. No `CLAUDE.md` has come back.
+- Claude sessions load `app/AGENTS.md` and `api/AGENTS.md` after a Read tool call on a file there (not `rg` or `git diff`); they appear as PostToolUse hook context in transcripts. No `CLAUDE.md` has come back.
 - The SessionStart hook in `.claude/settings.json` either runs cleanly or is gone, as #60 decided.
 
 ## Audit

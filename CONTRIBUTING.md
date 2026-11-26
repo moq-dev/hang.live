@@ -38,7 +38,7 @@ leaving local-only submodule commits.
 
 # Quests
 
-Run `quest context` before work and `quest guide` before changing a quest.
+Run `quest guide` before changing a quest.
 The plans under `quest/` are the backlog. Use `quest skill plan` to scope
 work and `quest check` to validate it. The skills installed for Codex and
 Claude Code are stubs served by the binary pinned by tag in `flake.nix`; to
