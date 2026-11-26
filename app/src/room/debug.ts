@@ -7,7 +7,6 @@ import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import type { Bounds, Vector } from "./geometry";
-import { Jitter } from "./jitter";
 import type { WatchBroadcast } from "./watch";
 
 // How often the HUD samples counters into its sparklines, matching MoQ's own stats overlays.
@@ -51,7 +50,7 @@ interface Switch {
 
 /**
  * The per-tile MoQ telemetry overlay shown in Debug mode: each rendition with the live one ringed,
- * simulcast switches as they happen, and sparklines of the tile's video and audio delivery.
+ * simulcast switches as they happen, and sparklines of the tile's video delivery beside its decoders' counters.
  * Nothing runs while Debug is off.
  */
 export class Debug {
@@ -270,16 +269,9 @@ export class Debug {
 
 		const bitrate = graph(parent, "Video", { color: "#a855f7", format: formatBitrate });
 		const fps = graph(parent, "Frame rate", { color: "#facc15", format: formatFps });
-		const jitterGraph = graph(parent, "Audio jitter", { color: "#4ade80", format: formatMillis });
 		const videoCounters = DOM.create("div");
 		const audioCounters = DOM.create("div");
-		panel.append(bitrate.el, fps.el, videoCounters, jitterGraph.el, audioCounters);
-
-		// Feed every audio arrival the decoder reports, not just the one each poll sees.
-		const jitter = new Jitter();
-		parent.subscribe(source.audio.stats, (stats) => {
-			if (stats?.arrival) jitter.arrive(stats.arrival.timestamp.asMillis(), stats.arrival.wall.asUnixMillis());
-		});
+		panel.append(bitrate.el, fps.el, videoCounters, audioCounters);
 
 		// Start from the counters as they stand, so turning Debug on mid-call draws no spike.
 		const counters = () => {
@@ -304,9 +296,6 @@ export class Debug {
 				? `late ${video.late} · stalls ${video.stalls} (${formatMillis(video.stalled.asMillis())})`
 				: "no video";
 
-			// Silence sends nothing, so it is left out of the trace rather than drawn as zero jitter.
-			const late = jitter.sample();
-			if (late !== undefined) jitterGraph.push(late);
 			const audio = source.audio.stats.peek();
 			audioCounters.textContent = audio
 				? `late ${audio.late} · underruns ${audio.underruns} · skips ${audio.skips}`
