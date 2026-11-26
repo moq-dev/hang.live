@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { HTTPException } from "hono/http-exception";
 import * as jose from "jose";
@@ -27,6 +27,16 @@ export class Context {
 
 	async getLinks(account: Account.Id): Promise<Row[]> {
 		return await this.db.select().from(table).where(eq(table.accountId, account));
+	}
+
+	// Whether any sign-in method on the account never proved control of its email address.
+	async hasUnverifiedLink(account: Account.Id): Promise<boolean> {
+		const rows = await this.db
+			.select({ providerId: table.providerId })
+			.from(table)
+			.where(and(eq(table.accountId, account), eq(table.emailVerified, false)))
+			.limit(1);
+		return rows.length > 0;
 	}
 }
 
@@ -287,8 +297,19 @@ export class Provider {
 		};
 	}
 
-	async link(account: Account.Id, providerUser: string): Promise<void> {
+	async link(account: Account.Id, user: User): Promise<void> {
 		const now = new Date();
+		const providerUser = user.providerId;
+
+		// The link vouches for the account only when the provider verified the account's own address.
+		const owner = (
+			await this.db
+				.select({ email: Account.table.email })
+				.from(Account.table)
+				.where(eq(Account.table.id, account))
+				.limit(1)
+		).at(0);
+		const emailVerified = user.emailVerified && user.email !== undefined && user.email === owner?.email;
 
 		await this.db
 			.insert(table)
@@ -296,6 +317,7 @@ export class Provider {
 				accountId: account,
 				providerId: this.id,
 				providerUser,
+				emailVerified,
 				createdAt: now,
 				updatedAt: now,
 			})
@@ -303,6 +325,7 @@ export class Provider {
 				target: [table.accountId, table.providerId],
 				set: {
 					providerUser,
+					emailVerified,
 					updatedAt: now,
 				},
 			});
@@ -434,6 +457,7 @@ export const table = sqliteTable(
 			.references(() => Account.table.id, { onDelete: "cascade" }),
 		providerId: text("provider_id").notNull(),
 		providerUser: text("provider_user").notNull(),
+		emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
 		createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 		updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 	},
@@ -532,6 +556,13 @@ export const router = rpc
 				}
 
 				user = await ctx.account.getByEmail(oauthUser.email);
+				// Before verification was checked, anyone could claim an address; such an account may not be its owner's.
+				if (user && (await ctx.oauth.hasUnverifiedLink(user.id))) {
+					throw new HTTPException(409, {
+						message:
+							"This email's account was created without verifying it. Sign in with that method instead.",
+					});
+				}
 				if (!user) {
 					const name =
 						provider.id === "apple" && callbackData.user ? appleName(callbackData.user) : undefined;
@@ -543,7 +574,7 @@ export const router = rpc
 				}
 			}
 
-			await provider.link(user.id, oauthUser.providerId);
+			await provider.link(user.id, oauthUser);
 
 			// Hand the browser a short-lived code instead of the session token, since URLs leak
 			// through history, logs, and the native app's unauthenticated loopback server.

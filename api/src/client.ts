@@ -67,6 +67,9 @@ export const isValidRoom = (name: string): boolean => {
 	return ROOM_NAME_REGEX.test(name);
 };
 
+// The image types an avatar upload may be; the API identifies them by their bytes.
+export const avatarTypes = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+
 export const accountIdSchema = z.string().brand("AccountId");
 export type AccountId = z.infer<typeof accountIdSchema>;
 

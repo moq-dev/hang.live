@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import * as Avatar from "../src/avatar";
+import { avatarTypes } from "../src/client";
 import { harness } from "./harness";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
@@ -26,6 +27,11 @@ test("uploads are typed by their bytes, never by the client's label", async () =
 		await expect(Avatar.validate(new File([bytes], "avatar.png", { type: "image/png" }))).rejects.toMatchObject({
 			status: 415,
 		});
+	}
+
+	// The app's picker offers exactly what the API accepts.
+	for (const type of avatarTypes) {
+		expect(Avatar.contentType(type === "image/jpeg" ? "jpg" : type.slice("image/".length))).toBe(type);
 	}
 
 	const large = new File([PNG, new Uint8Array(Avatar.MAX_SIZE)], "big.png", { type: "image/png" });

@@ -1,4 +1,6 @@
+import { Database as Sqlite } from "bun:sqlite";
 import { afterEach, expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
 import * as jose from "jose";
 import { oauthChallenge, oauthVerifier } from "../src/client";
 import * as OAuth from "../src/oauth";
@@ -306,4 +308,63 @@ test("Apple's unsigned user field only names a newly created account", async () 
 	form.set("state", (await state()).state);
 	form.set("user", "{not json");
 	expect((await app.request("/auth/apple/callback", { method: "POST", body: form })).status).toBe(400);
+});
+
+test("a legacy account with an unverified link cannot absorb its email's verified owner", async () => {
+	const { app, sqlite } = harness();
+
+	// Before verification was checked, an attacker could create an account from an unverified Discord address.
+	discord({ id: "attacker", email: "victim@example.com", verified: true });
+	const attacker = await info(app, await login(app, "discord"));
+	restore?.();
+	sqlite.query("UPDATE accounts_linked SET email_verified = 0 WHERE account_id = ?").run(attacker.id);
+
+	google({ id: "victim", email: "victim@example.com", verified_email: true });
+	const { state: raw } = await state();
+	expect((await callback(app, "google", raw)).status).toBe(409);
+	expect(sqlite.query("SELECT provider_id FROM accounts_linked WHERE account_id = ?").all(attacker.id)).toEqual([
+		{ provider_id: "discord" },
+	]);
+	restore?.();
+
+	// A legacy link that signs in again with a verified, matching address vouches for the account again.
+	discord({ id: "attacker", email: "victim@example.com", verified: true });
+	await login(app, "discord");
+	restore?.();
+	google({ id: "victim", email: "victim@example.com", verified_email: true });
+	expect((await info(app, await login(app, "google"))).id).toBe(attacker.id);
+	restore?.();
+
+	// Signing in with an address other than the account's no longer vouches for it.
+	discord({ id: "attacker", email: "other@example.com", verified: true });
+	await login(app, "discord");
+	expect(sqlite.query("SELECT email_verified FROM accounts_linked WHERE provider_id = 'discord'").get()).toEqual({
+		email_verified: 0,
+	});
+});
+
+test("the migration trusts only providers that always verify emails", () => {
+	const sqlite = new Sqlite(":memory:");
+	const dir = new URL("../migrations/", import.meta.url).pathname;
+	const files = readdirSync(dir)
+		.filter((file) => file.endsWith(".sql"))
+		.sort();
+	const run = (file: string) => sqlite.exec(readFileSync(`${dir}${file}`, "utf8"));
+	for (const file of files.filter((file) => file < "0004")) run(file);
+
+	sqlite.exec(
+		"INSERT INTO accounts (id, email, name, avatar) VALUES ('a', 'a@example.com', 'Some One', '/avatar/1.svg')",
+	);
+	for (const provider of ["google", "apple", "discord"]) {
+		sqlite.exec(
+			`INSERT INTO accounts_linked (account_id, provider_id, provider_user) VALUES ('a', '${provider}', 'u')`,
+		);
+	}
+	for (const file of files.filter((file) => file >= "0004")) run(file);
+
+	expect(sqlite.query("SELECT provider_id, email_verified FROM accounts_linked ORDER BY provider_id").all()).toEqual([
+		{ provider_id: "apple", email_verified: 1 },
+		{ provider_id: "discord", email_verified: 0 },
+		{ provider_id: "google", email_verified: 1 },
+	]);
 });
