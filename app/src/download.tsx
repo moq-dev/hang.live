@@ -103,6 +103,7 @@ function DownloadButton(props: { platform: PlatformInfo; isPrimary?: boolean; is
 	);
 }
 
+/** Download page for the native builds, which exist to canary MoQ's native libraries; keep it minimal. */
 export function Download(): JSX.Element {
 	const [detectedArch, setDetectedArch] = createSignal<"aarch64" | "x86_64" | "unknown">("unknown");
 	const currentPlatform = detectPlatform();

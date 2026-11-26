@@ -1,6 +1,7 @@
 import { Signal } from "@moq/signals";
 import * as Process from "@tauri-apps/plugin-process";
 import * as Updater from "@tauri-apps/plugin-updater";
+import { Local } from "../room/local";
 
 export type Status =
 	| {
@@ -109,7 +110,8 @@ export class Update {
 				},
 			);
 
-			await Promise.race([this.#install, installTimeout]);
+			// An explicit click installs right away, but the automatic install waits until we're out of a call.
+			await Promise.race([this.#install, installTimeout.then(idle)]);
 
 			this.status.set({ type: "installing", version: update.version });
 
@@ -133,6 +135,11 @@ export class Update {
 			await new Promise((resolve) => setTimeout(resolve, CHECK_INTERVAL));
 		}
 	}
+}
+
+// Resolves once the user is not joined to a room, so a relaunch can't drop a call.
+async function idle() {
+	while (Local.join.peek()) await Local.join.changed();
 }
 
 export const update = new Update();

@@ -10,7 +10,8 @@ Hang combines a closed-source application layer with an [open-source media strea
 
 - **app** — Web frontend built with SolidJS, Vite, and Tailwind CSS v4
 - **api** — Backend running on Cloudflare Workers with Hono and Drizzle ORM
-- **native** — Desktop/mobile app using Tauri v2
+- **native** — Tauri v2 wrapper kept as a lightweight canary for MoQ's Android, iOS, and native libraries; the web app is the primary product, so keep installer and download polish minimal
+
 The frontend and backend share types via Hono RPC. Real-time media is streamed over WebTransport using the [MOQ protocol](https://github.com/moq-dev/moq), consumed as Bun workspaces from the pinned `moq/` submodule.
 
 ## Project Structure
@@ -18,7 +19,7 @@ The frontend and backend share types via Hono RPC. Real-time media is streamed o
 ```
 app/        Web frontend (SolidJS + Vite)
 api/        Backend API (Cloudflare Workers + Hono)
-native/     Desktop/mobile app (Tauri v2)
+native/     Tauri v2 canary for MoQ's mobile and native libraries
 dev/        Local relay server config
 ```
 
