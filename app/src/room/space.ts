@@ -2,13 +2,11 @@ import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import { Broadcast, type BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
-import { Vector } from "./geometry";
+import * as Gesture from "./gesture";
 import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
 import type { GLContext } from "./gl/context";
-import type { Position } from "./metadata";
-import * as Peers from "./peers";
 import * as Physics from "./physics";
 import type { Sound } from "./sound";
 
@@ -31,23 +29,15 @@ export class Space {
 	profile: boolean;
 
 	#hovering: Broadcast | undefined = undefined;
-	#dragging?: Broadcast;
-	// Where each remote tile sat before the moves we asked of it, restored if its peer locks first.
-	#homes = new WeakMap<Broadcast, Position>();
+	#stack = new Gesture.Stack();
+	#gesture: Gesture.Gesture<Broadcast>;
 
 	#scale = new Signal<number>(1.0);
-
-	#maxZ = 0;
 
 	// WebGL renderers for the live context.
 	#renderers?: Renderers;
 
 	#stepper = new Physics.Stepper();
-
-	// Touch handling for mobile
-	#touches = new Map<number, { x: number; y: number }>();
-	#pinchStartDistance = 0;
-	#pinchStartScale = 1;
 
 	#signals = new Effect();
 
@@ -55,6 +45,12 @@ export class Space {
 		this.canvas = canvas;
 		this.sound = sound;
 		this.profile = props?.profile ?? false;
+		this.#gesture = new Gesture.Gesture({
+			ordered: this.ordered,
+			joined: this.lookup,
+			viewport: canvas.viewport,
+			stack: this.#stack,
+		});
 
 		this.#signals.run(this.#runRenderers.bind(this));
 
@@ -90,400 +86,84 @@ export class Space {
 	}
 
 	#onMouseDown(e: MouseEvent) {
-		const mouse = this.canvas.relative(e.clientX, e.clientY);
-		const viewport = this.canvas.viewport.peek();
-
-		this.#dragging = undefined;
-
-		const broadcast = this.#at(mouse);
-		if (!broadcast) return;
-
-		if (broadcast.locked()) {
-			document.body.style.cursor = "not-allowed";
-			return;
-		}
-
-		// Calculate drag point relative to broadcast bounds (0-1)
-		const bounds = broadcast.bounds.peek();
-		const dragPoint = Vector.create(
-			(mouse.x - bounds.position.x) / bounds.size.x,
-			(mouse.y - bounds.position.y) / bounds.size.y,
-		);
-		broadcast.dragPoint.set(dragPoint);
-		this.#grab(broadcast);
-
-		// Bump the z-index unless we're already at the top.
-		broadcast.position.update((prev) => ({
-			...prev,
-			x: mouse.x / viewport.x - 0.5,
-			y: mouse.y / viewport.y - 0.5,
-			z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
-		}));
-
-		document.body.style.cursor = "grabbing";
+		const broadcast = this.#gesture.down(this.canvas.relative(e.clientX, e.clientY));
+		if (broadcast) document.body.style.cursor = Gesture.locked(broadcast) ? "not-allowed" : "grabbing";
 	}
 
 	#onMouseRelease() {
-		if (this.#dragging) {
-			this.#publishPosition(this.#dragging);
-
-			this.#dragging = undefined;
-			if (this.#hovering) {
-				this.#hovering.name.setHovering(false);
-				this.#hovering = undefined;
-			}
-			document.body.style.cursor = "default";
-		}
+		if (!this.#gesture.up()) return;
+		this.#hover(undefined);
+		document.body.style.cursor = "default";
 	}
 
 	#onMouseMove(e: MouseEvent) {
 		const mouse = this.canvas.relative(e.clientX, e.clientY);
-		const viewport = this.canvas.viewport.peek();
+		if (this.#gesture.move(mouse)) return;
 
-		if (this.#dragging) {
-			// Calculate mouse movement delta
-			const bounds = this.#dragging.bounds.peek();
-			const currentCenter = bounds.middle();
-			const deltaX = mouse.x - currentCenter.x;
-			const deltaY = mouse.y - currentCenter.y;
-
-			// Add to deformation velocity based on mouse movement (additive)
-			const deform = this.#dragging.deform;
-			deform.velocity = deform.velocity.add(Vector.create(deltaX * 0.12, deltaY * 0.12));
-
-			// Update the position but don't publish it yet.
-			this.#dragging.position.mutate((position) => {
-				position.x = mouse.x / viewport.x - 0.5;
-				position.y = mouse.y / viewport.y - 0.5;
-			});
-			return;
-		}
-
-		const broadcast = this.#at(mouse);
+		const broadcast = this.#gesture.at(mouse);
 		if (broadcast) {
-			if (this.#hovering !== broadcast) {
-				if (this.#hovering) {
-					this.#hovering.name.setHovering(false);
-				}
-				this.#hovering = broadcast;
-				this.#hovering.name.setHovering(true);
-			}
-
-			if (!broadcast.locked()) {
-				document.body.style.cursor = "grab";
-			}
+			this.#hover(broadcast);
+			if (!Gesture.locked(broadcast)) document.body.style.cursor = "grab";
 		} else {
-			if (this.#hovering) {
-				this.#hovering.name.setHovering(false);
-				this.#hovering = undefined;
-			}
+			this.#hover(undefined);
 			document.body.style.cursor = "default";
 		}
 	}
 
 	#onMouseWheel(e: WheelEvent) {
-		let broadcast = this.#dragging;
 		const mouse = this.canvas.relative(e.clientX, e.clientY);
+		const dragging = this.#gesture.dragging;
 
-		if (!broadcast) {
-			broadcast = this.#at(mouse);
-			if (!broadcast) {
-				// Not over a broadcast, so don't do anything.
-				// TODO prevent default when not on the demo.
-				return;
-			}
+		const broadcast = this.#gesture.wheel(mouse, e.deltaY);
+		// Not over a broadcast, so don't do anything.
+		// TODO prevent default when not on the demo.
+		if (!broadcast) return;
 
-			if (this.#hovering !== broadcast) {
-				if (this.#hovering) {
-					this.#hovering.name.setHovering(false);
-				}
-				this.#hovering = broadcast;
-				this.#hovering.name.setHovering(true);
-			}
-
-			// Bump the z-index unless we're already at the top.
-			broadcast.position.update((prev) => ({
-				...prev,
-				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
-			}));
-		}
-
+		if (!dragging) this.#hover(broadcast);
 		e.preventDefault();
 
-		if (broadcast.locked()) {
+		if (Gesture.locked(broadcast)) {
 			document.body.style.cursor = "not-allowed";
-			return;
-		}
-
-		// Calculate zoom center relative to broadcast bounds (0-1)
-		const bounds = broadcast.bounds.peek();
-		const zoomCenter = Vector.create(
-			(mouse.x - bounds.position.x) / bounds.size.x,
-			(mouse.y - bounds.position.y) / bounds.size.y,
-		);
-		broadcast.zoomCenter.set(zoomCenter);
-		if (broadcast !== this.#dragging) this.#remember(broadcast);
-
-		const scale = -e.deltaY * 0.001;
-		if (scale < 0) {
+		} else if (e.deltaY > 0) {
 			document.body.style.cursor = "zoom-out";
-		} else if (scale > 0) {
+		} else if (e.deltaY < 0) {
 			document.body.style.cursor = "zoom-in";
 		}
-
-		// Add to zoom deformation based on scale direction and magnitude (additive)
-		broadcast.deform.zoom += scale * 5; // Reduced from 15 to 5
-
-		// Update the scale, publishing it.
-		broadcast.position.update((prev) => ({
-			...prev,
-			s: Math.max(Math.min(prev.s + scale, 4), 0.25),
-		}));
-
-		this.#publishPosition(broadcast);
 	}
 
 	#onTouchStart(e: TouchEvent) {
-		// Store all active touches
-		this.#touches.clear();
-		for (const touch of e.touches) {
-			this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-		}
-
-		if (this.#touches.size === 0) {
-			return;
-		}
-
-		e.preventDefault();
-
-		// Single touch - start dragging
-		if (this.#touches.size === 1) {
-			const touch = e.touches[0];
-			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
-
-			this.#dragging = undefined;
-
-			const broadcast = this.#at(mouse);
-			if (!broadcast) return;
-
-			if (broadcast.locked()) return;
-
-			const viewport = this.canvas.viewport.peek();
-
-			// Calculate drag point relative to broadcast bounds (0-1)
-			const bounds = broadcast.bounds.peek();
-			const dragPoint = Vector.create(
-				(mouse.x - bounds.position.x) / bounds.size.x,
-				(mouse.y - bounds.position.y) / bounds.size.y,
-			);
-			broadcast.dragPoint.set(dragPoint);
-			this.#grab(broadcast);
-
-			// Bump the z-index unless we're already at the top.
-			broadcast.position.update((prev) => ({
-				...prev,
-				x: mouse.x / viewport.x - 0.5,
-				y: mouse.y / viewport.y - 0.5,
-				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
-			}));
-		}
-		// Two touches - start pinch zoom
-		else if (this.#touches.size === 2) {
-			const touches = Array.from(e.touches);
-			const touch1 = touches[0];
-			const touch2 = touches[1];
-
-			// Calculate the center point between the two touches
-			const centerX = (touch1.clientX + touch2.clientX) / 2;
-			const centerY = (touch1.clientY + touch2.clientY) / 2;
-			const center = this.canvas.relative(centerX, centerY);
-
-			// Find the broadcast at the center point
-			const broadcast = this.#at(center);
-			if (!broadcast) return;
-
-			if (broadcast.locked()) return;
-
-			// Store the initial distance for pinch zoom
-			const dx = touch2.clientX - touch1.clientX;
-			const dy = touch2.clientY - touch1.clientY;
-			this.#pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
-			this.#pinchStartScale = broadcast.position.peek().s;
-
-			// Track which broadcast we're zooming. Re-grab only on a new target, so a drag that
-			// turns into a pinch keeps the tile's pre-gesture placement.
-			if (this.#dragging !== broadcast) {
-				if (this.#dragging) this.#publishPosition(this.#dragging);
-				this.#grab(broadcast);
-			}
-
-			// Bump the z-index
-			broadcast.position.update((prev) => ({
-				...prev,
-				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
-			}));
-		}
+		if (e.touches.length > 0) e.preventDefault();
+		this.#gesture.touchStart(this.#fingers(e.touches));
 	}
 
 	#onTouchMove(e: TouchEvent) {
-		if (this.#touches.size === 0) return;
-
-		// Update touch positions
-		for (const touch of e.touches) {
-			if (this.#touches.has(touch.identifier)) {
-				this.#touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
-			}
-		}
-
-		e.preventDefault();
-
-		// Single touch - drag
-		if (e.touches.length === 1 && this.#dragging) {
-			const touch = e.touches[0];
-			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
-			const viewport = this.canvas.viewport.peek();
-
-			// Calculate touch movement delta for deformation
-			const bounds = this.#dragging.bounds.peek();
-			const currentCenter = bounds.middle();
-			const deltaX = mouse.x - currentCenter.x;
-			const deltaY = mouse.y - currentCenter.y;
-
-			// Add to deformation velocity based on touch movement (additive)
-			const deform = this.#dragging.deform;
-			deform.velocity = deform.velocity.add(Vector.create(deltaX * 0.12, deltaY * 0.12));
-
-			// Update the position but don't publish it yet.
-			this.#dragging.position.update((prev) => ({
-				...prev,
-				x: mouse.x / viewport.x - 0.5,
-				y: mouse.y / viewport.y - 0.5,
-			}));
-		}
-		// Two touches - pinch zoom
-		else if (e.touches.length === 2 && this.#dragging) {
-			const touches = Array.from(e.touches);
-			const touch1 = touches[0];
-			const touch2 = touches[1];
-
-			// Calculate current distance
-			const dx = touch2.clientX - touch1.clientX;
-			const dy = touch2.clientY - touch1.clientY;
-			const currentDistance = Math.sqrt(dx * dx + dy * dy);
-
-			// Calculate pinch center
-			const centerX = (touch1.clientX + touch2.clientX) / 2;
-			const centerY = (touch1.clientY + touch2.clientY) / 2;
-			const center = this.canvas.relative(centerX, centerY);
-
-			// Calculate zoom center relative to broadcast bounds (0-1)
-			const bounds = this.#dragging.bounds.peek();
-			const zoomCenter = Vector.create(
-				(center.x - bounds.position.x) / bounds.size.x,
-				(center.y - bounds.position.y) / bounds.size.y,
-			);
-			this.#dragging.zoomCenter.set(zoomCenter);
-
-			// Calculate scale factor
-			if (this.#pinchStartDistance > 0) {
-				const scaleFactor = currentDistance / this.#pinchStartDistance;
-				const newScale = this.#pinchStartScale * scaleFactor;
-				const oldScale = this.#dragging.position.peek().s;
-
-				// Add to zoom deformation based on scale delta (additive)
-				const scaleDelta = newScale - oldScale;
-				this.#dragging.deform.zoom += scaleDelta * 5; // Reduced from 15 to 5
-
-				// Update the scale
-				this.#dragging.position.update((prev) => ({
-					...prev,
-					s: Math.max(Math.min(newScale, 4), 0.25),
-				}));
-			}
-
-			// Also update position to the center of the pinch
-			const viewport = this.canvas.viewport.peek();
-
-			this.#dragging.position.update((prev) => ({
-				...prev,
-				x: center.x / viewport.x - 0.5,
-				y: center.y / viewport.y - 0.5,
-			}));
-		}
+		if (this.#gesture.touchMove(this.#fingers(e.touches))) e.preventDefault();
 	}
 
 	#onTouchEnd(e: TouchEvent) {
-		// Remove ended touches
-		for (const touch of e.changedTouches) {
-			this.#touches.delete(touch.identifier);
-		}
-
-		// If all touches ended, publish the final position
-		if (this.#touches.size === 0 && this.#dragging) {
-			this.#publishPosition(this.#dragging);
-			this.#dragging = undefined;
-			if (this.#hovering) {
-				this.#hovering.name.setHovering(false);
-				this.#hovering = undefined;
-			}
-			this.#pinchStartDistance = 0;
-			this.#pinchStartScale = 1;
-		}
-		// If we go from 2 touches to 1, switch from pinch to drag, unless a lock already ended the gesture.
-		else if (this.#touches.size === 1 && e.touches.length === 1 && this.#dragging) {
-			// Reset pinch state
-			this.#pinchStartDistance = 0;
-			this.#pinchStartScale = 1;
-
-			// Check if we should start dragging a different broadcast
-			const touch = e.touches[0];
-			const mouse = this.canvas.relative(touch.clientX, touch.clientY);
-			const broadcast = this.#at(mouse);
-
-			if (broadcast && !broadcast.locked()) {
-				if (this.#dragging !== broadcast) {
-					// Publish the old broadcast's position
-					this.#publishPosition(this.#dragging);
-					this.#grab(broadcast);
-				}
-			}
-		}
-
-		if (e.touches.length === 0) {
-			e.preventDefault();
-		}
+		const ended = Array.from(e.changedTouches, (touch) => touch.identifier);
+		if (this.#gesture.touchEnd(ended, this.#fingers(e.touches))) this.#hover(undefined);
+		if (e.touches.length === 0) e.preventDefault();
 	}
 
 	#onTouchCancel(e: TouchEvent) {
-		// Clear all touches and reset state
-		this.#touches.clear();
-
-		if (this.#dragging) {
-			this.#publishPosition(this.#dragging);
-			this.#dragging = undefined;
-			if (this.#hovering) {
-				this.#hovering.name.setHovering(false);
-				this.#hovering = undefined;
-			}
-			this.#pinchStartDistance = 0;
-			this.#pinchStartScale = 1;
-		}
-
+		if (this.#gesture.touchCancel()) this.#hover(undefined);
 		e.preventDefault();
 	}
 
-	#at(point: Vector): Broadcast | undefined {
-		// Loop in reverse order to respect the z-index.
-		const broadcasts = this.ordered.peek();
+	#fingers(touches: TouchList): Gesture.Touch[] {
+		return Array.from(touches, (touch) => ({
+			id: touch.identifier,
+			point: this.canvas.relative(touch.clientX, touch.clientY),
+		}));
+	}
 
-		for (let i = broadcasts.length - 1; i >= 0; i--) {
-			const broadcast = broadcasts[i];
-			if (broadcast.bounds.peek().contains(point)) {
-				return broadcast;
-			}
-		}
-
-		return undefined;
+	// Show the name of the broadcast under the pointer, if any.
+	#hover(broadcast: Broadcast | undefined) {
+		if (this.#hovering === broadcast) return;
+		this.#hovering?.name.setHovering(false);
+		this.#hovering = broadcast;
+		broadcast?.name.setHovering(true);
 	}
 
 	add(id: string, source: BroadcastSource): Broadcast {
@@ -491,10 +171,7 @@ export class Space {
 
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.
-		broadcast.position.update((prev) => ({
-			...prev,
-			z: ++this.#maxZ,
-		}));
+		this.#stack.push(broadcast.position);
 
 		// Set profile mode for the name display
 		broadcast.name.setProfile(this.profile);
@@ -514,9 +191,9 @@ export class Space {
 		broadcast.signals.run((effect) => {
 			// Get our z-index so we resort when it changes.
 			const z = effect.get(broadcast.position).z;
-			if (z > this.#maxZ) {
+			if (z > this.#stack.top) {
 				// Save the higher z-index so we can use it for new broadcasts.
-				this.#maxZ = z;
+				this.#stack.top = z;
 			}
 
 			// Sorts in place, so mutate to notify.
@@ -534,10 +211,7 @@ export class Space {
 				if (!effect.get(source.enabled)) return;
 				if (!effect.get(source.video.source) && !effect.get(source.audio.source)) return;
 
-				broadcast.position.update((prev) => ({
-					...prev,
-					z: ++this.#maxZ,
-				}));
+				this.#stack.push(broadcast.position);
 			});
 		}
 
@@ -545,10 +219,7 @@ export class Space {
 			const message = effect.get(broadcast.source.chat.message.latest);
 			if (!message) return;
 
-			broadcast.position.update((prev) => ({
-				...prev,
-				z: ++this.#maxZ,
-			}));
+			this.#stack.push(broadcast.position);
 		});
 
 		if (source.role === "watch") {
@@ -558,35 +229,15 @@ export class Space {
 
 				// Stop asking a peer to move once it leaves or locks its tile.
 				effect.cleanup(() => {
-					const carrier = this.#carrier();
-					const pending = carrier ? Peers.drop(carrier, handle) : false;
-
-					// A lock mid-gesture ends it, pinch included, so a later touch can't resume its baseline.
-					const dragging = this.#dragging === broadcast;
-					if (dragging) {
-						this.#dragging = undefined;
-						this.#pinchStartDistance = 0;
-						this.#pinchStartScale = 1;
-						document.body.style.cursor = "default";
-					}
-
-					// A lock that rejects our move puts the tile back where it was before our moves, overlaid with
-					// whatever placement the peer published. A departing tile is already fading away.
-					if (!dragging && !pending) return;
-					if (!broadcast.visible.peek()) return;
-					const placed = { ...this.#homes.get(broadcast), ...source.location.window.position.peek() };
-					broadcast.position.update((prev) => ({ ...prev, ...placed }));
+					if (this.#gesture.revoke(broadcast, handle)) document.body.style.cursor = "default";
 				});
 
-				// Stop asking once it confirms the move we asked for.
 				effect.run((effect) => {
-					const peer = {
+					this.#gesture.settle({
 						handle,
 						position: effect.get(source.location.window.position),
 						applied: effect.get(source.location.window.applied),
-					};
-					const carrier = this.#carrier();
-					if (carrier) Peers.settle(carrier, peer);
+					});
 				});
 			});
 		}
@@ -692,7 +343,7 @@ export class Space {
 				let force = Physics.repel(a.bounds.peek(), b.bounds.peek());
 				if (!force) continue;
 
-				if (this.#dragging !== a && this.#dragging !== b) {
+				if (this.#gesture.dragging !== a && this.#gesture.dragging !== b) {
 					force = force.mult(10);
 				}
 
@@ -714,35 +365,36 @@ export class Space {
 
 		// 1. Render black borders (furthest back)
 		for (const broadcast of this.#rip) {
-			renderers.border.render(broadcast, this.canvas.camera, this.#maxZ);
+			renderers.border.render(broadcast, this.canvas.camera, this.#stack.top);
 		}
 		for (const broadcast of broadcasts) {
-			renderers.border.render(broadcast, this.canvas.camera, this.#maxZ);
+			renderers.border.render(broadcast, this.canvas.camera, this.#stack.top);
 		}
 
 		// 2. Render audio visualizations (middle layer)
 		for (const broadcast of this.#rip) {
-			renderers.audio.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			renderers.audio.render(broadcast, this.canvas.camera, this.#stack.top, now);
 		}
 		for (const broadcast of broadcasts) {
-			renderers.audio.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			renderers.audio.render(broadcast, this.canvas.camera, this.#stack.top, now);
 		}
 
 		// 3. Render video content (front layer)
 		for (const broadcast of this.#rip) {
-			renderers.broadcast.render(broadcast, this.canvas.camera, this.#maxZ);
+			renderers.broadcast.render(broadcast, this.canvas.camera, this.#stack.top);
 		}
 
 		// Render all broadcasts (except dragging)
+		const dragging = this.#gesture.dragging;
 		for (const broadcast of broadcasts) {
-			if (this.#dragging !== broadcast) {
-				renderers.broadcast.render(broadcast, this.canvas.camera, this.#maxZ);
+			if (dragging !== broadcast) {
+				renderers.broadcast.render(broadcast, this.canvas.camera, this.#stack.top);
 			}
 		}
 
 		// Render the dragging broadcast last so it's always on top
-		if (this.#dragging) {
-			renderers.broadcast.render(this.#dragging, this.canvas.camera, this.#maxZ, {
+		if (dragging) {
+			renderers.broadcast.render(dragging, this.canvas.camera, this.#stack.top, {
 				dragging: true,
 			});
 		}
@@ -785,53 +437,6 @@ export class Space {
 		this.#rip = [];
 		this.ordered.set([]);
 		this.lookup.clear();
-	}
-
-	// Start a gesture on `broadcast`, remembering where it was.
-	#grab(broadcast: Broadcast) {
-		this.#dragging = broadcast;
-		this.#remember(broadcast);
-	}
-
-	// Save where a remote tile sits before we ask it to move, keeping the spot from before any move still pending.
-	#remember(broadcast: Broadcast) {
-		if (broadcast.source.role !== "watch") return;
-		const handle = broadcast.source.location.window.handle.peek();
-		if (handle && this.#carrier()?.peek()?.[handle]) return;
-		this.#homes.set(broadcast, { ...broadcast.position.peek() });
-	}
-
-	// Publish the current position to the network.
-	#publishPosition(broadcast: Broadcast) {
-		const position = broadcast.position.peek();
-
-		if (broadcast.source.role === "publish") {
-			broadcast.source.location.window.position.update((old) => ({ ...old, ...position }));
-			return;
-		}
-
-		if (broadcast.source.role === "watch") {
-			const target = broadcast.source.location.window;
-			const handle = target.handle.peek();
-			if (!handle) return;
-
-			// Remote Control only decides who may move us, so we ask even with it off.
-			const moves = this.#carrier();
-			if (!moves) return;
-
-			const peer = { handle, position: target.position.peek(), applied: target.applied.peek() };
-			Peers.request(moves, peer, position);
-		}
-	}
-
-	// The peer moves we ask, all through the earliest-added local broadcast (the camera), since requests on
-	// two tracks could arrive out of order and replay an older one. Stacking order changes; this doesn't.
-	#carrier(): Signal<Peers.Moves> | undefined {
-		for (const broadcast of this.lookup.values()) {
-			const source = broadcast.source;
-			if (source.role === "publish") return source.location.peers.positions;
-		}
-		return undefined;
 	}
 }
 
