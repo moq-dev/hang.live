@@ -11,6 +11,11 @@
 		"not_found_handling": "single-page-application"
 	},
 
+	// `wrangler dev` previews the built app on Vite's port, the only origin the local API allows.
+	"dev": {
+		"port": 1420
+	},
+
 	"env": {
 		// Production environment configuration
 		"live": {
