@@ -42,6 +42,14 @@
       in
       {
         devShells.default = pkgs.mkShell {
+          # The media check launches only full Chromium.
+          PLAYWRIGHT_BROWSERS_PATH = "${
+            pkgs.playwright-driver.browsers.override {
+              withFirefox = false;
+              withWebkit = false;
+              withChromiumHeadlessShell = false;
+            }
+          }";
           nativeBuildInputs = with pkgs; [
             cargo-sort
             cargo-shear

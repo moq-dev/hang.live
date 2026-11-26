@@ -186,14 +186,17 @@ export function Download(): JSX.Element {
 					</h2>
 					<div class="flex flex-wrap gap-4">
 						{primary.map((platform) => {
-							// macOS highlights only the detected architecture; other platforms have one build.
-							const isDetected = () =>
-								currentPlatform !== "macOS" ||
-								(detectedArch() === "aarch64" && platform.archLabel === "Apple Silicon") ||
-								(detectedArch() === "x86_64" && platform.archLabel === "Intel");
+							const isDetected =
+								currentPlatform === "macOS" &&
+								((detectedArch() === "aarch64" && platform.archLabel === "Apple Silicon") ||
+									(detectedArch() === "x86_64" && platform.archLabel === "Intel"));
 
 							return (
-								<DownloadButton platform={platform} isPrimary={true} isDetectedArch={isDetected()} />
+								<DownloadButton
+									platform={platform}
+									isPrimary={currentPlatform === "macOS"}
+									isDetectedArch={isDetected}
+								/>
 							);
 						})}
 					</div>

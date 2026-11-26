@@ -1,5 +1,6 @@
 // The `type` keyword is VERY important here
 import type * as Api from "@hang/api";
+import { oauthChallenge, oauthVerifier } from "@hang/api/client";
 import { hc } from "hono/client";
 
 export type * from "@hang/api";
@@ -49,6 +50,13 @@ export class Client {
 
 			effect.spawn(async () => {
 				const response = await this.routes.account.info.$get();
+				// Auth middleware's 401 is missing from the RPC's inferred statuses.
+				const status: number = response.status;
+				if (status === 401) {
+					// The token expired or was revoked: drop it rather than keep sending it.
+					Settings.oauth.token.set(undefined);
+					return;
+				}
 				if (!response.ok) {
 					console.error(`Failed to get info: ${response.statusText}`);
 					return;
@@ -72,11 +80,11 @@ export class Client {
 		// - Google doesn't support hang:// redirect URLs.
 		// - Apple doesn't support http://localhost redirects
 		//
-		// My hack is to instead redirect to https://hang.live/oauth/<path>?token=<jwt>
-		// OR on desktop platforms, to hang://oauth/<path>?token=<jwt>
+		// My hack is to instead redirect to https://hang.live/oauth/<path>?code=<code>
+		// OR on desktop platforms, to hang://oauth/<path>?code=<code>
 		// Mobile platforms will open the app when https://hang.live is visited.
 		//
-		// The /oauth prefix is removed and the token is grabbed from the query params.
+		// The /oauth prefix is removed and the code is exchanged for a token.
 		//
 		// NOTE: pathname starts with a slash.
 		const parts = new URL(url);
@@ -98,13 +106,11 @@ export class Client {
 			redirect = parts.toString();
 		}
 
-		// We encode this random string which gets echoed back to us in the OAuth callback.
-		// If the random is different, then something sus is happening.
-		// TODO Use a more secure random string.
-		const random = Math.random().toString(36).substring(2, 15);
+		// Only this client knows the verifier; the API mints a code that only it can redeem.
+		const verifier = oauthVerifier();
 
 		Settings.oauth.token.set(undefined);
-		Settings.oauth.random.set(random);
+		Settings.oauth.verifier.set(verifier);
 
 		// Fetch the OAuth URL from the API
 		const response = await this.routes.auth[":provider"].login.$get({
@@ -112,10 +118,13 @@ export class Client {
 				provider,
 			},
 			query: {
-				random,
+				challenge: await oauthChallenge(verifier),
 				redirect: redirect.toString(),
 			},
 		});
+		if (!response.ok) {
+			throw new Error(`Failed to start login: ${response.statusText}`);
+		}
 
 		const data = await response.json();
 
@@ -126,22 +135,18 @@ export class Client {
 		}
 	}
 
-	// Parses the OAuth token out of the URL.
-	loginComplete(token: string, random: string) {
-		const url = new URL(window.location.href);
+	// Redeem the code from the OAuth redirect for a session token.
+	async loginComplete(code: string) {
+		const verifier = Settings.oauth.verifier.peek();
+		// Single use, even if the exchange fails.
+		Settings.oauth.verifier.set(undefined);
+		if (!verifier) throw new Error("No login in progress");
 
-		if (random !== Settings.oauth.random.peek()) {
-			Settings.oauth.random.set(undefined); // Clear so we can't try again
-			throw new Error("Incorrect random in OAuth callback");
-		}
+		const response = await this.routes.auth.token.$post({ json: { code, verifier } });
+		if (!response.ok) throw new Error(`Login failed: ${response.statusText}`);
 
-		// MUST be after random check.
+		const { token } = await response.json();
 		Settings.oauth.token.set(token);
-		Settings.oauth.random.set(undefined);
-
-		// Remove token and state from URL
-		url.searchParams.delete("token");
-		url.searchParams.delete("random");
 	}
 
 	async logout(): Promise<void> {

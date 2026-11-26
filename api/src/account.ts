@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { bodyLimit } from "hono/body-limit";
+import { HTTPException } from "hono/http-exception";
 import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
@@ -55,13 +57,15 @@ export const router = rpc
 	})
 	.put(
 		"/info",
+		Auth.required,
+		// Bound the buffered form by the avatar cap plus room for the other fields.
+		bodyLimit({ maxSize: Avatar.MAX_SIZE + 64 * 1024 }),
 		rpc.withForm(
 			z.object({
 				name: z.optional(nameSchema),
 				avatar: z.optional(z.union([z.string(), z.instanceof(File)])),
 			}),
 		),
-		Auth.required,
 		async (c) => {
 			const form = c.req.valid("form");
 			const ctx = c.var.ctx;
@@ -145,63 +149,29 @@ export class Context {
 
 	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {
 		let avatar: string | undefined;
-		let avatarType: "url" | "r2" | undefined;
-		// The R2 upload this update replaces, deleted only once the row no longer references it.
-		let replaced: string | undefined;
+		let avatarType: Avatar.Type | undefined;
 
-		if (update.avatar) {
-			const old = (
-				await this.db
-					.select({ avatar: table.avatar, avatarType: table.avatarType })
-					.from(table)
-					.where(eq(table.id, id))
-					.limit(1)
-			).at(0);
-
-			if (old?.avatarType === "r2" && old.avatar) {
-				replaced = old.avatar;
+		// Validate and upload before touching the old avatar, so a rejected upload loses nothing.
+		if (update.avatar instanceof File) {
+			avatar = await this.storage.upload("avatar", await Avatar.validate(update.avatar));
+			avatarType = "r2";
+		} else if (update.avatar !== undefined) {
+			if (!Avatar.isDefault(update.avatar)) {
+				throw new HTTPException(400, { message: "Invalid avatar URL" });
 			}
-
-			// TODO move to avatar.ts
-			if (update.avatar instanceof File) {
-				// Validate file (reuse avatar validation logic)
-				if (update.avatar.size > 5 * 1024 * 1024) {
-					throw new Error("File size too large. Maximum 5MB allowed.");
-				}
-
-				// Get file extension
-				let extension: string | undefined;
-				if (update.avatar.name) {
-					const lastDot = update.avatar.name.lastIndexOf(".");
-					if (lastDot !== -1) {
-						extension = update.avatar.name.substring(lastDot + 1).toLowerCase();
-					}
-				} else if (update.avatar.type) {
-					const mimeToExt: Record<string, string> = {
-						"image/jpeg": "jpg",
-						"image/jpg": "jpg",
-						"image/png": "png",
-						"image/gif": "gif",
-						"image/webp": "webp",
-						"image/svg+xml": "svg",
-					};
-					extension = mimeToExt[update.avatar.type];
-				}
-
-				if (!extension) {
-					throw new Error("Unknown file extension");
-				}
-
-				// Upload to R2
-				const fileBuffer = new Uint8Array(await update.avatar.arrayBuffer());
-
-				avatar = await this.storage.upload("avatar", fileBuffer, extension);
-				avatarType = "r2";
-			} else {
-				avatar = update.avatar;
-				avatarType = "url";
-			}
+			avatar = update.avatar;
+			avatarType = "url";
 		}
+
+		const old = avatar
+			? (
+					await this.db
+						.select({ avatar: table.avatar, avatarType: table.avatarType })
+						.from(table)
+						.where(eq(table.id, id))
+						.limit(1)
+				).at(0)
+			: undefined;
 
 		const updated = await this.db
 			.update(table)
@@ -221,12 +191,17 @@ export class Context {
 
 		const res = this.#rowToInfo(updated.at(0));
 		if (!res) {
+			if (avatarType === "r2" && avatar) await this.storage.delete("avatar", avatar);
 			throw new Error("failed to update");
 		}
 
-		if (replaced && replaced !== avatar) {
-			await this.storage.delete("avatar", replaced);
+		// The save already committed, so a failed cleanup must not report it as failed.
+		if (old?.avatarType === "r2" && old.avatar !== avatar) {
+			await this.storage.delete("avatar", old.avatar).catch((err) => {
+				console.error(`failed to delete replaced avatar ${old.avatar}`, err);
+			});
 		}
+
 		return res;
 	}
 
@@ -240,13 +215,16 @@ export class Context {
 				.limit(1)
 		).at(0);
 
-		// Favorites go with the account through their ON DELETE CASCADE, which D1 enforces.
-		await this.db.delete(OAuth.table).where(eq(OAuth.table.accountId, id));
-		await this.db.delete(table).where(eq(table.id, id));
-
-		// Delete the R2 avatar last, so a failed row delete leaves a working account.
+		// Delete the R2 avatar while the row still names it, so a failed delete can be retried.
+		// R2 deletes of a missing key succeed, so a retry after a failed row delete also works.
 		if (account?.avatarType === "r2" && account.avatar) {
 			await this.storage.delete("avatar", account.avatar);
 		}
+
+		// Delete OAuth entries
+		await this.db.delete(OAuth.table).where(eq(OAuth.table.accountId, id));
+
+		// Delete account
+		await this.db.delete(table).where(eq(table.id, id));
 	}
 }

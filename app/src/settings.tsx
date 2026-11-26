@@ -5,6 +5,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
 import { Tab } from "./components/meme-selector";
 import { Sound } from "./room/sound";
+import * as Speaker from "./speaker";
 import { solid } from "./util/solid";
 
 const ttsSchema = z.enum(["none", "low", "high"]);
@@ -33,20 +34,20 @@ function loadGain(): number {
 // The signed-in identity, forgotten on logout while device and UI preferences stay.
 const ACCOUNT_KEYS = [
 	"settings.oauth.token",
-	"settings.oauth.random",
+	"settings.oauth.verifier",
 	"settings.account.guest",
 	"settings.account.name",
 	"settings.account.avatar",
 ];
 
 const guest = Api.guestSchema.safeParse(localStorage.getItem("settings.account.guest"));
+const effect = new Effect();
 
 export const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 
 	audio: {
-		enabled: new Signal(localStorage.getItem("settings.audio.enabled") !== "false"),
-		volume: new Signal<number>(Number.parseFloat(localStorage.getItem("settings.audio.volume") ?? "1")),
+		...Speaker.load(localStorage, effect),
 		tts: new Signal<TTS>(loadTTS()),
 	},
 
@@ -76,7 +77,8 @@ export const Settings = {
 
 	oauth: {
 		token: new Signal<string | undefined>(localStorage.getItem("settings.oauth.token") ?? undefined),
-		random: new Signal<string | undefined>(localStorage.getItem("settings.oauth.random") ?? undefined),
+		// The secret for an in-progress login, redeemed with the code the OAuth redirect returns.
+		verifier: new Signal<string | undefined>(localStorage.getItem("settings.oauth.verifier") ?? undefined),
 	},
 
 	// Meme selector settings
@@ -117,23 +119,8 @@ export const Settings = {
 	},
 };
 
-const volume = Settings.audio.volume.peek();
-if (Number.isNaN(volume) || volume < 0 || volume > 1) {
-	Settings.audio.volume.set(1);
-}
-
-const effect = new Effect();
-
 effect.subscribe(Settings.draggable, (draggable) => {
 	localStorage.setItem("settings.draggable", draggable.toString());
-});
-
-effect.subscribe(Settings.audio.volume, (volume) => {
-	localStorage.setItem("settings.audio.volume", volume.toString());
-});
-
-effect.subscribe(Settings.audio.enabled, (enabled) => {
-	localStorage.setItem("settings.audio.enabled", enabled.toString());
 });
 
 effect.subscribe(Settings.microphone.gain, (gain) => {
@@ -197,11 +184,11 @@ effect.subscribe(Settings.oauth.token, (token) => {
 	}
 });
 
-effect.subscribe(Settings.oauth.random, (random) => {
-	if (random) {
-		localStorage.setItem("settings.oauth.random", random);
+effect.subscribe(Settings.oauth.verifier, (verifier) => {
+	if (verifier) {
+		localStorage.setItem("settings.oauth.verifier", verifier);
 	} else {
-		localStorage.removeItem("settings.oauth.random");
+		localStorage.removeItem("settings.oauth.verifier");
 	}
 });
 
