@@ -25,7 +25,7 @@ Run the `cost` audit: `quest audit cost` prints what it checks, what each findin
   - Whether a new flake input pulls a second nixpkgs; `nix flake archive --json --dry-run` lists every input's store path.
     `quest.inputs.nixpkgs-bun.follows` exists only until quest drops that input upstream.
   - Whether `moq-dev/moq` still makes evaluating its packages unpack `rust-overlay`.
-  - Whether the deploy workflow from [Deploy on merge](/quest/m1/deploy-on-merge.md) earns its minutes.
+  - Whether the deploy workflow from [Deploy staging and release](/quest/m1/deploy-staging-and-release.md) earns its minutes.
 
 ## Audit
 
