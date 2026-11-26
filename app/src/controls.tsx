@@ -27,7 +27,7 @@ import * as Speaker from "./speaker";
 import { isMobile } from "./util/mobile";
 import { solid } from "./util/solid";
 
-type MobileSection = "publish" | "chat" | "settings" | null;
+type MobileSection = "publish" | "settings" | null;
 
 export function Controls(props: { name: string; room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	const mobile = isMobile();
@@ -50,7 +50,6 @@ export function Controls(props: { name: string; room: Room; local: Local; canvas
 
 	// Close expanded sections when clicking outside (mobile only)
 	let publishRef: HTMLDivElement | undefined;
-	let chatRef: HTMLDivElement | undefined;
 	let settingsRef: HTMLDivElement | undefined;
 
 	onMount(() => {
@@ -170,7 +169,6 @@ export function Controls(props: { name: string; room: Room; local: Local; canvas
 
 			{/* Center: Chat */}
 			<div
-				ref={chatRef}
 				class="fixed bottom-0 left-1/2 -translate-x-1/2 p-4 text-shadow-lg text-xl pointer-events-auto leading-none transition-all duration-300 ease-in-out flex items-end"
 				classList={{
 					"z-[10]": tutorial() !== 1,
@@ -801,7 +799,7 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 }
 
 // Renders a volume meter in the background of an element.
-export function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): JSX.Element {
+function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
@@ -911,8 +909,6 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 
 		const m = message();
 		if (!m) return;
-
-		if (!props.broadcast.chat.message.enabled.peek()) return;
 
 		// Force it, so sending the same message twice replays it and restarts its expiry.
 		props.broadcast.chat.message.latest.set(m, true);

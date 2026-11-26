@@ -2,17 +2,11 @@ import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import type * as Meme from "./meme";
-import { fade, PannedSound, type Sound } from "./sound";
-
-const FADE_TIME = 0.2;
-
-export type AudioProps = {
-	pan?: number;
-};
+import { FADE_TIME, fade, PannedSound, type Sound } from "./sound";
 
 export class Audio {
 	broadcast: Broadcast;
-	pan: Signal<number>;
+	pan = new Signal(0);
 
 	#analyser?: AnalyserNode;
 	#analyserBuffer = new Uint8Array(1024);
@@ -31,9 +25,8 @@ export class Audio {
 
 	#signals = new Effect();
 
-	constructor(broadcast: Broadcast, sound: Sound, props?: AudioProps) {
+	constructor(broadcast: Broadcast, sound: Sound) {
 		this.broadcast = broadcast;
-		this.pan = new Signal(props?.pan ?? 0);
 
 		this.sound = new PannedSound(sound, this.pan);
 
@@ -154,10 +147,6 @@ export class Audio {
 	tick() {
 		// Get audio from the notification/meme context
 		const soundBuffer = this.sound.analyze();
-		if (!soundBuffer) {
-			this.volume *= 0.95; // Fade out when no analyser
-			return;
-		}
 
 		// Take the absolute value of the distance from 128 (silence)
 		for (let i = 0; i < soundBuffer.length; i++) {
