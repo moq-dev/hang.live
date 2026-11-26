@@ -1,5 +1,4 @@
 import * as Moq from "@moq/net";
-import * as Publish from "@moq/publish";
 import * as Signals from "@moq/signals";
 import * as Watch from "@moq/watch";
 import * as SolidWeb from "solid-js/web";
@@ -67,7 +66,7 @@ const local = player ? undefined : new Room.Local({ connection, identity: Moq.Pa
 let dispose: (() => void) | undefined;
 if (local) {
 	Room.Local.join.set(true);
-	local.core.microphone.constraints.set({ echoCancellation: false, noiseSuppression: false, autoGainControl: false });
+	local.microphone.constraints.set({ echoCancellation: false, noiseSuppression: false, autoGainControl: false });
 	const controls = document.getElementById("controls");
 	if (!controls) throw new Error("Missing controls");
 	dispose = SolidWeb.render(
@@ -97,10 +96,12 @@ if (player)
 function track(kind: Kind): MediaStreamTrack | undefined {
 	if (kind === "camera") {
 		const source = local?.webcam.out.source.peek()?.video;
-		return source && !("frames" in source) ? Publish.Video.normalizeSource(source).track : undefined;
+		if (!source || "frames" in source) return undefined;
+		return "track" in source ? source.track : source;
 	}
 	const source = local?.microphone.out.source.peek()?.audio;
-	return source && !Publish.Audio.isSampleSource(source) ? Publish.Audio.normalizeSource(source).track : undefined;
+	if (!source || "samples" in source) return undefined;
+	return "track" in source ? source.track : source;
 }
 const harness = {
 	codec(stage: CodecStage | undefined) {
@@ -139,8 +140,8 @@ const harness = {
 			microphone: track("microphone")?.id,
 			liveTracks: tracks.filter((track) => track.readyState === "live").length,
 			held: held.length,
-			video: player?.video.out.timestamp.peek(),
-			audio: player?.audio.out.timestamp.peek(),
+			video: player?.video.out.timestamp.peek()?.asMillis(),
+			audio: player?.audio.out.timestamp.peek()?.asMillis(),
 			videoFrames: player?.video.out.stats.peek()?.frameCount,
 			audioBytes: player?.audio.out.stats.peek()?.bytesReceived,
 			videoError: player?.video.out.error.peek()?.message,
