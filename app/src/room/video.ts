@@ -9,7 +9,7 @@ import type * as Meme from "./meme";
 import * as Sanitize from "./sanitize";
 
 /** One tile's textures on a live GL context. */
-class Textures {
+export class Textures {
 	gl: WebGL2RenderingContext;
 	/** The latest video frame. */
 	frame: WebGLTexture;
