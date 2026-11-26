@@ -35,22 +35,17 @@ export class Jitter {
 	}
 
 	/**
-	 * Close the interval ending at `wall` (milliseconds), returning how far its latest arrival trailed
-	 * the baseline, or undefined before any frame. An interval without arrivals reports how late a
-	 * frame landing now would be, so a gap ramps up instead of reading as zero.
+	 * Close the interval since the last sample, returning how far its latest arrival trailed the
+	 * baseline in milliseconds, or undefined when no frame arrived in it. A publisher sends nothing
+	 * through a mute or a pause in speech, so an empty interval is no evidence of a late network.
 	 */
-	sample(wall: number): number | undefined {
-		const last = this.#last;
-		if (!last) return undefined;
-
+	sample(): number | undefined {
 		const interval = this.#interval;
+		if (!interval) return undefined;
 		this.#interval = undefined;
-		if (interval) {
-			this.#floors.push(interval.min);
-			if (this.#floors.length > WINDOW) this.#floors.shift();
-		}
 
-		const worst = interval ? interval.max : wall - last.timestamp;
-		return Math.max(0, worst - Math.min(...this.#floors));
+		this.#floors.push(interval.min);
+		if (this.#floors.length > WINDOW) this.#floors.shift();
+		return Math.max(0, interval.max - Math.min(...this.#floors));
 	}
 }

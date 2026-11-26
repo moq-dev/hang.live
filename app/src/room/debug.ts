@@ -1,4 +1,4 @@
-import { Duration, Instant, now, wall } from "@moq/clock";
+import { Duration, Instant, now } from "@moq/clock";
 import type * as Moq from "@moq/net";
 import { Effect, type Getter, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
@@ -17,7 +17,7 @@ const POLL = Duration.millis(250);
 const SWITCH = Duration.secs(3);
 
 // The smallest on-screen tile, in CSS pixels, that fits the sparklines beside its rendition boxes.
-const ROOMY = { width: 360, height: 240 };
+const ROOMY = { width: 440, height: 240 };
 
 const BOX = "px-2 py-1 rounded font-mono text-[11px] leading-snug whitespace-nowrap";
 const PANEL = `bg-black/75 text-white ${BOX}`;
@@ -187,8 +187,8 @@ export class Debug {
 		return latest;
 	}
 
-	// One box per catalog rendition, the active one ringed: green while playing, amber just after a
-	// switch, red if it failed to decode.
+	// One box per catalog rendition, the selected one ringed: green while playing, amber just after
+	// selection moved to it, red if it failed to decode.
 	#renditions(
 		parent: Effect,
 		container: HTMLElement,
@@ -216,7 +216,9 @@ export class Debug {
 						className += " ring-2 ring-red-500";
 						content += ` (${error.message})`;
 					} else if (switched?.to === name) {
+						// The source picked it; the decoder may still show the old one until it arrives.
 						className += " ring-2 ring-amber-400";
+						content += " · selected";
 					} else {
 						className += " ring-2 ring-green-500";
 					}
@@ -240,7 +242,7 @@ export class Debug {
 			const change = effect.get(switched);
 			if (!change) return;
 			const label = (name: string) => name.split("/").pop();
-			const content = `${change.up ? "▲" : "▼"} ${label(change.from)} → ${label(change.to)}`;
+			const content = `${change.up ? "▲" : "▼"} selected ${label(change.from)} → ${label(change.to)}`;
 			const className = `${BOX} bg-amber-400 text-black font-bold`;
 			DOM.render(effect, container, DOM.create("div", { className }, content));
 		});
@@ -286,7 +288,7 @@ export class Debug {
 				? `late ${video.late} · stalls ${video.stalls} (${formatMillis(video.stalled.asMillis())})`
 				: "no video";
 
-			jitterGraph.push(jitter.sample(wall().asUnixMillis()));
+			jitterGraph.push(jitter.sample());
 			const audio = source.audio.stats.peek();
 			audioCounters.textContent = audio
 				? `late ${audio.late} · underruns ${audio.underruns} · skips ${audio.skips}`
