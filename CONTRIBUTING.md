@@ -25,8 +25,7 @@ watches API source changes so RPC types stay current during development.
 
 Run expensive checks with `quest gate just check` and `quest gate just build`.
 `just fix` applies formatting and lint fixes. `just dev` starts the API,
-frontend, local relay, and auth service; start it only to validate a change on
-its real surface, and stop it when done.
+frontend, local relay, and auth service.
 App builds also refresh the pinned decoder assets, including through `just deploy`.
 
 # MoQ updates
@@ -47,8 +46,9 @@ upgrade, bump that tag, run `nix flake lock`, then
 `nix develop --command quest init`, so a shell still holding the old binary
 does not write its stubs. Keep only the SessionStart hook in
 `.claude/settings.json` if that version generates worktree hooks. It reuses
-MoQ's direnv hook with Hang's project directory. Claude Code imports the same
-root instructions as Codex.
+MoQ's direnv hook with Hang's project directory. There is no `CLAUDE.md`:
+Claude Code reads `AGENTS.md` itself, and a `CLAUDE.md` would stop it from
+loading `app/AGENTS.md` and `api/AGENTS.md`.
 
 # Pull requests
 
