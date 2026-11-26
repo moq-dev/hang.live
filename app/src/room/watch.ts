@@ -71,11 +71,9 @@ export class WatchBroadcast {
 		this.#videoSource = new Watch.Video.Source({
 			broadcast: this.#broadcast,
 			target: this.#target,
-			supported: Watch.Video.Decoder.supported,
 		});
 		this.#audioSource = new Watch.Audio.Source({
 			broadcast: this.#broadcast,
-			supported: Watch.Audio.Decoder.supported,
 		});
 		this.signals.cleanup(() => {
 			this.#videoSource.close();

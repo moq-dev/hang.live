@@ -43,8 +43,8 @@ export class Local {
 			connection,
 			identity: this.identity,
 			enabled: Local.join,
-			cameraEnabled: Settings.camera.enabled,
-			microphoneEnabled: Settings.microphone.enabled,
+			camera: { enabled: Settings.camera.enabled },
+			microphone: { enabled: Settings.microphone.enabled },
 			user: {
 				name: this.name,
 				avatar: this.avatar,
@@ -52,24 +52,24 @@ export class Local {
 		});
 		this.#signals.cleanup(() => this.core.close());
 		this.#signals.run((effect) => {
-			this.core.webcam.device.preferred.set(effect.get(Settings.camera.device));
+			this.webcam.device.preferred.set(effect.get(Settings.camera.device));
 			// Pin the resolved OS default for the mic so capture matches the user's default input.
 			// An explicit choice still wins, and an unresolvable default stays browser-managed.
-			this.core.microphone.device.preferred.set(
-				effect.get(Settings.microphone.device) ?? effect.get(this.core.microphone.device.out.default),
+			this.microphone.device.preferred.set(
+				effect.get(Settings.microphone.device) ?? effect.get(this.microphone.device.out.default),
 			);
 		});
 		this.#signals.run((effect) => {
-			this.core.audio.microphone.volume.set(effect.get(Settings.microphone.gain));
+			this.core.microphone.volume.set(effect.get(Settings.microphone.gain));
 		});
 
 		this.camera = new HangLocalSource({
-			broadcast: this.core.camera,
-			frame: this.#frame(this.core.cameraCapture),
-			display: this.core.cameraCapture.out.display,
-			audioRoot: this.core.audio.microphone.root,
-			videoSource: this.core.webcam.out.source,
-			audioSource: this.core.microphone.out.source,
+			broadcast: this.core.camera.broadcast,
+			frame: this.#frame(this.core.camera.capture),
+			display: this.core.camera.capture.out.display,
+			audioRoot: this.core.microphone.root,
+			videoSource: this.webcam.out.source,
+			audioSource: this.microphone.out.source,
 			user: this.core.user,
 			flip: true,
 			enabled: this.core.enabled,
@@ -78,10 +78,10 @@ export class Local {
 
 		const shareName = new Signal<string | undefined>(undefined);
 		this.share = new HangLocalSource({
-			broadcast: this.core.screen,
-			frame: this.#frame(this.core.screenCapture),
-			display: this.core.screenCapture.out.display,
-			audioRoot: this.core.audio.screen.root,
+			broadcast: this.core.screen.broadcast,
+			frame: this.#frame(this.core.screen.capture),
+			display: this.core.screen.capture.out.display,
+			audioRoot: this.core.screen.audio.root,
 			videoSource: new Signal<unknown>(undefined),
 			audioSource: new Signal<unknown>(undefined),
 			user: {
@@ -91,12 +91,12 @@ export class Local {
 				color: this.core.user.color,
 			},
 			flip: false,
-			enabled: this.core.screenEnabled,
+			enabled: this.core.screen.enabled,
 		});
 		this.#signals.cleanup(() => this.share.close());
 
 		this.#signals.run((effect) => {
-			const source = effect.get(this.core.share.out.source);
+			const source = effect.get(this.screen.out.source);
 			(this.share.video.source as Signal<unknown>).set(source?.video);
 			(this.share.audio.source as Signal<unknown>).set(source?.audio);
 		});
@@ -105,12 +105,9 @@ export class Local {
 			const message = effect.get(this.camera.chat.message.latest);
 			this.core.chatting.set(!!message);
 			if (!message) return;
-			effect.timer(
-				() => {
-					this.camera.chat.message.latest.set("");
-				},
-				Clock.Nano.fromMilli(Clock.Milli(10000)),
-			);
+			effect.timer(() => {
+				this.camera.chat.message.latest.set("");
+			}, Clock.Duration.millis(10000));
 		});
 
 		this.#signals.run((effect) => {
@@ -154,15 +151,15 @@ export class Local {
 	}
 
 	get webcam() {
-		return this.core.webcam;
+		return this.core.camera.source;
 	}
 
 	get microphone() {
-		return this.core.microphone;
+		return this.core.microphone.source;
 	}
 
 	get screen() {
-		return this.core.share;
+		return this.core.screen.source;
 	}
 
 	close() {

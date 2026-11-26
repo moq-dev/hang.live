@@ -59,7 +59,7 @@ export class Room {
 
 		this.#signals.run((effect) => {
 			if (!effect.get(Local.join)) return;
-			if (!effect.get(this.local.core.share.out.source)) return;
+			if (!effect.get(this.local.screen.out.source)) return;
 
 			const sharePath = effect.get(this.local.share.name);
 			const share = this.space.add(sharePath, this.local.share);
@@ -99,19 +99,16 @@ export class Room {
 			}
 		});
 
-		this.#signals.timer(
-			() => {
-				this.space.sound.tts.enabled.set(true);
-			},
-			Clock.Nano.fromMilli(Clock.Milli(1000)),
-		);
+		this.#signals.timer(() => {
+			this.space.sound.tts.enabled.set(true);
+		}, Clock.Duration.millis(1000));
 
 		this.#signals.run((effect) => {
 			const cameraBroadcast = effect.get(this.#cameraBroadcast);
 			if (!cameraBroadcast) return;
 			const locator = new Locator(cameraBroadcast);
 			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Clock.Nano.fromMilli(Clock.Milli(8000)));
+			effect.timer(() => locator.close(), Clock.Duration.millis(8000));
 		});
 
 		this.#signals.run((effect) => {
@@ -119,17 +116,17 @@ export class Room {
 			if (!shareBroadcast) return;
 			const locator = new Locator(shareBroadcast);
 			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Clock.Nano.fromMilli(Clock.Milli(8000)));
+			effect.timer(() => locator.close(), Clock.Duration.millis(8000));
 		});
 
 		this.#signals.run((effect) => {
-			if (effect.get(this.local.core.webcam.out.source) || effect.get(this.local.core.microphone.out.source)) {
+			if (effect.get(this.local.webcam.out.source) || effect.get(this.local.microphone.out.source)) {
 				this.space.sound.notification("select");
 			}
 		});
 
 		this.#signals.run((effect) => {
-			if (effect.get(this.local.core.share.out.source)) {
+			if (effect.get(this.local.screen.out.source)) {
 				this.space.sound.notification("select");
 			}
 		});

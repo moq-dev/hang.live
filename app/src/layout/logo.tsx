@@ -1,6 +1,6 @@
 import * as Moq from "@moq/net";
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { solid } from "../util/solid";
 
 export function Logo(props: { connection?: Moq.Connection; link?: string }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";

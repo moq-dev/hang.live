@@ -1,9 +1,9 @@
-import { createAccessor as solid } from "@moq/signals/solid";
 import { createEffect, createSignal, For, onCleanup, onMount, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import type { HangLocalSource } from "../room/local";
 import * as Meme from "../room/meme";
 import Settings from "../settings";
+import { solid } from "../util/solid";
 
 export type Tab = "emoji" | "audio" | "video";
 
@@ -391,7 +391,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	const sendMeme = (memeName: string) => {
 		// Send the slash command
 		if (props.broadcast.chat.message.enabled.peek()) {
-			props.broadcast.chat.message.latest.update(() => `/${memeName}`);
+			// Force a notification so picking the same meme again replays it.
+			props.broadcast.chat.message.latest.set(`/${memeName}`, true);
 		}
 		props.onClose();
 	};
