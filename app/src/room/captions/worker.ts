@@ -2,30 +2,28 @@
 // turns transcription on, so the model and its runtime stay out of the room bundle.
 import { type AutomaticSpeechRecognitionPipeline, pipeline } from "@huggingface/transformers";
 import { Duration } from "@moq/clock";
-import { type Job, Resampler, SAMPLE_RATE, Segmenter, split, tidy } from "./segment";
+import { clean, type Job, Resampler, SAMPLE_RATE, Segmenter, tidy } from "./segment";
 
 /** A message the page sends the worker. */
 export type Request =
 	| { type: "init"; language: string; translate: boolean }
 	// `end` is the media-clock time of the chunk's last sample, in microseconds.
 	| { type: "audio"; samples: Float32Array; rate: number; end: number }
-	// The microphone stopped: forget the utterance in progress and anything waiting on it.
-	| { type: "reset" };
+	// The microphone stopped: forget the utterance in progress and anything waiting on it. Replies
+	// carry the latest `generation`, so the page can tell them from ones posted before the reset.
+	| { type: "reset"; generation: number };
 
 /** A message the worker sends the page. `at` is a media-clock time in microseconds. */
 export type Response =
 	| { type: "progress"; loaded: number }
 	| { type: "ready" }
-	| { type: "cue"; track: "source" | "translation"; text: string; at: number }
-	| { type: "clear"; track: "source" | "translation"; at: number }
+	| { type: "cue"; track: "source" | "translation"; text: string; at: number; generation: number }
+	| { type: "clear"; at: number; generation: number }
 	| { type: "error"; message: string };
 
 // The English-only model transcribes English better; the multilingual one also translates to it.
 const ENGLISH = "onnx-community/whisper-base.en";
 const MULTILINGUAL = "onnx-community/whisper-base";
-
-// How long each extra caption of a long translation stays up before the next replaces it.
-const READ = Duration.secs(3);
 
 // Finished utterances waiting behind a slow transcription. Past this the oldest are dropped, so a GPU
 // slower than speech falls behind by a bounded amount instead of growing without end.
@@ -38,10 +36,8 @@ let model: Promise<AutomaticSpeechRecognitionPipeline> | undefined;
 let ready = false;
 let resampler: Resampler | undefined;
 let segmenter = new Segmenter();
-// Bumped by every reset, so a transcription already running when it came posts nothing.
+// The page's count of microphone resets, tagging every reply.
 let generation = 0;
-// When the last translated caption has had its time on screen, in media-clock microseconds.
-let translated = 0;
 const queue: Job[] = [];
 let busy = false;
 
@@ -97,26 +93,19 @@ async function drain() {
 		for (let job = queue.shift(); job; job = queue.shift()) {
 			const at = job.end.asMicros();
 			if (job.kind === "clear") {
-				// A long translation's later captions are still up; clear the track after them.
-				post({ type: "clear", track: "source", at });
-				if (translate) post({ type: "clear", track: "translation", at: Math.max(at, translated) });
+				post({ type: "clear", at, generation });
 				continue;
 			}
 
 			const current = generation;
 			const text = tidy(await transcribe(asr, job.audio, "transcribe"));
-			if (current !== generation) continue;
-			if (text) post({ type: "cue", track: "source", text, at });
+			if (text) post({ type: "cue", track: "source", text, at, generation: current });
 
 			// Translating only finished utterances halves the work and keeps the second track from flickering.
+			// No partial showed its beginning, so it is published whole; an utterance is at most 15 s.
 			if (translate && job.kind === "final") {
-				const parts = split(await transcribe(asr, job.audio, "translate"));
-				if (current !== generation) continue;
-				// No partial showed this text, so a long one is shown in turns rather than cut short.
-				parts.forEach((part, i) => {
-					post({ type: "cue", track: "translation", text: part, at: at + READ.asMicros() * i });
-				});
-				if (parts.length > 0) translated = at + READ.asMicros() * parts.length;
+				const translated = clean(await transcribe(asr, job.audio, "translate"));
+				if (translated) post({ type: "cue", track: "translation", text: translated, at, generation: current });
 			}
 		}
 	} catch (err) {
@@ -161,7 +150,7 @@ self.addEventListener("message", (event: MessageEvent<Request>) => {
 	}
 
 	if (message.type === "reset") {
-		generation++;
+		generation = message.generation;
 		segmenter = new Segmenter();
 		queue.length = 0;
 		return;

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { Duration } from "@moq/clock";
-import { type Job, Resampler, SAMPLE_RATE, Segmenter, split, tidy } from "./segment";
+import { type Job, Resampler, SAMPLE_RATE, Segmenter, tidy } from "./segment";
 
 // Speech louder than this is spoken in syllables: 200 ms on, then 100 ms back at the room's level.
 const LOUD = 0.1;
@@ -143,17 +143,4 @@ test("tidy keeps only the latest words of a long transcript", () => {
 	expect(text.length).toBeLessThanOrEqual(161);
 	expect(text.startsWith("…word")).toBe(true);
 	expect(text.endsWith("word59")).toBe(true);
-});
-
-test("split keeps every word of a long transcript, in captions short enough to read", () => {
-	const words = Array.from({ length: 60 }, (_, i) => `word${i}`);
-	const parts = split(`  ${words.join("  ")} `);
-	expect(parts.length).toBe(3);
-	for (const part of parts) expect(part.length).toBeLessThanOrEqual(160);
-	expect(parts.join(" ")).toBe(words.join(" "));
-});
-
-test("split of no words is no captions", () => {
-	expect(split("[BLANK_AUDIO]")).toEqual([]);
-	expect(split("   ")).toEqual([]);
 });

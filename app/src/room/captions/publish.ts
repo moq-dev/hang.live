@@ -70,6 +70,8 @@ export class Captioner {
 
 		// Stop for good, until transcription is turned off and on again.
 		let stopped = false;
+		// Counts microphone resets; a reply from before the latest one is stale.
+		let generation = 0;
 		const fail = (message: string) => {
 			console.error("captions:", message);
 			stopped = true;
@@ -82,6 +84,7 @@ export class Captioner {
 		worker.addEventListener("message", (event: MessageEvent<Response>) => {
 			const message = event.data;
 			if (stopped) return;
+			if ((message.type === "cue" || message.type === "clear") && message.generation !== generation) return;
 			// Viewers drop a caption this far behind their playback, so the device can't keep up.
 			if (
 				(message.type === "cue" || message.type === "clear") &&
@@ -110,12 +113,9 @@ export class Captioner {
 					}
 					break;
 				case "clear":
-					if (message.track === "source") {
-						source.write("", message.at);
-						this.text.set(undefined);
-					} else {
-						translation?.write("", message.at);
-					}
+					source.write("", message.at);
+					translation?.write("", message.at);
+					this.text.set(undefined);
 					break;
 			}
 		});
@@ -143,7 +143,8 @@ export class Captioner {
 				// A muted speaker's caption ends with their audio, and their next words start afresh.
 				inner.cleanup(() => {
 					if (stopped) return;
-					const reset: Request = { type: "reset" };
+					generation++;
+					const reset: Request = { type: "reset", generation };
 					worker.postMessage(reset);
 					const at = Publish.MediaClock.now().asMicros();
 					source.write("", at);
