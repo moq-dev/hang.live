@@ -8,6 +8,5 @@ participant and accurate spatial audio.
 
 ## Plan
 
-Prioritize the maintainer's reported media-toggle hang alongside the critical
-security/auth vulnerabilities and duplicated MoQ watch/audio bugs surfaced in
-the 2026-11-25 audit. Each child is independently shippable.
+Prioritize the critical security/auth vulnerabilities and duplicated MoQ
+watch/audio bugs surfaced in the 2026-11-25 audit. Each child is independently shippable.

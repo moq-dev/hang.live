@@ -1,0 +1,7 @@
+{
+	"extends": "../tsconfig.json",
+	"include": [".", "../../moq/js/common/worklet.d.ts", "../src/vite-env.d.ts"],
+	"compilerOptions": {
+		"rootDir": "../.."
+	}
+}
