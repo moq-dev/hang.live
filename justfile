@@ -5,7 +5,6 @@
 mod api
 mod app
 mod dev
-mod native
 
 # List all of the available commands.
 default:
@@ -26,14 +25,12 @@ check:
 	bun run --cwd api test
 	bun run --cwd app test
 	bun run --cwd app test:media
-	just native check
 
 # Automatically fix some issues.
 fix:
 	bun install
 	bun run --cwd api fix
 	bun run --cwd app fix
-	just native fix
 
 # Upgrade any tooling
 upgrade:
@@ -52,15 +49,3 @@ prod: build
 deploy:
 	just api deploy
 	just app deploy
-
-# Run the Android build, using --open to open Android Studio
-android *args:
-	just native android {{args}}
-
-# Run the iOS build, using --open to open Xcode
-ios *args:
-	just native ios {{args}}
-
-# Release the app for the given platform
-release platform:
-	just native release "{{platform}}"

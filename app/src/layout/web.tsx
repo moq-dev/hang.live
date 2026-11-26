@@ -1,8 +1,6 @@
-import { type JSX, Match, Switch } from "solid-js";
+import type { JSX } from "solid-js";
 import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
-import UpdaterIcon from "../components/updater";
-import * as Tauri from "../tauri";
 import { Logo } from "./logo";
 
 export default function Web(props: { children: JSX.Element; link?: string }) {
@@ -12,21 +10,6 @@ export default function Web(props: { children: JSX.Element; link?: string }) {
 				<Logo link={props.link} />
 				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
-					<Switch>
-						<Match when={!Tauri.ENABLED}>
-							<Tooltip content="Download app" position="bottom">
-								<a
-									href="/download"
-									class="p-2 text-white hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
-								>
-									<span class="icon-[mdi--download]" />
-								</a>
-							</Tooltip>
-						</Match>
-						<Match when={Tauri.DESKTOP}>
-							<UpdaterIcon />
-						</Match>
-					</Switch>
 					<Tooltip content="Account settings" position="bottom">
 						<a
 							href="/account"

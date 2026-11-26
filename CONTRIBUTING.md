@@ -1,7 +1,7 @@
 # Development
 
-Hang uses Bun workspaces, a SolidJS frontend (`app/`), a Hono API on
-Cloudflare Workers (`api/`), and Tauri (`native/`). Media libraries live in
+Hang uses Bun workspaces, a SolidJS frontend (`app/`), and a Hono API on
+Cloudflare Workers (`api/`). Media libraries live in
 the pinned `moq/` submodule. The Nix relay and JS libraries use the same MoQ
 revision.
 
@@ -21,9 +21,7 @@ with browser DOM types. `just install` prepares both declaration boundaries.
 The emits are incremental. App checks and builds refresh them, and `just dev`
 watches API source changes so RPC types stay current during development.
 
-`just check` runs Quest validation, TypeScript, Biome, API and app tests, and native checks. On Linux,
-the native recipe checks Rust formatting; native compilation needs GTK and
-WebKit development libraries and is not part of that recipe.
+`just check` runs Quest validation, TypeScript, Biome, and API, app, and media tests.
 
 Run expensive checks with `quest gate just check` and `quest gate just build`.
 `just fix` applies formatting and lint fixes. `just dev` starts the API,
