@@ -295,8 +295,11 @@ Test.test(
 		const browser = await launch([...FAKE_MEDIA, "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]);
 		try {
 			const errors: string[] = [];
-			const alice = await browser.newPage();
-			const bob = await browser.newPage();
+			// SwiftShader fills the full-page canvas on the CPU every frame, which at the default
+			// 1280x720 starves both pages' encoders and decoders on a small CI runner.
+			const viewport = { width: 320, height: 240 };
+			const alice = await browser.newPage({ viewport });
+			const bob = await browser.newPage({ viewport });
 			const pages = [alice, bob];
 			for (const page of pages) {
 				page.on("pageerror", (error) => errors.push(error.message));
