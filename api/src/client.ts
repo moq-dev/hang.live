@@ -1,12 +1,11 @@
 import { adjectives, animals, uniqueNamesGenerator } from "unique-names-generator";
 import { z } from "zod";
 
-// TODO Make a schema module instead of these rag-tag miscellaneous schemas.
+// Browser-safe schemas and helpers shared by the API and the app.
 
-// This could be an RPC endpoint in the future.
 export const oauthProviders = ["google", "discord", "apple"] as const;
 
-// This could be an RPC endpoint in the future.
+// One of the app's bundled default avatars.
 export function randomAvatar(): string {
 	const index = Math.floor(Math.random() * 50) + 1;
 	return `/avatar/${index}.svg`;
@@ -60,7 +59,7 @@ export type OauthState = z.infer<typeof oauthStateSchema>;
 
 // Room name validation - only allows URL-safe characters
 // Alphanumeric, hyphens, underscores, and dots
-export const ROOM_NAME_REGEX = /^[a-zA-Z0-9._-]+$/;
+const ROOM_NAME_REGEX = /^[a-zA-Z0-9._-]+$/;
 export const ROOM_NAME_ERROR = "Hang names can only contain letters, numbers, hyphens, underscores, and periods.";
 
 export const isValidRoom = (name: string): boolean => {
@@ -75,6 +74,9 @@ export type AccountId = z.infer<typeof accountIdSchema>;
 
 // One literal path segment beneath guest/, never a wildcard permission.
 export const guestSchema = z.string().regex(/^guest\/[^/*]+$/, "Invalid guest identity");
+
+// The credential the API issues a guest, a compact JWT, which the browser keeps to rejoin as the same guest.
+export const guestTokenSchema = z.string().regex(/^[\w-]+\.[\w-]+\.[\w-]+$/, "Invalid guest credential");
 
 // Display names, trimmed so whitespace cannot pad a short name past the minimum.
 export const nameSchema = z.string().trim().check(z.minLength(4), z.maxLength(100));

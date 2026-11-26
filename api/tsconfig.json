@@ -8,6 +8,5 @@
 			"@moq/*": ["../moq/js/*/dist/index.d.ts"]
 		}
 	},
-	"include": ["src"],
-	"exclude": ["src/client"]
+	"include": ["src"]
 }

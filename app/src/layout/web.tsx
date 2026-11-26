@@ -8,7 +8,6 @@ export default function Web(props: { children: JSX.Element; link?: string }) {
 		<div class="p-4 mx-auto w-full flex flex-col max-w-[1150px]">
 			<header class="flex items-center justify-between leading-none text-xl">
 				<Logo link={props.link} />
-				<div id="support" />
 				<nav class="rounded p-3 flex items-center gap-3">
 					<Tooltip content="Account settings" position="bottom">
 						<a

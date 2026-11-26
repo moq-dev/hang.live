@@ -15,14 +15,6 @@ import { WatchBroadcast } from "./watch";
 
 export type BroadcastSource = WatchBroadcast | HangLocalSource | FakeBroadcast;
 
-export type ChatMessage = {
-	audio?: HTMLAudioElement;
-	video?: HTMLVideoElement;
-	element: Node;
-	received: DOMHighResTimeStamp;
-	expires: DOMHighResTimeStamp;
-};
-
 // Catalog.Position but all fields are required.
 type Position = {
 	x: number;
@@ -63,14 +55,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Zoom center point in normalized coordinates (0-1) relative to the broadcast
 	zoomCenter = new Signal<Vector>(Vector.create(0.5, 0.5));
 
-	// Replaced by position
-	//targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
-	//targetScale = 1.0; // 1 is 100%
-
 	visible: Signal<boolean>;
 
 	// The target position of the broadcast, while bounds contains the actual position.
-	// This is separate from the source.location.current so we can temporarily use our own value.
+	// This is separate from the source's location window so we can temporarily use our own value.
 	// After we learn the real position over the network, we'll replace it.
 	position: Signal<Position>;
 
@@ -160,9 +148,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	}
 
 	#runChat(effect: Effect) {
-		const enabled = effect.get(this.source.chat.message.enabled);
-		if (!enabled) return;
-
 		const msg = effect.get(this.source.chat.message.latest);
 		if (!msg) return;
 
@@ -297,15 +282,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Slow down the velocity for the next frame.
 		this.velocity = this.velocity.mult(0.5);
-	}
-
-	// Returns true if the broadcaster is locked to a position.
-	locked(): boolean {
-		if (this.source instanceof WatchBroadcast) {
-			return !this.source.location.window.handle.peek();
-		}
-
-		return false;
 	}
 
 	// Called when online status changes to trigger fade transition

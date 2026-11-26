@@ -15,8 +15,6 @@ export class FakeBroadcast {
 	readonly role = "fake" as const;
 	sound: Sound;
 
-	enabled = new Signal(false);
-
 	location = {
 		window: {
 			position: new Signal<Position | undefined>(undefined),
@@ -26,11 +24,9 @@ export class FakeBroadcast {
 
 	chat = {
 		message: {
-			enabled: new Signal(true),
 			latest: new Signal<string | undefined>(undefined),
 		},
 		typing: {
-			enabled: new Signal(true),
 			active: new Signal<boolean | undefined>(undefined),
 		},
 	};
