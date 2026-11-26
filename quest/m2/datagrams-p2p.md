@@ -21,6 +21,9 @@ Showcase MoQ's low-latency non-media transport in Hang's spatial UI with
   negotiated session: enable live updates only when it carries unreliable
   datagrams, and keep every other session, WebSocket included (QMux datagrams
   there still ride TCP), on mouseup-only snapshots.
+- In a private room, encrypt the datagram track like its other tracks, as
+  [e2ee-rooms](/quest/m2/e2ee-rooms.md) plans, so no position reaches the
+  relay in plaintext.
 - Direct browser-to-browser P2P is out of scope: `moq-dev/moq` removed
   `@moq/p2p` in [moq-dev/moq#8771](https://github.com/moq-dev/moq/pull/8771),
   and the maintainer is investigating alternatives.

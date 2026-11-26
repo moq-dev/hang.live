@@ -30,7 +30,10 @@ profile exists.
 - Follow the pinned profile's credential, opaque broadcast path, and epoch
   rules: each publisher instance mints a fresh epoch, announced as the route's
   instance rather than in the path, never reused under one credential across
-  runs or restarts. Encrypt media and Hang's `location`/`chat` tracks.
+  runs or restarts. Encrypt media, Hang's `location`/`chat` tracks, and its
+  datagram tracks (live cursors and drags from
+  [datagrams-p2p](/quest/m2/datagrams-p2p.md)), which the profile covers with
+  its own datagram key domain.
   Only `moq-lite-07-wip`, which `@moq/net`'s default versions leave out, carries
   the publisher's instance end to end; older Lite versions resolve their own,
   so subscribers could not derive keys. Private rooms connect with versions
