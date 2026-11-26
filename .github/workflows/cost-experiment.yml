@@ -1,0 +1,42 @@
+# TEMPORARY: cost-audit measurement; deleted before review.
+name: Cost experiment
+permissions:
+  contents: read
+on:
+  push:
+    branches: ["quest/m1/audit-cost"]
+    paths: [".github/workflows/cost-experiment.yml"]
+jobs:
+  measure:
+    name: ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [cache, nocache, nocache-mainlock]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - if: matrix.variant == 'nocache-mainlock'
+        run: |
+          git fetch --depth=1 origin main
+          git checkout FETCH_HEAD -- flake.nix flake.lock
+      - uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # main
+        with:
+          determinate: false
+          extra-conf: |
+            accept-flake-config = true
+      - if: matrix.variant == 'cache'
+        uses: DeterminateSystems/magic-nix-cache-action@f69a2d3e148e90223fe63ab6e3f6331f2e7e33dc # main
+        with:
+          use-flakehub: false
+          use-gha-cache: true
+      - name: shell
+        run: nix develop --command true
+      - name: check
+        run: nix develop --command just check
+      - name: build
+        run: nix develop --command just build
