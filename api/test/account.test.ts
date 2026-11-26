@@ -73,9 +73,13 @@ test("a failed delete of the replaced upload still reports the committed save", 
 test("an upload for an account deleted meanwhile is removed, not orphaned", async () => {
 	const { ctx, bucket } = harness();
 	const { id } = await ctx.account.create({ name: "Alice", email: "alice@example.com" });
-	await ctx.account.delete(id);
 
-	// A session token outlives its account, so the update still runs.
+	// The account goes while its new avatar is uploading.
+	const put = bucket.put.bind(bucket);
+	bucket.put = async (...args: Parameters<typeof put>) => {
+		await put(...args);
+		await ctx.account.delete(id);
+	};
 	await expect(ctx.account.update(id, { avatar: png() })).rejects.toThrow();
 	expect(bucket.objects.size).toBe(0);
 });

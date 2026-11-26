@@ -35,6 +35,7 @@ const { client } = await import("./api");
 
 test("a rejected token is dropped instead of resent forever", async () => {
 	expect(await dropped).toBeUndefined();
+	if (client.authenticated.peek()) await client.authenticated.changed();
 	expect(requests.some((r) => r.url.endsWith("/account/info"))).toBe(true);
 	expect(Settings.oauth.token.peek()).toBeUndefined();
 	expect(client.authenticated.peek()).toBe(false);
