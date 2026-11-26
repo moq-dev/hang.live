@@ -8,14 +8,10 @@ fix remaining WebGL/physics/UI/API bugs, and remove the Tauri native app.
 
 ## Plan
 
-Decided 2026-11-25 (maintainer):
-- Adopt `moq/`'s AI/review workflow (`REVIEW.md`, stricter Biome, `@moq/clock`,
-  TypeScript/CI hygiene).
-- Delete `infra/` and point production relay config to `moq.pro`.
-
-Decided 2026-11-25 (maintainer, /quest-run): delete Tauri: `native/`, its app
-glue, the download page, native release recipes, updater manifests, and its
-dependencies. This supersedes the earlier "keep `native/` as a canary" decision;
-Hang is web-only.
+Decided 2026-11-25 (maintainer): adopt `moq/`'s agent and review workflow,
+delete `infra/` for `moq.pro`, and delete the Tauri app; all three have landed.
+What remains is tearing down the old relay nodes, dropping the legacy chat
+field once the room-media deploy is live, binding guest identities, and listing
+Hang on `moq.dev` again.
 
 Each child quest is independently shippable.

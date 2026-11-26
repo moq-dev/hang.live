@@ -8,12 +8,14 @@ key held only in the URL `#fragment`, so the relay forwards only ciphertext.
 
 ## Plan
 
-Build on `moq/js/crypto` (`@moq/crypto` `E2ee` + `Sign`, implementing
-`moq-e2ee-00` and `moq-sign-00`):
+Build on `moq/js/e2ee` (`@moq/e2ee`, implementing `moq-e2ee-00`). At the
+pinned `moq/` (and upstream `main` on 2026-11-25), `@moq/publish`, `@moq/watch`,
+and `@moq/room` do not use it yet, and nothing upstream implements signing
+(`moq-sign-00`, Ed25519).
 
-- Add `moq/js/crypto` to Hang's workspace once its browser integration is ready,
+- Add `moq/js/e2ee` to Hang's workspace once its browser integration is ready,
   and upstream any missing `@moq/room` / `@moq/publish` / `@moq/watch` E2EE
-  wiring into `moq-dev/moq` rather than reimplementing encryption in Hang.
+  wiring and signing into `moq-dev/moq` rather than reimplementing them in Hang.
 - Support a "Private (E2EE)" toggle when starting a room that generates a room
   credential and embeds it in the URL `#fragment` (never sent to `api/` or the
   relay).

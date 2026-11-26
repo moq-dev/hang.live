@@ -20,7 +20,11 @@ Showcase MoQ's low-latency non-media transport features in Hang's spatial UI:
     (instead of waiting until `mouseup`), gracefully falling back to
     mouseup-only snapshots when datagrams are unavailable.
 - **Direct 1:1 browser P2P (`@moq/p2p`)**:
-  - Explore an opt-in 1:1 direct P2P room mode using `moq/js/p2p` (WebRTC
+  - `moq-dev/moq` removed peer-to-peer and `@moq/p2p` in
+    [moq-dev/moq#8771](https://github.com/moq-dev/moq/pull/8771), which the
+    pinned `moq/` includes; no upstream quest restores it, so this part needs
+    it restored upstream first.
+  - Explore an opt-in 1:1 direct P2P room mode using restored `@moq/p2p` (WebRTC
     `RTCDataChannel` + `@moq/qmux` carrying the exact same MoQ protocol with
     zero relay media egress), with lightweight signaling through the existing
     Cloudflare API or relay.
