@@ -56,6 +56,9 @@ export class Video {
 	// So we use the Video class directly to get individual frames.
 	broadcast: Broadcast;
 
+	// The avatar URL last shown, kept while the user details are missing.
+	#avatar?: string;
+
 	// The size of the avatar in pixels.
 	avatarSize = new Signal<Vector | undefined>(undefined);
 
@@ -109,14 +112,9 @@ export class Video {
 	}
 
 	#runAvatar(effect: Effect) {
-		let avatar = effect.get(this.broadcast.source.user.avatar);
-		if (!avatar) {
-			// Don't unset the avatar if it's already set.
-			if (this.avatarSize.peek()) return;
-
-			// Set a random default avatar while the user details are loading.
-			avatar = Api.randomAvatar();
-		}
+		// Keep the last avatar while the user details are missing, and pick a random one only for a tile that never had one.
+		const avatar = effect.get(this.broadcast.source.user.avatar) ?? this.#avatar ?? Api.randomAvatar();
+		this.#avatar = avatar;
 
 		// TODO only set the avatar if it successfully loads
 		const newAvatar = new Image();
@@ -124,23 +122,20 @@ export class Video {
 		// Enable CORS for external avatar images
 		newAvatar.crossOrigin = "anonymous";
 
-		// For SVGs, load at higher resolution to avoid pixelation
-		// Set a reasonable size (e.g., 512x512) for better quality
+		// An SVG may have no intrinsic size, so give it the largest size we render at.
 		if (avatar.endsWith(".svg")) {
-			const size = effect.get(this.#renderSize);
-			newAvatar.width = size;
-			newAvatar.height = size;
+			newAvatar.width = 512;
+			newAvatar.height = 512;
 		}
 
 		newAvatar.src = avatar;
 
 		// Once the avatar loads, upload it to the texture
 		effect.event(newAvatar, "load", () => {
-			const avatarSize = Vector.create(
-				newAvatar.naturalWidth || newAvatar.width,
-				newAvatar.naturalHeight || newAvatar.height,
+			// Not reset when the avatar changes, so the old one shows until the new one loads.
+			this.avatarSize.set(
+				Vector.create(newAvatar.naturalWidth || newAvatar.width, newAvatar.naturalHeight || newAvatar.height),
 			);
-			effect.set(this.avatarSize, avatarSize);
 
 			effect.run((effect) => {
 				const textures = effect.get(this.textures);

@@ -532,8 +532,11 @@ export class Space {
 			);
 		});
 
-		// When the media source changes, bump the z-index to the highest known value.
 		if (source.role === "publish") {
+			// A publisher reused later, such as a new screen share, must not replay moves nobody settles anymore.
+			broadcast.signals.cleanup(() => source.location.peers.positions.set(undefined));
+
+			// When the media source changes, bump the z-index to the highest known value.
 			broadcast.signals.run((effect) => {
 				if (!effect.get(source.enabled)) return;
 				if (!effect.get(source.video.source) && !effect.get(source.audio.source)) return;
@@ -777,7 +780,11 @@ export class Space {
 
 			// Ask the peer to move through the first local broadcast with Remote Control enabled.
 			const moves = this.#moves(true).at(0);
-			if (moves) Peers.request(moves, handle, position);
+			if (!moves) return;
+
+			Peers.request(moves, handle, position);
+			// A peer already there never publishes again to settle it.
+			Peers.settle(moves, handle, broadcast.source.location.window.position.peek());
 		}
 	}
 
