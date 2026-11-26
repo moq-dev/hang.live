@@ -20,15 +20,41 @@ export function randomName(): string {
 	});
 }
 
+// A PKCE-style (RFC 7636) verifier: 32 random bytes, base64url without padding.
+const base64urlSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, "Expected 32 base64url bytes");
+
 export const oauthStateSchema = z.object({
-	// A random string to prevent CSRF attacks.
-	// The client should validate that they generated this string themselves.
-	random: z.string(),
+	// SHA-256 of a verifier only the client holds; the login code is redeemable only with that verifier.
+	// This also stops login CSRF, since a code minted for an attacker's login fails the victim's verifier.
+	challenge: base64urlSchema,
 
 	// The client should redirect to this URL after login.
 	// This was the page they were on before they clicked the login button.
 	redirect: z.string(),
 });
+
+export const oauthTokenSchema = z.object({
+	code: z.string(),
+	verifier: base64urlSchema,
+});
+
+function base64url(bytes: Uint8Array): string {
+	return btoa(String.fromCharCode(...bytes))
+		.replaceAll("+", "-")
+		.replaceAll("/", "_")
+		.replace(/=+$/, "");
+}
+
+// Generate a fresh secret verifier for one login attempt.
+export function oauthVerifier(): string {
+	return base64url(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+// The public challenge sent through the OAuth provider for a verifier.
+export async function oauthChallenge(verifier: string): Promise<string> {
+	const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+	return base64url(new Uint8Array(digest));
+}
 
 export type OauthState = z.infer<typeof oauthStateSchema>;
 

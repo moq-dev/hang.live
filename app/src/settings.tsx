@@ -61,7 +61,8 @@ export const Settings = {
 
 	oauth: {
 		token: new Signal<string | undefined>(localStorage.getItem("settings.oauth.token") ?? undefined),
-		random: new Signal<string | undefined>(localStorage.getItem("settings.oauth.random") ?? undefined),
+		// The secret for an in-progress login, redeemed with the code the OAuth redirect returns.
+		verifier: new Signal<string | undefined>(localStorage.getItem("settings.oauth.verifier") ?? undefined),
 	},
 
 	// Meme selector settings
@@ -181,11 +182,11 @@ effect.subscribe(Settings.oauth.token, (token) => {
 	}
 });
 
-effect.subscribe(Settings.oauth.random, (random) => {
-	if (random) {
-		localStorage.setItem("settings.oauth.random", random);
+effect.subscribe(Settings.oauth.verifier, (verifier) => {
+	if (verifier) {
+		localStorage.setItem("settings.oauth.verifier", verifier);
 	} else {
-		localStorage.removeItem("settings.oauth.random");
+		localStorage.removeItem("settings.oauth.verifier");
 	}
 });
 
