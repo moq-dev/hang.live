@@ -38,6 +38,36 @@ test("location edits keep an existing subscription alive", async () => {
 	}
 });
 
+test("a window peers may not move hides its handle and echoes from them", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({});
+	const local = locationFields();
+	const effect = new Effect();
+	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, local, chatFields(), effect);
+	const extras = consumeExtras({
+		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+	});
+	try {
+		local.peers.positions.set({ peer: { x: 0.5, id: "m1" } });
+		await flush();
+		expect(extras.location.window.handle.peek()).toBe(local.window.handle.peek());
+		// An empty list still tells peers to wait for the echo.
+		expect(extras.location.window.applied.peek()).toEqual([]);
+		expect(extras.location.peers.positions.peek()).toEqual({ peer: { x: 0.5, id: "m1" } });
+
+		local.window.movable.set(false);
+		await flush();
+		expect(extras.location.window.handle.peek()).toBeUndefined();
+		expect(extras.location.window.applied.peek()).toBeUndefined();
+		// Asking others to move doesn't depend on it.
+		expect(extras.location.peers.positions.peek()).toEqual({ peer: { x: 0.5, id: "m1" } });
+	} finally {
+		extras.close();
+		effect.close();
+		net.close();
+	}
+});
+
 test("removed chat catalog entries clear stale messages", async () => {
 	const net = new Net.Broadcast.Producer();
 	const catalog = new Signal<ExtendedCatalog | undefined>({ hang: { chat: { track: "hang/chat.json" } } });

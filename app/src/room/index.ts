@@ -6,6 +6,7 @@ import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { HangLocalSource, Local } from "./local";
 import { Locator } from "./locator";
+import * as Peers from "./peers";
 import { Sound } from "./sound";
 import { Space } from "./space";
 import { WatchBroadcast } from "./watch";
@@ -147,23 +148,19 @@ export class Room {
 			video: this.space.canvas.visible,
 		});
 
-		watch.signals.run((effect) => {
-			const positions = effect.get(watch.location.peers.positions);
-			if (!positions) return;
+		// Follow the moves this peer asks of each local window, while Remote Control allows it.
+		for (const local of [this.local.camera, this.local.share]) {
+			const target = local.location.window;
+			const inbox = new Peers.Inbox(target);
+			watch.signals.cleanup(() => inbox.close());
 
-			const camera = effect.get(this.local.camera.location.window.handle);
-			const screen = effect.get(this.local.share.location.window.handle);
-
-			if (camera && camera in positions) {
-				const position = positions[camera];
-				this.local.camera.location.window.position.update((prev) => ({ ...prev, ...position }));
-			}
-
-			if (screen && screen in positions) {
-				const position = positions[screen];
-				this.local.share.location.window.position.update((prev) => ({ ...prev, ...position }));
-			}
-		});
+			watch.signals.run((effect) => {
+				const handle = effect.get(target.handle);
+				const movable = effect.get(target.movable);
+				const request = handle && movable ? effect.get(watch.location.peers.positions)?.[handle] : undefined;
+				inbox.receive(request);
+			});
+		}
 
 		this.space.add(path, watch);
 	}

@@ -233,7 +233,7 @@ export class HangLocalSource {
 		};
 
 		this.signals.run((effect) => {
-			this.location.peers.enabled.set(effect.get(Settings.draggable));
+			this.location.window.movable.set(effect.get(Settings.draggable));
 		});
 
 		serveExtras(this.broadcast, this.location, this.chat, this.signals);

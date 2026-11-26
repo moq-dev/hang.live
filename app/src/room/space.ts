@@ -565,10 +565,14 @@ export class Space {
 					for (const moves of this.#moves()) Peers.drop(moves, handle);
 				});
 
-				// Stop asking once it publishes the position we asked for.
+				// Stop asking once it confirms the move we asked for.
 				effect.run((effect) => {
-					const published = effect.get(source.location.window.position);
-					for (const moves of this.#moves()) Peers.settle(moves, handle, published);
+					const peer = {
+						handle,
+						position: effect.get(source.location.window.position),
+						applied: effect.get(source.location.window.applied),
+					};
+					for (const moves of this.#moves()) Peers.settle(moves, peer);
 				});
 			});
 		}
@@ -781,24 +785,25 @@ export class Space {
 		}
 
 		if (broadcast.source.role === "watch") {
-			const handle = broadcast.source.location.window.handle.peek();
+			const target = broadcast.source.location.window;
+			const handle = target.handle.peek();
 			if (!handle) return;
 
-			// Ask the peer to move through the first local broadcast with Remote Control enabled.
-			const moves = this.#moves(true).at(0);
+			// Any local broadcast can carry the request: Remote Control only decides who may move us.
+			const moves = this.#moves().at(0);
 			if (!moves) return;
 
-			Peers.request(moves, handle, { to: position, from: broadcast.source.location.window.position.peek() });
+			const peer = { handle, position: target.position.peek(), applied: target.applied.peek() };
+			Peers.request(moves, peer, position);
 		}
 	}
 
-	// The peer moves each local broadcast publishes, optionally only those that take part in peer dragging.
-	#moves(enabled = false): Signal<Peers.Moves>[] {
+	// The peer moves each local broadcast publishes.
+	#moves(): Signal<Peers.Moves>[] {
 		const moves = [];
 		for (const broadcast of this.ordered.peek()) {
 			const source = broadcast.source;
 			if (source.role !== "publish") continue;
-			if (enabled && !source.location.peers.enabled.peek()) continue;
 			moves.push(source.location.peers.positions);
 		}
 		return moves;
