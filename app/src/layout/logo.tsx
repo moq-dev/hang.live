@@ -1,4 +1,4 @@
-import * as Moq from "@moq/net";
+import type * as Moq from "@moq/net";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { solid } from "../util/solid";
 
@@ -42,7 +42,7 @@ export function Logo(props: { connection?: Moq.Connection; link?: string }) {
 				}
 			};
 
-			cycleImage();
+			void cycleImage();
 			onCleanup(() => {
 				active = false;
 			});

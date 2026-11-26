@@ -481,12 +481,9 @@ function IconCanvas(props: { variant: IconVariant }) {
 		return URL.createObjectURL(blob);
 	};
 
-	onMount(async () => {
-		const svgDataUrl = renderIconToSvg();
-		setSvgDataUrl(svgDataUrl);
-
-		const pngDataUrl = await renderIconToPng();
-		setIconDataUrl(pngDataUrl);
+	onMount(() => {
+		setSvgDataUrl(renderIconToSvg());
+		void renderIconToPng().then(setIconDataUrl);
 	});
 
 	const downloadPNG = async (size?: number) => {

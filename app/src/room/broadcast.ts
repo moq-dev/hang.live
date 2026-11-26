@@ -1,15 +1,15 @@
 import { Effect, Signal } from "@moq/signals";
 import { Audio } from "./audio";
-import { Canvas } from "./canvas";
+import { type Canvas, timestamp } from "./canvas";
 import { Chat } from "./chat";
 import { Debug } from "./debug";
-import { FakeBroadcast } from "./fake";
+import type { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
 import type { HangLocalSource } from "./local";
 import * as Meme from "./meme";
 import { Name } from "./name";
 import { Deform } from "./physics";
-import { Sound } from "./sound";
+import type { Sound } from "./sound";
 import { Video } from "./video";
 import { WatchBroadcast } from "./watch";
 
@@ -191,7 +191,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 			if (!parsed) return;
 
 			effect.set(this.message, parsed);
-			this.audio.sound.notification("chat");
+			void this.audio.sound.notification("chat");
 		});
 	}
 
@@ -311,7 +311,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Called when online status changes to trigger fade transition
 	setOnline(online: boolean) {
 		this.online.set(online);
-		this.#onlineTransition = performance.now();
+		this.#onlineTransition = timestamp();
 	}
 
 	close() {

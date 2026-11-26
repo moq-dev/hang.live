@@ -1,7 +1,7 @@
 import * as Clock from "@moq/clock";
-import { Catalog } from "@moq/hang";
+import type { Catalog } from "@moq/hang";
 import { Effect, Signal } from "@moq/signals";
-import { Canvas } from "./canvas";
+import type { Canvas } from "./canvas";
 import type { Position, User } from "./metadata";
 import { Sound } from "./sound";
 import { Space } from "./space";
@@ -189,9 +189,7 @@ export class FakeRoom {
 	}
 
 	remove(path: string) {
-		this.space.remove(path).then((source) => {
-			source?.close();
-		});
+		void this.space.remove(path).then((source) => source?.close());
 	}
 
 	close() {

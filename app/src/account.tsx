@@ -49,7 +49,7 @@ function AccountLoad(): JSX.Element {
 		}
 	};
 
-	onMount(async () => {
+	const loadInfo = async () => {
 		try {
 			const info = await Api.client.routes.account.info.$get();
 			if (info.ok) {
@@ -60,7 +60,8 @@ function AccountLoad(): JSX.Element {
 		} catch (e) {
 			setError(`Failed to load account info: ${e}`);
 		}
-	});
+	};
+	onMount(() => void loadInfo());
 
 	return (
 		<>

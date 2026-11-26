@@ -1,16 +1,16 @@
 import { and, eq } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import * as Avatar from "./avatar";
-import { AccountId, accountIdSchema, nameSchema } from "./client";
-import * as Database from "./database";
-import * as OAuth from "./oauth";
+import { type AccountId, accountIdSchema, nameSchema } from "./client";
+import type * as Database from "./database";
+import type * as OAuth from "./oauth";
 import * as rpc from "./rpc";
-import * as Storage from "./storage";
+import * as Schema from "./schema";
+import type * as Storage from "./storage";
 
 export type Id = AccountId;
 export const idSchema = accountIdSchema;
@@ -32,15 +32,7 @@ export const createSchema = z.object({
 
 export type Create = z.infer<typeof createSchema>;
 
-export const table = sqliteTable("accounts", {
-	id: text("id").primaryKey(),
-	email: text("email").notNull().unique(),
-	name: text("name").notNull(),
-	avatar: text("avatar").notNull(),
-	avatarType: text("avatar_type").notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-});
+const table = Schema.accounts;
 
 export type Row = typeof table.$inferSelect;
 export type NewRow = typeof table.$inferInsert;
@@ -108,8 +100,8 @@ export class Context {
 		const result = await this.db
 			.select()
 			.from(table)
-			.innerJoin(OAuth.table, eq(table.id, OAuth.table.accountId))
-			.where(and(eq(OAuth.table.providerId, provider), eq(OAuth.table.providerUser, providerUser)))
+			.innerJoin(Schema.linked, eq(table.id, Schema.linked.accountId))
+			.where(and(eq(Schema.linked.providerId, provider), eq(Schema.linked.providerUser, providerUser)))
 			.limit(1);
 
 		return this.#rowToInfo(result.at(0)?.accounts);
@@ -222,7 +214,7 @@ export class Context {
 		}
 
 		// Delete OAuth entries
-		await this.db.delete(OAuth.table).where(eq(OAuth.table.accountId, id));
+		await this.db.delete(Schema.linked).where(eq(Schema.linked.accountId, id));
 
 		// Delete account
 		await this.db.delete(table).where(eq(table.id, id));

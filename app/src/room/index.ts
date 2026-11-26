@@ -2,11 +2,11 @@ import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import { parse } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
-import { Broadcast } from "./broadcast";
+import type { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
-import { HangLocalSource, Local } from "./local";
+import { type HangLocalSource, Local } from "./local";
 import { Locator } from "./locator";
-import { Sound } from "./sound";
+import type { Sound } from "./sound";
 import { Space } from "./space";
 import { WatchBroadcast } from "./watch";
 
@@ -126,13 +126,13 @@ export class Room {
 
 		this.#signals.run((effect) => {
 			if (effect.get(this.local.webcam.out.source) || effect.get(this.local.microphone.out.source)) {
-				this.space.sound.notification("select");
+				void this.space.sound.notification("select");
 			}
 		});
 
 		this.#signals.run((effect) => {
 			if (effect.get(this.local.screen.out.source)) {
-				this.space.sound.notification("select");
+				void this.space.sound.notification("select");
 			}
 		});
 	}

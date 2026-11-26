@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import * as Clock from "@moq/clock";
 import * as Json from "@moq/json";
 import * as Net from "@moq/net";
 import { Chat } from "@moq/room";
@@ -189,7 +190,7 @@ test("a watcher recovers every chat message a delivery gap skipped", async () =>
 		write(2, ["hi", "/huh", "bye"]);
 		// One event-loop turn per recovered record, the yield the reader takes between them.
 		for (let i = 0; i < 3; i++) {
-			await new Promise((resolve) => setTimeout(resolve, 0));
+			await Clock.yieldNow();
 			await flush();
 		}
 		expect(seen).toEqual(["hi", "/huh", "bye"]);

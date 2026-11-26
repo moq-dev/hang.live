@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { HTTPException } from "hono/http-exception";
 import * as jose from "jose";
 import { z } from "zod";
-import * as Account from "./account";
-import { OauthState, oauthStateSchema, oauthTokenSchema, oauthProviders as providers } from "./client";
-import * as Database from "./database";
+import type * as Account from "./account";
+import { type OauthState, oauthStateSchema, oauthTokenSchema, oauthProviders as providers } from "./client";
+import type * as Database from "./database";
 import * as rpc from "./rpc";
+import * as Schema from "./schema";
 import { unreachable } from "./util";
 
 export type ProviderId = (typeof providers)[number];
@@ -304,9 +304,9 @@ export class Provider {
 		// The link vouches for the account only when the provider verified the account's own address.
 		const owner = (
 			await this.db
-				.select({ email: Account.table.email })
-				.from(Account.table)
-				.where(eq(Account.table.id, account))
+				.select({ email: Schema.accounts.email })
+				.from(Schema.accounts)
+				.where(eq(Schema.accounts.id, account))
 				.limit(1)
 		).at(0);
 		const emailVerified = user.emailVerified && user.email !== undefined && user.email === owner?.email;
@@ -442,20 +442,7 @@ export interface User {
 	avatar?: string;
 }
 
-export const table = sqliteTable(
-	"accounts_linked",
-	{
-		accountId: text("account_id")
-			.notNull()
-			.references(() => Account.table.id, { onDelete: "cascade" }),
-		providerId: text("provider_id").notNull(),
-		providerUser: text("provider_user").notNull(),
-		emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
-		createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-	},
-	(table) => [primaryKey({ columns: [table.accountId, table.providerId] })],
-);
+const table = Schema.linked;
 
 export type Row = typeof table.$inferSelect;
 export type NewRow = typeof table.$inferInsert;

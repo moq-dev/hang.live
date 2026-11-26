@@ -1,5 +1,6 @@
+import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
-import { Broadcast, BroadcastSource } from "./broadcast";
+import { Broadcast, type BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
 import { Vector } from "./geometry";
 import { AudioRenderer } from "./gl/audio";
@@ -581,7 +582,7 @@ export class Space {
 
 			if (name.endsWith("(screen)")) return;
 
-			this.sound.tts.joined(name);
+			void this.sound.tts.joined(name);
 		});
 
 		broadcast.signals.run((effect) => {
@@ -592,7 +593,7 @@ export class Space {
 
 			if (name.endsWith("(screen)")) return;
 
-			this.sound.tts.left(name);
+			void this.sound.tts.left(name);
 		});
 
 		return broadcast;
@@ -615,7 +616,7 @@ export class Space {
 		broadcast.visible.set(false);
 
 		// Wait for the fade to complete, roughly.
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await Clock.sleep(Clock.Duration.secs(1));
 
 		// Space.close may have closed it already.
 		const index = this.#rip.indexOf(broadcast);

@@ -11,7 +11,7 @@ import AppLayout from "./layout/app";
 import WebLayout from "./layout/web";
 import { PreviewRoom } from "./preview";
 import { Room } from "./room";
-import { Canvas } from "./room/canvas";
+import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
 import { solid } from "./util/solid";
 

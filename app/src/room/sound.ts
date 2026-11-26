@@ -1,7 +1,7 @@
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 
-import { TTS, TTSProps } from "./tts";
+import { TTS, type TTSProps } from "./tts";
 
 const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
