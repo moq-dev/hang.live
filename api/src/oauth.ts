@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import * as jose from "jose";
 import { z } from "zod";
 import type * as Account from "./account";
+import * as Avatar from "./avatar";
 import { type OauthState, oauthStateSchema, oauthTokenSchema, oauthProviders as providers } from "./client";
 import type * as Database from "./database";
 import * as rpc from "./rpc";
@@ -220,7 +221,8 @@ export class Provider {
 		let avatarUrl: string | undefined;
 		if (user.avatar) {
 			const extension = user.avatar.startsWith("a_") ? "gif" : "png";
-			avatarUrl = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}`;
+			// Ask for the largest size we render, instead of whatever Discord defaults to.
+			avatarUrl = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=512`;
 		}
 		// If avatar is null/undefined, we could construct a default avatar URL, but it's better to leave it undefined
 		// Default Discord avatars: https://cdn.discordapp.com/embed/avatars/{discriminator % 5}.png
@@ -432,6 +434,20 @@ function parseState(raw: string): OauthState {
 	return parsed.data;
 }
 
+// Whether an avatar URL is hosted by the given provider's CDN.
+function avatarFrom(provider: ProviderId, url: string): boolean {
+	const host = URL.parse(url)?.hostname;
+	if (!host) return false;
+	switch (provider) {
+		case "discord":
+			return host === "cdn.discordapp.com";
+		case "google":
+			return host.endsWith(".googleusercontent.com");
+		case "apple":
+			return false;
+	}
+}
+
 export interface User {
 	provider: ProviderId;
 	providerId: string;
@@ -527,6 +543,16 @@ export const router = rpc
 			// Get user info
 			const oauthUser = await provider.getUser(accessToken);
 
+			// Copy the provider's avatar into R2 so peers never fetch from its CDN, which would reveal their IPs to it.
+			// The avatar is cosmetic, so a failed copy logs and leaves the account on a bundled default.
+			const copyAvatar = async () => {
+				if (!oauthUser.avatar) return undefined;
+				return await Avatar.download(oauthUser.avatar).catch((err) => {
+					console.error(`failed to copy ${provider.id} avatar`, err);
+					return undefined;
+				});
+			};
+
 			let user = await ctx.account.getByProvider(oauthUser.provider, oauthUser.providerId);
 			if (!user) {
 				// Matching or claiming an email is only safe when the provider verified it.
@@ -548,9 +574,21 @@ export const router = rpc
 					user = await ctx.account.create({
 						email: oauthUser.email,
 						name: name ?? oauthUser.name,
-						avatar: oauthUser.avatar,
+						avatar: await copyAvatar(),
 					});
 				}
+			}
+
+			// Accounts from before the copy still point at a provider CDN; move them over as they sign in with one.
+			// Peers refuse the old URL either way, so a provider without an avatar or a failed copy leaves it be.
+			// Only the provider that supplied the legacy avatar replaces it, so a linked account's photo never does.
+			const external = await ctx.account.externalAvatar(user.id);
+			const upload = external && avatarFrom(provider.id, external) ? await copyAvatar() : undefined;
+			if (external && upload) {
+				const id = user.id;
+				await ctx.account.replaceExternalAvatar(id, external, upload).catch((err) => {
+					console.error(`failed to migrate avatar for ${id}`, err);
+				});
 			}
 
 			await provider.link(user.id, oauthUser);

@@ -20,8 +20,9 @@ interface Discord {
 	global_name?: string | null;
 }
 
-function discord(user: Discord) {
+function discord(user: Discord, avatar?: () => Response) {
 	const mocked = mockFetch((url) => {
+		if (avatar && url.href === DISCORD_AVATAR) return avatar();
 		if (url.href === "https://discord.com/api/oauth2/token")
 			return Response.json({ access_token: "discord-access" });
 		if (url.href === "https://discord.com/api/users/@me") return Response.json({ username: "someone", ...user });
@@ -355,4 +356,93 @@ test("the migration leaves every legacy link unverified", () => {
 
 	// Nothing recorded which addresses were verified, so no provider is trusted on its name alone.
 	expect(sqlite.query("SELECT DISTINCT email_verified FROM accounts_linked").all()).toEqual([{ email_verified: 0 }]);
+});
+
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+const DISCORD_AVATAR = "https://cdn.discordapp.com/avatars/1/abc.png?size=512";
+
+// Discord login whose avatar CDN answers with `avatar`.
+function discordWithAvatar(avatar: () => Response) {
+	return discord({ id: "1", email: "a@example.com", verified: true, avatar: "abc" }, avatar);
+}
+
+test("signup copies the provider avatar into R2, so peers never load the provider's CDN", async () => {
+	const { app, bucket } = harness();
+	discordWithAvatar(() => new Response(PNG));
+
+	const me = await info(app, await login(app, "discord"));
+	expect(me.avatar).toStartWith(`${env.R2_PUBLIC_URL}/avatar/`);
+	const [key] = [...bucket.objects.keys()];
+	expect(me.avatar).toBe(`${env.R2_PUBLIC_URL}/${key}`);
+	expect(bucket.objects.get(key ?? "")?.contentType).toBe("image/png");
+});
+
+test("a provider avatar that fails to copy leaves a bundled default", async () => {
+	for (const avatar of [
+		() => new Response("nope", { status: 404 }),
+		() => new Response("<svg onload=alert(1)>"),
+		() => new Response(new Uint8Array(6 * 1024 * 1024)),
+	]) {
+		restore?.();
+		const { app, bucket } = harness();
+		discordWithAvatar(avatar);
+
+		const me = await info(app, await login(app, "discord"));
+		expect(me.avatar).toMatch(/^\/avatar\/\d+\.svg$/);
+		expect(bucket.objects.size).toBe(0);
+	}
+});
+
+test("an account still on a provider CDN avatar moves to R2 on its next login", async () => {
+	const { app, sqlite } = harness();
+	discordWithAvatar(() => new Response(PNG));
+	const token = await login(app, "discord");
+	sqlite.exec("UPDATE accounts SET avatar = 'https://cdn.discordapp.com/avatars/1/old.png', avatar_type = 'url'");
+	expect((await info(app, token)).avatar).toBe("https://cdn.discordapp.com/avatars/1/old.png");
+
+	expect((await info(app, await login(app, "discord"))).avatar).toStartWith(`${env.R2_PUBLIC_URL}/avatar/`);
+});
+
+test("a login with no provider avatar leaves a legacy one for a later login to copy", async () => {
+	const { app, sqlite } = harness();
+	discord({ id: "1", email: "a@example.com", verified: true, avatar: null });
+	const token = await login(app, "discord");
+	sqlite.exec("UPDATE accounts SET avatar = 'https://cdn.discordapp.com/avatars/1/old.png', avatar_type = 'url'");
+
+	await login(app, "discord");
+	expect((await info(app, token)).avatar).toBe("https://cdn.discordapp.com/avatars/1/old.png");
+});
+
+test("migration never overwrites an avatar picked after it read the legacy one", async () => {
+	const { ctx, bucket, sqlite } = harness();
+	const { id } = await ctx.account.create({ name: "Alice", email: "alice@example.com" });
+	sqlite.exec("UPDATE accounts SET avatar = '/avatar/3.svg', avatar_type = 'url'");
+
+	await ctx.account.replaceExternalAvatar(id, "https://cdn.discordapp.com/avatars/1/old.png", {
+		data: PNG,
+		extension: "png",
+		contentType: "image/png",
+	});
+	expect((await ctx.account.get(id))?.avatar).toBe("/avatar/3.svg");
+	expect(bucket.objects.size).toBe(0);
+});
+
+test("an R2 failure at signup still signs in, on a bundled default", async () => {
+	const { app, bucket } = harness();
+	bucket.put = async () => {
+		throw new Error("R2 unavailable");
+	};
+	discordWithAvatar(() => new Response(PNG));
+
+	expect((await info(app, await login(app, "discord"))).avatar).toMatch(/^\/avatar\/\d+\.svg$/);
+});
+
+test("only the provider that supplied a legacy avatar replaces it", async () => {
+	const { app, sqlite } = harness();
+	discordWithAvatar(() => new Response(PNG));
+	const token = await login(app, "discord");
+	sqlite.exec("UPDATE accounts SET avatar = 'https://lh3.googleusercontent.com/a/old', avatar_type = 'url'");
+
+	await login(app, "discord");
+	expect((await info(app, token)).avatar).toBe("https://lh3.googleusercontent.com/a/old");
 });
