@@ -1,36 +1,21 @@
-import * as Tauri from "../tauri";
-
 let lock = false;
 // A closed owner's pending writes must finish before the next owner's writes.
 let pending = Promise.resolve();
 
 async function set(count: number): Promise<void> {
-	if (Tauri.Api) {
-		const success = await Promise.resolve()
-			.then(() => Tauri.Api?.window.getCurrentWindow().setBadgeCount(count || undefined))
-			.then(() => true)
-			.catch(() => false);
-		if (success) return;
-	}
-
-	if (count ? navigator.setAppBadge : navigator.clearAppBadge) {
-		const success = await Promise.resolve()
-			.then(() => (count ? navigator.setAppBadge(count) : navigator.clearAppBadge()))
-			.then(() => true)
-			.catch(() => false);
-		if (success) return;
-	}
+	if (!(count ? navigator.setAppBadge : navigator.clearAppBadge)) return;
+	await Promise.resolve()
+		.then(() => (count ? navigator.setAppBadge(count) : navigator.clearAppBadge()))
+		.catch(() => {});
 }
 
 /**
- * A utility class for managing app badge counts across Tauri and web environments.
+ * A utility class for managing the app badge count.
  *
  * The badge appears on the app icon in the dock (macOS), taskbar (Windows),
  * or home screen (mobile) depending on the platform.
  *
- * Automatically detects and uses:
- * - Tauri API: window.setBadgeCount() / window.clearBadge()
- * - Web API: navigator.setAppBadge() / navigator.clearAppBadge()
+ * Uses navigator.setAppBadge() / navigator.clearAppBadge() where supported.
  */
 export class Badge {
 	private current: number = 0;

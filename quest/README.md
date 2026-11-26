@@ -17,9 +17,11 @@ Decided 2026-11-25 (maintainer, modernization audit):
 - Focus primary product effort on the web app and Cloudflare Workers API.
 - Keep `native/` (Tauri) only as a lightweight canary for testing MoQ's
   Android/iOS/native libraries rather than as a consumer-facing demo.
+  Superseded 2026-11-25 (maintainer, /quest-run): delete Tauri entirely; see
+  `m1`.
 - Delete `infra/` (self-hosted relay Nix/systemd setup) and use `moq.pro` for
   production relays instead, keeping `dev/` for local development.
 - Structure work into three milestones: `m0` for critical reliability, security,
   and MoQ media pipeline blockers; `m1` for `moq/` tooling modernization, infra
-  removal, and remaining WebGL/UI/API/native bugs; `m2` for MoQ showcase
+  removal, and remaining WebGL/UI/API bugs; `m2` for MoQ showcase
   features.

@@ -75,12 +75,7 @@ async function info(app: App, token: string) {
 }
 
 test("redirects are checked by parsed origin, not by prefix", () => {
-	for (const ok of [
-		"https://hang.test/oauth/room",
-		"https://hang.test/oauth/room?x=1",
-		"http://localhost:51234/oauth/room",
-		"hang://oauth/room",
-	]) {
+	for (const ok of ["https://hang.test/oauth/room", "https://hang.test/oauth/room?x=1"]) {
 		expect(OAuth.validRedirect(env, ok)).toBe(true);
 	}
 
@@ -92,6 +87,8 @@ test("redirects are checked by parsed origin, not by prefix", () => {
 		"http://user@localhost:80/oauth",
 		"http://localhost.evil.com/oauth",
 		"https://localhost/oauth",
+		"http://localhost:51234/oauth/room",
+		"hang://oauth/room",
 		"https://evil.com/?https://hang.test",
 		"hang://evil/oauth",
 		"javascript:alert(1)//https://hang.test",
@@ -117,13 +114,6 @@ test("login refuses to start toward a foreign redirect", async () => {
 	expect(ok.status).toBe(200);
 	const url = new URL(((await ok.json()) as { url: string }).url);
 	expect(JSON.parse(url.searchParams.get("state") ?? "")).toMatchObject({ challenge });
-
-	// Stale native builds still send the old CSRF nonce; they get pointed at an upgrade, never a login.
-	const legacy = await app.request(
-		`/auth/google/login?random=abc&redirect=${encodeURIComponent(`${env.APP_URL}/oauth`)}`,
-	);
-	expect(legacy.status).toBe(200);
-	expect(await legacy.json()).toEqual({ url: `${env.APP_URL}/download` });
 });
 
 test("a forged callback redirect is rejected before any account is touched", async () => {

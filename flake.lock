@@ -253,11 +253,7 @@
           "moq",
           "nixpkgs"
         ],
-        "quest": "quest_2",
-        "rust-overlay": [
-          "moq",
-          "rust-overlay"
-        ]
+        "quest": "quest_2"
       }
     },
     "rust-overlay": {

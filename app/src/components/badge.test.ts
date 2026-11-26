@@ -1,6 +1,5 @@
-import { afterEach, expect, mock, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 
-mock.module("../tauri", () => ({ Api: null }));
 const { Badge } = await import("./badge");
 const setDescriptor = Object.getOwnPropertyDescriptor(navigator, "setAppBadge");
 const clearDescriptor = Object.getOwnPropertyDescriptor(navigator, "clearAppBadge");
