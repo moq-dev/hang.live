@@ -335,6 +335,9 @@ Test.test(
 			await alice.evaluate(() => window.roomTest.lose());
 			await alice.waitForFunction(() => !window.roomTest.state().context);
 			await alice.evaluate(() => window.roomTest.restore());
+			// Restoration finishes in an async event, so sample bob's encoder only once it has, or a frame
+			// encoded in between could seed the new textures and pass.
+			await alice.waitForFunction(() => window.roomTest.state().context);
 			await drawn(alice, bob, before);
 
 			for (const page of pages) {
