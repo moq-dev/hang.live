@@ -7,7 +7,7 @@ import * as Room from "../src/room/local";
 import * as Settings from "../src/settings";
 
 type Kind = "camera" | "microphone";
-type Mode = "live" | "hold" | "deny";
+type Mode = "live" | "hold" | "deny" | "missing";
 type CodecStage = "support" | "flush";
 const params = new URLSearchParams(location.search);
 const connection = new Moq.Connection({ url: new URL(params.get("relay") ?? ""), share: false });
@@ -21,7 +21,7 @@ if (params.has("missing")) {
 }
 const native = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 const modes: Record<Kind, Mode> = { camera: "live", microphone: "live" };
-if (params.has("missing")) modes[params.get("missing") === "camera" ? "camera" : "microphone"] = "hold";
+if (params.has("missing")) modes[params.get("missing") === "camera" ? "camera" : "microphone"] = "missing";
 const tracks: MediaStreamTrack[] = [];
 const held: (() => void)[] = [];
 const hold = () => new Promise<void>((resolve) => held.push(resolve));
@@ -44,6 +44,7 @@ navigator.mediaDevices.getUserMedia = async (constraints) => {
 	const mode = modes[kind];
 	modes[kind] = "live";
 	if (mode === "deny") throw new DOMException("Capture permission denied", "NotAllowedError");
+	if (mode === "missing") throw new DOMException("Requested device not found", "NotFoundError");
 	const stream = await native(constraints);
 	tracks.push(...stream.getTracks());
 	if (mode === "hold") await hold();
@@ -134,6 +135,8 @@ const harness = {
 		return {
 			rms,
 			camera: track("camera")?.id,
+			cameraError: local?.webcam.out.error.peek()?.message,
+			microphoneError: local?.microphone.out.error.peek()?.message,
 			selectedMicrophone: local?.microphone.device.out.available
 				.peek()
 				?.find((device) => device.deviceId === Settings.default.microphone.device.peek())?.label,

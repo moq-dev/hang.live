@@ -316,15 +316,16 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	const device = props.local.microphone.device;
 	const enabled = solid(props.local.core.microphone.enabled);
 	const available = solid(device.out.available);
+	// A known-empty device list explains a capture failure better than Retry.
 	const state = createMemo(() =>
 		!enabled()
 			? "off"
-			: error()
-				? "failed"
-				: source()
-					? "live"
-					: available()?.length === 0
-						? "unavailable"
+			: source()
+				? "live"
+				: available()?.length === 0
+					? "unavailable"
+					: error()
+						? "failed"
 						: "pending",
 	);
 	const requested = createSelector(solid(device.out.requested));
@@ -394,7 +395,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 				kind="Microphone"
 				pending={state() === "pending"}
 				unavailable={state() === "unavailable"}
-				error={enabled() ? error() : undefined}
+				error={state() === "failed" ? error() : undefined}
 				retry={() => retry.start()}
 			/>
 			<Tooltip content={enabled() ? "Disable microphone" : "Enable microphone"} position="top">
@@ -519,7 +520,9 @@ export function Microphone(props: { local: Local }): JSX.Element {
 													classList={{
 														"icon-[mdi--check]": active(dev.deviceId),
 														"icon-[mdi--loading] animate-spin":
-															requested(dev.deviceId) && !active(dev.deviceId),
+															state() === "pending" &&
+															requested(dev.deviceId) &&
+															!active(dev.deviceId),
 													}}
 													style={{
 														color:
@@ -564,8 +567,9 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const device = props.local.webcam.device;
 	const available = solid(device.out.available);
 	const noCamera = createMemo(() => enabled() && available()?.length === 0 && !media());
+	// A known-empty device list explains a capture failure better than Retry.
 	const state = createMemo(() =>
-		!enabled() ? "off" : error() ? "failed" : noCamera() ? "unavailable" : media() ? "live" : "pending",
+		!enabled() ? "off" : media() ? "live" : noCamera() ? "unavailable" : error() ? "failed" : "pending",
 	);
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
@@ -631,16 +635,16 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	return (
 		<div class="flex items-start pointer-events-auto relative">
-			<Show when={noCamera() && !error()}>
+			<Show when={noCamera()}>
 				<div class="absolute bottom-full mb-2 left-0 w-56 rounded border border-white/30 bg-black/90 p-2 text-sm leading-snug text-white shadow-lg">
 					No camera found. Connect a webcam to turn on video.
 				</div>
 			</Show>
 			<CaptureStatus
 				kind="Camera"
-				pending={state() === "pending" && !noCamera()}
+				pending={state() === "pending"}
 				unavailable={state() === "unavailable"}
-				error={enabled() ? error() : undefined}
+				error={state() === "failed" ? error() : undefined}
 				retry={() => retry.start()}
 			/>
 			<Tooltip
@@ -739,7 +743,9 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 														classList={{
 															"icon-[mdi--check]": active(dev.deviceId),
 															"icon-[mdi--loading] animate-spin":
-																requested(dev.deviceId) && !active(dev.deviceId),
+																state() === "pending" &&
+																requested(dev.deviceId) &&
+																!active(dev.deviceId),
 														}}
 														style={{
 															color:

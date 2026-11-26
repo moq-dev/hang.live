@@ -102,13 +102,11 @@ Test.test(
 				await missing.waitForFunction(() => window.mediaTest);
 				const input = missing.getByRole("switch", { name: `Toggle ${kind}`, exact: true });
 				await input.click();
-				await missing.waitForFunction(
-					(kind) =>
-						document.querySelector(`[aria-label="Toggle ${kind}"]`)?.getAttribute("data-state") ===
-						"unavailable",
-					kind,
-				);
+				// The capture's NotFoundError must not replace the unavailable state with Retry.
+				await missing.waitForFunction((kind) => !!window.mediaTest.state()[`${kind}Error`], kind);
+				Test.expect(await input.getAttribute("data-state")).toBe("unavailable");
 				Test.expect(await input.getAttribute("aria-busy")).toBe("false");
+				Test.expect(await missing.getByRole("button", { name: `Retry ${kind}` }).count()).toBe(0);
 				await missing.evaluate(() => window.mediaTest.close());
 				await missing.close();
 			}
