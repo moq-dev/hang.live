@@ -412,6 +412,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				</div>
 				<input
 					type="checkbox"
+					aria-label="Remote Control"
 					checked={draggable()}
 					onChange={() => Settings.draggable.update((p) => !p)}
 					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors w-18"
@@ -428,6 +429,7 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				</div>
 				<input
 					type="checkbox"
+					aria-label="Debug"
 					checked={debugTracks()}
 					onChange={() => Settings.debug.tracks.update((p) => !p)}
 					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors w-18"
