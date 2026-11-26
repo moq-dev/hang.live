@@ -610,16 +610,24 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 		device.requestPermission();
 	};
 
+	const select = new Capture.Select({
+		enabled: props.local.core.camera.enabled,
+		setting: Settings.camera.device,
+		requested: device.out.requested,
+	});
+	onCleanup(() => select.close());
+
 	// Handle device selection
 	const selectDevice = (deviceId: string) => {
 		if (enabled() && deviceId === Settings.camera.device.peek()) {
 			// Selecting the requested device again disables even a pending capture.
 			props.local.core.camera.enabled.set(false);
 			Settings.camera.device.set(undefined);
-		} else {
-			// Different device or camera is disabled - enable it
+		} else if (enabled()) {
+			// A live capture switches devices on its own.
 			Settings.camera.device.set(deviceId);
-			props.local.core.camera.enabled.set(true);
+		} else {
+			select.start(deviceId);
 		}
 	};
 
