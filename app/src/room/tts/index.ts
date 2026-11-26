@@ -1,4 +1,4 @@
-import { Effect, Signal } from "@moq/signals";
+import { Effect, type Getter, Signal } from "@moq/signals";
 import * as Comlink from "comlink";
 import Settings from "../../settings";
 
@@ -117,6 +117,7 @@ export class TTS {
 	enabled: Signal<boolean>;
 	context: AudioContext;
 	#output: AudioNode;
+	#audible: Getter<boolean>;
 
 	ready = new Signal<boolean>(false); // Whether a TTS model is loaded
 	progress = new Signal<number | undefined>(undefined); // From 0 to 1
@@ -126,10 +127,11 @@ export class TTS {
 
 	#signals = new Effect();
 
-	/** Speak into `output`, a node on `context`, so room mute and speaker volume apply. */
-	constructor(context: AudioContext, output: AudioNode, props?: TTSProps) {
-		this.context = context;
-		this.#output = output;
+	/** Speak through the owning sound's gain, so its mute and speaker volume apply. */
+	constructor(sound: { context: AudioContext; gain: AudioNode; enabled: Getter<boolean> }, props?: TTSProps) {
+		this.context = sound.context;
+		this.#output = sound.gain;
+		this.#audible = sound.enabled;
 		this.enabled = Signal.from(props?.enabled ?? false);
 
 		this.#signals.run((effect) => {
@@ -185,7 +187,7 @@ export class TTS {
 	async say(text: string) {
 		if (!this.enabled.peek() || this.context.state === "suspended") return;
 		// Browser speech bypasses the room's audio graph, so skip it outright while muted.
-		if (!Settings.audio.enabled.peek()) return;
+		if (!this.#audible.peek()) return;
 
 		const quality = Settings.audio.tts.peek();
 

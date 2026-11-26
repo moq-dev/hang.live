@@ -236,39 +236,55 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 	const chat = chatFields();
 	const signals = new Effect();
 
+	// Each track name is its own computed, so a catalog update that leaves it alone (a camera toggle)
+	// keeps its subscription instead of reopening it and replaying the window.
+	const hang = signals.computed((effect) => (effect.get(broadcast.out.catalog) as ExtendedCatalog | undefined)?.hang);
+	const locationTrack = signals.computed((effect) => effect.get(hang)?.location?.track);
+	const chatTrack = signals.computed((effect) => effect.get(hang)?.chat?.track);
+	const messagesTrack = signals.computed((effect) => effect.get(hang)?.messages?.track);
+	// A broadcast advertising the window sends messages only there.
+	const windowed = signals.computed((effect) => effect.get(messagesTrack) !== undefined);
+
 	signals.run((effect) => {
-		const catalog = effect.get(broadcast.out.catalog) as ExtendedCatalog | undefined;
-		const hang = catalog?.hang;
 		const active = effect.get(broadcast.out.active);
+		const track = effect.get(locationTrack);
 		effect.cleanup(() => {
 			location.window.position.set(undefined);
 			location.window.handle.set(undefined);
 			location.peers.positions.set(undefined);
-			chat.message.latest.set(undefined);
+		});
+		if (!active || track === undefined) return;
+
+		subscribeJson(active, track, LocationSchema, effect, (value) => {
+			location.window.position.set(value.window?.position);
+			location.window.handle.set(value.window?.handle);
+			location.peers.positions.set(value.peers?.positions);
+		});
+	});
+
+	signals.run((effect) => {
+		const active = effect.get(broadcast.out.active);
+		const track = effect.get(chatTrack);
+		const legacy = !effect.get(windowed);
+		effect.cleanup(() => {
+			if (legacy) chat.message.latest.set(undefined);
 			chat.typing.active.set(undefined);
 		});
-		if (!active || !hang) return;
+		if (!active || track === undefined) return;
 
-		if (hang.location) {
-			subscribeJson(active, hang.location.track, LocationSchema, effect, (value) => {
-				location.window.position.set(value.window?.position);
-				location.window.handle.set(value.window?.handle);
-				location.peers.positions.set(value.peers?.positions);
-			});
-		}
+		subscribeJson(active, track, ChatSchema, effect, (value) => {
+			if (legacy) chat.message.latest.set(value.message);
+			chat.typing.active.set(value.typing);
+		});
+	});
 
-		// Decided once per catalog: a broadcast advertising the window sends messages only there.
-		const windowed = hang.messages !== undefined;
-		if (hang.chat) {
-			subscribeJson(active, hang.chat.track, ChatSchema, effect, (value) => {
-				if (!windowed) chat.message.latest.set(value.message);
-				chat.typing.active.set(value.typing);
-			});
-		}
+	signals.run((effect) => {
+		const active = effect.get(broadcast.out.active);
+		const track = effect.get(messagesTrack);
+		effect.cleanup(() => chat.message.latest.set(undefined));
+		if (!active || track === undefined) return;
 
-		if (hang.messages) {
-			subscribeMessages(active, hang.messages.track, effect, chat.message.latest);
-		}
+		subscribeMessages(active, track, effect, chat.message.latest);
 	});
 
 	return {

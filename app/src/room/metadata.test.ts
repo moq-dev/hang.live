@@ -82,6 +82,11 @@ test("windowed chat delivers a repeated message twice and ignores the legacy fie
 		await flush();
 		expect(seen.filter((value) => value === "lol")).toHaveLength(2);
 		expect(extras.chat.message.latest.peek()).toBe("lol");
+
+		// An unrelated catalog edit, such as a camera toggle, must not reopen the window and replay it.
+		catalog.update((prev) => ({ ...prev, version: (prev.version ?? 0) + 1 }));
+		await flush();
+		expect(seen.filter((value) => value === "lol")).toHaveLength(2);
 	} finally {
 		dispose();
 		extras.close();
