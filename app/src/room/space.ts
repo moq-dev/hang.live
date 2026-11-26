@@ -61,8 +61,9 @@ export class Space {
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
 		this.#signals.event(canvas.element, "mousemove", this.#onMouseMove.bind(this));
-		this.#signals.event(canvas.element, "mouseup", this.#onMouseUp.bind(this));
-		this.#signals.event(canvas.element, "mouseleave", this.#onMouseLeave.bind(this));
+		// Releasing the button and leaving the canvas both end a drag.
+		this.#signals.event(canvas.element, "mouseup", this.#onMouseRelease.bind(this));
+		this.#signals.event(canvas.element, "mouseleave", this.#onMouseRelease.bind(this));
 		this.#signals.event(canvas.element, "wheel", this.#onMouseWheel.bind(this), { passive: false });
 
 		this.#signals.event(canvas.element, "touchstart", this.#onTouchStart.bind(this), { passive: false });
@@ -122,7 +123,7 @@ export class Space {
 		document.body.style.cursor = "grabbing";
 	}
 
-	#onMouseUp(_: MouseEvent) {
+	#onMouseRelease() {
 		if (this.#dragging) {
 			this.#publishPosition(this.#dragging);
 
@@ -172,19 +173,6 @@ export class Space {
 				document.body.style.cursor = "grab";
 			}
 		} else {
-			if (this.#hovering) {
-				this.#hovering.name.setHovering(false);
-				this.#hovering = undefined;
-			}
-			document.body.style.cursor = "default";
-		}
-	}
-
-	#onMouseLeave() {
-		if (this.#dragging) {
-			this.#publishPosition(this.#dragging);
-
-			this.#dragging = undefined;
 			if (this.#hovering) {
 				this.#hovering.name.setHovering(false);
 				this.#hovering = undefined;
@@ -249,7 +237,7 @@ export class Space {
 		// Update the scale, publishing it.
 		broadcast.position.update((prev) => ({
 			...prev,
-			s: Math.max(Math.min((prev.s ?? 1) + scale, 4), 0.25),
+			s: Math.max(Math.min(prev.s + scale, 4), 0.25),
 		}));
 
 		this.#publishPosition(broadcast);
@@ -320,7 +308,7 @@ export class Space {
 			const dx = touch2.clientX - touch1.clientX;
 			const dy = touch2.clientY - touch1.clientY;
 			this.#pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
-			this.#pinchStartScale = broadcast.position.peek().s ?? 1;
+			this.#pinchStartScale = broadcast.position.peek().s;
 
 			// Track which broadcast we're zooming. Re-grab only on a new target, so a drag that
 			// turns into a pinch keeps the tile's pre-gesture placement.
@@ -400,7 +388,7 @@ export class Space {
 			if (this.#pinchStartDistance > 0) {
 				const scaleFactor = currentDistance / this.#pinchStartDistance;
 				const newScale = this.#pinchStartScale * scaleFactor;
-				const oldScale = this.#dragging.position.peek().s ?? 1;
+				const oldScale = this.#dragging.position.peek().s;
 
 				// Add to zoom deformation based on scale delta (additive)
 				const scaleDelta = newScale - oldScale;
@@ -748,9 +736,7 @@ export class Space {
 		// Render all broadcasts (except dragging)
 		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
-				renderers.broadcast.render(broadcast, this.canvas.camera, this.#maxZ, {
-					hovering: this.#hovering === broadcast || this.profile,
-				});
+				renderers.broadcast.render(broadcast, this.canvas.camera, this.#maxZ);
 			}
 		}
 

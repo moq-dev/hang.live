@@ -89,49 +89,6 @@ nav > * {
 	@apply backdrop-blur-sm rounded bg-transparent;
 }
 
-.controls {
-	@apply fixed bottom-0 left-0 right-0 flex items-end gap-3 p-3 text-shadow-lg text-xl;
-	z-index: 10; /* Ensure controls are above other content */
-
-	input:not([type="range"]) {
-		@apply py-1 px-2;
-	}
-
-	button {
-		@apply p-2 hover:bg-gray-700 transition-all;
-	}
-
-	input,
-	button {
-		@apply backdrop-blur-sm rounded bg-transparent;
-	}
-
-	input:focus {
-		@apply outline-none;
-	}
-
-	button {
-		@apply cursor-pointer;
-	}
-
-	button:focus:not(:focus-visible) {
-		@apply outline-none;
-	}
-}
-
-.pointer-gaps {
-	@apply pointer-events-none;
-}
-
-.pointer-gaps > * {
-	@apply pointer-events-auto;
-}
-
-.potato * {
-	/* I think this is expensive, so we disable it in potato mode. */
-	@apply backdrop-filter-none;
-}
-
 main {
 	p {
 		@apply m-4;

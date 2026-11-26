@@ -9,7 +9,7 @@ import type * as Meme from "./meme";
 import * as Sanitize from "./sanitize";
 
 /** One tile's textures on a live GL context. */
-export class Textures {
+class Textures {
 	gl: WebGL2RenderingContext;
 	/** The latest video frame. */
 	frame: WebGLTexture;
@@ -324,18 +324,6 @@ export class Video {
 			else if (part === "right") xPos = 1;
 			else if (part === "top") yPos = 0;
 			else if (part === "bottom") yPos = 1;
-			else if (part === "center") {
-				// Keep defaults
-			} else if (part.endsWith("%")) {
-				const value = parseFloat(part) / 100;
-				if (positionParts.length === 1) {
-					xPos = value;
-				} else if (positionParts.indexOf(part) === 0) {
-					xPos = value;
-				} else {
-					yPos = value;
-				}
-			}
 		}
 
 		// Calculate offset in texture coordinates (0-1 range)

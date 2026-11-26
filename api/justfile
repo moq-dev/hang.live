@@ -14,7 +14,8 @@ build:
 check:
 	bun run check
 
-fix:
+# Regenerate worker-configuration.d.ts from wrangler.jsonc.
+types:
 	bun wrangler types
 
 deploy: build

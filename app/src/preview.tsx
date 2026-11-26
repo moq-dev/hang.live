@@ -80,10 +80,9 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 	);
 }
 
-export function PreviewRoom(props: { connection: Moq.Connection; name?: string }): JSX.Element {
+export function PreviewRoom(props: { connection: Moq.Connection }): JSX.Element {
 	const room = new Preview.Room({
 		connection: props.connection,
-		path: props.name ? Moq.Path.from(props.name) : undefined,
 		enabled: true,
 	});
 	onCleanup(() => room.close());
