@@ -14,7 +14,7 @@ fixed up.
 - **Prerequisite:** land and deploy [m0](/quest/m0/README.md) and the rest of
   [m1](/quest/m1/README.md) (security/auth hardening, media-toggle recovery,
   deduplicated watch pipelines and spatial audio, WebGL/UI/API bugfixes, and
-  migration from `infra/` to `moq.pro`).
+  [retiring the self-hosted relays](/quest/m1/retire-relay-nodes.md)).
 - Verify `https://hang.live` end to end in a real browser against `moq.pro`
   (landing page demo, guest join, camera/mic toggle recovery, screen share,
   chat/memes, and room previews).
