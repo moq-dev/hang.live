@@ -32,8 +32,12 @@ Release branch, modeled on moq's (`RELEASE.md`, `.github/workflows/release-gate.
   A release is a PR merging `main` into `release` with a merge commit; a serious fix lands on `main` first and is then ported to `release` as its own PR.
   Hang has no versions or changelogs, so it skips moq's pre-cut merge of `release` into `main`.
 - `Check` also runs on PRs into `release`.
-- A `Release gate` job on PRs into `release` passes only when the PR's head commit has a green staging deploy, so production only receives a tree staging already ran and smoke-checked.
+- A `Release gate` job on PRs into `release` compares trees, not commits: it passes only when the PR's merge candidate (`refs/pull/<n>/merge`) has the same tree as a `main` commit with a green staging deploy, so production only receives a tree staging already ran and smoke-checked, even when `release` holds a backport `main` later reverted.
+  It runs on the same runners as `Check`, moving with it to the self-hosted merge gate kixel-ai/quest is planning.
+- A backport's tree never ran on staging, which tracks `main`, so the gate passes one only once the maintainer approves it, rerunning on `pull_request_review`, as the explicit override; its production smoke check and `wrangler rollback` are its safety net.
+  Rejected: deploying backport heads to staging, which would roll staging back from `main` until the next merge.
 - The `release` ruleset mirrors moq's: no deletion or force push, a PR required, and `Check` plus `Release gate` required.
+  Unlike moq's, it requires the branch to be up to date, so the merged tree is the one the gate checked; releases are rare enough that the re-run costs nothing.
   Add it through dotfiles' `bin/repo-settings`, where the org rulesets live, not by hand.
 - Document cutting a release and backports in `CONTRIBUTING.md`.
 
@@ -44,7 +48,8 @@ Deploy workflow:
 - Check out with `submodules: recursive` like `Check`, plus `lfs: true`: `app/public` media is Git LFS, and `Check` skips LFS, so a plain checkout would ship pointer files.
 - Run `nix develop --command bash -c 'bun install --frozen-lockfile && just deploy <env>'`, since `just deploy` installs nothing, without the Actions Nix cache, which the first cost audit measured as slower than none.
 - Migrations run before the new Worker, so each must work with the Worker already live; `api/AGENTS.md` already keeps them additive.
-- Smoke check after each deploy: the target's `/health` on its API origin and its app origin must answer 200, and the job fails otherwise.
+- Smoke check after each deploy, failing the job otherwise: the API origin's `/health` answers 200, and the app origin's `/` serves exactly the `app/dist/index.html` this run built, whose hashed main bundle also answers 200.
+  A bare 200 from the app origin proves nothing, since its single-page-application fallback answers any path with `index.html`.
   Rollback is `wrangler rollback --env <env>` for the Worker; the job prints that command when the smoke check fails.
 - Seed each environment's secret from bws `cloudflare-admin-token` with `gh secret set --env <environment>`, passing the value by command substitution.
 - After the first green production deploy, drop the "deploy `main`" steps from quests that wait on a manual deploy, such as [Chat window only](/quest/m1/chat-window-only.md) and [MoQ demos](/quest/m1/moq-dev-demos.md).
