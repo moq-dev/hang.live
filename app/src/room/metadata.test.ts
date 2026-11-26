@@ -114,3 +114,43 @@ test("a malformed location never reaches the UI", async () => {
 		net.close();
 	}
 });
+
+test("a late joiner applies only the newest retained chat message", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({});
+	const local = chatFields();
+	const effect = new Effect();
+	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, locationFields(), local, effect);
+	try {
+		await flush();
+		for (const text of ["hi", "/huh", "bye"]) {
+			local.message.latest.set(text, true);
+			await flush();
+		}
+
+		const extras = consumeExtras({
+			out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+		});
+		// Watch it the way the meme effect does, so a superseded `/huh` would play here.
+		const seen: string[] = [];
+		const watcher = new Effect();
+		watcher.run((effect) => {
+			const msg = effect.get(extras.chat.message.latest);
+			if (msg) seen.push(msg);
+		});
+		try {
+			await flush();
+			expect(seen).toEqual(["bye"]);
+
+			local.message.latest.set("again", true);
+			await flush();
+			expect(seen).toEqual(["bye", "again"]);
+		} finally {
+			watcher.close();
+			extras.close();
+		}
+	} finally {
+		effect.close();
+		net.close();
+	}
+});

@@ -323,33 +323,75 @@ function subscribeJson<T>(
 	});
 }
 
-/** Show each message pushed to the window on `name`, clearing it once it leaves the window. */
+// Groups the publisher ended early rather than failed; the next group restates the window.
+const WINDOW_GAPS: Moq.StreamCode[] = [
+	Moq.StreamCode.TooFarBehind,
+	Moq.StreamCode.Old,
+	Moq.StreamCode.Evicted,
+	Moq.StreamCode.GroupTooLarge,
+];
+
+/**
+ * Show the newest message each frame of the window on `name` pushes, clearing it once it leaves.
+ *
+ * Reads frames rather than `Chat.Subscriber` events: a late joiner's first frame restates up to ten
+ * seconds of history, and only its newest record may run, or a superseded meme command would play.
+ */
 function subscribeMessages(
 	broadcast: Moq.Broadcast.Consumer,
 	name: string,
 	effect: Effect,
 	latest: Signal<string | undefined>,
 ): void {
-	const subscriber = new Chat.Subscriber(broadcast.track(name).subscribe());
-	effect.cleanup(() => subscriber.close());
+	const track = broadcast.track(name).subscribe();
+	effect.cleanup(() => track.close());
 	effect.spawn(async () => {
+		const decoder = new Json.Window.Decoder<unknown>();
 		let shown: number | undefined;
 		try {
+			// Start at the newest window instead of replaying older ones.
+			const largest = await effect.race(track.largest());
+			if (largest) track.withRange({ start: { included: largest.group } });
+			const ordered = track.ordered();
+
 			for (;;) {
-				const next = await effect.race(subscriber.recv());
-				if (next === undefined) break;
-				const event = next.value;
-				if ("push" in event) {
-					shown = event.push.index;
-					// Forced, so the same text sent twice still shows twice.
-					latest.set(event.push.value, true);
-				} else if ("pop" in event && shown !== undefined && shown < event.pop.end) {
-					shown = undefined;
-					latest.set(undefined);
+				const group = await effect.race(ordered.nextGroup());
+				if (!group) break;
+				const codec = decoder.group();
+
+				for (;;) {
+					let frame: Moq.Group.Frame | undefined;
+					try {
+						frame = await effect.race(group.readFrame());
+					} catch (err) {
+						if (err instanceof Moq.Error.Stream && WINDOW_GAPS.includes(err.code)) break;
+						throw err;
+					}
+					if (!frame) break;
+					codec.decode(frame.payload);
+
+					let newest: { index: number; value: string } | undefined;
+					for (let event = decoder.next(); event; event = decoder.next()) {
+						if ("push" in event) {
+							if (typeof event.push.value !== "string") throw new Error("chat record must be a string");
+							newest = { index: event.push.index, value: event.push.value };
+						} else if ("pop" in event) {
+							if (newest && newest.index < event.pop.end) newest = undefined;
+							if (shown !== undefined && shown < event.pop.end) {
+								shown = undefined;
+								latest.set(undefined);
+							}
+						}
+					}
+					if (newest) {
+						shown = newest.index;
+						// Forced, so the same text sent twice still shows twice.
+						latest.set(newest.value, true);
+					}
 				}
 			}
 		} finally {
-			subscriber.close();
+			track.close();
 		}
 	});
 }
