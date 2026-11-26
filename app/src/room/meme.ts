@@ -1316,11 +1316,9 @@ export function load(name: string): AV | undefined {
 	// Make the name lowercase and remove hyphens for lookup
 	const key = name.toLowerCase().replace(/-/g, "");
 
-	const v: VideoName | undefined = VIDEO_LOOKUP[key];
-	if (v) return video(v);
-
-	const a: AudioName | undefined = AUDIO_LOOKUP[key];
-	if (a) return audio(a);
+	// Peers choose the key, so only the tables' own entries count, never inherited ones like `constructor`.
+	if (Object.hasOwn(VIDEO_LOOKUP, key)) return video(VIDEO_LOOKUP[key]);
+	if (Object.hasOwn(AUDIO_LOOKUP, key)) return audio(AUDIO_LOOKUP[key]);
 
 	return undefined;
 }
