@@ -47,7 +47,7 @@ export function egress(external: External, path: string): { hls: string; rtmp: s
 	return {
 		hls: `${from} export hls`,
 		rtmp: `${from} export rtmp --connect rtmp://live.example.com/app/STREAM_KEY`,
-		// A file per run, so running it again never truncates an earlier recording.
-		record: `${from} export fmp4 > "recording-$(date +%s).mp4"`,
+		// A file per run, and noclobber so two runs started in the same second fail instead of sharing one.
+		record: `(set -C; ${from} export fmp4 > "recording-$(date +%s).mp4")`,
 	};
 }

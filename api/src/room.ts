@@ -1,6 +1,5 @@
 import * as MoqAuth from "@moq/auth";
 import { wall } from "@moq/clock";
-import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import { guestSchema, guestTokenSchema, isValidRoom, ROOM_NAME_ERROR } from "./client";
@@ -66,7 +65,7 @@ export class Context {
 	// Mints an identity no participant holds, so the publish token can never stream as anyone else.
 	// Uncapped like a participant's: the released relay refuses a grant with a `rate`.
 	async signExternal(room: Name): Promise<External> {
-		const path = `external/${Uuid.v4()}`;
+		const path = `external/${crypto.randomUUID()}`;
 		const root = this.#room(room);
 		const publish = await this.#grant(root, { publish: [path] }, EXTERNAL_LIFETIME);
 		const subscribe = await this.#grant(root, { subscribe: [""] }, EXTERNAL_LIFETIME);
