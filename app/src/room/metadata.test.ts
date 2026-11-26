@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import * as Clock from "@moq/clock";
+import { Manual } from "@moq/clock/test";
 import * as Json from "@moq/json";
 import * as Net from "@moq/net";
 import { Chat } from "@moq/room";
@@ -45,9 +46,12 @@ test("a window peers may not move hides its handle and echoes from them", async 
 	const local = locationFields();
 	const effect = new Effect();
 	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, local, chatFields(), effect);
-	const extras = consumeExtras({
-		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
-	});
+	const extras = consumeExtras(
+		{
+			out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+		},
+		new Signal(true),
+	);
 	try {
 		local.peers.positions.set({ peer: { x: 0.5, id: "m1" } });
 		await flush();
@@ -77,7 +81,7 @@ test("removed chat catalog entries clear stale messages", async () => {
 	if (!track) throw new Error("hang/chat.json already exists");
 	const publisher = new Json.Snapshot.Producer({ track });
 	publisher.update({ message: "hello", typing: true }, Net.Time.Timestamp.now());
-	const extras = consumeExtras({ out: { catalog, active } });
+	const extras = consumeExtras({ out: { catalog, active } }, new Signal(true));
 	try {
 		await flush();
 		expect(extras.chat.message.latest.peek()).toBe("hello");
@@ -98,9 +102,12 @@ test("windowed chat delivers a repeated message twice and ignores the legacy fie
 	const local = chatFields();
 	const effect = new Effect();
 	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, locationFields(), local, effect);
-	const extras = consumeExtras({
-		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
-	});
+	const extras = consumeExtras(
+		{
+			out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+		},
+		new Signal(true),
+	);
 	const seen: (string | undefined)[] = [];
 	const dispose = extras.chat.message.latest.subscribe((value) => seen.push(value));
 	try {
@@ -134,9 +141,12 @@ test("a malformed location never reaches the UI", async () => {
 	if (!track) throw new Error("hang/location.json already exists");
 	const publisher = new Json.Snapshot.Producer({ track });
 	publisher.update({ window: { position: { x: "left" } } }, Net.Time.Timestamp.now());
-	const extras = consumeExtras({
-		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
-	});
+	const extras = consumeExtras(
+		{
+			out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+		},
+		new Signal(true),
+	);
 	try {
 		await flush();
 		expect(extras.location.window.position.peek()).toBeUndefined();
@@ -160,9 +170,12 @@ test("a late joiner applies only the newest retained chat message", async () => 
 			await flush();
 		}
 
-		const extras = consumeExtras({
-			out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
-		});
+		const extras = consumeExtras(
+			{
+				out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+			},
+			new Signal(true),
+		);
 		// Watch it the way the meme effect does, so a superseded `/huh` would play here.
 		const seen: string[] = [];
 		const watcher = new Effect();
@@ -201,9 +214,12 @@ test("a watcher recovers every chat message a delivery gap skipped", async () =>
 	};
 
 	const group = write(1, ["hi"]);
-	const extras = consumeExtras({
-		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
-	});
+	const extras = consumeExtras(
+		{
+			out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+		},
+		new Signal(true),
+	);
 	// Watch it the way the meme effect does, so a dropped `/huh` would never play here.
 	const seen: string[] = [];
 	const watcher = new Effect();
@@ -228,6 +244,112 @@ test("a watcher recovers every chat message a delivery gap skipped", async () =>
 		watcher.close();
 		extras.close();
 		track.close();
+		net.close();
+	}
+});
+
+// Serve live state from `local` and read it back the way a watcher does, on a manual clock.
+function live(datagrams = new Signal(true)) {
+	const clock = new Manual();
+	const installed = clock.install();
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({});
+	const local = locationFields();
+	const effect = new Effect();
+	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, local, chatFields(), effect);
+	const extras = consumeExtras(
+		{ out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) } },
+		datagrams,
+	);
+	return {
+		clock,
+		local: local.live,
+		remote: extras.location.live,
+		stop: () => effect.close(),
+		[Symbol.dispose]: () => {
+			extras.close();
+			effect.close();
+			net.close();
+			installed.close();
+		},
+	};
+}
+
+test("live pointers and drags stream over datagrams and clear on release", async () => {
+	using room = live();
+	await flush();
+	room.local.cursor.set({ x: 0.1, y: -0.2 });
+	room.local.peer.set({ handle: "peer", position: { x: 0.3, y: 0.4, z: 2, s: 1 } });
+	await flush();
+	expect(room.remote.cursor.peek()).toEqual({ x: 0.1, y: -0.2 });
+	expect(room.remote.peer.peek()).toEqual({ handle: "peer", position: { x: 0.3, y: 0.4, z: 2, s: 1 } });
+
+	// Releasing sends the empty state, so viewers drop it without waiting to expire.
+	room.local.cursor.set(undefined);
+	room.local.peer.set(undefined);
+	await flush();
+	expect(room.remote.cursor.peek()).toBeUndefined();
+	expect(room.remote.peer.peek()).toBeUndefined();
+});
+
+test("a still pointer repeats, and one whose sender vanishes expires", async () => {
+	using room = live();
+	await flush();
+	room.local.window.set({ x: 0.25, y: 0.25 });
+	await flush();
+
+	// Well past the expiry, the repeats keep it alive.
+	for (let i = 0; i < 8; i++) await room.clock.advance(Clock.Duration.millis(250));
+	expect(room.remote.window.peek()).toEqual({ x: 0.25, y: 0.25 });
+
+	// A sender that stops without its empty datagram, as when its tab dies.
+	room.stop();
+	await room.clock.advance(Clock.Duration.millis(900));
+	expect(room.remote.window.peek()).toEqual({ x: 0.25, y: 0.25 });
+	await room.clock.advance(Clock.Duration.millis(200));
+	expect(room.remote.window.peek()).toBeUndefined();
+});
+
+test("a transport without datagrams keeps only the snapshot", async () => {
+	const datagrams = new Signal(false);
+	using room = live(datagrams);
+	await flush();
+	room.local.cursor.set({ x: 0.1, y: 0.1 });
+	await flush();
+	expect(room.remote.cursor.peek()).toBeUndefined();
+
+	// Reconnecting over WebTransport subscribes from the next datagram on.
+	datagrams.set(true);
+	await flush();
+	await room.clock.advance(Clock.Duration.millis(250));
+	expect(room.remote.cursor.peek()).toEqual({ x: 0.1, y: 0.1 });
+
+	datagrams.set(false);
+	await flush();
+	expect(room.remote.cursor.peek()).toBeUndefined();
+});
+
+test("a malformed live datagram ends the subscription", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({ hang: { live: { track: "hang/live.json" } } });
+	const track = net.createDatagrams("hang/live.json", { timescale: Net.Time.Timescale.MILLI });
+	if (!track) throw new Error("hang/live.json already exists");
+	const extras = consumeExtras(
+		{ out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) } },
+		new Signal(true),
+	);
+	const send = (value: unknown) =>
+		track.append(Net.Time.Timestamp.now(), new TextEncoder().encode(JSON.stringify(value)));
+	try {
+		await flush();
+		send({ cursor: { x: "left", y: 0 } });
+		await flush();
+		send({ cursor: { x: 0, y: 0 } });
+		await flush();
+		expect(extras.location.live.cursor.peek()).toBeUndefined();
+	} finally {
+		extras.close();
+		track.finish();
 		net.close();
 	}
 });

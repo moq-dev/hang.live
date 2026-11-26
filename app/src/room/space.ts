@@ -2,12 +2,14 @@ import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import { Broadcast, type BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
+import { Cursor } from "./cursor";
 import { Vector } from "./geometry";
 import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
 import type { GLContext } from "./gl/context";
-import type { Position } from "./metadata";
+import type { HangLocalSource } from "./local";
+import { LIVE_EXPIRY, type Point, type Position } from "./metadata";
 import * as Peers from "./peers";
 import * as Physics from "./physics";
 import type { Sound } from "./sound";
@@ -32,6 +34,8 @@ export class Space {
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
+	// Where the mouse is over the canvas, in room coordinates, streamed to peers each frame.
+	#pointer?: Point;
 	// Where each remote tile sat before the moves we asked of it, restored if its peer locks first.
 	#homes = new WeakMap<Broadcast, Position>();
 
@@ -74,6 +78,13 @@ export class Space {
 
 		// Physics steps with each rendered frame, so it pauses whenever the canvas is hidden.
 		this.#signals.set(this.canvas.scene, this.#frame.bind(this));
+
+		// Frames stop while hidden, so drop the pointer instead of repeating a stale one.
+		this.#signals.run((effect) => {
+			if (effect.get(this.canvas.visible)) return;
+			this.#pointer = undefined;
+			this.#stream();
+		});
 	}
 
 	#runRenderers(effect: Effect) {
@@ -138,6 +149,7 @@ export class Space {
 	#onMouseMove(e: MouseEvent) {
 		const mouse = this.canvas.relative(e.clientX, e.clientY);
 		const viewport = this.canvas.viewport.peek();
+		this.#pointer = { x: mouse.x / viewport.x - 0.5, y: mouse.y / viewport.y - 0.5 };
 
 		if (this.#dragging) {
 			// Calculate mouse movement delta
@@ -181,6 +193,7 @@ export class Space {
 	}
 
 	#onMouseLeave() {
+		this.#pointer = undefined;
 		if (this.#dragging) {
 			this.#publishPosition(this.#dragging);
 
@@ -563,7 +576,33 @@ export class Space {
 			}));
 		});
 
+		this.#runHeld(broadcast);
+
 		if (source.role === "watch") {
+			const cursor = new Cursor(broadcast as Broadcast<typeof source>, this.canvas);
+			broadcast.signals.cleanup(() => cursor.close());
+
+			// A peer dragging its own window streams where it is.
+			broadcast.signals.run((effect) => {
+				broadcast.held.set(effect.get(source.location.live.window));
+			});
+
+			// A peer dragging someone's window streams it by the handle that window publishes.
+			const dragged = broadcast.signals.computed((effect) => effect.get(source.location.live.peer)?.handle);
+			broadcast.signals.run((effect) => {
+				const handle = effect.get(dragged);
+				if (!handle) return;
+				const target = this.#addressed(handle);
+				if (!target) return;
+				effect.cleanup(() => target.held.set(undefined));
+
+				effect.run((effect) => {
+					// A window that locks or rotates its handle mid-drag stops following.
+					const addressed = handleOf(target, effect) === handle;
+					target.held.set(addressed ? effect.get(source.location.live.peer)?.position : undefined);
+				});
+			});
+
 			broadcast.signals.run((effect) => {
 				const handle = effect.get(source.location.window.handle);
 				if (!handle) return;
@@ -668,11 +707,77 @@ export class Space {
 	// Forget the peer moves a departing local publisher asked for, right away, since a publisher reused
 	// later (such as a new screen share) would replay them, and nothing settles them anymore.
 	#leave(broadcast: Broadcast) {
-		if (broadcast.source.role === "publish") broadcast.source.location.peers.positions.set(undefined);
+		if (broadcast.source.role !== "publish") return;
+		const location = broadcast.source.location;
+		location.peers.positions.set(undefined);
+		location.live.cursor.set(undefined);
+		location.live.window.set(undefined);
+		location.live.peer.set(undefined);
+	}
+
+	// Follow a peer's drag of this window while it streams, then fall back to the durable snapshot.
+	#runHeld(broadcast: Broadcast) {
+		let held = false;
+		broadcast.signals.run((effect) => {
+			const live = effect.get(broadcast.held);
+			if (live) {
+				held = true;
+				if (this.#dragging !== broadcast) broadcast.position.update((prev) => ({ ...prev, ...live }));
+				return;
+			}
+			if (!held) return;
+
+			// The drag's end can beat the snapshot it settles into, and a refused move never lands in one,
+			// so wait a moment before putting the window back where the snapshot says.
+			effect.timer(() => {
+				held = false;
+				if (this.#dragging === broadcast) return;
+				const placed = broadcast.source.location.window.position.peek();
+				if (!placed) return;
+				// The stacking order stays local.
+				broadcast.position.update((prev) => ({
+					...prev,
+					x: placed.x ?? prev.x,
+					y: placed.y ?? prev.y,
+					s: placed.s ?? prev.s,
+				}));
+			}, LIVE_EXPIRY);
+		});
+	}
+
+	// The window publishing `handle`, which peers may move.
+	#addressed(handle: string): Broadcast | undefined {
+		for (const broadcast of this.ordered.peek()) {
+			if (handleOf(broadcast) === handle) return broadcast;
+		}
+		return undefined;
+	}
+
+	// Stream the pointer and the dragged window to peers over datagrams, once per frame at most.
+	#stream() {
+		const dragging = this.#dragging;
+		// Copied, since a drag mutates its position in place.
+		const position = dragging ? { ...dragging.position.peek() } : undefined;
+
+		// The pointer and peer drags ride the camera, like the moves in #carrier.
+		let carrier: HangLocalSource | undefined;
+		for (const broadcast of this.lookup.values()) {
+			const source = broadcast.source;
+			if (source.role !== "publish") continue;
+			carrier ??= source;
+			source.location.live.window.set(dragging === broadcast ? position : undefined);
+		}
+		if (!carrier) return;
+
+		carrier.location.live.cursor.set(this.#pointer);
+		const handle = dragging?.source.role === "watch" ? dragging.source.location.window.handle.peek() : undefined;
+		carrier.location.live.peer.set(handle && position ? { handle, position } : undefined);
 	}
 
 	// Step the physics for the time since the last frame, then draw it.
 	#frame(now: DOMHighResTimeStamp) {
+		this.#stream();
+
 		const steps = this.#stepper.advance();
 		for (let i = 0; i < steps; i++) this.#step();
 
@@ -847,6 +952,16 @@ export class Space {
 		}
 		return undefined;
 	}
+}
+
+// The handle a window publishes for peers to address its moves, if it takes any.
+function handleOf(broadcast: Broadcast, effect?: Effect): string | undefined {
+	const source = broadcast.source;
+	const get = <T>(signal: Signal<T>) => (effect ? effect.get(signal) : signal.peek());
+	if (source.role === "watch") return get(source.location.window.handle);
+	if (source.role === "publish")
+		return get(source.location.window.movable) ? get(source.location.window.handle) : undefined;
+	return undefined;
 }
 
 // The WebGL renderers for one live context.
