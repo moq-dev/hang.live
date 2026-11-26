@@ -314,23 +314,28 @@ Test.test(
 				url.searchParams.set("name", name);
 				await page.goto(url.href);
 			}
-			// Each page shows exactly the other's tile, drawn after a fresh video frame reached the GPU.
-			const drawn = (page: Playwright.Page, previous?: number) =>
-				page.waitForFunction(
-					(previous) => {
+			// Each page shows exactly the other's tile, drawn from a frame its peer encoded after this
+			// check began, so neither a replayed nor an already buffered frame passes.
+			const drawn = async (page: Playwright.Page, peer: Playwright.Page, previous?: number) => {
+				const since = await peer.evaluate(() => window.roomTest.state().encoded);
+				await page.waitForFunction(
+					({ previous, since }) => {
 						const { remotes } = window.roomTest.state();
-						return remotes.length === 1 && remotes[0].textures !== previous && (remotes[0].drawn ?? 0) > 0;
+						return (
+							remotes.length === 1 && remotes[0].textures !== previous && (remotes[0].drawn ?? -1) > since
+						);
 					},
-					previous,
+					{ previous, since },
 					{ timeout: 10_000 },
 				);
-			await Promise.all(pages.map((page) => drawn(page)));
+			};
+			await Promise.all([drawn(alice, bob), drawn(bob, alice)]);
 
 			const before = await alice.evaluate(() => window.roomTest.state().remotes[0].textures);
 			await alice.evaluate(() => window.roomTest.lose());
 			await alice.waitForFunction(() => !window.roomTest.state().context);
 			await alice.evaluate(() => window.roomTest.restore());
-			await drawn(alice, before);
+			await drawn(alice, bob, before);
 
 			for (const page of pages) {
 				Test.expect(await page.evaluate(() => window.roomTest.state().errors)).toEqual([]);

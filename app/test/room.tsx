@@ -11,16 +11,24 @@ const params = new URLSearchParams(location.search);
 const element = document.querySelector("canvas");
 if (!element) throw new Error("Missing canvas");
 
-// Count per set of textures, since a restored context gives each tile new ones.
+// The newest camera timestamp this page's encoders were handed, in microseconds like decoded frames.
+let encoded = 0;
+const encode = VideoEncoder.prototype.encode;
+VideoEncoder.prototype.encode = function (this: VideoEncoder, frame: VideoFrame, options?: VideoEncoderEncodeOptions) {
+	encoded = Math.max(encoded, frame.timestamp);
+	encode.call(this, frame, options);
+};
+// Tracked per set of textures, since a restored context gives each tile new ones.
 const ids = new WeakMap<Textures, number>();
 let next = 0;
-const frames = new WeakMap<Textures, number>();
+// The timestamp of the newest video frame uploaded to, and then drawn from, each set of textures.
+const uploaded = new WeakMap<Textures, number>();
 const drawn = new WeakMap<Textures, number>();
 const errors: number[] = [];
 const upload = Textures.prototype.upload;
 Textures.prototype.upload = function (this: Textures, texture: WebGLTexture, source: TexImageSource) {
+	if (texture === this.frame && source instanceof VideoFrame) uploaded.set(this, source.timestamp);
 	upload.call(this, texture, source);
-	if (texture === this.frame) frames.set(this, (frames.get(this) ?? 0) + 1);
 };
 // Count GL draw calls, so a tile render that skips its draw does not pass.
 let calls = 0;
@@ -35,9 +43,8 @@ BroadcastRenderer.prototype.render = function (this: BroadcastRenderer, ...args:
 	render.apply(this, args);
 	const [broadcast] = args;
 	const textures = broadcast.video.textures.peek();
-	// New textures first get the last decoded frame again, so only a later upload proves video still flows.
-	if (textures && (frames.get(textures) ?? 0) > 1 && calls > before)
-		drawn.set(textures, (drawn.get(textures) ?? 0) + 1);
+	const timestamp = textures ? uploaded.get(textures) : undefined;
+	if (textures && timestamp !== undefined && calls > before) drawn.set(textures, timestamp);
 	// A frame can still draw between losing the context and its event, which only reports the loss.
 	const gl = broadcast.canvas.context.peek()?.gl;
 	if (!gl || gl.isContextLost()) return;
@@ -67,6 +74,7 @@ const harness = {
 	state() {
 		return {
 			context: !!canvas.context.peek(),
+			encoded,
 			errors: [...errors],
 			remotes: room.space.ordered
 				.peek()
@@ -75,11 +83,7 @@ const harness = {
 					const textures = broadcast.video.textures.peek();
 					if (!textures) return {};
 					if (!ids.has(textures)) ids.set(textures, ++next);
-					return {
-						textures: ids.get(textures),
-						frames: frames.get(textures) ?? 0,
-						drawn: drawn.get(textures) ?? 0,
-					};
+					return { textures: ids.get(textures), drawn: drawn.get(textures) };
 				}),
 		};
 	},
