@@ -19,7 +19,7 @@ The frontend and backend share types via Hono RPC. Real-time media is streamed o
 app/        Web frontend (SolidJS + Vite)
 api/        Backend API (Cloudflare Workers + Hono)
 native/     Desktop/mobile app (Tauri v2)
-dev/        Local relay server config
+dev/        Local relay server config (production uses moq.pro)
 ```
 
 ## Prerequisites

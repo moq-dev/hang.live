@@ -29,5 +29,4 @@ dist-ssr
 # Generated relay keys/tokens
 *.jwk
 *.jwt
-.terraform
 .wrangler
