@@ -47,8 +47,9 @@ Claude Code are stubs served by the binary pinned by tag in `flake.nix`; to
 upgrade, bump that tag, run `nix flake lock`, then
 `nix develop --command quest init`, so a shell still holding the old binary
 does not write its stubs. Keep only the SessionStart hook in
-`.claude/settings.json` if that version generates worktree hooks. It reuses MoQ's direnv hook with Hang's
-project directory. Claude Code imports the same root instructions as Codex.
+`.claude/settings.json` if that version generates worktree hooks. It reuses
+MoQ's direnv hook with Hang's project directory. Claude Code imports the same
+root instructions as Codex.
 
 # Pull requests
 
