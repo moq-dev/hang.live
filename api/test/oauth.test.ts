@@ -118,11 +118,12 @@ test("login refuses to start toward a foreign redirect", async () => {
 	const url = new URL(((await ok.json()) as { url: string }).url);
 	expect(JSON.parse(url.searchParams.get("state") ?? "")).toMatchObject({ challenge });
 
-	// The old CSRF nonce shape is rejected outright.
+	// Stale native builds still send the old CSRF nonce; they get pointed at an upgrade, never a login.
 	const legacy = await app.request(
 		`/auth/google/login?random=abc&redirect=${encodeURIComponent(`${env.APP_URL}/oauth`)}`,
 	);
-	expect(legacy.status).toBe(400);
+	expect(legacy.status).toBe(200);
+	expect(await legacy.json()).toEqual({ url: `${env.APP_URL}/download` });
 });
 
 test("a forged callback redirect is rejected before any account is touched", async () => {
@@ -343,7 +344,7 @@ test("a legacy account with an unverified link cannot absorb its email's verifie
 	});
 });
 
-test("the migration trusts only providers that always verify emails", () => {
+test("the migration leaves every legacy link unverified", () => {
 	const sqlite = new Sqlite(":memory:");
 	const dir = new URL("../migrations/", import.meta.url).pathname;
 	const files = readdirSync(dir)
@@ -362,9 +363,6 @@ test("the migration trusts only providers that always verify emails", () => {
 	}
 	for (const file of files.filter((file) => file >= "0004")) run(file);
 
-	expect(sqlite.query("SELECT provider_id, email_verified FROM accounts_linked ORDER BY provider_id").all()).toEqual([
-		{ provider_id: "apple", email_verified: 1 },
-		{ provider_id: "discord", email_verified: 0 },
-		{ provider_id: "google", email_verified: 1 },
-	]);
+	// Nothing recorded which addresses were verified, so no provider is trusted on its name alone.
+	expect(sqlite.query("SELECT DISTINCT email_verified FROM accounts_linked").all()).toEqual([{ email_verified: 0 }]);
 });

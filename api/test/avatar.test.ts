@@ -29,10 +29,11 @@ test("uploads are typed by their bytes, never by the client's label", async () =
 		});
 	}
 
-	// The app's picker offers exactly what the API accepts.
-	for (const type of avatarTypes) {
-		expect(Avatar.contentType(type === "image/jpeg" ? "jpg" : type.slice("image/".length))).toBe(type);
-	}
+	// The app's picker offers exactly what the API accepts and serves.
+	const served = ["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp", "ico", "tiff", "heic"]
+		.map(Avatar.contentType)
+		.filter((type) => type !== undefined);
+	expect(new Set(served)).toEqual(new Set(avatarTypes));
 
 	const large = new File([PNG, new Uint8Array(Avatar.MAX_SIZE)], "big.png", { type: "image/png" });
 	await expect(Avatar.validate(large)).rejects.toMatchObject({ status: 413 });

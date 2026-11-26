@@ -493,6 +493,14 @@ export const router = rpc
 				provider: providerIdSchema,
 			}),
 		),
+		// Installed native builds older than the login code exchange send `random`, and open whatever `url`
+		// comes back; send them to the download page rather than a dead login.
+		async (c, next) => {
+			if (c.req.query("random") !== undefined && c.req.query("challenge") === undefined) {
+				return c.json({ url: `${c.var.ctx.env.APP_URL}/download` }, 200);
+			}
+			return await next();
+		},
 		rpc.withQuery(oauthStateSchema),
 		async (c) => {
 			const ctx = c.var.ctx;
@@ -559,8 +567,7 @@ export const router = rpc
 				// Before verification was checked, anyone could claim an address; such an account may not be its owner's.
 				if (user && (await ctx.oauth.hasUnverifiedLink(user.id))) {
 					throw new HTTPException(409, {
-						message:
-							"This email's account was created without verifying it. Sign in with that method instead.",
+						message: "Sign in once with the method you used before, then try this one again.",
 					});
 				}
 				if (!user) {
