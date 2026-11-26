@@ -4,6 +4,7 @@ import { parse } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import type { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
+import { NetworkDebug } from "./debug";
 import { type HangLocalSource, Local } from "./local";
 import { Locator } from "./locator";
 import * as Peers from "./peers";
@@ -31,6 +32,9 @@ export class Room {
 		this.connection = props.connection;
 		this.local = props.local;
 		this.space = new Space(props.canvas, props.sound);
+
+		const network = new NetworkDebug(this.connection);
+		this.#signals.cleanup(() => network.close());
 
 		this.#signals.run((effect) => {
 			if (!effect.get(Local.join)) {
