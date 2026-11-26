@@ -19,7 +19,18 @@ const NOTIFICATIONS = {
 
 export type NotificationSound = keyof typeof NOTIFICATIONS;
 const FADE_TIME = 0.2;
-const GAIN_MIN = 0.001;
+
+/**
+ * Fade `param` linearly from its current value to `value`, cancelling any fade in progress.
+ *
+ * An exponential ramp cannot start or end at silence, so muting and unmuting use a linear one.
+ */
+export function fade(param: AudioParam, value: number, context: BaseAudioContext) {
+	const now = context.currentTime;
+	param.cancelScheduledValues(now);
+	param.setValueAtTime(param.value, now);
+	param.linearRampToValueAtTime(value, now + FADE_TIME);
+}
 
 export type SoundProps = {
 	enabled?: boolean | Signal<boolean>;
@@ -60,10 +71,10 @@ export class Sound {
 		}
 
 		this.enabled = Signal.from(props?.enabled ?? false);
-		this.tts = new TTS(this.context, props?.tts);
 
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
+		this.tts = new TTS(this, props?.tts);
 
 		this.#signals.run(this.#runGain.bind(this));
 	}
@@ -71,16 +82,7 @@ export class Sound {
 	#runGain(effect: Effect) {
 		// Reduce the volume for notifications so we can hear them over everything else.
 		const volume = effect.get(this.enabled) ? effect.get(Settings.audio.volume) / 2 : 0;
-
-		// Cancel any scheduled transitions on change.
-		effect.cleanup(() => this.gain.gain.cancelScheduledValues(this.gain.context.currentTime));
-
-		if (volume < GAIN_MIN) {
-			this.gain.gain.exponentialRampToValueAtTime(GAIN_MIN, this.gain.context.currentTime + FADE_TIME);
-			this.gain.gain.setValueAtTime(0, this.gain.context.currentTime + FADE_TIME + 0.01);
-		} else {
-			this.gain.gain.exponentialRampToValueAtTime(volume, this.gain.context.currentTime + FADE_TIME);
-		}
+		fade(this.gain.gain, volume, this.context);
 	}
 
 	// Return a buffer for the sound, randomly selecting one if there are multiple.
@@ -102,7 +104,7 @@ export class Sound {
 		if (this.suspended.peek()) return;
 
 		const source = await this.notificationNode(sound);
-		source.connect(this.context.destination);
+		source.connect(this.gain);
 		source.start();
 	}
 
@@ -177,10 +179,8 @@ export class PannedSound {
 		return source;
 	}
 
-	async load(url: string): Promise<AudioBufferSourceNode> {
-		const response = await fetch(url);
-		const data = await response.arrayBuffer();
-		const buffer = await this.parent.context.decodeAudioData(data);
+	/** Play a buffer from {@link Sound.load} through this panner. */
+	play(buffer: AudioBuffer): AudioBufferSourceNode {
 		const node = new AudioBufferSourceNode(this.parent.context, { buffer });
 		node.connect(this.#panner);
 		node.start();

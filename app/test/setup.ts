@@ -16,5 +16,12 @@ await Bun.plugin({
 			if (!result?.code) throw new Error(`Failed to transform ${path}`);
 			return { contents: result.code, loader: "js" };
 		});
+
+		// MoQ's `?worklet` imports are a Vite transform; tests never start a worklet, so stub its URL.
+		build.onResolve({ filter: /\?worklet$/ }, ({ path }) => ({ path, namespace: "worklet" }));
+		build.onLoad({ filter: /.*/, namespace: "worklet" }, () => ({
+			contents: 'export default async () => "blob:test-worklet";',
+			loader: "js",
+		}));
 	},
 });

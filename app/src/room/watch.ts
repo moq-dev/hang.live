@@ -1,5 +1,5 @@
 import type * as Catalog from "@moq/hang/catalog";
-import * as Moq from "@moq/net";
+import type * as Moq from "@moq/net";
 import { consume } from "@moq/room";
 import { Effect, type Getter, Signal } from "@moq/signals";
 import * as Watch from "@moq/watch";
@@ -7,31 +7,25 @@ import { type ChatFields, consumeExtras, type LocationFields } from "./metadata"
 
 export interface WatchBroadcastProps {
 	connection: Moq.Connection;
-	enabled?: boolean | Signal<boolean>;
-	name?: Moq.Path.Valid | Signal<Moq.Path.Valid>;
-	reload?: boolean | Signal<boolean>;
-	audio?: { enabled?: boolean | Signal<boolean> };
-	video?: { enabled?: boolean | Signal<boolean> };
+	name: Moq.Path.Valid;
+	/** Download and decode audio while true. */
+	audio: Getter<boolean>;
+	/** Download and decode video while true. */
+	video: Getter<boolean>;
 }
 
 /**
- * Watch pipeline plus hang.live location/chat extras.
+ * One remote broadcast: a headless `Watch.Player` plus hang.live location/chat extras.
  *
- * User/preview come from `@moq/room` consume; location/chat stay hang.live.
+ * Hang paints frames with its own WebGL renderer and routes audio through its own spatial graph,
+ * so the player gets no canvas and its speaker output stays silent.
  */
 export class WatchBroadcast {
 	readonly role = "watch" as const;
 
-	readonly #broadcast: Watch.Broadcast;
-	readonly #sync: Watch.Sync;
-	readonly #videoSource: Watch.Video.Source;
-	readonly #videoDecoder: Watch.Video.Decoder;
-	readonly #audioSource: Watch.Audio.Source;
-	readonly #audioDecoder: Watch.Audio.Decoder;
+	readonly #player: Watch.Player;
 	readonly #target = new Signal<Watch.Video.Target | undefined>(undefined);
 	readonly #flip = new Signal(false);
-	readonly #metadata: ReturnType<typeof consume>;
-	readonly #extras: ReturnType<typeof consumeExtras>;
 
 	readonly location: LocationFields;
 	readonly chat: ChatFields;
@@ -47,6 +41,7 @@ export class WatchBroadcast {
 		catalog: Getter<Catalog.Video | undefined>;
 		target: Signal<Watch.Video.Target | undefined>;
 		active: Getter<string | undefined>;
+		error: Getter<Error | undefined>;
 		flip: Signal<boolean>;
 		source: Getter<undefined>;
 	};
@@ -54,82 +49,75 @@ export class WatchBroadcast {
 		root: Getter<AudioNode | undefined>;
 		catalog: Getter<Catalog.Audio | undefined>;
 		active: Getter<string | undefined>;
+		error: Getter<Error | undefined>;
 		source: Getter<undefined>;
 	};
 
 	readonly signals = new Effect();
 
 	constructor(props: WatchBroadcastProps) {
-		this.#broadcast = new Watch.Broadcast({
+		const visible = new Signal<Watch.Video.Visible>("never");
+		const muted = new Signal(true);
+		this.signals.run((effect) => visible.set(effect.get(props.video) ? "always" : "never"));
+		this.signals.run((effect) => muted.set(!effect.get(props.audio)));
+
+		this.#player = new Watch.Player({
 			origin: props.connection.origin,
-			enabled: props?.enabled,
-			name: props?.name,
-			follow: props.reload,
+			name: props.name,
+			// The room only creates this once the broadcast is announced.
+			follow: false,
+			video: { target: this.#target, visible },
+			audio: { muted, volume: 0 },
+			// Share the connection's receive estimate with every other tile, so ABR and probing see the whole room.
+			viewer: { viewers: props.connection.viewers },
 		});
-		this.signals.cleanup(() => this.#broadcast.close());
+		this.signals.cleanup(() => this.#player.close());
 
-		this.#videoSource = new Watch.Video.Source({
-			broadcast: this.#broadcast,
-			target: this.#target,
-		});
-		this.#audioSource = new Watch.Audio.Source({
-			broadcast: this.#broadcast,
-		});
+		const metadata = consume(this.#player.broadcast);
+		const extras = consumeExtras(this.#player.broadcast);
 		this.signals.cleanup(() => {
-			this.#videoSource.close();
-			this.#audioSource.close();
+			metadata.close();
+			extras.close();
 		});
 
-		// Use MoQ's decoder-measured adaptive delay for audio and video together.
-		this.#sync = new Watch.Sync();
-		this.signals.cleanup(() => this.#sync.close());
+		this.location = extras.location;
+		this.chat = extras.chat;
+		this.user = metadata.user;
 
-		this.#videoDecoder = new Watch.Video.Decoder({
-			source: this.#videoSource,
-			sync: this.#sync,
-			enabled: props?.video?.enabled,
-		});
-		this.#audioDecoder = new Watch.Audio.Decoder({
-			source: this.#audioSource,
-			sync: this.#sync,
-			enabled: props?.audio?.enabled,
-		});
-		this.signals.cleanup(() => {
-			this.#videoDecoder.close();
-			this.#audioDecoder.close();
-		});
-
-		this.#metadata = consume(this.#broadcast);
-		this.#extras = consumeExtras(this.#broadcast);
-		this.signals.cleanup(() => {
-			this.#metadata.close();
-			this.#extras.close();
-		});
-
-		this.location = this.#extras.location;
-		this.chat = this.#extras.chat;
-		this.user = this.#metadata.user;
-
+		const decoder = { video: this.#player.video, audio: this.#player.audio };
 		this.signals.run((effect) => {
-			const catalog = effect.get(this.#videoSource.out.catalog);
+			const catalog = effect.get(decoder.video.source.out.catalog);
 			this.#flip.set(catalog?.flip ?? false);
 		});
 
 		this.video = {
-			frame: this.#videoDecoder.out.frame,
-			display: this.#videoDecoder.out.display,
-			catalog: this.#videoSource.out.catalog,
+			frame: decoder.video.out.frame,
+			display: decoder.video.out.display,
+			catalog: decoder.video.source.out.catalog,
 			target: this.#target,
-			active: this.#videoSource.out.track,
+			active: decoder.video.source.out.track,
+			error: decoder.video.out.error,
 			flip: this.#flip,
 			source: new Signal(undefined),
 		};
 		this.audio = {
-			root: this.#audioDecoder.out.root,
-			catalog: this.#audioSource.out.catalog,
-			active: this.#audioSource.out.track,
+			root: decoder.audio.out.root,
+			catalog: decoder.audio.source.out.catalog,
+			active: decoder.audio.source.out.track,
+			error: decoder.audio.out.error,
 			source: new Signal(undefined),
 		};
+
+		// A decode failure otherwise only shows as a frozen avatar or silence.
+		for (const [kind, error] of [
+			["video", this.video.error],
+			["audio", this.audio.error],
+		] as const) {
+			this.signals.run((effect) => {
+				const err = effect.get(error);
+				if (err) console.error(`${props.name}: ${kind} decode failed:`, err);
+			});
+		}
 	}
 
 	close() {

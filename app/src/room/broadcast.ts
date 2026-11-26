@@ -186,7 +186,8 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		effect.spawn(async () => {
 			// Parse the markdown into sanitized HTML using a background WebWorker.
-			const parsed = await this.chat.parse(msg);
+			// Raced so the next message reruns this at once instead of waiting behind a stale parse.
+			const parsed = await effect.race(this.chat.parse(msg));
 			if (!parsed) return;
 
 			effect.set(this.message, parsed);

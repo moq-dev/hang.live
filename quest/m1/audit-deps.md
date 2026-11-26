@@ -7,7 +7,3 @@ Run the `deps` audit: `quest audit deps` prints what it checks, what each findin
 ## Audit
 
 - deps
-
-## Required
-
-- [m0](/quest/m0/README.md) - the audit runs after it

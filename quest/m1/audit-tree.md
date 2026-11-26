@@ -7,7 +7,3 @@ Run the `tree` audit: `quest audit tree` prints what it checks, what each findin
 ## Audit
 
 - tree
-
-## Required
-
-- [m0](/quest/m0/README.md) - the audit runs after it

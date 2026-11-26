@@ -156,7 +156,8 @@ function Preview(props: {
 		<WebLayout>
 			<div class="font-semibold mb-6 text-center text-gray-400">ready to hang?</div>
 
-			<moq-watch-support class="text-2xl" prop:show="never" />
+			<moq-watch-support class="text-2xl" prop:show="warning" />
+			<moq-publish-support class="text-2xl" prop:show="warning" />
 
 			{/* Join Button */}
 			<div class="mb-12 flex justify-center">
