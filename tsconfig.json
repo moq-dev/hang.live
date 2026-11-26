@@ -12,6 +12,8 @@
 		"declarationMap": true,
 		"sourceMap": true,
 		"strict": true,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"noImplicitReturns": true,

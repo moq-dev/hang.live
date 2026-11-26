@@ -3,9 +3,9 @@ import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import * as Comlink from "comlink";
 import type { Broadcast } from "./broadcast";
-import { Canvas } from "./canvas";
-import ChatWorker from "./chat-worker";
-import { Bounds, Vector } from "./geometry";
+import type { Canvas } from "./canvas";
+import type ChatWorker from "./chat-worker";
+import type { Bounds, Vector } from "./geometry";
 import { sanitizer } from "./sanitize";
 
 const worker = new Worker(new URL("./chat-worker.ts", import.meta.url), { type: "module" });

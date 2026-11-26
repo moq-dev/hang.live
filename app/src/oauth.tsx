@@ -16,7 +16,7 @@ export function Oauth(): JSX.Element {
 	const [searchParams, _] = Router.useSearchParams();
 	const code = searchParams.code;
 
-	onMount(async () => {
+	const complete = async () => {
 		if (!code) {
 			setError("No code in OAuth callback");
 			return;
@@ -34,7 +34,8 @@ export function Oauth(): JSX.Element {
 		} catch (error) {
 			setError(error instanceof Error ? error.message : "Unknown error");
 		}
-	});
+	};
+	onMount(() => void complete());
 
 	return (
 		<Layout>

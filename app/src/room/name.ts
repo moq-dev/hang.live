@@ -2,7 +2,7 @@ import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
-import { Bounds, Vector } from "./geometry";
+import type { Bounds, Vector } from "./geometry";
 
 export class Name {
 	canvas: Canvas;

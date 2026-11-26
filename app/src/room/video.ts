@@ -1,10 +1,11 @@
-import { Effect, Signal } from "@moq/signals";
+import { type Effect, Signal } from "@moq/signals";
 import * as Api from "../api";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
+import { timestamp } from "./canvas";
 import { Bounds, Vector } from "./geometry";
 import type { GLContext } from "./gl/context";
-import * as Meme from "./meme";
+import type * as Meme from "./meme";
 import * as Sanitize from "./sanitize";
 
 /** One tile's textures on a live GL context. */
@@ -180,7 +181,7 @@ export class Video {
 		const frame = effect.get(this.broadcast.source.video.frame);
 
 		if (!!frame !== this.frameActive) {
-			this.#frameTransition = performance.now();
+			this.#frameTransition = timestamp();
 			this.frameActive = !!frame;
 		}
 
@@ -381,7 +382,7 @@ export class Video {
 
 	#runMemeTransition(effect: Effect) {
 		effect.get(this.memeActive);
-		this.#memeTransition = performance.now();
+		this.#memeTransition = timestamp();
 	}
 
 	#runRenderSize(effect: Effect) {

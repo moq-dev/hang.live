@@ -1,5 +1,5 @@
-import * as Moq from "@moq/net";
-import { createResource, createSignal, JSX, onCleanup, Show } from "solid-js";
+import type * as Moq from "@moq/net";
+import { createResource, createSignal, type JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";

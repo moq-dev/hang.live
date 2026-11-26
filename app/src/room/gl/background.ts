@@ -1,7 +1,7 @@
 import backgroundFragSource from "./background.frag";
 import backgroundVertSource from "./background.vert";
 import type { GLContext } from "./context";
-import { Attribute, Shader, Uniform1f, Uniform2f } from "./shader";
+import { type Attribute, Shader, type Uniform1f, type Uniform2f } from "./shader";
 
 export class BackgroundRenderer {
 	#glContext: GLContext;

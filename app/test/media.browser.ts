@@ -129,18 +129,19 @@ Test.test(
 				Test.expect(await control(kind).getAttribute("aria-checked")).toBe("false");
 			};
 			const decoded = async (kind: Kind) => {
+				// Media encoded before this check may be an earlier capture's, so require newer media.
+				const since = await publisher.evaluate((kind) => window.mediaTest.state().encoded[kind], kind);
 				const before = await viewer.evaluate(() => window.mediaTest.state());
 				await viewer.waitForFunction(
-					({ kind, before }) => {
+					({ kind, since, before }) => {
 						const state = window.mediaTest.state();
 						return kind === "camera"
-							? (state.video ?? 0) > (before.video ?? 0) + 100 &&
-									(state.videoFrames ?? 0) > (before.videoFrames ?? 0)
-							: (state.audio ?? 0) > (before.audio ?? 0) + 100 &&
+							? (state.video ?? 0) > since + 100 && (state.videoFrames ?? 0) > (before.videoFrames ?? 0)
+							: (state.audio ?? 0) > since + 100 &&
 									(state.audioBytes ?? 0) > (before.audioBytes ?? 0) &&
 									state.rms > 0.001;
 					},
-					{ kind, before },
+					{ kind, since, before },
 					{ timeout: 15_000 },
 				);
 			};

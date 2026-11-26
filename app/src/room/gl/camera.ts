@@ -1,4 +1,4 @@
-import { Vector } from "../geometry";
+import type { Vector } from "../geometry";
 
 export class Camera {
 	projection: Float32Array;

@@ -1,5 +1,7 @@
+import { Hono } from "hono";
 import * as Account from "./account";
 import * as Avatar from "./avatar";
+import { withContext } from "./context";
 import * as Fave from "./fave";
 import * as Health from "./health";
 import * as OAuth from "./oauth";
@@ -9,8 +11,9 @@ import * as Storage from "./storage";
 
 export { Account, Avatar, Fave, Health, OAuth, Room };
 
-const app = rpc
-	.app()
+const app = new Hono<{ Bindings: Env }>()
+	.use(withContext)
+	.use(rpc.withCors)
 	.route("/auth", OAuth.router)
 	.route("/account", Account.router)
 	.route("/fave", Fave.router)

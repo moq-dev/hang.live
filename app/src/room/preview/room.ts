@@ -1,4 +1,4 @@
-import * as Moq from "@moq/net";
+import type * as Moq from "@moq/net";
 import { Room as MoqRoom, type Remote } from "@moq/room";
 import type { Getter } from "@moq/signals";
 

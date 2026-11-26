@@ -1,11 +1,10 @@
 import * as Clock from "@moq/clock";
 import { Effect } from "@moq/signals";
-import { createSignal, JSX, onCleanup, Show } from "solid-js";
+import { createSignal, type JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
 import { Canvas } from "../room/canvas";
-import type { HangLocalSource } from "../room/local";
-import { Local } from "../room/local";
+import type { HangLocalSource, Local } from "../room/local";
 import { Sound } from "../room/sound";
 import { Space } from "../room/space";
 import Settings from "../settings";
