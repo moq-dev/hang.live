@@ -52,8 +52,8 @@ export function About(): JSX.Element {
 				</div>
 
 				<p>
-					Powered by new and <a href="https://github.com/kixelated/moq">open source</a> web tech:{" "}
-					<a href="https://moq.dev">MoQ</a>. There's more to live than another {services[currentService()]}{" "}
+					Powered by new and <a href="https://github.com/moq-dev/moq">open source</a> web tech:{" "}
+					<a href="https://moq.dev">MoQ</a>. There's more to life than another {services[currentService()]}{" "}
 					clone. <i>Crazy</i>, I know.
 				</p>
 			</div>
@@ -119,7 +119,7 @@ function Demo(): JSX.Element {
 		position: { x: 0.25, y: 0, s: 1.5 },
 	});
 
-	// Every 2 seconds, perform the next action in the timeline.
+	// Every 1.5 seconds, perform the next action in the timeline.
 	const timeline = [
 		() => room.add("1", one),
 		() => {
@@ -241,7 +241,6 @@ function Demo(): JSX.Element {
 		},
 		() => {
 			five.location.window.position.set(randomLeft());
-			three.location.window.position.set(randomLeft());
 			two.chat.typing.active.set(true);
 			two.chat.message.latest.set("this shit again");
 		},

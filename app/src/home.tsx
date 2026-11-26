@@ -106,7 +106,7 @@ export function Home(): JSX.Element {
 									{(favs) => (
 										<>
 											<div class="space-y-3">
-												<For each={favs()}>
+												<For each={showMore() ? favs() : favs().slice(0, 6)}>
 													{(favorite) => (
 														<FavoriteRoom
 															room={favorite.room}

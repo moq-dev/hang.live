@@ -158,23 +158,19 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 	const local = new Local();
 	onCleanup(() => local.close());
 
+	// The avatar to display: one object URL per chosen file, revoked when replaced or unmounted.
+	const currentAvatarUrl = createMemo(() => {
+		const a = avatar();
+		if (!(a instanceof File)) return a;
+		const url = URL.createObjectURL(a);
+		onCleanup(() => URL.revokeObjectURL(url));
+		return url;
+	});
+
 	// Update preview signals when local state changes
 	createEffect(() => {
 		local.name.set(name() ?? "");
-		const av = avatar();
-		if (av instanceof File) {
-			local.avatar.set(URL.createObjectURL(av));
-		} else {
-			local.avatar.set(av);
-		}
-	});
-
-	onCleanup(() => {
-		// Clean up object URLs to prevent memory leaks
-		const a = avatar();
-		if (a instanceof File) {
-			URL.revokeObjectURL(URL.createObjectURL(a));
-		}
+		local.avatar.set(currentAvatarUrl());
 	});
 
 	const avatarChanged = createMemo(() => {
@@ -187,15 +183,6 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 
 	const changed = createMemo(() => {
 		return nameChanged() || avatarChanged();
-	});
-
-	// Get the current avatar URL for display (either uploaded file preview or string URL)
-	const currentAvatarUrl = createMemo(() => {
-		const a = avatar();
-		if (a instanceof File) {
-			return URL.createObjectURL(a);
-		}
-		return a;
 	});
 
 	const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -240,7 +227,8 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 			// Make single request to the unified endpoint
 			const response = await Api.client.routes.account.info.$put({
 				form: {
-					name: name(),
+					// Only send what changed, so a provider name shorter than the rules allows can't block an avatar save.
+					name: nameChanged() ? name() : undefined,
 					avatar: avatarChanged() ? avatar() : undefined,
 				},
 			});
@@ -270,8 +258,15 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 		setAvatar(info().avatar);
 	};
 
+	// Match the API's name rules so Save never sends a name it will reject.
+	const nameError = createMemo(() => {
+		if (!nameChanged()) return undefined;
+		const result = Api.nameSchema.safeParse(name() ?? "");
+		return result.success ? undefined : "Use 4 to 100 characters.";
+	});
+
 	const canSave = () => {
-		return changed() && name()?.trim() !== "";
+		return changed() && !nameError();
 	};
 
 	const handleRandomAvatar = () => {
@@ -385,6 +380,7 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 									Random
 								</button>
 							</div>
+							<Show when={nameError()}>{(error) => <p class="text-sm text-red-400">{error()}</p>}</Show>
 							<p class="text-sm text-gray-400">
 								How you'll appear to others. You don't have to use a <i>real name</i>, mix it up.
 							</p>

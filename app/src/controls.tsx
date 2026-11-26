@@ -250,6 +250,26 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 	);
 }
 
+// Briefly announces a device being plugged in or removed, returning [active, message].
+function deviceToast(available: () => MediaDeviceInfo[] | undefined, kind: "Microphone" | "Camera") {
+	const [message, setMessage] = createSignal("");
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	onCleanup(() => clearTimeout(timer));
+
+	let previous = available()?.length ?? 0;
+	createEffect(() => {
+		const count = available()?.length ?? 0;
+		if (count !== previous && previous !== 0) {
+			setMessage(count > previous ? `New ${kind.toLowerCase()} detected` : `${kind} disconnected`);
+			clearTimeout(timer);
+			timer = setTimeout(() => setMessage(""), 5000);
+		}
+		previous = count;
+	});
+
+	return [() => message() !== "", message] as const;
+}
+
 export function Microphone(props: { local: Local }): JSX.Element {
 	const toggle = () => {
 		props.local.core.microphone.enabled.update((prev: boolean) => !prev);
@@ -257,8 +277,6 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	const root = solid(props.local.camera.audio.root);
 
 	const [showMenu, setShowMenu] = createSignal(false);
-	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
-	const [deviceChangeMessage, setDeviceChangeMessage] = createSignal("");
 	const volume = solid(Settings.microphone.gain);
 
 	// Use device signals from the Device API
@@ -268,24 +286,11 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
-	// Watch for device changes and trigger indicator
-	let previousDeviceCount = available()?.length ?? 0;
+	const [deviceChangeIndicator, deviceChangeMessage] = deviceToast(available, "Microphone");
+
+	// Disabling closes the menu instead of leaving it to reopen on the next enable.
 	createEffect(() => {
-		const currentDevices = available();
-		const currentCount = currentDevices?.length ?? 0;
-		if (currentCount !== previousDeviceCount && previousDeviceCount !== 0) {
-			setDeviceChangeIndicator(true);
-			if (currentCount > previousDeviceCount) {
-				setDeviceChangeMessage("New microphone detected");
-			} else {
-				setDeviceChangeMessage("Microphone disconnected");
-			}
-			setTimeout(() => {
-				setDeviceChangeIndicator(false);
-				setDeviceChangeMessage("");
-			}, 5000);
-		}
-		previousDeviceCount = currentCount;
+		if (!enabled()) setShowMenu(false);
 	});
 
 	// Close menu when clicking outside
@@ -469,8 +474,6 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const enabled = solid(props.local.core.camera.enabled);
 
 	const [showMenu, setShowMenu] = createSignal(false);
-	const [deviceChangeIndicator, setDeviceChangeIndicator] = createSignal(false);
-	const [deviceChangeMessage, setDeviceChangeMessage] = createSignal("");
 
 	// Use device signals from the Device API
 	const device = props.local.webcam.device;
@@ -479,24 +482,11 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const requested = createSelector(solid(device.out.requested));
 	const active = createSelector(solid(device.out.active));
 
-	// Watch for device changes and trigger indicator
-	let previousDeviceCount = available()?.length ?? 0;
+	const [deviceChangeIndicator, deviceChangeMessage] = deviceToast(available, "Camera");
+
+	// Disabling closes the menu instead of leaving it to reopen on the next enable.
 	createEffect(() => {
-		const currentDevices = available();
-		const currentCount = currentDevices?.length ?? 0;
-		if (currentCount !== previousDeviceCount && previousDeviceCount !== 0) {
-			setDeviceChangeIndicator(true);
-			if (currentCount > previousDeviceCount) {
-				setDeviceChangeMessage("New camera detected");
-			} else {
-				setDeviceChangeMessage("Camera disconnected");
-			}
-			setTimeout(() => {
-				setDeviceChangeIndicator(false);
-				setDeviceChangeMessage("");
-			}, 5000);
-		}
-		previousDeviceCount = currentCount;
+		if (!enabled()) setShowMenu(false);
 	});
 
 	// Close menu when clicking outside
@@ -567,7 +557,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 					<span class={media() ? "icon-[mdi--camera]" : "icon-[mdi--camera-off]"} />
 				</button>
 			</Tooltip>
-			<Show when={media() && (available()?.length ?? 0) > 1}>
+			<Show when={(available()?.length ?? 0) > 1}>
 				<Tooltip
 					content={deviceChangeMessage() || "Camera settings"}
 					position="top"

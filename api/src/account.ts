@@ -4,7 +4,7 @@ import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import * as Avatar from "./avatar";
-import { AccountId, accountIdSchema } from "./client";
+import { AccountId, accountIdSchema, nameSchema } from "./client";
 import * as Database from "./database";
 import * as OAuth from "./oauth";
 import * as rpc from "./rpc";
@@ -16,14 +16,14 @@ export const idSchema = accountIdSchema;
 // Account schemas
 export const infoSchema = z.object({
 	id: accountIdSchema,
-	name: z.string().check(z.minLength(4), z.maxLength(100)),
+	name: nameSchema,
 	avatar: z.string(),
 });
 
 export type Info = z.infer<typeof infoSchema>;
 
 export const createSchema = z.object({
-	name: z.string().check(z.minLength(4), z.maxLength(100)),
+	name: nameSchema,
 	email: z.string().check(z.email()),
 	avatar: z.optional(z.string()),
 });
@@ -57,7 +57,7 @@ export const router = rpc
 		"/info",
 		rpc.withForm(
 			z.object({
-				name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
+				name: z.optional(nameSchema),
 				avatar: z.optional(z.union([z.string(), z.instanceof(File)])),
 			}),
 		),
@@ -128,7 +128,8 @@ export class Context {
 		const user: NewRow = {
 			...info,
 			id,
-			avatarType: info.avatar ? "url" : "r2",
+			// Random avatars are app-relative URLs, not R2 keys.
+			avatarType: "url",
 			avatar: info.avatar ?? Avatar.random(),
 			createdAt: now,
 			updatedAt: now,
@@ -145,6 +146,8 @@ export class Context {
 	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {
 		let avatar: string | undefined;
 		let avatarType: "url" | "r2" | undefined;
+		// The R2 upload this update replaces, deleted only once the row no longer references it.
+		let replaced: string | undefined;
 
 		if (update.avatar) {
 			const old = (
@@ -155,9 +158,8 @@ export class Context {
 					.limit(1)
 			).at(0);
 
-			// Only delete old R2 files if we're changing to a different avatar
 			if (old?.avatarType === "r2" && old.avatar) {
-				await this.storage.delete("avatar", old.avatar);
+				replaced = old.avatar;
 			}
 
 			// TODO move to avatar.ts
@@ -207,14 +209,23 @@ export class Context {
 				name: update.name,
 				avatar,
 				avatarType,
+				updatedAt: new Date(),
 			})
 			.where(eq(table.id, id))
-			.returning();
+			.returning()
+			.catch(async (err) => {
+				// Don't orphan the new upload when the row still points at the old avatar.
+				if (avatarType === "r2" && avatar) await this.storage.delete("avatar", avatar);
+				throw err;
+			});
 
 		const res = this.#rowToInfo(updated.at(0));
 		if (!res) {
-			// TODO Delete from storage if we failed to upload
 			throw new Error("failed to update");
+		}
+
+		if (replaced && replaced !== avatar) {
+			await this.storage.delete("avatar", replaced);
 		}
 		return res;
 	}
@@ -229,15 +240,13 @@ export class Context {
 				.limit(1)
 		).at(0);
 
-		// Delete R2 avatar if it exists
+		// Favorites go with the account through their ON DELETE CASCADE, which D1 enforces.
+		await this.db.delete(OAuth.table).where(eq(OAuth.table.accountId, id));
+		await this.db.delete(table).where(eq(table.id, id));
+
+		// Delete the R2 avatar last, so a failed row delete leaves a working account.
 		if (account?.avatarType === "r2" && account.avatar) {
 			await this.storage.delete("avatar", account.avatar);
 		}
-
-		// Delete OAuth entries
-		await this.db.delete(OAuth.table).where(eq(OAuth.table.accountId, id));
-
-		// Delete account
-		await this.db.delete(table).where(eq(table.id, id));
 	}
 }

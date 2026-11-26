@@ -24,6 +24,21 @@ function loadTTS() {
 	return "low";
 }
 
+// Gain from the microphone's 0-200% slider; anything else, NaN included, resets to unity.
+function loadGain(): number {
+	const gain = Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1");
+	return gain >= 0 && gain <= 2 ? gain : 1;
+}
+
+// The signed-in identity, forgotten on logout while device and UI preferences stay.
+const ACCOUNT_KEYS = [
+	"settings.oauth.token",
+	"settings.oauth.random",
+	"settings.account.guest",
+	"settings.account.name",
+	"settings.account.avatar",
+];
+
 const guest = Api.guestSchema.safeParse(localStorage.getItem("settings.account.guest"));
 
 export const Settings = {
@@ -43,7 +58,7 @@ export const Settings = {
 	// Device states that persist across sessions
 	microphone: {
 		enabled: new Signal(localStorage.getItem("settings.microphone.enabled") === "true"),
-		gain: new Signal(Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1")),
+		gain: new Signal(loadGain()),
 		device: new Signal(localStorage.getItem("settings.microphone.device") ?? undefined),
 	},
 	camera: {
@@ -95,8 +110,9 @@ export const Settings = {
 		tracks: new Signal(localStorage.getItem("settings.debug.tracks") === "true"),
 	},
 
-	clear: () => {
-		localStorage.clear();
+	// Sign out and reload as a fresh guest.
+	logout: () => {
+		for (const key of ACCOUNT_KEYS) localStorage.removeItem(key);
 		window.location.reload();
 	},
 };
@@ -219,11 +235,6 @@ effect.subscribe(Settings.render.scale, (ratio) => {
 
 effect.subscribe(Settings.debug.tracks, (enabled) => {
 	localStorage.setItem("settings.debug.tracks", enabled.toString());
-});
-
-// Mostly just to avoid console warnings about signals not being closed
-document.addEventListener("unload", () => {
-	effect.close();
 });
 
 export default Settings;

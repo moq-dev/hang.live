@@ -1,6 +1,6 @@
 import * as Api from "@hang/api/client";
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, type JSX, Match, onMount, Switch } from "solid-js";
+import { createMemo, createSignal, type JSX, Match, onCleanup, Switch } from "solid-js";
 import { Local } from "../room/local";
 import * as Random from "../util/random";
 import Dialog from "./dialog";
@@ -12,14 +12,12 @@ export default function Create(): JSX.Element {
 	const [placeholder, setPlaceholder] = createSignal(Random.room());
 
 	// Regenerate placeholder periodically
-	onMount(() => {
-		const interval = setInterval(() => {
-			if (!roomInput()) {
-				setPlaceholder(Random.room());
-			}
-		}, 5000);
-		return () => clearInterval(interval);
-	});
+	const interval = setInterval(() => {
+		if (!roomInput()) {
+			setPlaceholder(Random.room());
+		}
+	}, 5000);
+	onCleanup(() => clearInterval(interval));
 
 	const roomName = createMemo(() => {
 		const input = roomInput().trim();

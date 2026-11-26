@@ -1,5 +1,5 @@
 import * as Moq from "@moq/net";
-import { createResource, createSignal, JSX, Show } from "solid-js";
+import { createResource, createSignal, JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import Login from "../components/login";
 import Tooltip from "../components/tooltip";
@@ -54,7 +54,7 @@ function Header(props: { connection: Moq.Connection; room: string }) {
 											animation: "slideInFromRight 0.3s ease-out",
 										}}
 									>
-										<RoomNavMobile room={props.room} />
+										<RoomNav room={props.room} />
 									</div>
 									<button
 										type="button"
@@ -123,16 +123,22 @@ function Header(props: { connection: Moq.Connection; room: string }) {
 }
 
 function RoomNav(props: { room: string }) {
-	const [showCopiedNotification, setShowCopiedNotification] = createSignal(false);
+	const [copied, setCopied] = createSignal<"copied" | "failed" | undefined>(undefined);
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	onCleanup(() => clearTimeout(timer));
 
 	const share = async () => {
-		const url = window.location.href;
-		await navigator.clipboard.writeText(url);
+		try {
+			await navigator.clipboard.writeText(window.location.href);
+			setCopied("copied");
+		} catch (err) {
+			// Denied permission or an insecure context; say so instead of claiming success.
+			console.error("Failed to copy link", err);
+			setCopied("failed");
+		}
 
-		setShowCopiedNotification(true);
-		setTimeout(() => {
-			setShowCopiedNotification(false);
-		}, 3000);
+		clearTimeout(timer);
+		timer = setTimeout(() => setCopied(undefined), 3000);
 	};
 
 	return (
@@ -147,60 +153,22 @@ function RoomNav(props: { room: string }) {
 			</Tooltip>
 			<FavoriteButton room={props.room} />
 			<Tooltip
-				content={showCopiedNotification() ? "Copied to clipboard" : "Copy link"}
+				content={
+					copied() === "copied"
+						? "Copied to clipboard"
+						: copied() === "failed"
+							? "Couldn't copy, copy the address bar instead"
+							: "Copy link"
+				}
 				position="bottom"
-				force={showCopiedNotification()}
+				force={copied() !== undefined}
 			>
 				<button
 					type="button"
 					onClick={share}
 					class="p-2 text-white hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
 					classList={{
-						"animate-pulse": showCopiedNotification(),
-					}}
-				>
-					<span class="icon-[mdi--share-variant]" />
-				</button>
-			</Tooltip>
-		</>
-	);
-}
-
-function RoomNavMobile(props: { room: string }) {
-	const [showCopiedNotification, setShowCopiedNotification] = createSignal(false);
-
-	const share = async () => {
-		const url = window.location.href;
-		await navigator.clipboard.writeText(url);
-
-		setShowCopiedNotification(true);
-		setTimeout(() => {
-			setShowCopiedNotification(false);
-		}, 3000);
-	};
-
-	return (
-		<>
-			<Tooltip content="Leave" position="bottom">
-				<a
-					href="/home"
-					class="p-2 text-white hover:text-red-500 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
-				>
-					<span class="icon-[mdi--exit-run]" />
-				</a>
-			</Tooltip>
-			<FavoriteButton room={props.room} />
-			<Tooltip
-				content={showCopiedNotification() ? "Copied to clipboard" : "Copy link"}
-				position="bottom"
-				force={showCopiedNotification()}
-			>
-				<button
-					type="button"
-					onClick={share}
-					class="p-2 text-white hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-all cursor-pointer"
-					classList={{
-						"animate-pulse": showCopiedNotification(),
+						"animate-pulse": copied() === "copied",
 					}}
 				>
 					<span class="icon-[mdi--share-variant]" />
