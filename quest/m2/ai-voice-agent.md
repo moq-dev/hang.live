@@ -27,6 +27,11 @@ Split from the captions quest on 2026-11-26 (maintainer, `/quest-run`), when
   a screen share. Generate its speech faster than realtime with the in-browser
   engine [TTS on Phonon](/quest/m2/tts-phonon.md) adds, and publish each reply
   as a burst.
+- The summoner's browser skips its own identity's announcements
+  (`app/src/room/index.ts`), so add the agent's tile locally, the way
+  `index.ts` adds the local screen share, and play it with the same buffered
+  playback and `reset()` as remote watchers so the summoner hears the reply
+  they interrupt.
 - Watch the agent's tile with `Watch.Player` `delay: 100ms`, `lookahead: 30s`
   (pinned `moq/` provides both, plus `reset()`). Other tiles keep the default
   live playback.
