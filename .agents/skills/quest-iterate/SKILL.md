@@ -4,4 +4,4 @@ description: Iterate on an open PR to settle its open decisions, fix CI and revi
 ---
 
 Run `quest skill iterate` and follow its output.
-If `quest` is not on `PATH`, run `nix develop --command quest skill iterate` instead; prefix later Quest commands with `nix develop --command` too.
+If `quest` is not installed, follow https://github.com/kixel-ai/quest/blob/main/SETUP.md first.

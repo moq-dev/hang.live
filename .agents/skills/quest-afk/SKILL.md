@@ -1,7 +1,7 @@
 ---
 name: quest-afk
-description: Keep quest work moving while the user is away, leaving every decision for their return.
+description: Keep this session's work going while the user is away, taking your recommendations and deferring merge picks until they return. Use when the user says afk, afk merge, or afk soon.
 ---
 
 Run `quest skill afk` and follow its output.
-If `quest` is not on `PATH`, run `nix develop --command quest skill afk` instead; prefix later Quest commands with `nix develop --command` too.
+If `quest` is not installed, follow https://github.com/kixel-ai/quest/blob/main/SETUP.md first.

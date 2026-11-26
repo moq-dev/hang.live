@@ -12,4 +12,4 @@ Trust the pinned `moq/` source over published API references.
 - Keep the SessionStart direnv hook in `.claude/settings.json`; worktree creation is host-managed.
 
 Quests: before any work, run `quest context` and follow it.
-The `quest` binary comes from `moq`'s Quest flake input; upgrade upstream and bump `moq` here.
+The `quest` binary is pinned by tag in `flake.nix`, separately from `moq`.

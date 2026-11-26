@@ -23,9 +23,3 @@ Decided 2026-11-25 (maintainer, modernization audit):
   and MoQ media pipeline blockers; `m1` for `moq/` tooling modernization, infra
   removal, and remaining WebGL/UI/API/native bugs; `m2` for MoQ showcase
   features.
-
-## Required
-
-- [m0: Room reliability and critical blockers](/quest/m0/README.md) - capture recovery, security hardening, deduplicated watch pipelines, and spatial audio fixes
-- [m1: Modernization and bugfixes](/quest/m1/README.md) - `moq/` workflow and lint parity, `infra/` removal in favor of `moq.pro`, WebGL/UI/API bugfixes, native canary stability, and re-listing on `moq.dev` demos
-- [m2: MoQ showcase features](/quest/m2/README.md) - Network X-Ray HUD, E2EE private rooms, BYO publisher/egress, live captions and AI voice agents, and datagram physics / 1:1 P2P

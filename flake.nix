@@ -14,8 +14,13 @@
     nixpkgs.follows = "moq/nixpkgs";
     flake-utils.follows = "moq/flake-utils";
     rust-overlay.follows = "moq/rust-overlay";
-    # Keep Quest's CLI, guide, and skills at the version used by MoQ.
-    quest.follows = "moq/quest";
+    # Quest's CLI, which serves the guide and the skills its stubs call.
+    # Bump the tag, then rerun `quest init`.
+    quest = {
+      url = "github:kixel-ai/quest/v0.27.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
   outputs =
