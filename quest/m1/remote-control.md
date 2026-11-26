@@ -1,4 +1,4 @@
-# [S] Make the Remote Control setting stop others from moving you
+# [M] Make the Remote Control setting stop others from moving you
 
 ## Goal
 
@@ -23,3 +23,12 @@ The receiving side in `app/src/room/index.ts` applies every peer's
   wire, so older peers keep working.
 - Let `Space.#publishPosition` ask peers to move through any local broadcast,
   regardless of your own setting.
+- Decided 2026-11-25 (maintainer, /quest-run): give each peer move a
+  confirmation ID that the moved peer echoes back even when its position does
+  not change, and drop a pending move only once its ID is confirmed. Today a
+  move is settled only when the peer publishes the same x/y/s, so a move that
+  undoes one still in flight, landing where the peer already is, stays queued
+  and can replay later, snapping the tile back once. This changes the
+  `hang/location.json` wire format, so it must work with older clients: add the
+  ID and the echo as optional fields, and keep settling on matching x/y/s for
+  peers that send no echo.
