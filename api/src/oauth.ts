@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { HTTPException } from "hono/http-exception";
 import * as jose from "jose";
 import { z } from "zod";
 import * as Account from "./account";
-import { OauthState, oauthStateSchema, oauthProviders as providers } from "./client";
+import { OauthState, oauthStateSchema, oauthTokenSchema, oauthProviders as providers } from "./client";
 import * as Database from "./database";
 import * as rpc from "./rpc";
 import { unreachable } from "./util";
@@ -26,6 +27,16 @@ export class Context {
 
 	async getLinks(account: Account.Id): Promise<Row[]> {
 		return await this.db.select().from(table).where(eq(table.accountId, account));
+	}
+
+	// Whether any sign-in method on the account never proved control of its email address.
+	async hasUnverifiedLink(account: Account.Id): Promise<boolean> {
+		const rows = await this.db
+			.select({ providerId: table.providerId })
+			.from(table)
+			.where(and(eq(table.accountId, account), eq(table.emailVerified, false)))
+			.limit(1);
+		return rows.length > 0;
 	}
 }
 
@@ -218,7 +229,8 @@ export class Provider {
 		return {
 			provider: this.id,
 			providerId: user.id,
-			email: user.email,
+			email: user.email ?? undefined,
+			emailVerified: user.verified === true,
 			name: user.global_name || user.username, // Prefer display name over username
 			avatar: avatarUrl,
 		};
@@ -248,6 +260,7 @@ export class Provider {
 			provider: "google",
 			providerId: user.id,
 			email: user.email,
+			emailVerified: user.verified_email === true,
 			name: user.name,
 			avatar: user.picture,
 		};
@@ -278,41 +291,25 @@ export class Provider {
 			provider: "apple",
 			providerId: user.sub,
 			email: user.email,
+			emailVerified: user.email_verified === true || user.email_verified === "true",
 			name: user.email.split("@")[0] || "Apple User", // Fallback to email prefix
 			avatar: undefined, // Apple doesn't provide avatars
 		};
 	}
 
-	// Apple sends user info in the callback on first authorization
-	async updateAppleUser(user: string): Promise<void> {
-		if (this.id !== "apple") {
-			throw new Error("User update only available for Apple provider");
-		}
-
-		const rawUserData = JSON.parse(user);
-		const parseResult = appleCallbackUserSchema.safeParse(rawUserData);
-		if (!parseResult.success) {
-			throw new Error(`Invalid Apple user data format: ${parseResult.error.message}`);
-		}
-
-		let name = parseResult.data.name.firstName || "";
-		if (parseResult.data.name.lastName) {
-			if (name) {
-				name += " ";
-			}
-			name += parseResult.data.name.lastName;
-		}
-
-		if (!name) {
-			// I guess this is possible.
-			return;
-		}
-
-		await this.db.update(Account.table).set({ name }).where(eq(Account.table.email, parseResult.data.email));
-	}
-
-	async link(account: Account.Id, providerUser: string): Promise<void> {
+	async link(account: Account.Id, user: User): Promise<void> {
 		const now = new Date();
+		const providerUser = user.providerId;
+
+		// The link vouches for the account only when the provider verified the account's own address.
+		const owner = (
+			await this.db
+				.select({ email: Account.table.email })
+				.from(Account.table)
+				.where(eq(Account.table.id, account))
+				.limit(1)
+		).at(0);
+		const emailVerified = user.emailVerified && user.email !== undefined && user.email === owner?.email;
 
 		await this.db
 			.insert(table)
@@ -320,6 +317,7 @@ export class Provider {
 				accountId: account,
 				providerId: this.id,
 				providerUser,
+				emailVerified,
 				createdAt: now,
 				updatedAt: now,
 			})
@@ -327,6 +325,7 @@ export class Provider {
 				target: [table.accountId, table.providerId],
 				set: {
 					providerUser,
+					emailVerified,
 					updatedAt: now,
 				},
 			});
@@ -346,10 +345,10 @@ const tokenResponseSchema = z.object({
 const discordUserResponseSchema = z.object({
 	id: z.string(),
 	username: z.string(),
-	email: z.string(),
-	avatar: z.optional(z.string()), // Discord avatar is either a hash string or null/undefined
-	discriminator: z.optional(z.string()), // Legacy field, may not be present
-	global_name: z.optional(z.string()), // New display name field, can be null
+	email: z.nullish(z.string()), // null when the user never added an email
+	verified: z.optional(z.boolean()), // whether the email is verified
+	avatar: z.nullish(z.string()), // null for the default avatar
+	global_name: z.nullish(z.string()), // display name, null when unset
 });
 
 // Google user API response schema
@@ -370,19 +369,82 @@ const appleUserResponseSchema = z.object({
 	real_user_status: z.optional(z.number()),
 });
 
-// Apple callback user data schema (sent on first authorization)
+// Apple posts the user's name alongside the code, only on the first authorization.
+// Nothing in it is signed, so only the name is used, and only for a newly created account.
 const appleCallbackUserSchema = z.object({
-	name: z.object({
-		firstName: z.string(),
-		lastName: z.string(),
-	}),
-	email: z.string(),
+	name: z.optional(
+		z.object({
+			firstName: z.optional(z.string()),
+			lastName: z.optional(z.string()),
+		}),
+	),
 });
+
+// The display name in Apple's first-authorization user field, if any.
+export function appleName(user: string): string | undefined {
+	let json: unknown;
+	try {
+		json = JSON.parse(user);
+	} catch {
+		throw new HTTPException(400, { message: "Invalid Apple user data" });
+	}
+
+	const parsed = appleCallbackUserSchema.safeParse(json);
+	if (!parsed.success) {
+		throw new HTTPException(400, { message: "Invalid Apple user data" });
+	}
+
+	const name = [parsed.data.name?.firstName, parsed.data.name?.lastName]
+		.map((part) => part?.trim())
+		.filter(Boolean)
+		.join(" ");
+	return name || undefined;
+}
+
+// Whether the API may send a finished login to this URL.
+// Parsed rather than prefix-matched, so `https://hang.live.evil.com` and `http://localhost:80@evil.com` fail.
+export function validRedirect(env: { APP_URL: string }, redirect: string): boolean {
+	let url: URL;
+	try {
+		url = new URL(redirect);
+	} catch {
+		return false;
+	}
+
+	if (url.username || url.password) return false;
+
+	// The web app.
+	if (url.origin === new URL(env.APP_URL).origin) return true;
+	// The native app's loopback OAuth server, on whatever port it picked.
+	if (url.protocol === "http:" && url.hostname === "localhost") return true;
+	// The native app's deep link.
+	if (url.protocol === "hang:" && url.host === "oauth") return true;
+
+	return false;
+}
+
+function parseState(raw: string): OauthState {
+	let json: unknown;
+	try {
+		json = JSON.parse(raw);
+	} catch {
+		throw new HTTPException(400, { message: "Invalid OAuth state" });
+	}
+
+	const parsed = oauthStateSchema.safeParse(json);
+	if (!parsed.success) {
+		throw new HTTPException(400, { message: "Invalid OAuth state" });
+	}
+
+	return parsed.data;
+}
 
 export interface User {
 	provider: ProviderId;
 	providerId: string;
-	email: string;
+	email?: string;
+	// Whether the provider vouches that the user controls `email`.
+	emailVerified: boolean;
 	name: string;
 	avatar?: string;
 }
@@ -395,6 +457,7 @@ export const table = sqliteTable(
 			.references(() => Account.table.id, { onDelete: "cascade" }),
 		providerId: text("provider_id").notNull(),
 		providerUser: text("provider_user").notNull(),
+		emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
 		createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 		updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 	},
@@ -418,15 +481,8 @@ export const callbackSchema = z.object({
 	user: z.string().nullable().optional(),
 });
 
-export const callbackResponseSchema = z.object({
-	token: z.string(),
-	redirectUrl: z.string(),
-});
-
 export type Login = z.infer<typeof loginSchema>;
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
-export type Callback = z.infer<typeof callbackSchema>;
-export type CallbackResponse = z.infer<typeof callbackResponseSchema>;
 
 export const router = rpc
 	.router()
@@ -437,6 +493,14 @@ export const router = rpc
 				provider: providerIdSchema,
 			}),
 		),
+		// Installed native builds older than the login code exchange send `random`, and open whatever `url`
+		// comes back; send them to the download page rather than a dead login.
+		async (c, next) => {
+			if (c.req.query("random") !== undefined && c.req.query("challenge") === undefined) {
+				return c.json({ url: `${c.var.ctx.env.APP_URL}/download` }, 200);
+			}
+			return await next();
+		},
 		rpc.withQuery(oauthStateSchema),
 		async (c) => {
 			const ctx = c.var.ctx;
@@ -445,9 +509,13 @@ export const router = rpc
 			const provider = ctx.oauth.provider(params.provider);
 
 			const state = c.req.valid("query");
+			if (!validRedirect(ctx.env, state.redirect)) {
+				return c.json({ error: "Invalid redirect URL" }, 400);
+			}
+
 			const url = provider.authUrl(state);
 
-			return c.json({ url });
+			return c.json({ url }, 200);
 		},
 	)
 	.all(
@@ -463,30 +531,22 @@ export const router = rpc
 			// Validate provider parameter using Zod
 			const provider = ctx.oauth.provider(c.req.valid("param").provider);
 
-			// Handle both GET (Google/Discord) and POST (Apple) callbacks
-			let callbackData: Callback;
-
-			if (c.req.method === "POST") {
-				// Apple form_post callback
-				const formData = await c.req.formData();
-				callbackData = callbackSchema.parse({
-					code: formData.get("code"),
-					state: formData.get("state"),
-					user: formData.get("user"),
-				});
-			} else {
-				// Google/Discord query params callback
-				const url = new URL(c.req.url);
-				callbackData = callbackSchema.parse({
-					code: url.searchParams.get("code"),
-					state: url.searchParams.get("state"),
-					user: url.searchParams.get("user"),
-				});
+			// Handle both GET (Google/Discord) and POST (Apple form_post) callbacks
+			const fields = c.req.method === "POST" ? await c.req.formData() : new URL(c.req.url).searchParams;
+			const parsed = callbackSchema.safeParse({
+				code: fields.get("code"),
+				state: fields.get("state"),
+				user: fields.get("user"),
+			});
+			if (!parsed.success) {
+				throw new HTTPException(400, { message: "Missing OAuth callback parameters" });
 			}
+			const callbackData = parsed.data;
 
-			// Validate required fields
-			if (!callbackData.code || !callbackData.state) {
-				throw new Error("Missing required callback parameters");
+			// The state round-trips through the provider and the browser, so check it before acting on it.
+			const state = parseState(callbackData.state);
+			if (!validRedirect(ctx.env, state.redirect)) {
+				throw new HTTPException(400, { message: "Invalid redirect URL" });
 			}
 
 			// Exchange code for access token
@@ -495,47 +555,49 @@ export const router = rpc
 			// Get user info
 			const oauthUser = await provider.getUser(accessToken);
 
-			// Apple sends user info in the callback on first authorization
-			if (provider.id === "apple" && callbackData.user) {
-				await provider.updateAppleUser(callbackData.user);
-			}
-
-			// Get or create a user account.
-			// TODO Should we only use the email address to link accounts? Why look up by providerId?
 			let user = await ctx.account.getByProvider(oauthUser.provider, oauthUser.providerId);
 			if (!user) {
-				// Try to find an existing account with the same email.
+				// Matching or claiming an email is only safe when the provider verified it.
+				// Otherwise anyone could sign up with a victim's address and take over (or pre-hijack) their account.
+				if (!oauthUser.email || !oauthUser.emailVerified) {
+					throw new HTTPException(403, { message: `Verify your email address with ${provider.id} first.` });
+				}
+
 				user = await ctx.account.getByEmail(oauthUser.email);
+				// Before verification was checked, anyone could claim an address; such an account may not be its owner's.
+				if (user && (await ctx.oauth.hasUnverifiedLink(user.id))) {
+					throw new HTTPException(409, {
+						message: "Sign in once with the method you used before, then try this one again.",
+					});
+				}
 				if (!user) {
-					// Make a new account.
+					const name =
+						provider.id === "apple" && callbackData.user ? appleName(callbackData.user) : undefined;
 					user = await ctx.account.create({
 						email: oauthUser.email,
-						name: oauthUser.name,
+						name: name ?? oauthUser.name,
 						avatar: oauthUser.avatar,
 					});
 				}
 			}
 
-			await provider.link(user.id, oauthUser.providerId);
+			await provider.link(user.id, oauthUser);
 
-			// Generate JWT token
-			const token = await ctx.auth.create(user.id);
-			const state = oauthStateSchema.parse(JSON.parse(callbackData.state));
+			// Hand the browser a short-lived code instead of the session token, since URLs leak
+			// through history, logs, and the native app's unauthenticated loopback server.
+			const code = await ctx.auth.createCode(user.id, state.challenge);
+			const redirect = new URL(state.redirect);
+			redirect.searchParams.set("code", code);
 
-			// Validate redirect URL - only allow APP_URL, localhost, and hang://
-			if (
-				!(
-					state.redirect.startsWith("http://localhost:") ||
-					state.redirect.startsWith(ctx.env.APP_URL) ||
-					state.redirect.startsWith("hang://")
-				)
-			) {
-				throw new Error(`Invalid redirect URL: ${state.redirect}`);
-			}
-
-			// Redirect to frontend with token
-			return c.redirect(
-				`${state.redirect}?token=${encodeURIComponent(token)}&random=${encodeURIComponent(state.random)}`,
-			);
+			return c.redirect(redirect.toString());
 		},
-	);
+	)
+	.post("/token", rpc.withJson(oauthTokenSchema), async (c) => {
+		const { code, verifier } = c.req.valid("json");
+		const token = await c.var.ctx.auth.redeemCode(code, verifier);
+		if (!token) {
+			return c.json({ error: "Invalid or expired login code" }, 401);
+		}
+
+		return c.json({ token }, 200);
+	});

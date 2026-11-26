@@ -213,7 +213,8 @@ function VideoMemeItem(props: VideoMemeItemProps): JSX.Element {
 			const video = Meme.video(props.name);
 			if (!video) throw new Error(`Video meme not found: ${props.name}`);
 
-			video.element.volume = Settings.audio.volume.peek();
+			// Media elements cap volume at unity; amplification belongs to the room gain node.
+			video.element.volume = Math.min(Settings.audio.volume.peek(), 1);
 			video.element.muted = false;
 			video.element.style.width = "100%";
 			video.element.style.height = "100%";
