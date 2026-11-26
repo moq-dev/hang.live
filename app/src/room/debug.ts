@@ -65,16 +65,14 @@ export class Debug {
 						"bg-black/75 text-white px-2 py-1 rounded font-mono text-[11px] leading-snug whitespace-nowrap",
 				});
 
-				// Highlight active rendition
-				if (this.broadcast.source.role === "watch") {
+				// Highlight the active rendition, red if it failed to decode.
+				let error: Error | undefined;
+				if (this.broadcast.source.role === "watch" || this.broadcast.source.role === "publish") {
 					const active = effect.get(this.broadcast.source.video.active);
 					if (active === name) {
-						box.className += " ring-2 ring-green-500";
-					}
-				} else if (this.broadcast.source.role === "publish") {
-					const active = effect.get(this.broadcast.source.video.active);
-					if (active === name) {
-						box.className += " ring-2 ring-green-500";
+						if (this.broadcast.source.role === "watch")
+							error = effect.get(this.broadcast.source.video.error);
+						box.className += error ? " ring-2 ring-red-500" : " ring-2 ring-green-500";
 					}
 				}
 
@@ -93,6 +91,7 @@ export class Debug {
 					const rounded = Number(bitrateMbps.toPrecision(2));
 					content += ` @ ${rounded}Mb/s`;
 				}
+				if (error) content += ` (${error.message})`;
 
 				box.textContent = content;
 				DOM.render(effect, container, box);
@@ -117,11 +116,14 @@ export class Debug {
 						"bg-black/75 text-white px-2 py-1 rounded font-mono text-[11px] leading-snug whitespace-nowrap",
 				});
 
-				// Highlight active rendition
+				// Highlight the active rendition, red if it failed to decode.
+				let error: Error | undefined;
 				if (this.broadcast.source.role === "watch" || this.broadcast.source.role === "publish") {
 					const active = effect.get(this.broadcast.source.audio.active);
 					if (active === name) {
-						box.className += " ring-2 ring-green-500";
+						if (this.broadcast.source.role === "watch")
+							error = effect.get(this.broadcast.source.audio.error);
+						box.className += error ? " ring-2 ring-red-500" : " ring-2 ring-green-500";
 					}
 				}
 
@@ -144,6 +146,7 @@ export class Debug {
 						content += `${rounded}kb/s`;
 					}
 				}
+				if (error) content += ` (${error.message})`;
 
 				box.textContent = content;
 				DOM.render(effect, container, box);

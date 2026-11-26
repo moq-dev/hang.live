@@ -2,10 +2,9 @@ import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import * as Meme from "./meme";
-import { PannedSound, Sound } from "./sound";
+import { fade, PannedSound, Sound } from "./sound";
 
 const FADE_TIME = 0.2;
-const GAIN_MIN = 0.001;
 
 export type AudioProps = {
 	pan?: number;
@@ -70,17 +69,8 @@ export class Audio {
 			const gain = effect.get(this.#gain);
 			if (!gain) return;
 
-			// Cancel any scheduled transitions on change.
-			effect.cleanup(() => gain.gain.cancelScheduledValues(gain.context.currentTime));
-
 			const volume = effect.get(Settings.audio.enabled) ? effect.get(Settings.audio.volume) : 0;
-
-			if (volume < GAIN_MIN) {
-				gain.gain.exponentialRampToValueAtTime(GAIN_MIN, gain.context.currentTime + FADE_TIME);
-				gain.gain.setValueAtTime(0, gain.context.currentTime + FADE_TIME + 0.01);
-			} else {
-				gain.gain.exponentialRampToValueAtTime(volume, gain.context.currentTime + FADE_TIME);
-			}
+			fade(gain.gain, volume, gain.context);
 		});
 
 		// Don't output to the speakers if we're publishing the broadcast.
@@ -120,8 +110,14 @@ export class Audio {
 
 	async #runMemeAudio(effect: Effect, meme: Meme.Audio) {
 		// We can't use HTMLAudioElement because iOS requires user interaction to play.
-		const node = await this.sound.load(meme.url);
-		effect.cleanup(() => node.disconnect());
+		// A meme replaced or cancelled while loading never starts.
+		const buffer = await effect.race(this.sound.parent.load(meme.url));
+		if (!buffer) return;
+		const node = this.sound.play(buffer);
+		effect.cleanup(() => {
+			node.stop();
+			node.disconnect();
+		});
 
 		effect.event(node, "ended", () => {
 			if (this.broadcast.meme.peek() === meme) {
@@ -142,20 +138,15 @@ export class Audio {
 
 		root.connect(gain);
 
-		if (root.channelCount > 1) {
-			const audioPanner = new StereoPannerNode(root.context, {
-				channelCount: root.channelCount,
-			});
-			effect.cleanup(() => audioPanner.disconnect());
+		// The panner up-mixes mono to stereo, so mono microphones pan too.
+		const audioPanner = new StereoPannerNode(root.context);
+		effect.cleanup(() => audioPanner.disconnect());
 
-			this.#panner.set(audioPanner);
-			effect.cleanup(() => this.#panner.set(undefined));
+		this.#panner.set(audioPanner);
+		effect.cleanup(() => this.#panner.set(undefined));
 
-			gain.connect(audioPanner);
-			audioPanner.connect(root.context.destination);
-		} else {
-			gain.connect(root.context.destination);
-		}
+		gain.connect(audioPanner);
+		audioPanner.connect(root.context.destination);
 	}
 
 	tick() {

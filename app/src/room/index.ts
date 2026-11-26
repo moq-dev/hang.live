@@ -1,6 +1,6 @@
 import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
-import { Room as MoqRoom } from "@moq/room";
+import { parse } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import { Broadcast } from "./broadcast";
 import type { Canvas } from "./canvas";
@@ -24,20 +24,12 @@ export class Room {
 
 	#cameraBroadcast = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
 	#shareBroadcast = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
-	#roster: MoqRoom;
 	#signals = new Effect();
 
 	constructor(props: RoomProps) {
 		this.connection = props.connection;
 		this.local = props.local;
 		this.space = new Space(props.canvas, props.sound);
-
-		this.#roster = new MoqRoom({
-			connection: this.connection,
-			identity: this.local.identity,
-			enabled: Local.join,
-		});
-		this.#signals.cleanup(() => this.#roster.close());
 
 		this.#signals.run((effect) => {
 			if (!effect.get(Local.join)) {
@@ -70,33 +62,46 @@ export class Room {
 			});
 		});
 
-		const members = new Map<Moq.Path.Valid, { remote: import("@moq/room").Remote; scope: Effect }>();
-		this.#signals.cleanup(() => {
-			for (const { scope } of members.values()) scope.close();
-			members.clear();
-		});
+		// Discover remote broadcasts ourselves: `@moq/room`'s roster would open a second watch per
+		// broadcast, painting to a canvas Hang does not use.
 		this.#signals.run((effect) => {
-			const remotes = effect.get(this.#roster.remotes);
-			for (const [id, member] of members) {
-				if (remotes.get(id) === member.remote) continue;
-				member.scope.close();
-				members.delete(id);
-			}
-			for (const [id, remote] of remotes) {
-				if (members.has(id)) continue;
-				const scope = new Effect();
-				members.set(id, { remote, scope });
-				for (const slot of [remote.camera, remote.screen]) {
-					scope.run((effect) => {
-						const member = effect.get(slot);
-						if (!member) return;
-						this.#addRemote(member.path);
-						effect.cleanup(() => {
-							void this.space.remove(member.path).then((source) => source?.close());
-						});
-					});
+			if (!effect.get(Local.join)) return;
+			const origin = effect.get(this.connection.origin);
+			if (!origin) return;
+			const local = effect.get(this.local.identity);
+
+			// The connection URL already carries the room, so the whole origin is the room.
+			const announced = origin.announced(Moq.Path.Pattern.subtree(Moq.Path.empty()));
+			effect.cleanup(() => announced.close());
+
+			const remotes = new Set<Moq.Path.Valid>();
+			effect.cleanup(() => {
+				for (const path of remotes) void this.space.remove(path).then((source) => source?.close());
+			});
+
+			effect.spawn(async () => {
+				for (;;) {
+					const update = await effect.race(announced.next());
+					if (!update) break;
+
+					// Same capture handling as `@moq/room`: a broad route that cannot pin the suffix names
+					// no participant to open.
+					const capture = update.captures?.[0];
+					const suffix = capture?.isLiteral ? capture.text : capture?.asPrefix();
+					if (suffix === undefined) continue;
+					const path = Moq.Path.from(suffix);
+					const parsed = parse(path);
+					if (!parsed || parsed.identity === local) continue;
+
+					if (update.kind === "present") {
+						if (remotes.has(path)) continue;
+						remotes.add(path);
+						this.#addRemote(path);
+					} else if (remotes.delete(path)) {
+						void this.space.remove(path).then((source) => source?.close());
+					}
 				}
-			}
+			});
 		});
 
 		this.#signals.timer(() => {
@@ -137,11 +142,9 @@ export class Room {
 
 		const watch = new WatchBroadcast({
 			connection: this.connection,
-			enabled: true,
 			name: path,
-			reload: false,
-			audio: { enabled: this.space.sound.enabled },
-			video: { enabled: this.space.canvas.visible },
+			audio: this.space.sound.enabled,
+			video: this.space.canvas.visible,
 		});
 
 		watch.signals.run((effect) => {

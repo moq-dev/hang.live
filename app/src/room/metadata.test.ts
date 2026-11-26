@@ -59,3 +59,53 @@ test("removed chat catalog entries clear stale messages", async () => {
 		net.close();
 	}
 });
+
+test("windowed chat delivers a repeated message twice and ignores the legacy field", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({});
+	const local = chatFields();
+	const effect = new Effect();
+	serveExtras({ net: new Signal<Net.Broadcast.Producer | undefined>(net), catalog }, locationFields(), local, effect);
+	const extras = consumeExtras({
+		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+	});
+	const seen: (string | undefined)[] = [];
+	const dispose = extras.chat.message.latest.subscribe((value) => seen.push(value));
+	try {
+		await flush();
+		local.message.latest.set("lol", true);
+		await flush();
+		local.message.latest.set("lol", true);
+		await flush();
+		// The legacy snapshot clears its message, which a windowed reader must not follow.
+		local.message.latest.set("");
+		await flush();
+		expect(seen.filter((value) => value === "lol")).toHaveLength(2);
+		expect(extras.chat.message.latest.peek()).toBe("lol");
+	} finally {
+		dispose();
+		extras.close();
+		effect.close();
+		net.close();
+	}
+});
+
+test("a malformed location never reaches the UI", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog | undefined>({ hang: { location: { track: "hang/location.json" } } });
+	const track = net.createTrack("hang/location.json", { timescale: Net.Time.Timescale.MILLI });
+	if (!track) throw new Error("hang/location.json already exists");
+	const publisher = new Json.Snapshot.Producer({ track });
+	publisher.update({ window: { position: { x: "left" } } }, Net.Time.Timestamp.now());
+	const extras = consumeExtras({
+		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+	});
+	try {
+		await flush();
+		expect(extras.location.window.position.peek()).toBeUndefined();
+	} finally {
+		extras.close();
+		publisher.finish();
+		net.close();
+	}
+});
