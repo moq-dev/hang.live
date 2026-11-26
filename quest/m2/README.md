@@ -15,3 +15,8 @@ crypto, room, and protocol pieces belong upstream in `moq-dev/moq` and are
 consumed here through the pinned `moq/` submodule.
 
 Each child quest is independently shippable.
+
+## Required
+
+- [m1](/quest/m1/README.md) - the clean, modern baseline the showcase builds on
+  (maintainer, 2026-11-25: m2 runs after m0 and m1)
