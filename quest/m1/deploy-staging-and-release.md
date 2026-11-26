@@ -21,8 +21,7 @@ The `hang.now` staging environment was removed as obsolete in [#31](https://gith
 - A `staging` env in `api/wrangler.jsonc`: Worker `api-hang-staging` on `api.new.hang.live`, its own D1 `db-hang-staging` and R2 `public-hang-staging` (served at `public.new.hang.live`), so staging migrations and uploads never touch production data.
   Recommended over sharing production's D1: migrations then run on staging one release before production, which tests them against a live Worker.
 - A `staging` env in `app/wrangler.jsonc`: Worker `hang-staging` on `new.hang.live`.
-- `app/.env.staging` with the `new.hang.live` origins, built by `vite build --mode staging`.
-  [#57](https://github.com/moq-dev/hang.live/pull/57) deletes the leftover `hang.now` file; re-add it with the new origins.
+- `app/.env.staging` with the `new.hang.live` origins, built by `vite build --mode staging`; [#57](https://github.com/moq-dev/hang.live/pull/57) deleted the leftover `hang.now` one.
 - `RELAY_URL` stays `https://cdn.moq.dev` (moq.pro), with `RELAY_PREFIX` `staging` so staging rooms never share production's `hang` broadcasts.
 - `AUTH_SECRET` is a fresh random value for staging, set with `wrangler secret put --env staging`.
 - Restore `just deploy <env>` (and `just api deploy <env>`, `just app deploy <env>`) taking `staging` or `live`, and regenerate `api/worker-configuration.d.ts`.
