@@ -70,10 +70,10 @@ export class Sound {
 		}
 
 		this.enabled = Signal.from(props?.enabled ?? false);
-		this.tts = new TTS(this.context, props?.tts);
 
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
+		this.tts = new TTS(this.context, this.gain, props?.tts);
 
 		// TODO only start loading once unmuted.
 		const notifications = new Map();
