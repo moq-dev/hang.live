@@ -106,9 +106,11 @@ export function Home(): JSX.Element {
 									{(favs) => (
 										<>
 											<div class="space-y-3">
-												<For each={showMore() ? favs() : favs().slice(0, 6)}>
-													{(favorite) => (
+												<For each={favs()}>
+													{(favorite, index) => (
 														<FavoriteRoom
+															// Collapsed cards stay mounted so their rooms still count toward the badge.
+															hidden={!showMore() && index() >= 6}
 															room={favorite.room}
 															createdAt={favorite.created_at}
 															onRemove={handleRemove}
@@ -159,6 +161,7 @@ export function Home(): JSX.Element {
 }
 
 function FavoriteRoom(props: {
+	hidden: boolean;
 	room: string;
 	createdAt: number;
 	onRemove: (room: string) => void;
@@ -190,6 +193,7 @@ function FavoriteRoom(props: {
 		<div
 			class="group relative bg-gray-800/30 rounded-xl px-5 py-3 hover:bg-gray-800/50 transition-all flex flex-col gap-3"
 			classList={{
+				hidden: props.hidden,
 				"opacity-50 pointer-events-none": removing(),
 			}}
 		>

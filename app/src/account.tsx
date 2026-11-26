@@ -1,3 +1,4 @@
+import { Signal } from "@moq/signals";
 import { createEffect, createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -155,7 +156,11 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 	const [message, setMessage] = createSignal<{ type: "success" | "error"; text: string } | undefined>(undefined);
 	const [randomClicks, setRandomClicks] = createSignal(0);
 
-	const local = new Local();
+	// Preview edits on private signals; the shared account settings change only on save.
+	const local = new Local({
+		name: new Signal<string | undefined>(props.info.name),
+		avatar: new Signal<string | undefined>(props.info.avatar),
+	});
 	onCleanup(() => local.close());
 
 	// The avatar to display: one object URL per chosen file, revoked when replaced or unmounted.
@@ -223,6 +228,7 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 		setSaving(true);
 		setMessage(undefined);
 
+		const submitted = name();
 		try {
 			// Make single request to the unified endpoint
 			const response = await Api.client.routes.account.info.$put({
@@ -240,6 +246,8 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 			const updatedInfo = await response.json();
 			setInfo(updatedInfo);
 			setAvatar(updatedInfo.avatar);
+			// Show the name as the API stored it (trimmed), unless it was edited mid-save.
+			if (name() === submitted) setName(updatedInfo.name);
 
 			// Update the global SettingsStore after successful save
 			Settings.account.name.set(updatedInfo.name);
