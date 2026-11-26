@@ -22,78 +22,95 @@ Test.test("relay readiness accepts terminal styling in CI logs", () => {
 	Test.expect(relayAddress('listening addr=127.0.0.1:444 kind="quic"')).toBeUndefined();
 });
 
+// One relay and one Vite server for every browser test.
+let relay: Bun.Subprocess<"ignore", "ignore", "pipe"> | undefined;
+let relayOutput: Promise<void> | undefined;
+let relayLog = "";
+let relayUrl = "";
+let server: Vite.ViteDevServer | undefined;
+let base: URL;
+
+Test.beforeAll(async () => {
+	const ready = Promise.withResolvers<string>();
+	relay = Bun.spawn(
+		[
+			"moq-relay",
+			"--listen",
+			"127.0.0.1:0",
+			"--listen-tls-generate",
+			"localhost",
+			"--web-http-listen",
+			"127.0.0.1:0",
+			"--auth-public=",
+			"--drain-timeout",
+			"0s",
+		],
+		{
+			stdin: "ignore",
+			stdout: "ignore",
+			stderr: "pipe",
+			env: { ...Process.env, RUST_LOG: "warn,moq_relay::web=info" },
+		},
+	);
+	const stderr = relay.stderr;
+	relayOutput = (async () => {
+		try {
+			const decoder = new TextDecoder();
+			for await (const chunk of stderr) {
+				relayLog += decoder.decode(chunk, { stream: true });
+				const address = relayAddress(relayLog);
+				if (address) ready.resolve(`ws://${address}`);
+			}
+			ready.reject(new Error(`Relay exited before listening: ${relayLog}`));
+		} catch (error) {
+			ready.reject(error);
+		}
+	})();
+	const deadline = setTimeout(() => ready.reject(new Error(`Relay did not start: ${relayLog}`)), 10_000);
+	try {
+		relayUrl = await ready.promise;
+	} finally {
+		clearTimeout(deadline);
+	}
+	server = await Vite.createServer({
+		root: app,
+		configFile: Path.join(app, "vite.config.ts"),
+		server: { host: "127.0.0.1", port: 0, strictPort: false, open: false },
+	});
+	await server.listen();
+	const local = server.resolvedUrls?.local[0];
+	if (!local) throw new Error("Vite did not report a local URL");
+	base = new URL(local);
+});
+
+Test.afterAll(async () => {
+	relay?.kill();
+	const cleanup = await Promise.allSettled([server?.close(), relay?.exited, relayOutput]);
+	const failures = cleanup.filter((result) => result.status === "rejected").map((result) => result.reason);
+	if (failures.length) throw new AggregateError(failures, "Browser test cleanup failed");
+});
+
+// Fake capture devices stand in for a camera and microphone.
+const FAKE_MEDIA = [
+	"--use-fake-device-for-media-stream",
+	"--use-fake-ui-for-media-stream",
+	"--autoplay-policy=no-user-gesture-required",
+];
+
+function launch(args: string[]): Promise<Playwright.Browser> {
+	return Playwright.chromium.launch({ channel: "chromium", headless: true, args });
+}
+
 Test.test(
 	"input controls recover capture and remote decoded media",
 	async () => {
-		let relay: Bun.Subprocess<"ignore", "ignore", "pipe"> | undefined;
-		let relayOutput: Promise<void> | undefined;
-		let relayLog = "";
-		let server: Vite.ViteDevServer | undefined;
-		let browser: Playwright.Browser | undefined;
-		let cleanup: PromiseSettledResult<unknown>[] = [];
+		const browser = await launch(FAKE_MEDIA);
 		try {
-			const ready = Promise.withResolvers<string>();
-			relay = Bun.spawn(
-				[
-					"moq-relay",
-					"--listen",
-					"127.0.0.1:0",
-					"--listen-tls-generate",
-					"localhost",
-					"--web-http-listen",
-					"127.0.0.1:0",
-					"--auth-public=",
-					"--drain-timeout",
-					"0s",
-				],
-				{
-					stdin: "ignore",
-					stdout: "ignore",
-					stderr: "pipe",
-					env: { ...Process.env, RUST_LOG: "warn,moq_relay::web=info" },
-				},
-			);
-			const stderr = relay.stderr;
-			relayOutput = (async () => {
-				try {
-					const decoder = new TextDecoder();
-					for await (const chunk of stderr) {
-						relayLog += decoder.decode(chunk, { stream: true });
-						const address = relayAddress(relayLog);
-						if (address) ready.resolve(`ws://${address}`);
-					}
-					ready.reject(new Error(`Relay exited before listening: ${relayLog}`));
-				} catch (error) {
-					ready.reject(error);
-				}
-			})();
-			const deadline = setTimeout(() => ready.reject(new Error(`Relay did not start: ${relayLog}`)), 10_000);
-			let relayUrl: string;
-			try {
-				relayUrl = await ready.promise;
-			} finally {
-				clearTimeout(deadline);
-			}
-			server = await Vite.createServer({
-				root: app,
-				configFile: Path.join(app, "vite.config.ts"),
-				server: { host: "127.0.0.1", port: 0, strictPort: false, open: false },
-			});
-			await server.listen();
-			browser = await Playwright.chromium.launch({
-				channel: "chromium",
-				headless: true,
-				args: [
-					"--use-fake-device-for-media-stream",
-					"--use-fake-ui-for-media-stream",
-					"--autoplay-policy=no-user-gesture-required",
-				],
-			});
 			const publisher = await browser.newPage();
 			const viewer = await browser.newPage();
 			const errors: string[] = [];
 			for (const page of [publisher, viewer]) page.on("pageerror", (error) => errors.push(error.message));
-			const url = new URL("test/media.html", server.resolvedUrls?.local[0]);
+			const url = new URL("test/media.html", base);
 			url.searchParams.set("relay", relayUrl);
 			for (const kind of ["camera", "microphone"] as const) {
 				const missing = await browser.newPage();
@@ -266,11 +283,81 @@ Test.test(
 			console.error(relayLog);
 			throw error;
 		} finally {
-			relay?.kill();
-			cleanup = await Promise.allSettled([browser?.close(), server?.close(), relay?.exited, relayOutput]);
+			await browser.close();
 		}
-		const failures = cleanup.filter((result) => result.status === "rejected").map((result) => result.reason);
-		if (failures.length) throw new AggregateError(failures, "Media test cleanup failed");
 	},
 	90_000,
 );
+
+Test.test(
+	"room tiles draw each peer through WebGL and again after a lost context",
+	async () => {
+		const browser = await launch([...FAKE_MEDIA, "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]);
+		try {
+			const errors: string[] = [];
+			const alice = await browser.newPage();
+			const bob = await browser.newPage();
+			const pages = [alice, bob];
+			for (const page of pages) {
+				page.on("pageerror", (error) => errors.push(error.message));
+				// Chromium reports GL errors as WebGL console messages, and the canvas logs a throwing frame.
+				page.on("console", (message) => {
+					if (/WebGL|render error/.test(message.text())) errors.push(message.text());
+				});
+			}
+			const url = new URL("test/room.html", base);
+			url.searchParams.set("relay", relayUrl);
+			for (const [page, name] of [
+				[alice, "alice"],
+				[bob, "bob"],
+			] as const) {
+				url.searchParams.set("name", name);
+				await page.goto(url.href);
+			}
+			// Each page shows exactly the other's tile, drawn after its video frame reached the GPU.
+			const drawn = (page: Playwright.Page, previous?: number) =>
+				page.waitForFunction(
+					(previous) => {
+						const { remotes } = window.roomTest.state();
+						return remotes.length === 1 && remotes[0].textures !== previous && (remotes[0].drawn ?? 0) > 0;
+					},
+					previous,
+					{ timeout: 10_000 },
+				);
+			await Promise.all(pages.map((page) => drawn(page)));
+
+			const before = await alice.evaluate(() => window.roomTest.state().remotes[0].textures);
+			await alice.evaluate(() => window.roomTest.lose());
+			await alice.waitForFunction(() => !window.roomTest.state().context);
+			await alice.evaluate(() => window.roomTest.restore());
+			await drawn(alice, before);
+
+			for (const page of pages) {
+				Test.expect(await page.evaluate(() => window.roomTest.state().errors)).toEqual([]);
+				await page.evaluate(() => window.roomTest.close());
+			}
+			Test.expect(errors).toEqual([]);
+		} catch (error) {
+			console.error(relayLog);
+			throw error;
+		} finally {
+			await browser.close();
+		}
+	},
+	30_000,
+);
+
+Test.test("a browser without WebGL2 gets the room page's fallback", async () => {
+	const browser = await launch(["--disable-webgl"]);
+	try {
+		const page = await browser.newPage();
+		const errors: string[] = [];
+		page.on("pageerror", (error) => errors.push(error.message));
+		await page.goto(new URL("@smoke", base).href);
+		Test.expect(await page.evaluate(() => !document.createElement("canvas").getContext("webgl2"))).toBe(true);
+		await page.getByRole("heading", { name: "WebGL2 is required" }).waitFor();
+		Test.expect(errors).toEqual([]);
+	} finally {
+		await browser.close();
+	}
+});

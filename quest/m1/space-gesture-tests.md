@@ -25,10 +25,5 @@ older home.
 
 Rejected: driving Space itself in happy-dom, since constructing a `Broadcast`
 pulls in `AudioContext`, the chat worker, and the video pipeline; exercising
-gestures only in a real browser, which is slower and covered by the room-page
-smoke quest instead.
-
-## Related
-
-- [Room page browser smoke](/quest/m1/room-browser-smoke.md) - covers the
-  rendering half Space's unit tests cannot
+gestures only in a real browser, which is slower and left to the room-page
+smoke in `app/test/media.browser.ts`.
