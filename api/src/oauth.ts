@@ -402,7 +402,7 @@ export function appleName(user: string): string | undefined {
 }
 
 // Whether the API may send a finished login to this URL.
-// Parsed rather than prefix-matched, so `https://hang.live.evil.com` and `http://localhost:80@evil.com` fail.
+// Parsed rather than prefix-matched, so `https://hang.live.evil.com` and `https://hang.live@evil.com` fail.
 export function validRedirect(env: { APP_URL: string }, redirect: string): boolean {
 	let url: URL;
 	try {
@@ -413,14 +413,7 @@ export function validRedirect(env: { APP_URL: string }, redirect: string): boole
 
 	if (url.username || url.password) return false;
 
-	// The web app.
-	if (url.origin === new URL(env.APP_URL).origin) return true;
-	// The native app's loopback OAuth server, on whatever port it picked.
-	if (url.protocol === "http:" && url.hostname === "localhost") return true;
-	// The native app's deep link.
-	if (url.protocol === "hang:" && url.host === "oauth") return true;
-
-	return false;
+	return url.origin === new URL(env.APP_URL).origin;
 }
 
 function parseState(raw: string): OauthState {
@@ -493,14 +486,6 @@ export const router = rpc
 				provider: providerIdSchema,
 			}),
 		),
-		// Installed native builds older than the login code exchange send `random`, and open whatever `url`
-		// comes back; send them to the download page rather than a dead login.
-		async (c, next) => {
-			if (c.req.query("random") !== undefined && c.req.query("challenge") === undefined) {
-				return c.json({ url: `${c.var.ctx.env.APP_URL}/download` }, 200);
-			}
-			return await next();
-		},
 		rpc.withQuery(oauthStateSchema),
 		async (c) => {
 			const ctx = c.var.ctx;
@@ -584,7 +569,7 @@ export const router = rpc
 			await provider.link(user.id, oauthUser);
 
 			// Hand the browser a short-lived code instead of the session token, since URLs leak
-			// through history, logs, and the native app's unauthenticated loopback server.
+			// through history and logs.
 			const code = await ctx.auth.createCode(user.id, state.challenge);
 			const redirect = new URL(state.redirect);
 			redirect.searchParams.set("code", code);

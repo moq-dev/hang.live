@@ -54,7 +54,6 @@ mock.module("./room/local", () => ({
 		close() {}
 	},
 }));
-mock.module("./tauri", () => ({ Api: null }));
 mock.module("../../moq/js/watch/src/audio/render-worklet.ts?worklet", () => ({
 	default: async () => "blob:fake-render",
 }));

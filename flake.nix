@@ -13,7 +13,6 @@
     moq.url = "github:moq-dev/moq/28d8eb84d640c2db6b516e1a1115c34400975787";
     nixpkgs.follows = "moq/nixpkgs";
     flake-utils.follows = "moq/flake-utils";
-    rust-overlay.follows = "moq/rust-overlay";
     # Quest's CLI, which serves the guide and the skills its stubs call.
     # Bump the tag, then rerun `quest init`.
     quest = {
@@ -28,17 +27,13 @@
       self,
       nixpkgs,
       flake-utils,
-      rust-overlay,
       moq,
       quest,
     }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (
       system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ rust-overlay.overlays.default ];
-        };
+        pkgs = import nixpkgs { inherit system; };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -51,16 +46,6 @@
             }
           }";
           nativeBuildInputs = with pkgs; [
-            cargo-sort
-            cargo-shear
-            cargo-edit
-            cargo-tauri
-            (rust-bin.stable."1.98.1".minimal.override {
-              extensions = [
-                "clippy"
-                "rustfmt"
-              ];
-            })
             bun
             just
             rsync
@@ -68,8 +53,6 @@
             quest.packages.${system}.default
             moq.packages.${system}.moq-relay
             moq.packages.${system}.moq
-            imagemagick
-            libicns
           ];
         };
 

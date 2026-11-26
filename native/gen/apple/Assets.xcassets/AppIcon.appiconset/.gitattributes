@@ -1,1 +1,0 @@
-*.{opus,webm,mp4,mp3,onnx,png,ico,icns} filter=lfs diff=lfs merge=lfs -text
