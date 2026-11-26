@@ -104,7 +104,7 @@ export function PreviewRoom(props: { connection: Moq.Connection }): JSX.Element 
 					</div>
 				}
 			>
-				<div class="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+				<div class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500">
 					<For each={members().values().toArray()}>
 						{(member) => <Show when={member}>{(member) => <PreviewMember member={member()} />}</Show>}
 					</For>
