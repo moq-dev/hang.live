@@ -6,7 +6,8 @@ permissions:
 on:
   pull_request:
     branches: ["main"]
-    types: [opened, synchronize, reopened, ready_for_review]
+    # Converting to a draft or closing cancels the in-flight run through the concurrency group.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, closed]
 
 # Cancel a superseded run so a newer push to the PR frees its runner.
 concurrency:
@@ -16,8 +17,10 @@ concurrency:
 jobs:
   check:
     name: Check
-    if: ${{ !github.event.pull_request.draft }}
+    if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
+    # Backstop a hang instead of holding the runner for the 6-hour default.
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
