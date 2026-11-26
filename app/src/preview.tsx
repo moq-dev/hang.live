@@ -2,6 +2,7 @@ import * as Moq from "@moq/net";
 import { createEffect, For, onCleanup, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Preview from "./room/preview";
+import * as Sanitize from "./room/sanitize";
 import { solid } from "./util/solid";
 
 export function PreviewRoomCompact(props: {
@@ -44,7 +45,14 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 					style={{ "flex-basis": "calc(50% - 0.25rem)", "min-width": "140px" }}
 				>
 					<div class="relative">
-						<img src={info().avatar} alt={info().name} class="w-8 h-8 rounded-lg object-cover" />
+						<Show
+							when={Sanitize.peerAvatar(info().avatar)}
+							fallback={<div class="w-8 h-8 bg-gray-500 rounded-lg" />}
+						>
+							{(avatar) => (
+								<img src={avatar()} alt={info().name} class="w-8 h-8 rounded-lg object-cover" />
+							)}
+						</Show>
 					</div>
 					<div class="flex-1 min-w-0">
 						<div class="text-xs font-medium text-white truncate">{info().name}</div>
@@ -136,12 +144,17 @@ function PreviewMember(props: { member: Preview.Member }): JSX.Element {
 								"ring-2 ring-gray-600 group-hover:ring-gray-500": !info().video,
 							}}
 						>
-							<Show when={info().avatar} fallback={<div class="w-full h-full bg-gray-500 rounded-lg" />}>
-								<img
-									src={info().avatar}
-									alt={info().name}
-									class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-								/>
+							<Show
+								when={Sanitize.peerAvatar(info().avatar)}
+								fallback={<div class="w-full h-full bg-gray-500 rounded-lg" />}
+							>
+								{(avatar) => (
+									<img
+										src={avatar()}
+										alt={info().name}
+										class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+									/>
+								)}
 							</Show>
 						</div>
 					</div>

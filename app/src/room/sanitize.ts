@@ -78,3 +78,8 @@ export function avatar(url: string, origins: { app: string; public: string }): b
 	const bucket = origins.public.replace(/\/+$/, "");
 	return parsed.href.startsWith(`${bucket}/avatar/`);
 }
+
+// A peer's avatar URL when this build may load it, otherwise undefined.
+export function peerAvatar(url: string | undefined): string | undefined {
+	return url && avatar(url, { app: location.href, public: import.meta.env.VITE_PUBLIC_URL }) ? url : undefined;
+}

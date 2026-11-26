@@ -114,11 +114,7 @@ export class Video {
 
 	#runAvatar(effect: Effect) {
 		// The peer chose this URL, so load it only from our own origins; anywhere else would learn our IP.
-		const peer = effect.get(this.broadcast.source.user.avatar);
-		const safe =
-			peer && Sanitize.avatar(peer, { app: location.href, public: import.meta.env.VITE_PUBLIC_URL })
-				? peer
-				: undefined;
+		const safe = Sanitize.peerAvatar(effect.get(this.broadcast.source.user.avatar));
 
 		// Keep the last avatar while the user details are missing, and pick a random one only for a tile that never had one.
 		const avatar = safe || this.#avatar || Api.randomAvatar();

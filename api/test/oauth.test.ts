@@ -402,3 +402,37 @@ test("an account still on a provider CDN avatar moves to R2 on its next login", 
 
 	expect((await info(app, await login(app, "discord"))).avatar).toStartWith(`${env.R2_PUBLIC_URL}/avatar/`);
 });
+
+test("a login with no provider avatar leaves a legacy one for a later login to copy", async () => {
+	const { app, sqlite } = harness();
+	discord({ id: "1", email: "a@example.com", verified: true, avatar: null });
+	const token = await login(app, "discord");
+	sqlite.exec("UPDATE accounts SET avatar = 'https://cdn.discordapp.com/avatars/1/old.png', avatar_type = 'url'");
+
+	await login(app, "discord");
+	expect((await info(app, token)).avatar).toBe("https://cdn.discordapp.com/avatars/1/old.png");
+});
+
+test("migration never overwrites an avatar picked after it read the legacy one", async () => {
+	const { ctx, bucket, sqlite } = harness();
+	const { id } = await ctx.account.create({ name: "Alice", email: "alice@example.com" });
+	sqlite.exec("UPDATE accounts SET avatar = '/avatar/3.svg', avatar_type = 'url'");
+
+	await ctx.account.replaceExternalAvatar(id, "https://cdn.discordapp.com/avatars/1/old.png", {
+		data: PNG,
+		extension: "png",
+		contentType: "image/png",
+	});
+	expect((await ctx.account.get(id))?.avatar).toBe("/avatar/3.svg");
+	expect(bucket.objects.size).toBe(0);
+});
+
+test("an R2 failure at signup still signs in, on a bundled default", async () => {
+	const { app, bucket } = harness();
+	bucket.put = async () => {
+		throw new Error("R2 unavailable");
+	};
+	discordWithAvatar(() => new Response(PNG));
+
+	expect((await info(app, await login(app, "discord"))).avatar).toMatch(/^\/avatar\/\d+\.svg$/);
+});

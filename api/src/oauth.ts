@@ -578,9 +578,15 @@ export const router = rpc
 				}
 			}
 
-			// Accounts from before the copy still point at a provider CDN; move them over as they sign in.
-			if (await ctx.account.hasExternalAvatar(user.id)) {
-				user = await ctx.account.update(user.id, { avatar: (await copyAvatar()) ?? Avatar.random() });
+			// Accounts from before the copy still point at a provider CDN; move them over as they sign in with one.
+			// Peers refuse the old URL either way, so a provider without an avatar or a failed copy leaves it be.
+			const external = await ctx.account.externalAvatar(user.id);
+			const upload = external ? await copyAvatar() : undefined;
+			if (external && upload) {
+				const id = user.id;
+				await ctx.account.replaceExternalAvatar(id, external, upload).catch((err) => {
+					console.error(`failed to migrate avatar for ${id}`, err);
+				});
 			}
 
 			await provider.link(user.id, oauthUser);

@@ -128,7 +128,13 @@ export class Context {
 		const id = Uuid.v4();
 		const now = new Date();
 
-		const avatar = info.avatar ? await this.storage.upload("avatar", info.avatar) : undefined;
+		// The avatar is cosmetic, so an R2 failure leaves a bundled default rather than failing signup.
+		const avatar = info.avatar
+			? await this.storage.upload("avatar", info.avatar).catch((err) => {
+					console.error("failed to store signup avatar", err);
+					return undefined;
+				})
+			: undefined;
 
 		const user: NewRow = {
 			name: info.name,
@@ -156,8 +162,8 @@ export class Context {
 		return res;
 	}
 
-	// Whether the account's avatar is an external URL, from before signup copied provider avatars into R2.
-	async hasExternalAvatar(id: Id): Promise<boolean> {
+	// The external avatar URL an account still holds from before signup copied provider avatars into R2.
+	async externalAvatar(id: Id): Promise<string | undefined> {
 		const row = (
 			await this.db
 				.select({ avatar: table.avatar, avatarType: table.avatarType })
@@ -165,25 +171,38 @@ export class Context {
 				.where(eq(table.id, id))
 				.limit(1)
 		).at(0);
-		return row?.avatarType === "url" && !Avatar.isDefault(row.avatar);
+		return row?.avatarType === "url" && !Avatar.isDefault(row.avatar) ? row.avatar : undefined;
 	}
 
-	// A File is a client upload still to validate; an Upload was already validated, such as a copied provider avatar.
-	async update(id: Id, update: { name?: string; avatar?: File | Avatar.Upload | string }): Promise<Info> {
+	// Swap an external avatar for a stored copy, unless the account picked another avatar meanwhile.
+	async replaceExternalAvatar(id: Id, external: string, upload: Avatar.Upload): Promise<void> {
+		const key = await this.storage.upload("avatar", upload);
+		const updated = await this.db
+			.update(table)
+			.set({ avatar: key, avatarType: "r2", updatedAt: new Date() })
+			.where(and(eq(table.id, id), eq(table.avatarType, "url"), eq(table.avatar, external)))
+			.returning({ id: table.id })
+			.catch(async (err) => {
+				await this.storage.delete("avatar", key);
+				throw err;
+			});
+		if (updated.length === 0) await this.storage.delete("avatar", key);
+	}
+
+	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {
 		let avatar: string | undefined;
 		let avatarType: Avatar.Type | undefined;
 
 		// Validate and upload before touching the old avatar, so a rejected upload loses nothing.
-		if (typeof update.avatar === "string") {
+		if (update.avatar instanceof File) {
+			avatar = await this.storage.upload("avatar", await Avatar.validate(update.avatar));
+			avatarType = "r2";
+		} else if (update.avatar !== undefined) {
 			if (!Avatar.isDefault(update.avatar)) {
 				throw new HTTPException(400, { message: "Invalid avatar URL" });
 			}
 			avatar = update.avatar;
 			avatarType = "url";
-		} else if (update.avatar) {
-			const upload = update.avatar instanceof File ? await Avatar.validate(update.avatar) : update.avatar;
-			avatar = await this.storage.upload("avatar", upload);
-			avatarType = "r2";
 		}
 
 		const old = avatar
