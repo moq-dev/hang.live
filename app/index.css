@@ -176,3 +176,23 @@ input[type="range"] {
 .animate-throb {
 	animation: throb 2s ease-in-out infinite;
 }
+
+/* Captions over a tile scale with it: readable on a small tile, not shouting on a large one. */
+.hang-captions {
+	container-type: size;
+}
+
+.hang-captions [part="captions"] {
+	--cue-font-size: clamp(12px, 7cqh, 28px);
+}
+
+/* The speaker's own caption, matching the ones the renderer draws for everyone else. */
+.hang-cue {
+	display: inline-block;
+	font-size: clamp(12px, 7cqh, 28px);
+	line-height: 1.2;
+	padding: 0.4em 0.6em;
+	color: white;
+	background-color: rgba(0, 0, 0, 0.8);
+	white-space: pre-wrap;
+}

@@ -1,6 +1,7 @@
 import { Effect, Signal } from "@moq/signals";
 import { Audio } from "./audio";
 import { type Canvas, timestamp } from "./canvas";
+import { Overlay as Captions } from "./captions/overlay";
 import { Chat } from "./chat";
 import { Debug } from "./debug";
 import type { FakeBroadcast } from "./fake";
@@ -47,6 +48,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	chat: Chat;
 	name: Name;
 	debug: Debug;
+	captions: Captions;
 
 	// The current chat message, if any.
 	message = new Signal<HTMLElement | undefined>(undefined);
@@ -123,6 +125,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		startPosition = startPosition.normalize().mult(viewport.length()).add(viewport.div(2));
 
 		this.bounds = new Signal(new Bounds(startPosition, this.video.targetSize.peek()));
+		this.captions = new Captions(this);
 
 		this.signals.run(this.#runLocation.bind(this));
 		this.signals.run(this.#runChat.bind(this));
@@ -320,6 +323,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.chat.close();
 		this.name.close();
 		this.debug.close();
+		this.captions.close();
 
 		// NOTE: Don't close the source broadcast; we need it for the local preview.
 		// this.source.close();

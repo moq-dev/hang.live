@@ -4,6 +4,7 @@ import { createSelector, createSignal, Match, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { z } from "zod";
 import type { Tab } from "./components/meme-selector";
+import type { Captioner } from "./room/captions/publish";
 import type { Sound } from "./room/sound";
 import * as Speaker from "./speaker";
 import { solid } from "./util/solid";
@@ -23,6 +24,39 @@ function loadTTS() {
 		}
 	}
 	return "low";
+}
+
+/** The languages captions can be transcribed from, by BCP-47 tag; each is one Whisper knows. */
+export const LANGUAGES = [
+	"en",
+	"es",
+	"fr",
+	"de",
+	"it",
+	"pt",
+	"nl",
+	"pl",
+	"ru",
+	"uk",
+	"tr",
+	"ar",
+	"hi",
+	"ja",
+	"ko",
+	"zh",
+];
+
+/** A language's name in the reader's own language, such as "Spanish" for `es`. */
+export function languageName(tag: string): string {
+	return new Intl.DisplayNames([navigator.language], { type: "language" }).of(tag) ?? tag;
+}
+
+// The stored spoken language, else the browser's when captions support it, else English.
+function loadSpoken(): string {
+	const stored = localStorage.getItem("settings.captions.speak");
+	if (stored && LANGUAGES.includes(stored)) return stored;
+	const browser = navigator.language.split("-")[0].toLowerCase();
+	return LANGUAGES.includes(browser) ? browser : "en";
 }
 
 // Gain from the microphone's 0-200% slider; anything else, NaN included, resets to unity.
@@ -52,8 +86,14 @@ export const Settings = {
 	},
 
 	captions: {
+		// Show other participants' captions.
 		render: new Signal(localStorage.getItem("settings.captions.render") !== "false"),
-		capture: new Signal(supportsWebGPU() ? localStorage.getItem("settings.captions.capture") !== "false" : false),
+		// Transcribe my microphone. Opt-in, since it downloads a speech model of about 100 MB.
+		capture: new Signal(supportsWebGPU() && localStorage.getItem("settings.captions.transcribe") === "true"),
+		// The language I speak, which my captions are published in.
+		speak: new Signal(loadSpoken()),
+		// The language I read captions in, or undefined for the browser's.
+		read: new Signal<string | undefined>(localStorage.getItem("settings.captions.read") ?? undefined),
 	},
 
 	// Device states that persist across sessions
@@ -127,16 +167,23 @@ effect.subscribe(Settings.microphone.gain, (gain) => {
 	localStorage.setItem("settings.microphone.gain", gain.toString());
 });
 
-effect.subscribe(Settings.captions.render, (closedCaptions) => {
-	localStorage.setItem("settings.captions.render", closedCaptions.toString());
+effect.subscribe(Settings.captions.render, (render) => {
+	localStorage.setItem("settings.captions.render", render.toString());
 });
 
-effect.subscribe(Settings.captions.capture, (transcription) => {
-	if (!supportsWebGPU()) {
-		// Don't save this setting if WebGPU is not supported.
-		localStorage.removeItem("settings.captions.capture");
+effect.subscribe(Settings.captions.capture, (capture) => {
+	localStorage.setItem("settings.captions.transcribe", capture.toString());
+});
+
+effect.subscribe(Settings.captions.speak, (language) => {
+	localStorage.setItem("settings.captions.speak", language);
+});
+
+effect.subscribe(Settings.captions.read, (language) => {
+	if (language) {
+		localStorage.setItem("settings.captions.read", language);
 	} else {
-		localStorage.setItem("settings.captions.capture", transcription.toString());
+		localStorage.removeItem("settings.captions.read");
 	}
 });
 
@@ -226,7 +273,7 @@ effect.subscribe(Settings.debug.tracks, (enabled) => {
 
 export default Settings;
 
-export function Modal(props: { sound: Sound }): JSX.Element {
+export function Modal(props: { sound: Sound; captioner: Captioner }): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const debugTracks = solid(Settings.debug.tracks);
 	const tts = createSelector(solid(Settings.audio.tts));
@@ -376,6 +423,8 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 				</div>
 			</button>
 			<div class="h-px bg-white/10" />
+			<Captions captioner={props.captioner} />
+			<div class="h-px bg-white/10" />
 			{/* Device Pixel Ratio */}
 			<div class="flex flex-wrap gap-4">
 				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
@@ -434,6 +483,83 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 					onChange={() => Settings.debug.tracks.update((p) => !p)}
 					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors w-18"
 				/>
+			</div>
+		</div>
+	);
+}
+
+// Transcription of the microphone and the language captions are spoken and read in.
+function Captions(props: { captioner: Captioner }): JSX.Element {
+	const capture = solid(Settings.captions.capture);
+	const speak = solid(Settings.captions.speak);
+	const read = solid(Settings.captions.read);
+	const status = solid(props.captioner.status);
+	const webGPUSupported = supportsWebGPU();
+
+	const select = "bg-white/8 rounded-md px-2 py-1 text-xs text-white cursor-pointer";
+
+	const describe = (): string => {
+		if (!webGPUSupported) return "Transcribing your microphone requires WebGPU.";
+		const current = status();
+		switch (current.kind) {
+			case "off":
+				return "Transcribe your microphone on this device so others can read along.";
+			case "loading":
+				return `Downloading the speech model: ${Math.round(current.progress * 100)}%`;
+			case "ready":
+				return "Transcribing your microphone.";
+			case "error":
+				return `Captions stopped: ${current.message}`;
+		}
+	};
+
+	return (
+		<div class="flex flex-col gap-3">
+			<div class="flex flex-wrap gap-4">
+				<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 flex-shrink-0 self-start">
+					<span class="icon-[mdi--closed-caption] text-lg text-white/70" />
+				</div>
+				<div class="flex flex-col gap-0.5 flex-grow">
+					<span class="text-white/90 font-medium">Live Captions</span>
+					<span class="text-xs text-white/50">{describe()}</span>
+				</div>
+				<input
+					type="checkbox"
+					aria-label="Transcribe my microphone"
+					checked={capture()}
+					disabled={!webGPUSupported}
+					onChange={() => Settings.captions.capture.update((p) => !p)}
+					class="cursor-pointer accent-blue-500 group-hover:accent-blue-400 transition-colors w-18"
+				/>
+			</div>
+			<div class="flex flex-wrap gap-4 pl-12 text-xs text-white/70">
+				<label class="flex items-center gap-2">
+					I speak
+					<select
+						class={select}
+						aria-label="Spoken language"
+						value={speak()}
+						onChange={(e) => Settings.captions.speak.set(e.currentTarget.value)}
+					>
+						{LANGUAGES.map((tag) => (
+							<option value={tag}>{languageName(tag)}</option>
+						))}
+					</select>
+				</label>
+				<label class="flex items-center gap-2">
+					Show captions in
+					<select
+						class={select}
+						aria-label="Caption language"
+						value={read() ?? ""}
+						onChange={(e) => Settings.captions.read.set(e.currentTarget.value || undefined)}
+					>
+						<option value="">My browser's language</option>
+						{LANGUAGES.map((tag) => (
+							<option value={tag}>{languageName(tag)}</option>
+						))}
+					</select>
+				</label>
 			</div>
 		</div>
 	);

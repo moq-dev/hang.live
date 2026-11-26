@@ -45,6 +45,14 @@ export class WatchBroadcast {
 		flip: Signal<boolean>;
 		source: Getter<undefined>;
 	};
+	readonly text: {
+		/** Every caption track the broadcast offers, by name. */
+		available: Getter<Record<string, Catalog.TextConfig>>;
+		/** The caption track to show, or undefined for none. */
+		target: Signal<string | undefined>;
+		/** Where to draw the captions, or undefined to not download them. */
+		container: Signal<HTMLElement | undefined>;
+	};
 	readonly audio: {
 		root: Getter<AudioNode | undefined>;
 		catalog: Getter<Catalog.Audio | undefined>;
@@ -56,6 +64,10 @@ export class WatchBroadcast {
 	readonly signals = new Effect();
 
 	constructor(props: WatchBroadcastProps) {
+		const text = {
+			target: new Signal<string | undefined>(undefined),
+			container: new Signal<HTMLElement | undefined>(undefined),
+		};
 		const visible = new Signal<Watch.Video.Visible>("never");
 		const muted = new Signal(true);
 		this.signals.run((effect) => visible.set(effect.get(props.video) ? "always" : "never"));
@@ -68,6 +80,7 @@ export class WatchBroadcast {
 			follow: false,
 			video: { target: this.#target, visible },
 			audio: { muted, volume: 0 },
+			text,
 			// Share the connection's receive estimate with every other tile, so ABR and probing see the whole room.
 			viewer: { viewers: props.connection.viewers },
 		});
@@ -100,6 +113,7 @@ export class WatchBroadcast {
 			flip: this.#flip,
 			source: new Signal(undefined),
 		};
+		this.text = { available: this.#player.text.out.available, ...text };
 		this.audio = {
 			root: decoder.audio.out.root,
 			catalog: decoder.audio.source.out.catalog,

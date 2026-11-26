@@ -19,6 +19,7 @@ import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
 import type { Canvas } from "./room/canvas";
+import type { Captioner } from "./room/captions/publish";
 import type { HangLocalSource, Local } from "./room/local";
 import type { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
@@ -227,7 +228,8 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						}}
 					>
 						<Volume />
-						<Advanced sound={props.room.space.sound} />
+						<ClosedCaptions />
+						<Advanced sound={props.room.space.sound} captioner={props.local.captioner} />
 						<Fullscreen canvas={props.canvas} />
 					</div>
 					<Show when={mobile() && expandedSection() === "settings"}>
@@ -1014,31 +1016,27 @@ function Volume(): JSX.Element {
 	);
 }
 
-// Temporarily disabled - Caption generation disabled
-// function ClosedCaptions(): JSX.Element {
-// 	const toggle = () => {
-// 		Settings.renderCaptions.update((prev) => !prev);
-// 	};
+// Show or hide everyone else's captions.
+function ClosedCaptions(): JSX.Element {
+	const enabled = solid(Settings.captions.render);
 
-// 	const enabled = solid(Settings.renderCaptions);
+	return (
+		<Tooltip content={enabled() ? "Hide captions" : "Show captions"} position="top">
+			<button
+				type="button"
+				onClick={() => Settings.captions.render.update((prev) => !prev)}
+				role="switch"
+				aria-checked={enabled()}
+				aria-label="Captions"
+				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
+			>
+				<span class={enabled() ? "icon-[mdi--closed-caption]" : "icon-[mdi--closed-caption-outline]"} />
+			</button>
+		</Tooltip>
+	);
+}
 
-// 	return (
-// 		<Tooltip content={enabled() ? "Disable closed captions" : "Enable closed captions"} position="top">
-// 			<button
-// 				type="button"
-// 				onClick={toggle}
-// 				role="switch"
-// 				aria-checked={enabled()}
-// 				aria-label="Toggle closed captions"
-// 				class="hover:bg-gray-700 transition-all cursor-pointer p-2 pointer-events-auto backdrop-blur-sm bg-transparent rounded"
-// 			>
-// 				{enabled() ? <IconClosedCaption /> : <IconClosedCaptionDisabled />}
-// 			</button>
-// 		</Tooltip>
-// 	);
-// }
-
-function Advanced(props: { sound: Sound }): JSX.Element {
+function Advanced(props: { sound: Sound; captioner: Captioner }): JSX.Element {
 	const [showSettings, setShowSettings] = createSignal(false);
 	const [button, setButton] = createSignal<HTMLButtonElement | undefined>(undefined);
 	const [modal, setModal] = createSignal<HTMLDivElement | undefined>(undefined);
@@ -1082,7 +1080,7 @@ function Advanced(props: { sound: Sound }): JSX.Element {
 			<Show when={showSettings()}>
 				<div ref={setModal} class="fixed z-[999] right-4 bottom-16 pointer-events-auto">
 					<div class="bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5">
-						<Modal sound={props.sound} />
+						<Modal sound={props.sound} captioner={props.captioner} />
 					</div>
 				</div>
 			</Show>

@@ -4,6 +4,7 @@ import type * as Publish from "@moq/publish";
 import { Local as RoomLocal } from "@moq/room";
 import { Effect, type Getter, Signal } from "@moq/signals";
 import Settings from "../settings";
+import { Captioner } from "./captions/publish";
 import { type ChatFields, chatFields, type LocationFields, locationFields, serveExtras } from "./metadata";
 
 export interface LocalProps {
@@ -23,6 +24,8 @@ export class Local {
 
 	readonly camera: HangLocalSource;
 	readonly share: HangLocalSource;
+	/** Live captions of the microphone, published with the camera. */
+	readonly captioner: Captioner;
 
 	readonly name: Signal<string | undefined>;
 	readonly avatar: Signal<string | undefined>;
@@ -63,8 +66,22 @@ export class Local {
 			this.core.microphone.volume.set(effect.get(Settings.microphone.gain));
 		});
 
+		// Transcribe only once joined, so the model doesn't load on the way into a room.
+		const transcribe = new Signal(false);
+		this.#signals.run((effect) => {
+			transcribe.set(effect.get(Settings.captions.capture) && effect.get(this.core.enabled));
+		});
+		this.captioner = new Captioner({
+			broadcast: this.core.camera.broadcast,
+			root: this.core.microphone.root,
+			enabled: transcribe,
+			language: Settings.captions.speak,
+		});
+		this.#signals.cleanup(() => this.captioner.close());
+
 		this.camera = new HangLocalSource({
 			broadcast: this.core.camera.broadcast,
+			captions: this.captioner.text,
 			frame: this.#frame(this.core.camera.capture),
 			display: this.core.camera.capture.out.display,
 			audioRoot: this.core.microphone.root,
@@ -82,6 +99,7 @@ export class Local {
 			frame: this.#frame(this.core.screen.capture),
 			display: this.core.screen.capture.out.display,
 			audioRoot: this.core.screen.audio.root,
+			captions: new Signal(undefined),
 			videoSource: new Signal<unknown>(undefined),
 			audioSource: new Signal<unknown>(undefined),
 			user: {
@@ -169,6 +187,7 @@ export class Local {
 
 export interface HangLocalSourceProps {
 	broadcast: Publish.Broadcast;
+	captions: Getter<string | undefined>;
 	frame: Getter<VideoFrame | undefined>;
 	display: Getter<{ width: number; height: number } | undefined>;
 	audioRoot: Getter<AudioNode | undefined>;
@@ -207,10 +226,13 @@ export class HangLocalSource {
 		active: Getter<undefined>;
 	};
 	readonly enabled: Getter<boolean>;
+	/** The caption currently showing for this source's speaker. */
+	readonly captions: Getter<string | undefined>;
 	readonly signals = new Effect();
 
 	constructor(props: HangLocalSourceProps) {
 		this.broadcast = props.broadcast;
+		this.captions = props.captions;
 		this.enabled = props.enabled;
 		this.location = locationFields();
 		this.chat = chatFields();
