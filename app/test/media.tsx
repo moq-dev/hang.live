@@ -33,6 +33,20 @@ VideoEncoder.isConfigSupported = async (config) => {
 	if (pending) await hold();
 	return result;
 };
+// The newest timestamp each kind's encoders were handed, in milliseconds like the viewer's. A
+// disable resets the viewer, and resubscribing can replay the last capture's cached group, so only
+// media newer than this proves the current capture reaches it.
+const encoded: Record<Kind, number> = { camera: 0, microphone: 0 };
+const encodeVideo = VideoEncoder.prototype.encode;
+VideoEncoder.prototype.encode = function (this: VideoEncoder, frame: VideoFrame, options?: VideoEncoderEncodeOptions) {
+	encoded.camera = Math.max(encoded.camera, frame.timestamp / 1000);
+	encodeVideo.call(this, frame, options);
+};
+const encodeAudio = AudioEncoder.prototype.encode;
+AudioEncoder.prototype.encode = function (this: AudioEncoder, data: AudioData) {
+	encoded.microphone = Math.max(encoded.microphone, data.timestamp / 1000);
+	encodeAudio.call(this, data);
+};
 const flush = VideoEncoder.prototype.flush;
 VideoEncoder.prototype.flush = async function (this: VideoEncoder) {
 	const pending = codec === "flush";
@@ -135,6 +149,7 @@ const harness = {
 			: 0;
 		return {
 			rms,
+			encoded: { ...encoded },
 			camera: track("camera")?.id,
 			cameraError: local?.webcam.out.error.peek()?.message,
 			microphoneError: local?.microphone.out.error.peek()?.message,
