@@ -16,6 +16,13 @@ Split from the captions quest on 2026-11-26 (maintainer, `/quest-run`), when
   with local Phonon TTS now, a hosted LLM later if the demo earns it
   (rejected: hosted LLM now; leave it open). Scripted replies need no service
   or key and are enough to show `lookahead` and barge-in.
+- First, upstream in `moq-dev/moq`: add an agent kind to `@moq/room`'s path
+  convention (`moq/js/room/src/path.ts`), such as `{identity}/agent.hang`
+  under the summoner's existing publish grant. Today `parse()` accepts only
+  `camera` and `screen`, and Hang's discovery loop (`app/src/room/index.ts`)
+  skips any other path, so other participants would never see the agent's
+  tile; reusing `screen` would collide with a live screen share. Bump the
+  `moq/` pin once it lands.
 - Publish the agent as its own room broadcast from the summoning browser, like
   a screen share. Generate its speech faster than realtime with the in-browser
   engine [TTS on Phonon](/quest/m2/tts-phonon.md) adds, and publish each reply

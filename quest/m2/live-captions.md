@@ -62,9 +62,10 @@ starts and stops the work.
   WebGPU-only gate) and delete the unused `Settings.captions.capture` key.
 - Hide the CC toggle in encrypted rooms ([E2EE rooms](/quest/m2/e2ee-rooms.md)):
   a transcriber cannot read ciphertext.
-- Name moq.pro as the transcription provider on the privacy page
-  (`app/src/privacy.tsx`): a participant's audio is sent to it for
-  transcription while anyone in the room shows captions.
+- Name moq.pro, and the speech-to-text backend it uses at launch (Deepgram
+  Nova-3, per pinned `moq/quest/m3/transcribe/README.md`), as transcription
+  processors on the privacy page (`app/src/privacy.tsx`): a participant's
+  audio is sent to them while anyone in the room shows captions.
 - Captions trail the audio by the transcriber's lag, since Hang plays at low
   latency and `@moq/watch` shows a late revision on arrival. Keep room
   latency as is, and measure that lag (from when a phrase plays to when its
