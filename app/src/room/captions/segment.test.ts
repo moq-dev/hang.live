@@ -100,6 +100,30 @@ test("a shorter limit splits speech into shorter utterances", () => {
 	}
 });
 
+test("a word crossing a forced split keeps its ending, however short", () => {
+	// The split lands 6 s into speech, so only the last 100 ms of the word is left after it.
+	const jobs = feed(new Segmenter(Duration.secs(6)), [
+		[0.5, 0.001],
+		[6.1, 0.3],
+		[2, 0.001],
+	]);
+	const finals = jobs.filter((job) => job.kind === "final");
+	expect(finals.length).toBe(2);
+	const [, ending] = finals;
+	if (ending?.kind !== "final") throw new Error("expected a final");
+	// The 100 ms of speech plus the 200 ms of trailing silence kept after it.
+	expect(ending.audio.length / SAMPLE_RATE).toBeCloseTo(0.3, 1);
+});
+
+test("a forced split with no speech after it emits no empty final", () => {
+	const jobs = feed(new Segmenter(Duration.secs(6)), [
+		[0.5, 0.001],
+		[6, 0.3],
+		[2, 0.001],
+	]);
+	expect(jobs.filter((job) => job.kind === "final").length).toBe(1);
+});
+
 test("speech resuming before the hold keeps the caption up instead of clearing it", () => {
 	const jobs = feed(new Segmenter(Duration.secs(15)), [
 		[1, 0.001],

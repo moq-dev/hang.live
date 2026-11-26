@@ -55,6 +55,8 @@ export class Segmenter {
 	#preroll: Float32Array[] = [];
 
 	#active = false;
+	// Whether this utterance carries on from one split for length, mid-word perhaps.
+	#continued = false;
 	#speech = 0;
 	#silence = 0;
 	#sincePartial = 0;
@@ -113,7 +115,7 @@ export class Segmenter {
 				return;
 			}
 
-			this.#begin();
+			this.#begin(false);
 			for (const previous of this.#preroll) this.#append(previous);
 			this.#preroll = [];
 		}
@@ -133,7 +135,7 @@ export class Segmenter {
 		} else if (this.#frames >= PREROLL + this.#max) {
 			// Too long to hold as one: finish it and carry on with a fresh one, still speaking.
 			this.#finish(end, jobs);
-			this.#begin();
+			this.#begin(true);
 		} else if (this.#sincePartial >= PARTIAL && this.#speech >= MIN_SPEECH) {
 			jobs.push({ kind: "partial", audio: this.#audio(), end });
 			this.#sincePartial = 0;
@@ -141,8 +143,9 @@ export class Segmenter {
 		}
 	}
 
-	#begin() {
+	#begin(continued: boolean) {
 		this.#active = true;
+		this.#continued = continued;
 		this.#frames = 0;
 		this.#speech = 0;
 		this.#silence = 0;
@@ -155,7 +158,8 @@ export class Segmenter {
 	}
 
 	#finish(end: Duration, jobs: Job[]) {
-		if (this.#speech < MIN_SPEECH) return;
+		// After a split, even a few frames of speech can be the end of a word, not a click.
+		if (this.#speech < (this.#continued ? 1 : MIN_SPEECH)) return;
 		// Drop the trailing silence, keeping a little so the last word isn't cut.
 		const trailing = Math.max(this.#silence - 10, 0);
 		const frames = this.#frames - trailing;
