@@ -579,7 +579,7 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 
 	const [deviceChangeIndicator, deviceChangeMessage] = deviceToast(available, "Camera");
 
-	// Disabling closes the menu instead of leaving it to reopen on the next enable.
+	// Turning the camera off closes its menu.
 	createEffect(() => {
 		if (!enabled()) setShowMenu(false);
 	});
@@ -668,7 +668,8 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 					/>
 				</button>
 			</Tooltip>
-			<Show when={enabled() && (available()?.length ?? 0) > 1}>
+			{/* Shown while off too, so a camera can be picked before capture starts. */}
+			<Show when={(available()?.length ?? 0) > 1}>
 				<Tooltip
 					content={deviceChangeMessage() || "Camera settings"}
 					position="top"
