@@ -15,14 +15,21 @@ export function redirect(url: string, origin: string): string {
 		throw new Error(`unsupported deep link: ${parsed.protocol}//${parsed.host}`);
 	}
 
-	// Resolve against our origin so `//evil.com` or `/\\evil.com` can't escape it.
-	const resolved = new URL(`${path}${parsed.search}`, origin);
-	if (resolved.origin !== new URL(origin).origin || !path.startsWith("/") || path.startsWith("//")) {
+	// Resolve against our origin, then check the normalized result: dot segments can turn `/a/..//x` into `//x`,
+	// which the browser would treat as another host.
+	// Compare protocol and host, since `tauri://localhost` has an opaque "null" origin.
+	const base = new URL(origin);
+	const resolved = new URL(`${path}${parsed.search}`, base);
+	const out = `${resolved.pathname}${resolved.search}`;
+	const escapes = (p: string) => !p.startsWith("/") || p.startsWith("//") || p.startsWith("/\\");
+	if (resolved.protocol !== base.protocol || resolved.host !== base.host || escapes(path) || escapes(out)) {
 		throw new Error(`deep link escapes the app: ${path}`);
 	}
 
-	return `${resolved.pathname}${resolved.search}`;
+	return out;
 }
+
+const STARTUP_KEY = "hang.deep_link.startup";
 
 function load(urls: string[] | null) {
 	const url = urls?.at(0);
@@ -48,9 +55,13 @@ export async function start(): Promise<number | undefined> {
 	// Register the deep link handler
 	await DeepLink.onOpenUrl(load);
 
-	// Check if there is a deep link to handle.
-	const current = await DeepLink.getCurrent();
-	load(current);
+	// getCurrent() keeps returning the launch link after our hard redirect reloads the page,
+	// so follow it only once per webview session.
+	const current = (await DeepLink.getCurrent())?.at(0);
+	if (current !== undefined && sessionStorage.getItem(STARTUP_KEY) !== current) {
+		sessionStorage.setItem(STARTUP_KEY, current);
+		load([current]);
+	}
 
 	// Start the OAuth server so we can receive localhost redirects
 	try {

@@ -19,6 +19,7 @@ describe("redirect", () => {
 			expect(() => redirect("hang:///evil.com/x", origin)).toThrow();
 			expect(() => redirect("http://localhost:8000//evil.com/x", origin)).toThrow();
 			expect(() => redirect("http://localhost:8000/\\evil.com/x", origin)).toThrow();
+			expect(() => redirect("http://localhost:8000/a/..//evil.com/x", origin)).toThrow();
 		});
 
 		test(`rejects other schemes and hosts (${origin})`, () => {

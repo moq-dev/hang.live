@@ -111,12 +111,21 @@ export class Update {
 			);
 
 			// An explicit click installs right away, but the automatic install waits until we're out of a call.
-			await Promise.race([this.#install, installTimeout.then(idle)]);
+			const auto = await Promise.race([
+				this.#install.then(() => false),
+				installTimeout.then(idle).then(() => true),
+			]);
 
 			this.status.set({ type: "installing", version: update.version });
 
-			await update.install();
-			await Process.relaunch();
+			// Keep the user out of rooms until the relaunch, or a join would be dropped moments later.
+			const unblock = auto ? Local.join.subscribe((join) => join && Local.join.set(false)) : undefined;
+			try {
+				await update.install();
+				await Process.relaunch();
+			} finally {
+				unblock?.();
+			}
 		} catch (error) {
 			console.error("failed checking for update:", error);
 			this.status.set({ type: "error", error: error instanceof Error ? error.message : String(error) });
