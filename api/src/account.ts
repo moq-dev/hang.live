@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
-import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import * as Avatar from "./avatar";
@@ -117,7 +116,7 @@ export class Context {
 	}
 
 	async create(info: Create): Promise<Info> {
-		const id = Uuid.v4();
+		const id = crypto.randomUUID();
 		const now = new Date();
 
 		// The avatar is cosmetic, so an R2 failure leaves a bundled default rather than failing signup.

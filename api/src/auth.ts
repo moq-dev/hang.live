@@ -1,6 +1,5 @@
 import { createMiddleware } from "hono/factory";
 import * as JWT from "jose";
-import * as Uuid from "uuid";
 import { z } from "zod";
 import type { Account } from ".";
 import { accountIdSchema, guestSchema, oauthChallenge } from "./client";
@@ -71,7 +70,7 @@ export class Context {
 	// Issue a fresh guest identity and the credential that proves it on every later join.
 	// It never expires: the identity is a random path that only outlives the browser storage holding it.
 	async createGuest(): Promise<{ path: string; credential: string }> {
-		const path = `guest/${Uuid.v4()}`;
+		const path = `guest/${crypto.randomUUID()}`;
 		const credential = await new JWT.SignJWT({})
 			.setProtectedHeader({ alg: "HS256", typ: GUEST_TYPE })
 			.setSubject(path)
