@@ -31,7 +31,8 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.7",
-		"concurrently": "^9.2.1",
+		"concurrently": "^10.0.7",
+		"fallow": "3.44.0",
 		"typescript": "7.0.2",
 		"wrangler": "^4.79.0"
 	},
