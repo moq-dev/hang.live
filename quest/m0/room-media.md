@@ -29,8 +29,6 @@ audit:
   - Fix `exponentialRampToValueAtTime` throwing `RangeError` when unmuting from
     `0` (clamp/anchor starting gain above `GAIN_MIN` or use linear/setTarget
     ramps) in both `Audio` and `Sound.#runGain`.
-  - Initialize new remote `GainNode`s to `0` when audio is muted instead of
-    `Settings.audio.volume`.
   - Route `Sound.notification()` through `this.gain` instead of connecting
     directly to `this.context.destination` so mute and speaker volume apply.
   - Cancel or drop in-flight `Audio.#runMemeAudio` playback if its effect cleans
@@ -44,8 +42,8 @@ audit:
 - **Browser support & media errors** (`app/src/sup.tsx`, `app/src/index.tsx`):
   show `<moq-watch-support show="warning" />` and `<moq-publish-support
   show="warning" />` instead of `prop:show="never"`, and surface decoder
-  `out.error` states cleanly (coordinating capture errors with
-  [media-toggles](/quest/m0/media-toggles.md)).
+  `out.error` states cleanly, consistent with the capture status in
+  `app/src/controls.tsx`.
 
 Keep reusable room/player improvements upstream in `moq-dev/moq` if Hang exposes
 a gap in `@moq/room`.
