@@ -35,8 +35,9 @@ BroadcastRenderer.prototype.render = function (this: BroadcastRenderer, ...args:
 	render.apply(this, args);
 	const [broadcast] = args;
 	const textures = broadcast.video.textures.peek();
-	// Only a draw after a video frame upload shows the peer's camera rather than their avatar.
-	if (textures && frames.get(textures) && calls > before) drawn.set(textures, (drawn.get(textures) ?? 0) + 1);
+	// New textures first get the last decoded frame again, so only a later upload proves video still flows.
+	if (textures && (frames.get(textures) ?? 0) > 1 && calls > before)
+		drawn.set(textures, (drawn.get(textures) ?? 0) + 1);
 	// A frame can still draw between losing the context and its event, which only reports the loss.
 	const gl = broadcast.canvas.context.peek()?.gl;
 	if (!gl || gl.isContextLost()) return;

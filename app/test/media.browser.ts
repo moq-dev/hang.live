@@ -314,7 +314,7 @@ Test.test(
 				url.searchParams.set("name", name);
 				await page.goto(url.href);
 			}
-			// Each page shows exactly the other's tile, drawn after its video frame reached the GPU.
+			// Each page shows exactly the other's tile, drawn after a fresh video frame reached the GPU.
 			const drawn = (page: Playwright.Page, previous?: number) =>
 				page.waitForFunction(
 					(previous) => {
