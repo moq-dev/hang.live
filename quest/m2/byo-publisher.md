@@ -15,7 +15,9 @@ Showcase that a Hang room is just a standard MoQ path prefix
   a `@moq/auth` publish grant's `rate` cap; the flat `publish_rate` claim is
   refused) that mints a short-lived publish URL/JWT for an external
   guest identity in the current room, plus a read-only subscribe token for
-  egress.
+  egress. Mint the external identity the way the join route in
+  [`room.ts`](/api/src/room.ts) mints a guest's (`createGuest()`, then a
+  grant publishing only beneath it).
 - Add a clean "Stream from OBS / CLI" dialog in the room header/menu showing:
   - Copyable relay URL + path for the MoQ OBS plugin and `moq-studio`.
   - Ready-to-paste `moq import capture` and `moq import rtsp` commands.
@@ -27,9 +29,3 @@ Showcase that a Hang room is just a standard MoQ path prefix
   draggable/resizable locally).
 - Cover token scoping (cannot publish under another participant's identity) and
   metadata-less external broadcast rendering in tests.
-
-## Related
-
-- [Room token identity](/quest/m1/room-token-identity.md) - binds guest
-  identities to API-issued credentials; mint external publisher identities the
-  same way
