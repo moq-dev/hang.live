@@ -30,6 +30,9 @@ profile exists.
   the publisher's instance end to end; older Lite versions resolve their own,
   so subscribers could not derive keys. Private rooms connect with versions
   that preserve the instance and refuse a session that negotiates any other.
+  Every relay hop must accept such a version too, alongside the defaults public
+  rooms use: the pinned relay leaves `moq-lite-07-wip` out by default, so
+  enable it in `dev/root.toml` and confirm `cdn.moq.dev` accepts it.
 - Display a clear lock indicator in the room header and warn users
   if they open an E2EE room link without a key fragment.
 - Verify in tests that relay-visible paths/payloads carry no plaintext room
