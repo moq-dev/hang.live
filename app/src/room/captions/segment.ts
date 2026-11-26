@@ -13,8 +13,6 @@ const PREROLL = 15;
 const HANGOVER = 35;
 // How much new speech a partial transcript waits for.
 const PARTIAL = 50;
-// The longest utterance transcribed as one; Whisper's window is 30 s, and shorter keeps it fast.
-const MAX_UTTERANCE = 750;
 // Speech shorter than this is a click or a cough, not worth a transcript.
 const MIN_SPEECH = 10;
 // How long a finished caption stays up before it is cleared.
@@ -40,6 +38,9 @@ export type Job = { kind: "partial" | "final"; audio: Float32Array; end: Duratio
  * job every second of speech, a final job when the speaker pauses, and a clear once they stay quiet.
  */
 export class Segmenter {
+	// The most frames of speech transcribed as one utterance.
+	readonly #max: number;
+
 	// A frame not yet filled by the chunks pushed so far.
 	#frame = new Float32Array(FRAME);
 	#filled = 0;
@@ -49,7 +50,7 @@ export class Segmenter {
 	#level = 0;
 
 	// The utterance being collected, or the preroll ring while idle.
-	#utterance = new Float32Array((PREROLL + MAX_UTTERANCE) * FRAME);
+	#utterance: Float32Array;
 	#frames = 0;
 	#preroll: Float32Array[] = [];
 
@@ -60,6 +61,16 @@ export class Segmenter {
 
 	// Frames of silence since the last caption, while one is still showing.
 	#shown: number | undefined;
+
+	/**
+	 * Split speech longer than `max` into consecutive utterances. Whisper's window is 30 s, and
+	 * shorter utterances transcribe faster and make shorter captions.
+	 */
+	constructor(max: Duration) {
+		this.#max = Math.ceil(max.asMillis() / FRAME_TIME.asMillis());
+		if (!(this.#max > 0 && max.asSecs() <= 30)) throw new Error(`captions: unsupported utterance length ${max}`);
+		this.#utterance = new Float32Array((PREROLL + this.#max) * FRAME);
+	}
 
 	/**
 	 * Add audio whose last sample was captured at `end`, returning the jobs it completes.
@@ -119,7 +130,7 @@ export class Segmenter {
 		if (this.#silence >= HANGOVER) {
 			this.#finish(end, jobs);
 			this.#active = false;
-		} else if (this.#frames >= PREROLL + MAX_UTTERANCE) {
+		} else if (this.#frames >= PREROLL + this.#max) {
 			// Too long to hold as one: finish it and carry on with a fresh one, still speaking.
 			this.#finish(end, jobs);
 			this.#begin();

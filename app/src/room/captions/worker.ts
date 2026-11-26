@@ -25,6 +25,12 @@ export type Response =
 const ENGLISH = "onnx-community/whisper-base.en";
 const MULTILINGUAL = "onnx-community/whisper-base";
 
+// The longest utterance transcribed as one. Its translation is published whole, since no partial
+// showed its beginning, so translating ends utterances sooner to keep that caption short enough for a
+// small tile: 6 s of speech is about 100 characters.
+const MAX_UTTERANCE = Duration.secs(15);
+const MAX_TRANSLATED = Duration.secs(6);
+
 // Finished utterances waiting behind a slow transcription. Past this the oldest are dropped, so a GPU
 // slower than speech falls behind by a bounded amount instead of growing without end.
 const MAX_QUEUE = 4;
@@ -35,7 +41,7 @@ let model: Promise<AutomaticSpeechRecognitionPipeline> | undefined;
 // Audio is dropped until the model loads, so speech from before captions were ready isn't replayed late.
 let ready = false;
 let resampler: Resampler | undefined;
-let segmenter = new Segmenter();
+let segmenter = new Segmenter(MAX_UTTERANCE);
 // The page's count of microphone resets, tagging every reply.
 let generation = 0;
 const queue: Job[] = [];
@@ -101,8 +107,10 @@ async function drain() {
 			const text = tidy(await transcribe(asr, job.audio, "transcribe"));
 			if (text) post({ type: "cue", track: "source", text, at, generation: current });
 
+			// A reset during transcription made this utterance and its translation obsolete.
+			if (current !== generation) continue;
+
 			// Translating only finished utterances halves the work and keeps the second track from flickering.
-			// No partial showed its beginning, so it is published whole; an utterance is at most 15 s.
 			if (translate && job.kind === "final") {
 				const translated = clean(await transcribe(asr, job.audio, "translate"));
 				if (translated) post({ type: "cue", track: "translation", text: translated, at, generation: current });
@@ -133,6 +141,7 @@ self.addEventListener("message", (event: MessageEvent<Request>) => {
 		if (model !== undefined) throw new Error("captions: worker already initialized");
 		language = message.language;
 		translate = message.translate;
+		segmenter = new Segmenter(translate ? MAX_TRANSLATED : MAX_UTTERANCE);
 		// The first run compiles the GPU shaders, which would otherwise delay the first caption.
 		model = load(language === "en" ? ENGLISH : MULTILINGUAL).then(async (asr) => {
 			await asr(new Float32Array(SAMPLE_RATE));
@@ -151,7 +160,7 @@ self.addEventListener("message", (event: MessageEvent<Request>) => {
 
 	if (message.type === "reset") {
 		generation = message.generation;
-		segmenter = new Segmenter();
+		segmenter = new Segmenter(translate ? MAX_TRANSLATED : MAX_UTTERANCE);
 		queue.length = 0;
 		return;
 	}

@@ -29,7 +29,7 @@ const kinds = (jobs: Job[]) => jobs.map((job) => job.kind);
 const secs = (job: Job) => job.end.asSecs();
 
 test("an utterance emits partials, a final when the speaker pauses, then a clear", () => {
-	const jobs = feed(new Segmenter(), [
+	const jobs = feed(new Segmenter(Duration.secs(15)), [
 		[1, 0.001],
 		[3.5, 0.3],
 		[5, 0.001],
@@ -48,7 +48,7 @@ test("an utterance emits partials, a final when the speaker pauses, then a clear
 });
 
 test("the final covers the preroll before speech started", () => {
-	const jobs = feed(new Segmenter(), [
+	const jobs = feed(new Segmenter(Duration.secs(15)), [
 		[1, 0.001],
 		[0.5, 0.3],
 		[2, 0.001],
@@ -61,7 +61,7 @@ test("the final covers the preroll before speech started", () => {
 
 test("a click too short for speech emits nothing", () => {
 	expect(
-		feed(new Segmenter(), [
+		feed(new Segmenter(Duration.secs(15)), [
 			[1, 0.001],
 			[0.1, 0.5],
 			[5, 0.001],
@@ -70,7 +70,7 @@ test("a click too short for speech emits nothing", () => {
 });
 
 test("a long monologue is split so no utterance exceeds Whisper's window", () => {
-	const jobs = feed(new Segmenter(), [
+	const jobs = feed(new Segmenter(Duration.secs(15)), [
 		[0.5, 0.001],
 		[40, 0.3],
 		[2, 0.001],
@@ -86,8 +86,22 @@ test("a long monologue is split so no utterance exceeds Whisper's window", () =>
 	expect(ends).toEqual([...ends].sort((a, b) => a - b));
 });
 
+test("a shorter limit splits speech into shorter utterances", () => {
+	const jobs = feed(new Segmenter(Duration.secs(6)), [
+		[0.5, 0.001],
+		[15, 0.3],
+		[2, 0.001],
+	]);
+	const finals = jobs.filter((job) => job.kind === "final");
+	expect(finals.length).toBe(3);
+	for (const final of finals) {
+		if (final.kind !== "final") continue;
+		expect(final.audio.length / SAMPLE_RATE).toBeLessThanOrEqual(6.3);
+	}
+});
+
 test("speech resuming before the hold keeps the caption up instead of clearing it", () => {
-	const jobs = feed(new Segmenter(), [
+	const jobs = feed(new Segmenter(Duration.secs(15)), [
 		[1, 0.001],
 		[1.5, 0.3],
 		[2, 0.001],
@@ -98,7 +112,7 @@ test("speech resuming before the hold keeps the caption up instead of clearing i
 });
 
 test("the noise floor adapts, so a steady hum is not speech", () => {
-	const jobs = feed(new Segmenter(), [
+	const jobs = feed(new Segmenter(Duration.secs(15)), [
 		[3, 0.02],
 		[1.5, 0.3],
 		[5, 0.02],
