@@ -372,8 +372,8 @@ export type AudioName = keyof typeof AUDIO;
 export type VideoName = keyof typeof VIDEO;
 
 // Lookup tables for slash commands (without hyphens)
-export const AUDIO_LOOKUP: Record<string, AudioName> = {};
-export const VIDEO_LOOKUP: Record<string, VideoName> = {};
+const AUDIO_LOOKUP: Record<string, AudioName> = {};
+const VIDEO_LOOKUP: Record<string, VideoName> = {};
 
 // Build lookup tables for slash commands without hyphens
 for (const [key] of Object.entries(AUDIO)) {
@@ -1269,8 +1269,6 @@ export const EMOJI_CATEGORIES = {
 	],
 } as const;
 
-export const ALL_EMOJIS = Object.values(EMOJI_CATEGORIES).flat();
-
 export function audio(name: AudioName): Audio {
 	const source = AUDIO[name];
 
@@ -1316,14 +1314,13 @@ export function video(name: VideoName): Video | undefined {
 // Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
 export function load(name: string): AV | undefined {
 	// Make the name lowercase and remove hyphens for lookup
-	const lower = name.toLowerCase();
-	const key = lower.replace(/-/g, "");
+	const key = name.toLowerCase().replace(/-/g, "");
 
-	const v = VIDEO_LOOKUP[key] || (lower as VideoName);
-	if (VIDEO[v]) return video(v);
+	const v: VideoName | undefined = VIDEO_LOOKUP[key];
+	if (v) return video(v);
 
-	const a = AUDIO_LOOKUP[key] || (lower as AudioName);
-	if (AUDIO[a]) return audio(a);
+	const a: AudioName | undefined = AUDIO_LOOKUP[key];
+	if (a) return audio(a);
 
 	return undefined;
 }

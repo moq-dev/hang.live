@@ -11,12 +11,12 @@ import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
 import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
-import { Chat, type Preview, type User } from "@moq/room";
+import { Chat, type User } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import type * as Watch from "@moq/watch";
 import * as z from "zod/mini";
 
-export type { Preview, User };
+export type { User };
 
 const TRACKS = {
 	location: "hang/location.json",
@@ -118,11 +118,9 @@ export type LocationFields = {
 
 export type ChatFields = {
 	message: {
-		enabled: Signal<boolean>;
 		latest: Signal<string | undefined>;
 	};
 	typing: {
-		enabled: Signal<boolean>;
 		active: Signal<boolean | undefined>;
 	};
 };
@@ -144,11 +142,9 @@ export function locationFields(): LocationFields {
 export function chatFields(): ChatFields {
 	return {
 		message: {
-			enabled: new Signal(true),
 			latest: new Signal<string | undefined>(undefined),
 		},
 		typing: {
-			enabled: new Signal(true),
 			active: new Signal<boolean | undefined>(undefined),
 		},
 	};
@@ -432,5 +428,3 @@ function subscribeMessages(
 		}
 	});
 }
-
-export type PreviewInfo = Preview;

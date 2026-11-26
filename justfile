@@ -43,9 +43,6 @@ build:
 	bun install --frozen-lockfile
 	bun run build
 
-prod: build
-	bun run --filter='@hang/*' prod
-
 deploy:
 	just api deploy
 	just app deploy

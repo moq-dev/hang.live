@@ -22,6 +22,9 @@ const codeSchema = z.object({
 // Login codes carry this header type so they can never pass as a session token, or vice versa.
 const CODE_TYPE = "hang-oauth-code";
 
+// How long a session token stays valid.
+const SESSION_LIFETIME = 365 * 24 * 60 * 60;
+
 // Long enough to load the app from a deep link, short enough that a leaked code soon expires.
 const CODE_LIFETIME = 5 * 60;
 
@@ -32,13 +35,13 @@ export class Context {
 		this.#secretKey = new TextEncoder().encode(env.AUTH_SECRET);
 	}
 
-	async create(userId: string, expiresIn: number = 365 * 24 * 60 * 60): Promise<string> {
+	async create(userId: string): Promise<string> {
 		const now = Math.floor(Date.now() / 1000);
 
 		return await new JWT.SignJWT({
 			sub: userId,
 			iat: now,
-			exp: now + expiresIn,
+			exp: now + SESSION_LIFETIME,
 		})
 			.setProtectedHeader({ alg: "HS256" })
 			.sign(this.#secretKey);

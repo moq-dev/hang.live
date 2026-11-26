@@ -43,7 +43,7 @@ const ACCOUNT_KEYS = [
 const guest = Api.guestSchema.safeParse(localStorage.getItem("settings.account.guest"));
 const effect = new Effect();
 
-export const Settings = {
+const Settings = {
 	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
 
 	audio: {
