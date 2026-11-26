@@ -7,6 +7,7 @@ import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
 import type { GLContext } from "./gl/context";
+import type { Position } from "./metadata";
 import * as Peers from "./peers";
 import * as Physics from "./physics";
 import type { Sound } from "./sound";
@@ -31,6 +32,8 @@ export class Space {
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
+	// Where each remote tile sat before the moves we asked of it, restored if its peer locks first.
+	#homes = new WeakMap<Broadcast, Position>();
 
 	#scale = new Signal<number>(1.0);
 
@@ -106,6 +109,7 @@ export class Space {
 			(mouse.y - bounds.position.y) / bounds.size.y,
 		);
 		broadcast.dragPoint.set(dragPoint);
+		this.#grab(broadcast);
 
 		// Bump the z-index unless we're already at the top.
 		broadcast.position.update((prev) => ({
@@ -116,7 +120,6 @@ export class Space {
 		}));
 
 		document.body.style.cursor = "grabbing";
-		this.#dragging = broadcast;
 	}
 
 	#onMouseUp(_: MouseEvent) {
@@ -231,6 +234,7 @@ export class Space {
 			(mouse.y - bounds.position.y) / bounds.size.y,
 		);
 		broadcast.zoomCenter.set(zoomCenter);
+		if (broadcast !== this.#dragging) this.#remember(broadcast);
 
 		const scale = -e.deltaY * 0.001;
 		if (scale < 0) {
@@ -285,6 +289,7 @@ export class Space {
 				(mouse.y - bounds.position.y) / bounds.size.y,
 			);
 			broadcast.dragPoint.set(dragPoint);
+			this.#grab(broadcast);
 
 			// Bump the z-index unless we're already at the top.
 			broadcast.position.update((prev) => ({
@@ -293,8 +298,6 @@ export class Space {
 				y: mouse.y / viewport.y - 0.5,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
-
-			this.#dragging = broadcast;
 		}
 		// Two touches - start pinch zoom
 		else if (this.#touches.size === 2) {
@@ -319,8 +322,12 @@ export class Space {
 			this.#pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
 			this.#pinchStartScale = broadcast.position.peek().s ?? 1;
 
-			// Set as dragging to track which broadcast we're zooming
-			this.#dragging = broadcast;
+			// Track which broadcast we're zooming. Re-grab only on a new target, so a drag that
+			// turns into a pinch keeps the tile's pre-gesture placement.
+			if (this.#dragging !== broadcast) {
+				if (this.#dragging) this.#publishPosition(this.#dragging);
+				this.#grab(broadcast);
+			}
 
 			// Bump the z-index
 			broadcast.position.update((prev) => ({
@@ -434,8 +441,8 @@ export class Space {
 			this.#pinchStartDistance = 0;
 			this.#pinchStartScale = 1;
 		}
-		// If we go from 2 touches to 1, switch from pinch to drag
-		else if (this.#touches.size === 1 && e.touches.length === 1) {
+		// If we go from 2 touches to 1, switch from pinch to drag, unless a lock already ended the gesture.
+		else if (this.#touches.size === 1 && e.touches.length === 1 && this.#dragging) {
 			// Reset pinch state
 			this.#pinchStartDistance = 0;
 			this.#pinchStartScale = 1;
@@ -446,11 +453,11 @@ export class Space {
 			const broadcast = this.#at(mouse);
 
 			if (broadcast && !broadcast.locked()) {
-				if (this.#dragging && this.#dragging !== broadcast) {
+				if (this.#dragging !== broadcast) {
 					// Publish the old broadcast's position
 					this.#publishPosition(this.#dragging);
+					this.#grab(broadcast);
 				}
-				this.#dragging = broadcast;
 			}
 		}
 
@@ -561,15 +568,37 @@ export class Space {
 				const handle = effect.get(source.location.window.handle);
 				if (!handle) return;
 
-				// Stop asking a peer to move once it leaves.
+				// Stop asking a peer to move once it leaves or locks its tile.
 				effect.cleanup(() => {
-					for (const moves of this.#moves()) Peers.drop(moves, handle);
+					const carrier = this.#carrier();
+					const pending = carrier ? Peers.drop(carrier, handle) : false;
+
+					// A lock mid-gesture ends it, pinch included, so a later touch can't resume its baseline.
+					const dragging = this.#dragging === broadcast;
+					if (dragging) {
+						this.#dragging = undefined;
+						this.#pinchStartDistance = 0;
+						this.#pinchStartScale = 1;
+						document.body.style.cursor = "default";
+					}
+
+					// A lock that rejects our move puts the tile back where it was before our moves, overlaid with
+					// whatever placement the peer published. A departing tile is already fading away.
+					if (!dragging && !pending) return;
+					if (!broadcast.visible.peek()) return;
+					const placed = { ...this.#homes.get(broadcast), ...source.location.window.position.peek() };
+					broadcast.position.update((prev) => ({ ...prev, ...placed }));
 				});
 
-				// Stop asking once it publishes the position we asked for.
+				// Stop asking once it confirms the move we asked for.
 				effect.run((effect) => {
-					const published = effect.get(source.location.window.position);
-					for (const moves of this.#moves()) Peers.settle(moves, handle, published);
+					const peer = {
+						handle,
+						position: effect.get(source.location.window.position),
+						applied: effect.get(source.location.window.applied),
+					};
+					const carrier = this.#carrier();
+					if (carrier) Peers.settle(carrier, peer);
 				});
 			});
 		}
@@ -772,6 +801,20 @@ export class Space {
 		this.lookup.clear();
 	}
 
+	// Start a gesture on `broadcast`, remembering where it was.
+	#grab(broadcast: Broadcast) {
+		this.#dragging = broadcast;
+		this.#remember(broadcast);
+	}
+
+	// Save where a remote tile sits before we ask it to move, keeping the spot from before any move still pending.
+	#remember(broadcast: Broadcast) {
+		if (broadcast.source.role !== "watch") return;
+		const handle = broadcast.source.location.window.handle.peek();
+		if (handle && this.#carrier()?.peek()?.[handle]) return;
+		this.#homes.set(broadcast, { ...broadcast.position.peek() });
+	}
+
 	// Publish the current position to the network.
 	#publishPosition(broadcast: Broadcast) {
 		const position = broadcast.position.peek();
@@ -782,27 +825,27 @@ export class Space {
 		}
 
 		if (broadcast.source.role === "watch") {
-			const handle = broadcast.source.location.window.handle.peek();
+			const target = broadcast.source.location.window;
+			const handle = target.handle.peek();
 			if (!handle) return;
 
-			// Ask the peer to move through the first local broadcast with Remote Control enabled.
-			const moves = this.#moves(true).at(0);
+			// Remote Control only decides who may move us, so we ask even with it off.
+			const moves = this.#carrier();
 			if (!moves) return;
 
-			Peers.request(moves, handle, { to: position, from: broadcast.source.location.window.position.peek() });
+			const peer = { handle, position: target.position.peek(), applied: target.applied.peek() };
+			Peers.request(moves, peer, position);
 		}
 	}
 
-	// The peer moves each local broadcast publishes, optionally only those that take part in peer dragging.
-	#moves(enabled = false): Signal<Peers.Moves>[] {
-		const moves = [];
-		for (const broadcast of this.ordered.peek()) {
+	// The peer moves we ask, all through the earliest-added local broadcast (the camera), since requests on
+	// two tracks could arrive out of order and replay an older one. Stacking order changes; this doesn't.
+	#carrier(): Signal<Peers.Moves> | undefined {
+		for (const broadcast of this.lookup.values()) {
 			const source = broadcast.source;
-			if (source.role !== "publish") continue;
-			if (enabled && !source.location.peers.enabled.peek()) continue;
-			moves.push(source.location.peers.positions);
+			if (source.role === "publish") return source.location.peers.positions;
 		}
-		return moves;
+		return undefined;
 	}
 }
 

@@ -32,13 +32,19 @@ export type Position = {
 	s?: number;
 };
 
+/** A move asked of a peer, with the ID it echoes back once applied. Older peers send no ID. */
+export type Request = Position & { id?: string };
+
 export type LocationValue = {
 	window?: {
 		position?: Position;
+		/** Where peers address moves; absent while the publisher refuses them. */
 		handle?: string;
+		/** The IDs of the moves applied that peers still ask for. Older peers send none. */
+		applied?: string[];
 	};
 	peers?: {
-		positions?: Record<string, Position>;
+		positions?: Record<string, Request>;
 	};
 };
 
@@ -56,16 +62,25 @@ const PositionSchema: z.ZodMiniType<Position> = z.object({
 	s: z.optional(z.number()),
 });
 
+const RequestSchema: z.ZodMiniType<Request> = z.object({
+	x: z.optional(z.number()),
+	y: z.optional(z.number()),
+	z: z.optional(z.number()),
+	s: z.optional(z.number()),
+	id: z.optional(z.string()),
+});
+
 const LocationSchema: z.ZodMiniType<LocationValue> = z.object({
 	window: z.optional(
 		z.object({
 			position: z.optional(PositionSchema),
 			handle: z.optional(z.string()),
+			applied: z.optional(z.array(z.string())),
 		}),
 	),
 	peers: z.optional(
 		z.object({
-			positions: z.optional(z.record(z.string(), PositionSchema)),
+			positions: z.optional(z.record(z.string(), RequestSchema)),
 		}),
 	),
 });
@@ -90,13 +105,14 @@ export type ExtendedCatalog = CatalogRoot & {
 
 export type LocationFields = {
 	window: {
-		enabled: Signal<boolean>;
 		position: Signal<Position | undefined>;
 		handle: Signal<string | undefined>;
+		/** Whether peers may move this window, which the Remote Control setting decides for local broadcasts. */
+		movable: Signal<boolean>;
+		applied: Signal<string[] | undefined>;
 	};
 	peers: {
-		enabled: Signal<boolean>;
-		positions: Signal<Record<string, Position> | undefined>;
+		positions: Signal<Record<string, Request> | undefined>;
 	};
 };
 
@@ -114,13 +130,13 @@ export type ChatFields = {
 export function locationFields(): LocationFields {
 	return {
 		window: {
-			enabled: new Signal(true),
 			position: new Signal<Position | undefined>(undefined),
 			handle: new Signal<string | undefined>(Math.random().toString(36).substring(2, 15)),
+			movable: new Signal(true),
+			applied: new Signal<string[] | undefined>(undefined),
 		},
 		peers: {
-			enabled: new Signal(true),
-			positions: new Signal<Record<string, Position> | undefined>(undefined),
+			positions: new Signal<Record<string, Request> | undefined>(undefined),
 		},
 	};
 }
@@ -163,15 +179,21 @@ export function serveExtras(
 		});
 	});
 
-	serveSnapshot(broadcast, TRACKS.location, effect, (effect) => ({
-		window: {
-			position: effect.get(location.window.position),
-			handle: effect.get(location.window.handle),
-		},
-		peers: {
-			positions: effect.get(location.peers.positions),
-		},
-	}));
+	serveSnapshot(broadcast, TRACKS.location, effect, (effect) => {
+		// Peers address moves by handle and show a tile without one as locked.
+		const movable = effect.get(location.window.movable);
+		return {
+			window: {
+				position: effect.get(location.window.position),
+				handle: movable ? effect.get(location.window.handle) : undefined,
+				// Present even when empty, so peers know to wait for the echo instead of matching positions.
+				applied: movable ? (effect.get(location.window.applied) ?? []) : undefined,
+			},
+			peers: {
+				positions: effect.get(location.peers.positions),
+			},
+		};
+	});
 
 	serveSnapshot(broadcast, TRACKS.chat, effect, (effect) => ({
 		message: effect.get(chat.message.latest),
@@ -252,6 +274,7 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 		effect.cleanup(() => {
 			location.window.position.set(undefined);
 			location.window.handle.set(undefined);
+			location.window.applied.set(undefined);
 			location.peers.positions.set(undefined);
 		});
 		if (!active || track === undefined) return;
@@ -259,6 +282,7 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 		subscribeJson(active, track, LocationSchema, effect, (value) => {
 			location.window.position.set(value.window?.position);
 			location.window.handle.set(value.window?.handle);
+			location.window.applied.set(value.window?.applied);
 			location.peers.positions.set(value.peers?.positions);
 		});
 	});
