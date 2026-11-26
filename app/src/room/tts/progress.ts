@@ -1,4 +1,8 @@
-import type { ProgressInfo } from "@huggingface/transformers";
+import type { KokoroTTS } from "kokoro-js";
+
+// kokoro-js loads its own transformers.js, so take the progress type from it rather than a second copy.
+type Options = NonNullable<Parameters<typeof KokoroTTS.from_pretrained>[1]>;
+type ProgressInfo = Parameters<NonNullable<Options["progress_callback"]>>[0];
 
 export class Progress {
 	#models = new Map<string, Map<string, { loaded: number; total: number } | undefined>>();

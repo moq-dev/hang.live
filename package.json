@@ -33,8 +33,7 @@
 		"@biomejs/biome": "^2.6.7",
 		"concurrently": "^9.2.1",
 		"typescript": "7.0.2",
-		"wrangler": "^4.79.0",
-		"esbuild": "^0.28.2"
+		"wrangler": "^4.79.0"
 	},
 	"packageManager": "bun@1.4.2"
 }

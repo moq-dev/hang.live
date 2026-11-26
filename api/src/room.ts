@@ -1,5 +1,4 @@
 import * as MoqAuth from "@moq/auth";
-import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import { guestSchema, isValidRoom, ROOM_NAME_ERROR } from "./client";
@@ -51,7 +50,7 @@ export const router = rpc
 		async (c) => {
 			const ctx = c.var.ctx;
 			const room = c.req.valid("param").room;
-			const path = c.var.account_id ?? c.req.valid("json").guest ?? `guest/${Uuid.v4()}`;
+			const path = c.var.account_id ?? c.req.valid("json").guest ?? `guest/${crypto.randomUUID()}`;
 			const token = await ctx.room.sign(room, path);
 			const url = new URL(token, ctx.env.RELAY_URL);
 			return c.json({ url, path, guest: !c.var.account_id ? path : undefined });
