@@ -17,7 +17,7 @@
 		"fix": "biome check --fix",
 		"build": "bun run types && tsc --noEmit false --emitDeclarationOnly --incremental --tsBuildInfoFile dist/api.tsbuildinfo",
 		"watch": "tsc --noEmit false --emitDeclarationOnly --incremental --tsBuildInfoFile dist/api.tsbuildinfo --watch",
-		"test": "bun test test/room.test.ts",
+		"test": "bun test test",
 		"types": "for package in clock pattern auth; do bun run --cwd ../moq/js/$package tsc --project tsconfig.build.json --emitDeclarationOnly --incremental --tsBuildInfoFile dist/hang.tsbuildinfo || exit $?; done"
 	},
 	"dependencies": {
