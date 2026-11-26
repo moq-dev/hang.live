@@ -60,6 +60,33 @@ export async function validate(file: File): Promise<Upload> {
 	return { data, extension: format.extension, contentType: format.contentType };
 }
 
+// Fetch a provider's avatar, such as a Discord or Google CDN image, so it can be copied into R2.
+// The bytes come from a third party, so they get the same size cap and format check as an upload.
+export async function download(url: string): Promise<Upload> {
+	if (new URL(url).protocol !== "https:") throw new Error(`refusing non-https avatar ${url}`);
+
+	// A stalled CDN must not hang the login that asked for it.
+	const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+	if (!res.ok || !res.body) throw new Error(`avatar fetch failed: ${res.status} ${url}`);
+
+	// Stream with a running total: Content-Length is optional and could lie.
+	const reader = res.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		size += value.byteLength;
+		if (size > MAX_SIZE) {
+			await reader.cancel();
+			throw new Error(`avatar larger than ${MAX_SIZE} bytes: ${url}`);
+		}
+		chunks.push(value);
+	}
+
+	return await validate(new File(chunks, "avatar"));
+}
+
 // Whether a string avatar names one of the app's bundled defaults, the only URL clients may set.
 export function isDefault(avatar: string): boolean {
 	return /^\/avatar\/\d+\.svg$/.test(avatar);

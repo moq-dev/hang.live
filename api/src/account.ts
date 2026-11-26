@@ -24,13 +24,12 @@ export const infoSchema = z.object({
 
 export type Info = z.infer<typeof infoSchema>;
 
-export const createSchema = z.object({
-	name: nameSchema,
-	email: z.string().check(z.email()),
-	avatar: z.optional(z.string()),
-});
-
-export type Create = z.infer<typeof createSchema>;
+export interface Create {
+	name: string;
+	email: string;
+	// A validated image to store in R2; a random bundled default when absent.
+	avatar?: Avatar.Upload;
+}
 
 export const table = sqliteTable("accounts", {
 	id: text("id").primaryKey(),
@@ -129,22 +128,65 @@ export class Context {
 		const id = Uuid.v4();
 		const now = new Date();
 
+		// The avatar is cosmetic, so an R2 failure leaves a bundled default rather than failing signup.
+		const avatar = info.avatar
+			? await this.storage.upload("avatar", info.avatar).catch((err) => {
+					console.error("failed to store signup avatar", err);
+					return undefined;
+				})
+			: undefined;
+
 		const user: NewRow = {
-			...info,
+			name: info.name,
+			email: info.email,
 			id,
 			// Random avatars are app-relative URLs, not R2 keys.
-			avatarType: "url",
-			avatar: info.avatar ?? Avatar.random(),
+			avatarType: avatar ? "r2" : "url",
+			avatar: avatar ?? Avatar.random(),
 			createdAt: now,
 			updatedAt: now,
 		};
 
-		const row = await this.db.insert(table).values(user).returning();
+		const row = await this.db
+			.insert(table)
+			.values(user)
+			.returning()
+			.catch(async (err) => {
+				if (avatar) await this.storage.delete("avatar", avatar);
+				throw err;
+			});
 		const res = this.#rowToInfo(row.at(0));
 		if (!res) {
 			throw new Error("failed to insert");
 		}
 		return res;
+	}
+
+	// The external avatar URL an account still holds from before signup copied provider avatars into R2.
+	async externalAvatar(id: Id): Promise<string | undefined> {
+		const row = (
+			await this.db
+				.select({ avatar: table.avatar, avatarType: table.avatarType })
+				.from(table)
+				.where(eq(table.id, id))
+				.limit(1)
+		).at(0);
+		return row?.avatarType === "url" && !Avatar.isDefault(row.avatar) ? row.avatar : undefined;
+	}
+
+	// Swap an external avatar for a stored copy, unless the account picked another avatar meanwhile.
+	async replaceExternalAvatar(id: Id, external: string, upload: Avatar.Upload): Promise<void> {
+		const key = await this.storage.upload("avatar", upload);
+		const updated = await this.db
+			.update(table)
+			.set({ avatar: key, avatarType: "r2", updatedAt: new Date() })
+			.where(and(eq(table.id, id), eq(table.avatarType, "url"), eq(table.avatar, external)))
+			.returning({ id: table.id })
+			.catch(async (err) => {
+				await this.storage.delete("avatar", key);
+				throw err;
+			});
+		if (updated.length === 0) await this.storage.delete("avatar", key);
 	}
 
 	async update(id: Id, update: { name?: string; avatar?: File | string }): Promise<Info> {

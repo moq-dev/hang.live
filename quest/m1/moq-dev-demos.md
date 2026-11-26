@@ -29,5 +29,3 @@ fixed up.
 
 - [Retire relay nodes](/quest/m1/retire-relay-nodes.md) - `hang.live` deployed
   against `moq.pro` with the self-hosted relays gone
-- [Peer avatars](/quest/m1/peer-avatars.md) - closes the peer-avatar IP leak
-  before Hang is promoted to a wider audience
