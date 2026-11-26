@@ -27,7 +27,8 @@ WebKit development libraries and is not part of that recipe.
 
 Run expensive checks with `quest gate just check` and `quest gate just build`.
 `just fix` applies formatting and lint fixes. `just dev` starts the API,
-frontend, local relay, and auth service; start it only when requested.
+frontend, local relay, and auth service; start it only to validate a change on
+its real surface, and stop it when done.
 App builds also refresh the pinned decoder assets, including through `just deploy`.
 
 # MoQ updates

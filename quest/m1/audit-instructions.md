@@ -7,7 +7,3 @@ Run the `instructions` audit: `quest audit instructions` prints what it checks, 
 ## Audit
 
 - instructions
-
-## Required
-
-- [m0](/quest/m0/README.md) - the audit runs after it

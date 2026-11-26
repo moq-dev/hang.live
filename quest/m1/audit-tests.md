@@ -7,7 +7,3 @@ Run the `tests` audit: `quest audit tests` prints what it checks, what each find
 ## Audit
 
 - tests
-
-## Required
-
-- [m0](/quest/m0/README.md) - the audit runs after it
