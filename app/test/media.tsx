@@ -42,7 +42,8 @@ VideoEncoder.prototype.flush = async function (this: VideoEncoder) {
 navigator.mediaDevices.getUserMedia = async (constraints) => {
 	const kind = constraints?.video ? "camera" : "microphone";
 	const mode = modes[kind];
-	modes[kind] = "live";
+	// A missing device stays missing for every retry; other modes apply once.
+	if (mode !== "missing") modes[kind] = "live";
 	if (mode === "deny") throw new DOMException("Capture permission denied", "NotAllowedError");
 	if (mode === "missing") throw new DOMException("Requested device not found", "NotFoundError");
 	const stream = await native(constraints);
@@ -137,6 +138,8 @@ const harness = {
 			camera: track("camera")?.id,
 			cameraError: local?.webcam.out.error.peek()?.message,
 			microphoneError: local?.microphone.out.error.peek()?.message,
+			cameraDevices: local?.webcam.device.out.available.peek()?.length,
+			microphoneDevices: local?.microphone.device.out.available.peek()?.length,
 			selectedMicrophone: local?.microphone.device.out.available
 				.peek()
 				?.find((device) => device.deviceId === Settings.default.microphone.device.peek())?.label,
