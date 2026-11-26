@@ -77,10 +77,16 @@ export class Space {
 		// Physics steps with each rendered frame, so it pauses whenever the canvas is hidden.
 		this.#signals.set(this.canvas.scene, this.#frame.bind(this));
 
-		// Frames stop while hidden or without a GL context, so drop the pointer instead of repeating a stale one.
+		// Frames stop while hidden or without a GL context, so end the drag and drop the pointer instead of
+		// streaming stale ones that no frame would clear.
 		this.#signals.run((effect) => {
 			if (effect.get(this.canvas.visible) && effect.get(this.canvas.context)) return;
 			this.#pointer = undefined;
+			// Ends a mouse drag as well as a touch one, publishing where the tile landed.
+			if (this.#gesture.touchCancel()) {
+				this.#hover(undefined);
+				document.body.style.cursor = "default";
+			}
 			this.#stream();
 		});
 	}
@@ -264,9 +270,12 @@ export class Space {
 			broadcast.signals.run((effect) => {
 				const window = effect.get(target);
 				if (!window) return;
-				effect.run((effect) =>
-					hold(effect, window, broadcast, effect.get(source.location.live.peer)?.position),
-				);
+				const handle = effect.get(dragged);
+				effect.run((effect) => {
+					// A datagram that switches windows can reach this run before the new target does.
+					const peer = effect.get(source.location.live.peer);
+					hold(effect, window, broadcast, peer && peer.handle === handle ? peer.position : undefined);
+				});
 			});
 
 			broadcast.signals.run((effect) => {
