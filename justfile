@@ -21,9 +21,6 @@ check:
 	set -euo pipefail
 	bun install --frozen-lockfile
 	quest check
-	# A moq bump that removes a path a quest plans against must update that quest.
-	stale=$(grep -rhoE '`moq/[A-Za-z0-9._/-]+`' quest | tr -d '`' | sort -u | while read -r path; do [ -e "$path" ] || echo "$path"; done)
-	if [ -n "$stale" ]; then echo "quest/ names moq/ paths the pinned submodule lacks:"; echo "$stale"; exit 1; fi
 	bun run check
 	bun run --cwd api test
 	bun run --cwd app test

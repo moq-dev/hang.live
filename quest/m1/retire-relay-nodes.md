@@ -15,8 +15,8 @@ commit `203de18` (`git show 203de18:infra/main.tf`). OpenTofu state is local
 that last ran `tofu apply`.
 
 1. Verify the token key. With the current API deployed (`just deploy`, which
-   fails until the Cloudflare token grant that
-   [chat-window-only](/quest/m1/chat-window-only.md) waits on lands), open
+   fails until the bws `cloudflare-admin-token` can edit the production
+   Workers, D1, and `hang.live` routes), open
    `https://hang.live`, join a room as a guest, and enable the camera. Publishing and watching from a second tab must work, and
    DevTools must show the WebTransport session to `cdn.moq.dev` open without a
    `401`/`403` close. If it is rejected, rotate to a key `moq.pro` trusts:

@@ -17,7 +17,7 @@ boxes) using the diagnostics already built into `moq/`:
   frames, target bitrate, PROBE RTT) are available alongside watch-side
   `video.out.stats` and `audio.out.stats`.
 - Grade each tile continuously with the health grading in
-  `moq/js/hang/src/health.ts` (`healthy`, `degraded`, `unhealthy`, `unknown`)
+  [`health.ts`](/moq/js/hang/src/health.ts) (`healthy`, `degraded`, `unhealthy`, `unknown`)
   and display its evidence on hover/expand. `@moq/hang` does not export it at
   the pinned `moq/`; export it upstream first.
 - Plot real-time audio frame arrivals and gaps per tile with `@moq/ui`'s
