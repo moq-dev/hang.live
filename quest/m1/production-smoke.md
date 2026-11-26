@@ -17,8 +17,12 @@ against production instead of Vite and `moq-relay`. It stays out of PR CI and
 - Drive only the shipped page, since production exposes no test state: page A
   opens `/@<room>`, clicks "Join as Guest", and turns its camera on; page B,
   still on the join screen, must list page A in the room preview, then join
-  too. Read results from the DOM and roles, not pixels; tile drawing stays
-  covered by the local smoke, which can read the renderer's state.
+  too, and then each page must list the other as in the room. Read results
+  from the DOM and roles, not pixels; tile drawing stays covered by the local
+  smoke, which can read the renderer's state.
+- The room draws peers only on its canvas, so nothing in the DOM lists them
+  yet. Add a screen-reader-only list of the peers in the room (its own win for
+  accessibility) and have the smoke read it on both pages.
 - Fail on any page error and on WebGL errors, the same filter the local smoke
   uses.
 - Run as the last step of the deploy job from
