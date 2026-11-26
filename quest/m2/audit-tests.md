@@ -27,6 +27,8 @@ files only because the app imports them.
 
 Check first: whether the Space gesture and room-page browser quests from the
 m1 run landed and closed those gaps, then the fixes merged since 2026-11-25.
+Nothing checks production `hang.live` after a deploy: plan a scheduled smoke
+join against it, which the m1 relay teardown verified by hand.
 
 ## Audit
 
