@@ -23,7 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-/target
 /.direnv
 
 # Generated relay keys/tokens
