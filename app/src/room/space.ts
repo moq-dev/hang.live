@@ -560,9 +560,15 @@ export class Space {
 				const handle = effect.get(source.location.window.handle);
 				if (!handle) return;
 
-				// Stop asking a peer to move once it leaves.
+				// Stop asking a peer to move once it leaves or locks its tile.
 				effect.cleanup(() => {
 					for (const moves of this.#moves()) Peers.drop(moves, handle);
+
+					// A lock mid-gesture ends it, putting the tile back where the peer last placed itself.
+					if (this.#dragging !== broadcast) return;
+					this.#dragging = undefined;
+					const placed = source.location.window.position.peek();
+					if (placed) broadcast.position.update((prev) => ({ ...prev, ...placed }));
 				});
 
 				// Stop asking once it confirms the move we asked for.
