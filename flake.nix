@@ -16,7 +16,7 @@
     # Quest's CLI, which serves the guide and the skills its stubs call.
     # Bump the tag, then rerun `quest init`.
     quest = {
-      url = "github:kixel-ai/quest/v0.27.0";
+      url = "github:kixel-ai/quest";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };

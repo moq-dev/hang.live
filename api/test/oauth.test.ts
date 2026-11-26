@@ -1,5 +1,5 @@
 import { Database as Sqlite } from "bun:sqlite";
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, setSystemTime, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import * as jose from "jose";
 import { oauthChallenge, oauthVerifier } from "../src/client";
@@ -10,6 +10,7 @@ let restore: (() => void) | undefined;
 afterEach(() => {
 	restore?.();
 	restore = undefined;
+	setSystemTime();
 });
 
 interface Discord {
@@ -174,19 +175,18 @@ test("the redirect carries a short-lived code, never the session token", async (
 	expect((await redeem({ code: token, verifier })).status).toBe(401);
 });
 
-test("an expired code cannot be redeemed", async () => {
+test("a login code redeems for five minutes and no longer", async () => {
 	const { ctx } = harness();
 	const verifier = oauthVerifier();
 	const challenge = await oauthChallenge(verifier);
-	const code = await new jose.SignJWT({ challenge })
-		.setProtectedHeader({ alg: "HS256", typ: "hang-oauth-code" })
-		.setSubject("account")
-		.setIssuedAt(Math.floor(Date.now() / 1000) - 600)
-		.setExpirationTime(Math.floor(Date.now() / 1000) - 300)
-		.sign(new TextEncoder().encode(env.AUTH_SECRET));
+	const minted = Date.parse("2026-01-01T00:00:00Z");
+	setSystemTime(minted);
+	const code = await ctx.auth.createCode("account" as never, challenge);
+
+	setSystemTime(minted + 5 * 60_000 - 1000);
+	expect(await ctx.auth.redeemCode(code, verifier)).toBeString();
+	setSystemTime(minted + 5 * 60_000);
 	expect(await ctx.auth.redeemCode(code, verifier)).toBeUndefined();
-	// The same code shape, unexpired, would redeem.
-	expect(await ctx.auth.redeemCode(await ctx.auth.createCode("account" as never, challenge), verifier)).toBeString();
 });
 
 test("an unverified email neither claims nor links an account", async () => {

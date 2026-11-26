@@ -49,11 +49,9 @@ export const router = rpc
 			.where(eq(table.accountId, c.var.account_id))
 			.orderBy(desc(table.createdAt));
 
-		// Generate a token that allows subscribing to all favorited rooms
-		const token = await ctx.room.signPreview(favorites.map((f) => f.room));
-		const url = token ? new URL(token, ctx.env.RELAY_URL) : undefined;
-
-		return c.json({ favorites, url });
+		// A grant to watch every favorited room, renewed by fetching the list again.
+		const preview = await ctx.room.signPreview(favorites.map((f) => f.room));
+		return c.json({ favorites, preview, url: preview && Room.legacyUrl(preview) });
 	})
 	// Check if a room is favorited
 	.get("/:room", rpc.withParam(z.object({ room: Room.nameSchema })), Auth.required, async (c) => {
