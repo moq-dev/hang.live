@@ -87,7 +87,8 @@ export class Chat {
 					Clock.Duration.millis(2000),
 				);
 			} else if (message.peek()) {
-				message.set(undefined);
+				// Clear the message after a short delay; a new message reruns this and cancels it.
+				effect.timer(() => message.set(undefined), Clock.Duration.millis(200));
 			}
 		});
 

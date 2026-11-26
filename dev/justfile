@@ -5,7 +5,6 @@ set fallback
 default:
 	bun install
 	bun run --cwd ../app deps
-	@just dev auth-token
 	bun concurrently --kill-others --names api,app,types,relay,auth --prefix-colors auto \
 		"just api dev" \
 		"just app dev" \
@@ -26,15 +25,4 @@ auth-key:
 	@if [ ! -f "root.jwk" ]; then \
 		rm -f *.jwt; \
 		moq auth generate --out "root.jwk"; \
-	fi
-
-# Generate authentication tokens for local development.
-auth-token: auth-key
-	@if [ ! -f "root.jwt" ]; then \
-		moq auth sign --key "root.jwk" \
-			--root "" \
-			--subscribe "" \
-			--publish "" \
-			--unbounded \
-			> root.jwt ; \
 	fi
