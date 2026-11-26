@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import * as Json from "@moq/json";
 import * as Net from "@moq/net";
+import { Chat } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import { chatFields, consumeExtras, type ExtendedCatalog, locationFields, serveExtras } from "./metadata";
 
@@ -151,6 +152,51 @@ test("a late joiner applies only the newest retained chat message", async () => 
 		}
 	} finally {
 		effect.close();
+		net.close();
+	}
+});
+
+test("a watcher recovers every chat message a delivery gap skipped", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({ hang: { messages: { track: Chat.TRACK } } });
+	const track = net.createTrack(Chat.TRACK, Chat.info());
+	if (!track) throw new Error(`${Chat.TRACK} already exists`);
+	// One group per header, each at its own millisecond.
+	const write = (ms: number, records: string[]) => {
+		const timestamp = Net.Time.Timestamp.fromMillis(ms);
+		const group = track.appendGroup(timestamp);
+		group.writeFrame({ payload: new TextEncoder().encode(JSON.stringify({ offset: 0, records })), timestamp });
+		return group;
+	};
+
+	const group = write(1, ["hi"]);
+	const extras = consumeExtras({
+		out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) },
+	});
+	// Watch it the way the meme effect does, so a dropped `/huh` would never play here.
+	const seen: string[] = [];
+	const watcher = new Effect();
+	watcher.run((effect) => {
+		const msg = effect.get(extras.chat.message.latest);
+		if (msg) seen.push(msg);
+	});
+	try {
+		await flush();
+		expect(seen).toEqual(["hi"]);
+
+		// The group carrying `/huh` never arrives; the next one restates it beside `bye`.
+		group.abort(new Net.Error.Stream(Net.StreamCode.TooFarBehind));
+		write(2, ["hi", "/huh", "bye"]);
+		// One event-loop turn per recovered record, the yield the reader takes between them.
+		for (let i = 0; i < 3; i++) {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			await flush();
+		}
+		expect(seen).toEqual(["hi", "/huh", "bye"]);
+	} finally {
+		watcher.close();
+		extras.close();
+		track.close();
 		net.close();
 	}
 });

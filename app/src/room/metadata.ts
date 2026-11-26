@@ -331,11 +331,15 @@ const WINDOW_GAPS: Moq.StreamCode[] = [
 	Moq.StreamCode.GroupTooLarge,
 ];
 
+// Resolves once the event loop has run every microtask queued so far.
+const nextTask = () => new Promise<true>((resolve) => setTimeout(() => resolve(true), 0));
+
 /**
- * Show the newest message each frame of the window on `name` pushes, clearing it once it leaves.
+ * Show each message the window on `name` pushes, in order, clearing it once it leaves.
  *
  * Reads frames rather than `Chat.Subscriber` events: a late joiner's first frame restates up to ten
  * seconds of history, and only its newest record may run, or a superseded meme command would play.
+ * A later frame that restates several unseen records, after a delivery gap, runs every one of them.
  */
 function subscribeMessages(
 	broadcast: Moq.Broadcast.Consumer,
@@ -348,6 +352,8 @@ function subscribeMessages(
 	effect.spawn(async () => {
 		const decoder = new Json.Window.Decoder<unknown>();
 		let shown: number | undefined;
+		// Only the first frame restates history this viewer never watched live.
+		let joined = false;
 		try {
 			// Start at the newest window instead of replaying older ones.
 			const largest = await effect.race(track.largest());
@@ -370,23 +376,29 @@ function subscribeMessages(
 					if (!frame) break;
 					codec.decode(frame.payload);
 
-					let newest: { index: number; value: string } | undefined;
+					const pushed: { index: number; value: string }[] = [];
 					for (let event = decoder.next(); event; event = decoder.next()) {
 						if ("push" in event) {
 							if (typeof event.push.value !== "string") throw new Error("chat record must be a string");
-							newest = { index: event.push.index, value: event.push.value };
+							pushed.push({ index: event.push.index, value: event.push.value });
 						} else if ("pop" in event) {
-							if (newest && newest.index < event.pop.end) newest = undefined;
+							while (pushed[0] && pushed[0].index < event.pop.end) pushed.shift();
 							if (shown !== undefined && shown < event.pop.end) {
 								shown = undefined;
 								latest.set(undefined);
 							}
 						}
 					}
-					if (newest) {
-						shown = newest.index;
+					if (!joined) pushed.splice(0, pushed.length - 1);
+					joined = true;
+
+					for (const [i, record] of pushed.entries()) {
+						// Signals coalesce writes, so let readers see each command before the next one,
+						// as they would had each arrived in its own packet.
+						if (i > 0 && !(await effect.race(nextTask()))) return;
+						shown = record.index;
 						// Forced, so the same text sent twice still shows twice.
-						latest.set(newest.value, true);
+						latest.set(record.value, true);
 					}
 				}
 			}
