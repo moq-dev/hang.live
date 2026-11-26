@@ -99,9 +99,11 @@ test("favorites add idempotently, list newest first, and remove", async () => {
 	// Skip auth and relay signing; only the favorites queries are under test.
 	const ctx = {
 		db: root.db,
-		env: { RELAY_URL: "https://relay.example" },
 		auth: { verify: async () => ({ sub: id }) },
-		room: { signPreview: async (rooms: string[]) => (rooms.length ? `hang?rooms=${rooms.join(",")}` : undefined) },
+		room: {
+			signPreview: async (rooms: string[]) =>
+				rooms.length ? { url: `https://relay.example/hang`, token: rooms.join(","), lifetime: 600 } : undefined,
+		},
 	} as unknown as RootContext;
 	const app = new Hono<{ Variables: { ctx: RootContext } }>()
 		.use(async (c, next) => {
@@ -111,7 +113,7 @@ test("favorites add idempotently, list newest first, and remove", async () => {
 		.route("/fave", Fave.router);
 	const call = (method: string, path: string) =>
 		app.request(path, { method, headers: { Authorization: "Bearer token" } });
-	type All = { favorites: Fave.Info[]; url?: string };
+	type All = { favorites: Fave.Info[]; preview?: { token: string } };
 
 	expect((await call("POST", "/fave/old/add")).status).toBe(200);
 	sqlite.exec("UPDATE favorites SET created_at = 1");
@@ -121,7 +123,7 @@ test("favorites add idempotently, list newest first, and remove", async () => {
 	const all = (await (await call("GET", "/fave/all")).json()) as All;
 	expect(all.favorites.map((f) => f.room)).toEqual(["new", "old"]);
 	expect(all.favorites[1]?.created_at).toBe(1);
-	expect(all.url).toBe("https://relay.example/hang?rooms=new,old");
+	expect(all.preview?.token).toBe("new,old");
 
 	expect(await (await call("GET", "/fave/old")).json()).toEqual({ is_favorite: true });
 	expect((await call("POST", "/fave/old/remove")).status).toBe(200);

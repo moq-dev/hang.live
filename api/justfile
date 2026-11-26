@@ -5,7 +5,8 @@ set fallback
 dev:
 	just ../dev/auth-key
 	bun wrangler d1 migrations apply DB --local
-	bun wrangler dev --var "RELAY_SECRET:$(cat ../dev/root.jwk)" --var "RELAY_URL:http://localhost:4443"
+	# Guest credentials and sessions need a signing secret; this one is only trusted by the local API.
+	bun wrangler dev --var "RELAY_SECRET:$(cat ../dev/root.jwk)" --var "RELAY_URL:http://localhost:4443" --var "AUTH_SECRET:local-development-only"
 
 build:
 	bun run build

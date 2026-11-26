@@ -1,4 +1,5 @@
 import * as Moq from "@moq/net";
+import { Signal } from "@moq/signals";
 import { createEffect, createSelector, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
@@ -10,6 +11,7 @@ import { Controls } from "./controls";
 import AppLayout from "./layout/app";
 import WebLayout from "./layout/web";
 import { PreviewRoom } from "./preview";
+import * as Relay from "./relay";
 import { Room } from "./room";
 import type { Canvas } from "./room/canvas";
 import { Local } from "./room/local";
@@ -23,7 +25,9 @@ import Settings from "./settings";
 export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 	if (!props.canvas.supported) return <WebGLUnsupported />;
 
-	const connection = new Moq.Connection({ enabled: true });
+	// Renewed tokens reach the live session over AUTH on moq-lite 07, and otherwise the next dial.
+	const tokens = new Signal<readonly string[]>([]);
+	const connection = new Moq.Connection({ enabled: true, tokens });
 	onCleanup(() => connection.close());
 
 	const sound = new Sound({ enabled: Settings.audio.enabled });
@@ -45,26 +49,32 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 	createEffect(() => {
 		attempt();
 		const room = props.room;
-		const guest = !authenticated() ? Settings.account.guest.peek() : undefined;
+		const signedIn = authenticated();
 		const abort = new AbortController();
 		onCleanup(() => abort.abort());
 		setJoinError(undefined);
 
-		const join = async () => {
+		const sign = async () => {
+			// Read on every renewal, since the first join of a new guest stores its credential.
+			const guest = signedIn ? undefined : Settings.account.guest.peek();
 			const response = await Api.client.routes.room[":room"].join.$post(
 				{ param: { room }, json: { guest } },
 				{ init: { signal: abort.signal } },
 			);
+			// The API no longer accepts this credential, so the next attempt joins as a new guest.
+			if (response.status === 401 && guest) Settings.account.guest.set(undefined);
 			if (!response.ok) throw new Error(response.statusText || `HTTP ${response.status}`);
+			return await response.json();
+		};
 
-			const data = await response.json();
-			if (abort.signal.aborted) return;
-
-			connection.url.set(new URL(data.url));
-			local.identity.set(Moq.Path.from(data.path));
-
-			// Save the guest account settings
-			Settings.account.guest.set(data.guest);
+		const join = async () => {
+			for await (const grant of Relay.renew(sign, abort.signal)) {
+				// The token first, so the dial the URL starts presents it.
+				tokens.set([grant.token]);
+				connection.url.set(new URL(grant.url));
+				local.identity.set(Moq.Path.from(grant.path));
+				Settings.account.guest.set(grant.guest);
+			}
 		};
 
 		join().catch((err: unknown) => {
