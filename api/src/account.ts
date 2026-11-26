@@ -6,7 +6,7 @@ import * as Uuid from "uuid";
 import { z } from "zod";
 import * as Auth from "./auth";
 import * as Avatar from "./avatar";
-import { AccountId, accountIdSchema } from "./client";
+import { AccountId, accountIdSchema, nameSchema } from "./client";
 import * as Database from "./database";
 import * as OAuth from "./oauth";
 import * as rpc from "./rpc";
@@ -18,14 +18,14 @@ export const idSchema = accountIdSchema;
 // Account schemas
 export const infoSchema = z.object({
 	id: accountIdSchema,
-	name: z.string().check(z.minLength(4), z.maxLength(100)),
+	name: nameSchema,
 	avatar: z.string(),
 });
 
 export type Info = z.infer<typeof infoSchema>;
 
 export const createSchema = z.object({
-	name: z.string().check(z.minLength(4), z.maxLength(100)),
+	name: nameSchema,
 	email: z.string().check(z.email()),
 	avatar: z.optional(z.string()),
 });
@@ -62,7 +62,7 @@ export const router = rpc
 		bodyLimit({ maxSize: Avatar.MAX_SIZE + 64 * 1024 }),
 		rpc.withForm(
 			z.object({
-				name: z.optional(z.string().check(z.minLength(4), z.maxLength(100))),
+				name: z.optional(nameSchema),
 				avatar: z.optional(z.union([z.string(), z.instanceof(File)])),
 			}),
 		),
@@ -132,7 +132,8 @@ export class Context {
 		const user: NewRow = {
 			...info,
 			id,
-			avatarType: info.avatar ? "url" : "r2",
+			// Random avatars are app-relative URLs, not R2 keys.
+			avatarType: "url",
 			avatar: info.avatar ?? Avatar.random(),
 			createdAt: now,
 			updatedAt: now,
@@ -178,9 +179,15 @@ export class Context {
 				name: update.name,
 				avatar,
 				avatarType,
+				updatedAt: new Date(),
 			})
 			.where(eq(table.id, id))
-			.returning();
+			.returning()
+			.catch(async (err) => {
+				// Don't orphan the new upload when the row still points at the old avatar.
+				if (avatarType === "r2" && avatar) await this.storage.delete("avatar", avatar);
+				throw err;
+			});
 
 		const res = this.#rowToInfo(updated.at(0));
 		if (!res) {
@@ -188,8 +195,11 @@ export class Context {
 			throw new Error("failed to update");
 		}
 
-		if (old?.avatarType === "r2") {
-			await this.storage.delete("avatar", old.avatar);
+		// The save already committed, so a failed cleanup must not report it as failed.
+		if (old?.avatarType === "r2" && old.avatar !== avatar) {
+			await this.storage.delete("avatar", old.avatar).catch((err) => {
+				console.error(`failed to delete replaced avatar ${old.avatar}`, err);
+			});
 		}
 
 		return res;
@@ -205,7 +215,8 @@ export class Context {
 				.limit(1)
 		).at(0);
 
-		// Delete R2 avatar if it exists
+		// Delete the R2 avatar while the row still names it, so a failed delete can be retried.
+		// R2 deletes of a missing key succeed, so a retry after a failed row delete also works.
 		if (account?.avatarType === "r2" && account.avatar) {
 			await this.storage.delete("avatar", account.avatar);
 		}

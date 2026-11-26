@@ -13,14 +13,15 @@ import { solid } from "../util/solid";
 import AnotherOne from "./another-one";
 import Tooltip from "./tooltip";
 
-export default function Profile(props: { local: Local }): JSX.Element {
+/** The local user's profile editor with a live preview tile; pass the page's `sound` when it has one to share. */
+export default function Profile(props: { local: Local; sound?: Sound }): JSX.Element {
 	const [avatarClicks, setAvatarClicks] = createSignal(0);
 	const [nameClicks, setNameClicks] = createSignal(0);
 
 	const canvas = document.createElement("canvas");
 	canvas.classList.add("w-full", "h-full");
 
-	const local = new LocalPreview(canvas, props.local.camera);
+	const local = new LocalPreview(canvas, props.local.camera, props.sound);
 	onCleanup(() => local.close());
 
 	const handleRandomAvatar = () => {
@@ -120,20 +121,23 @@ export default function Profile(props: { local: Local }): JSX.Element {
  */
 class LocalPreview {
 	canvas: Canvas;
-	sound?: Sound;
 	space?: Space;
+
+	// A muted sound of our own, only when the page has none to share.
+	#sound?: Sound;
 
 	signals = new Effect();
 
-	constructor(element: HTMLCanvasElement, camera: HangLocalSource) {
+	constructor(element: HTMLCanvasElement, camera: HangLocalSource, shared?: Sound) {
 		// Create a minimal canvas without the background effects
 		this.canvas = new Canvas(element);
 		if (!this.canvas.supported) return;
 
-		// Create a minimal sound context (muted for preview)
-		this.sound = new Sound();
+		// Share the page's sound rather than opening another AudioContext.
+		const sound = shared ?? new Sound();
+		if (!shared) this.#sound = sound;
 
-		const space = new Space(this.canvas, this.sound, {
+		const space = new Space(this.canvas, sound, {
 			// Not elegant, but disable some of the functionality for this profile preview.
 			profile: true,
 		});
@@ -162,6 +166,6 @@ class LocalPreview {
 		this.signals.close();
 		this.space?.close();
 		this.canvas.close();
-		this.sound?.close();
+		this.#sound?.close();
 	}
 }

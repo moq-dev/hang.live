@@ -72,3 +72,76 @@ Test.test("a stale retry click cannot restart a recovered or disabled capture", 
 		capture.retry.close();
 	}
 });
+
+// Mirrors the app's chain: the saved setting reaches the requested device two effect hops later.
+function selectFixture() {
+	const enabled = new Signals.Signal(false);
+	const setting = new Signals.Signal<string | undefined>("old");
+	const preferred = new Signals.Signal<string | undefined>(undefined);
+	const requested = new Signals.Signal<string | undefined>(undefined);
+	const opened: (string | undefined)[] = [];
+	const signals = new Signals.Effect();
+	signals.run((effect) => preferred.set(effect.get(setting)));
+	signals.run((effect) => requested.set(effect.get(preferred)));
+	// Stands in for the capture, which opens whatever is requested once enabled.
+	signals.run((effect) => {
+		if (effect.get(enabled)) opened.push(effect.get(requested));
+	});
+	const select = new Capture.Select({ enabled, setting, requested });
+	const close = () => {
+		select.close();
+		signals.close();
+	};
+	return { enabled, setting, requested, opened, select, close };
+}
+
+Test.test("selecting a device while off opens only that device", async () => {
+	const capture = selectFixture();
+	try {
+		await flush();
+		Test.expect(capture.requested.peek()).toBe("old");
+		capture.select.start("new");
+		Test.expect(capture.enabled.peek()).toBe(false);
+		await flush();
+		Test.expect(capture.enabled.peek()).toBe(true);
+		Test.expect(capture.opened).toEqual(["new"]);
+	} finally {
+		capture.close();
+	}
+});
+
+Test.test("selecting the already requested device enables at once", async () => {
+	const capture = selectFixture();
+	try {
+		await flush();
+		capture.select.start("old");
+		Test.expect(capture.enabled.peek()).toBe(true);
+		await flush();
+		Test.expect(capture.opened).toEqual(["old"]);
+	} finally {
+		capture.close();
+	}
+});
+
+Test.test("a later pick or toggle supersedes a pending selection", async () => {
+	for (const supersede of ["pick", "toggle", "setting", "close"] as const) {
+		const capture = selectFixture();
+		try {
+			await flush();
+			capture.select.start("new");
+			if (supersede === "pick") capture.select.start("other");
+			if (supersede === "toggle") {
+				capture.enabled.set(true);
+				await flush();
+				capture.enabled.set(false);
+			}
+			if (supersede === "setting") capture.setting.set(undefined);
+			if (supersede === "close") capture.select.close();
+			await flush();
+			Test.expect(capture.enabled.peek()).toBe(supersede === "pick");
+			if (supersede !== "toggle") Test.expect(capture.opened).toEqual(supersede === "pick" ? ["other"] : []);
+		} finally {
+			capture.close();
+		}
+	}
+});

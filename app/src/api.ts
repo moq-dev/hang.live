@@ -112,7 +112,7 @@ export class Client {
 	}
 
 	async logout(): Promise<void> {
-		Settings.clear();
+		Settings.logout();
 	}
 }
 

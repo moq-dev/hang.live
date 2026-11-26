@@ -44,3 +44,48 @@ export class Retry {
 		this.#attempt?.close();
 	}
 }
+
+interface SelectProps {
+	enabled: Signals.Signal<boolean>;
+	// The saved choice, which reaches the capture's requested device a few microtasks later.
+	setting: Signals.Signal<string | undefined>;
+	requested: Signals.Getter<string | undefined>;
+}
+
+// Saves a device and turns capture on only once the capture requests that device,
+// so turning on with a new choice never opens the previous or default device first.
+export class Select {
+	#pending: Signals.Effect | undefined;
+	#props: SelectProps;
+
+	constructor(props: SelectProps) {
+		this.#props = props;
+	}
+
+	start(deviceId: string): void {
+		this.#pending?.close();
+		const { enabled, setting, requested } = this.#props;
+		setting.set(deviceId);
+		if (requested.peek() === deviceId) {
+			enabled.set(true);
+			return;
+		}
+
+		const pending = new Signals.Effect();
+		this.#pending = pending;
+		// Toggling capture or picking again in the meantime supersedes this choice.
+		pending.cleanup(enabled.subscribe(() => pending.close()));
+		pending.cleanup(setting.subscribe((value) => value !== deviceId && pending.close()));
+		pending.cleanup(
+			requested.subscribe((value) => {
+				if (value !== deviceId || pending.abort.aborted) return;
+				pending.close();
+				enabled.set(true);
+			}),
+		);
+	}
+
+	close(): void {
+		this.#pending?.close();
+	}
+}

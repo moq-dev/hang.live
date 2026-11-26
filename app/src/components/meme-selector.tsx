@@ -360,11 +360,6 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 		onCleanup(() => window.removeEventListener("keydown", handleKeyDown));
 	});
 
-	// Save tab preference when it changes
-	createSignal(() => {
-		localStorage.setItem("settings.memeSelector.tab", activeTab());
-	});
-
 	// Handle clicking outside
 	const handleClickOutside = (e: MouseEvent) => {
 		if (modal() && !modal()?.contains(e.target as Node)) {
@@ -374,10 +369,13 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 
 	onMount(() => {
 		// Delay to prevent immediate close from the button click that opened it
-		setTimeout(() => {
+		const timer = setTimeout(() => {
 			window.addEventListener("click", handleClickOutside);
 		}, 100);
-		onCleanup(() => window.removeEventListener("click", handleClickOutside));
+		onCleanup(() => {
+			clearTimeout(timer);
+			window.removeEventListener("click", handleClickOutside);
+		});
 
 		// Add non-passive wheel listener to prevent scroll propagation
 		const handleWheel = (e: WheelEvent) => {

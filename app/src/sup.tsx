@@ -1,5 +1,5 @@
 import * as Moq from "@moq/net";
-import { createEffect, createSelector, Match, onCleanup, Show, Switch } from "solid-js";
+import { createEffect, createSelector, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "./api";
 import { Badge } from "./components/badge";
@@ -38,31 +38,58 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 
 	const authenticated = solid(Api.client.authenticated);
 
-	createEffect(async () => {
+	const [joinError, setJoinError] = createSignal<string | undefined>(undefined);
+	const [attempt, setAttempt] = createSignal(0);
+
+	// Rejoin whenever the room or sign-in changes, abandoning any request still in flight.
+	createEffect(() => {
+		attempt();
+		const room = props.room;
 		const guest = !authenticated() ? Settings.account.guest.peek() : undefined;
+		const abort = new AbortController();
+		onCleanup(() => abort.abort());
+		setJoinError(undefined);
 
-		const response = await Api.client.routes.room[":room"].join.$post({
-			param: { room: props.room },
-			json: { guest },
+		const join = async () => {
+			const response = await Api.client.routes.room[":room"].join.$post(
+				{ param: { room }, json: { guest } },
+				{ init: { signal: abort.signal } },
+			);
+			if (!response.ok) throw new Error(response.statusText || `HTTP ${response.status}`);
+
+			const data = await response.json();
+			if (abort.signal.aborted) return;
+
+			connection.url.set(new URL(data.url));
+			local.identity.set(Moq.Path.from(data.path));
+
+			// Save the guest account settings
+			Settings.account.guest.set(data.guest);
+		};
+
+		join().catch((err: unknown) => {
+			if (abort.signal.aborted) return;
+			console.error("Failed to join room", err);
+			setJoinError(err instanceof Error ? err.message : String(err));
 		});
-		if (!response.ok) {
-			throw new Error(`Failed to join room: ${response.statusText}`);
-		}
-
-		const data = await response.json();
-
-		connection.url.set(new URL(data.url));
-
-		local.identity.set(Moq.Path.from(data.path));
-
-		// Save the guest account settings
-		Settings.account.guest.set(data.guest);
 	});
 
 	const publish = solid(local.camera.enabled);
 
 	return (
-		<Show when={publish()} fallback={<Preview room={props.room} local={local} connection={connection} />}>
+		<Show
+			when={publish()}
+			fallback={
+				<Preview
+					room={props.room}
+					local={local}
+					sound={sound}
+					connection={connection}
+					error={joinError()}
+					retry={() => setAttempt((n) => n + 1)}
+				/>
+			}
+		>
 			<App connection={connection} canvas={props.canvas} room={props.room} sound={sound} local={local} />
 		</Show>
 	);
@@ -114,7 +141,14 @@ function App(props: {
 	);
 }
 
-function Preview(props: { room: string; local: Local; connection: Moq.Connection }): JSX.Element {
+function Preview(props: {
+	room: string;
+	local: Local;
+	sound: Sound;
+	connection: Moq.Connection;
+	error?: string;
+	retry: () => void;
+}): JSX.Element {
 	const status = createSelector(solid(props.connection.status));
 	const authenticated = solid(Api.client.authenticated);
 
@@ -131,16 +165,18 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 					type="button"
 					class="min-w-64 px-6 py-4 text-white rounded-xl font-medium transition-all transform hover:scale-105 cursor-pointer text-lg"
 					classList={{
-						"opacity-50 cursor-not-allowed": !status("connected"),
+						"opacity-50 cursor-not-allowed": !props.error && !status("connected"),
 					}}
-					onClick={() => Local.join.set(true)}
+					disabled={!props.error && !status("connected")}
+					onClick={() => (props.error ? props.retry() : Local.join.set(true))}
 					style={{
 						background: Gradient(),
 						"text-shadow": "0 0 2px rgba(0, 0, 0, 0.8)",
 					}}
 				>
-					<span class="icon-[mdi--play] inline mr-2" />
+					<span class={`${props.error ? "icon-[mdi--refresh]" : "icon-[mdi--play]"} inline mr-2`} />
 					<Switch>
+						<Match when={props.error}>Retry</Match>
 						<Match when={status("connecting")}>Connecting...</Match>
 						<Match when={status("disconnected")}>Disconnected</Match>
 						<Match when={authenticated()}>Join</Match>
@@ -148,6 +184,13 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 					</Switch>
 				</button>
 			</div>
+			<Show when={props.error}>
+				{(error) => (
+					<div role="alert" class="-mt-8 mb-12 text-center text-red-400">
+						Couldn't join this hang: {error()}
+					</div>
+				)}
+			</Show>
 
 			{/* Two Column Layout */}
 			<div class="flex flex-wrap gap-6 mb-8 items-start">
@@ -160,7 +203,7 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 				<div class="flex-1 min-w-[300px] grow space-y-6">
 					<Show when={status("connected")} fallback={<div class="text-center text-gray-400">Loading...</div>}>
 						<div class="rounded-2xl border border-gray-800 p-6">
-							<Profile local={props.local} />
+							<Profile local={props.local} sound={props.sound} />
 							<Show when={!authenticated()}>
 								<div class="text-center text-gray-400 my-4">
 									...or sign in to customize your profile
