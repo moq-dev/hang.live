@@ -79,9 +79,9 @@ export class Space {
 		// Physics steps with each rendered frame, so it pauses whenever the canvas is hidden.
 		this.#signals.set(this.canvas.scene, this.#frame.bind(this));
 
-		// Frames stop while hidden, so drop the pointer instead of repeating a stale one.
+		// Frames stop while hidden or without a GL context, so drop the pointer instead of repeating a stale one.
 		this.#signals.run((effect) => {
-			if (effect.get(this.canvas.visible)) return;
+			if (effect.get(this.canvas.visible) && effect.get(this.canvas.context)) return;
 			this.#pointer = undefined;
 			this.#stream();
 		});
@@ -584,7 +584,7 @@ export class Space {
 
 			// A peer dragging its own window streams where it is.
 			broadcast.signals.run((effect) => {
-				broadcast.held.set(effect.get(source.location.live.window));
+				hold(effect, broadcast, effect.get(source.location.live.window));
 			});
 
 			// A peer dragging someone's window streams it by the handle that window publishes.
@@ -592,15 +592,11 @@ export class Space {
 			broadcast.signals.run((effect) => {
 				const handle = effect.get(dragged);
 				if (!handle) return;
-				const target = this.#addressed(handle);
+				// Resolved reactively: a viewer joining mid-drag may learn the window or its handle after the
+				// first datagram, and a window that locks or rotates its handle mid-drag stops following.
+				const target = this.#addressed(handle, effect);
 				if (!target) return;
-				effect.cleanup(() => target.held.set(undefined));
-
-				effect.run((effect) => {
-					// A window that locks or rotates its handle mid-drag stops following.
-					const addressed = handleOf(target, effect) === handle;
-					target.held.set(addressed ? effect.get(source.location.live.peer)?.position : undefined);
-				});
+				effect.run((effect) => hold(effect, target, effect.get(source.location.live.peer)?.position));
 			});
 
 			broadcast.signals.run((effect) => {
@@ -717,38 +713,40 @@ export class Space {
 
 	// Follow a peer's drag of this window while it streams, then fall back to the durable snapshot.
 	#runHeld(broadcast: Broadcast) {
-		let held = false;
+		// Where the window sat before a peer's drag held it.
+		let home: Position | undefined;
 		broadcast.signals.run((effect) => {
 			const live = effect.get(broadcast.held);
 			if (live) {
-				held = true;
+				home ??= { ...broadcast.position.peek() };
 				if (this.#dragging !== broadcast) broadcast.position.update((prev) => ({ ...prev, ...live }));
 				return;
 			}
-			if (!held) return;
+			if (!home) return;
+			const from = home;
 
 			// The drag's end can beat the snapshot it settles into, and a refused move never lands in one,
-			// so wait a moment before putting the window back where the snapshot says.
+			// so wait a moment before putting the window back where the snapshot says, or where it sat
+			// before the drag when it never published a position.
 			effect.timer(() => {
-				held = false;
+				home = undefined;
 				if (this.#dragging === broadcast) return;
 				const placed = broadcast.source.location.window.position.peek();
-				if (!placed) return;
 				// The stacking order stays local.
 				broadcast.position.update((prev) => ({
 					...prev,
-					x: placed.x ?? prev.x,
-					y: placed.y ?? prev.y,
-					s: placed.s ?? prev.s,
+					x: placed?.x ?? from.x ?? prev.x,
+					y: placed?.y ?? from.y ?? prev.y,
+					s: placed?.s ?? from.s ?? prev.s,
 				}));
 			}, LIVE_EXPIRY);
 		});
 	}
 
 	// The window publishing `handle`, which peers may move.
-	#addressed(handle: string): Broadcast | undefined {
-		for (const broadcast of this.ordered.peek()) {
-			if (handleOf(broadcast) === handle) return broadcast;
+	#addressed(handle: string, effect: Effect): Broadcast | undefined {
+		for (const broadcast of effect.get(this.ordered)) {
+			if (handleOf(broadcast, effect) === handle) return broadcast;
 		}
 		return undefined;
 	}
@@ -955,13 +953,26 @@ export class Space {
 }
 
 // The handle a window publishes for peers to address its moves, if it takes any.
-function handleOf(broadcast: Broadcast, effect?: Effect): string | undefined {
+function handleOf(broadcast: Broadcast, effect: Effect): string | undefined {
 	const source = broadcast.source;
-	const get = <T>(signal: Signal<T>) => (effect ? effect.get(signal) : signal.peek());
-	if (source.role === "watch") return get(source.location.window.handle);
+	if (source.role === "watch") return effect.get(source.location.window.handle);
 	if (source.role === "publish")
-		return get(source.location.window.movable) ? get(source.location.window.handle) : undefined;
+		return effect.get(source.location.window.movable) ? effect.get(source.location.window.handle) : undefined;
 	return undefined;
+}
+
+// Hold `target` at `position` for this run, keeping any hold another sender has set since.
+function hold(effect: Effect, target: Broadcast, position: Position | undefined) {
+	if (!position) return;
+	target.held.set(position);
+	effect.cleanup(() => {
+		const held = target.held.peek();
+		if (held && same(held, position)) target.held.set(undefined);
+	});
+}
+
+function same(a: Position, b: Position): boolean {
+	return a.x === b.x && a.y === b.y && a.z === b.z && a.s === b.s;
 }
 
 // The WebGL renderers for one live context.

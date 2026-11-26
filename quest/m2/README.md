@@ -5,7 +5,7 @@
 Turn Hang into a compelling live showcase of what Media over QUIC makes easy
 that WebRTC/HLS struggle with: real-time transport/media telemetry, end-to-end
 encryption, external OBS/CLI/studio interoperability, synchronized captions and
-barge-in AI voice, and datagram-driven spatial interactivity / direct P2P.
+barge-in AI voice, and datagram-driven spatial interactivity.
 
 ## Plan
 

@@ -476,10 +476,14 @@ function subscribeLive(
 
 	effect.spawn(async () => {
 		const decoder = new TextDecoder();
+		// Datagrams arrive in any order, and a stale one could revive a drag its sender released.
+		let latest: bigint | undefined;
 		try {
 			for (;;) {
 				const datagram = await effect.race(consumer.recv());
 				if (!datagram) break;
+				if (latest !== undefined && datagram.sequence <= latest) continue;
+				latest = datagram.sequence;
 				const value = LiveSchema.parse(JSON.parse(decoder.decode(datagram.payload)));
 				live.cursor.set(value.cursor);
 				live.window.set(value.window);

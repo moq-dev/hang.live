@@ -353,3 +353,36 @@ test("a malformed live datagram ends the subscription", async () => {
 		net.close();
 	}
 });
+
+test("a live datagram arriving after a newer one is ignored", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog>({ hang: { live: { track: "hang/live.json" } } });
+	const track = net.createDatagrams("hang/live.json", { timescale: Net.Time.Timescale.MILLI });
+	if (!track) throw new Error("hang/live.json already exists");
+	const extras = consumeExtras(
+		{ out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) } },
+		new Signal(true),
+	);
+	const send = (sequence: bigint, value: unknown) =>
+		track.insert({
+			sequence,
+			timestamp: Net.Time.Timestamp.now(),
+			payload: new TextEncoder().encode(JSON.stringify(value)),
+		});
+	try {
+		await flush();
+		// The release overtakes the drag sent before it.
+		send(2n, {});
+		send(1n, { window: { x: 0.4, y: 0.4 } });
+		await flush();
+		expect(extras.location.live.window.peek()).toBeUndefined();
+
+		send(3n, { window: { x: 0.1, y: 0.1 } });
+		await flush();
+		expect(extras.location.live.window.peek()).toEqual({ x: 0.1, y: 0.1 });
+	} finally {
+		extras.close();
+		track.finish();
+		net.close();
+	}
+});
