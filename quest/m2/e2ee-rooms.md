@@ -87,8 +87,9 @@ Checked 2026-11-25 against pinned `moq/` (`28d8eb84d6`) and `moq-dev/moq` main
   both views: the lobby preview (`app/src/room/preview/room.ts`) and the 3D
   room's own announce loop (`app/src/room/index.ts`), which today parses
   plaintext path segments and would drop every opaque path, leaving the joined
-  room empty. The 3D room keeps its existing watch pipeline per tile and takes
-  only the participant list and kind from the roster.
+  room empty. The 3D room uses upstream's discovery-only API, which yields
+  participants and their kind without opening a `Watch.Player`, and keeps its
+  existing watch pipeline per tile, so no peer is watched twice.
 - Turn off the stats track and `echo` while a credential is set, which
   `browser.md` requires.
 - Add a lock indicator to the room header.
@@ -106,4 +107,4 @@ Checked 2026-11-25 against pinned `moq/` (`28d8eb84d6`) and `moq-dev/moq` main
 ## Waiting
 
 - moq-dev/moq: encrypted browser publish and watch. Check: `quest/m3/e2ee-format.md` and `quest/m5/e2ee/browser.md` are gone from moq main, `moq/js/e2ee/package.json` is no longer `private`, and `grep -rn Credential moq/js/publish/src moq/js/watch/src` finds a credential property. Then bump the pin.
-- moq-dev/moq: an encrypted `@moq/room` roster that finds participants and their kind without parsing plaintext path segments, for example an opaque per-participant path plus a kind and identity carried in an encrypted track. No upstream quest owns this yet. Advance it with `/quest-plan` in moq-dev/moq. Check: `grep -rn e2ee moq/js/room/src` finds the mode.
+- moq-dev/moq: an encrypted `@moq/room` roster that finds participants and their kind without parsing plaintext path segments, for example an opaque per-participant path plus a kind and identity carried in an encrypted track, with a discovery-only API that yields participants and their kind without opening a `Watch.Player`, for the 3D room's own per-tile watchers. No upstream quest owns this yet. Advance it with `/quest-plan` in moq-dev/moq. Check: `grep -rn e2ee moq/js/room/src` finds the mode, and the pinned `moq/js/room` exposes encrypted discovery that creates no `Watch.Player`.
