@@ -29,11 +29,20 @@ export function redirect(url: string, origin: string): string {
 	return out;
 }
 
-const STARTUP_KEY = "hang.deep_link.startup";
+// Digest of the last followed link, so getCurrent() doesn't replay it after our hard redirect reloads the page.
+// A digest rather than the URL, since OAuth links carry a bearer token.
+const HANDLED_KEY = "hang.deep_link.handled";
 
-function load(urls: string[] | null) {
-	const url = urls?.at(0);
+async function digest(url: string): Promise<string> {
+	const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(url));
+	return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function load(url: string | undefined, replay = false) {
 	if (url === undefined) return;
+
+	const handled = await digest(url);
+	if (replay && sessionStorage.getItem(HANDLED_KEY) === handled) return;
 
 	let path: string;
 	try {
@@ -43,32 +52,25 @@ function load(urls: string[] | null) {
 		return;
 	}
 
-	// SolidJS router sucks, so we use the browser's history API instead
-	// TODO SolidJS sucks even more and doesn't listen to the history API.
-	//window.history.pushState(null, "", redirect);
+	sessionStorage.setItem(HANDLED_KEY, handled);
 
-	// So just do a hard redirect, fuck solid.
+	// A hard redirect, since the SolidJS router doesn't observe history API changes.
 	window.location.href = path;
 }
 
 export async function start(): Promise<number | undefined> {
-	// Register the deep link handler
-	await DeepLink.onOpenUrl(load);
+	// Live events are always followed, even when the same link is opened again.
+	await DeepLink.onOpenUrl((urls) => void load(urls.at(0)));
 
-	// getCurrent() keeps returning the launch link after our hard redirect reloads the page,
-	// so follow it only once per webview session.
-	const current = (await DeepLink.getCurrent())?.at(0);
-	if (current !== undefined && sessionStorage.getItem(STARTUP_KEY) !== current) {
-		sessionStorage.setItem(STARTUP_KEY, current);
-		load([current]);
-	}
+	// getCurrent() keeps returning the launch or latest link for the app's lifetime.
+	await load((await DeepLink.getCurrent())?.at(0), true);
 
 	// Start the OAuth server so we can receive localhost redirects
 	try {
 		const port = await OAuth.start();
 
 		// Handle any redirects.
-		await OAuth.onUrl((url) => load([url]));
+		await OAuth.onUrl((url) => void load(url));
 
 		return port;
 	} catch (error) {

@@ -118,13 +118,15 @@ export class Update {
 
 			this.status.set({ type: "installing", version: update.version });
 
-			// Keep the user out of rooms until the relaunch, or a join would be dropped moments later.
+			// Keep the user out of rooms until the process exits, or a join would be dropped moments later.
+			// relaunch() can return before the exit, so the guard is released only on failure.
 			const unblock = auto ? Local.join.subscribe((join) => join && Local.join.set(false)) : undefined;
 			try {
 				await update.install();
 				await Process.relaunch();
-			} finally {
+			} catch (error) {
 				unblock?.();
+				throw error;
 			}
 		} catch (error) {
 			console.error("failed checking for update:", error);
