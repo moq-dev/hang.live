@@ -299,15 +299,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.velocity = this.velocity.mult(0.5);
 	}
 
-	// Returns true if the broadcaster is locked to a position.
-	locked(): boolean {
-		if (this.source instanceof WatchBroadcast) {
-			return !this.source.location.window.handle.peek();
-		}
-
-		return false;
-	}
-
 	// Called when online status changes to trigger fade transition
 	setOnline(online: boolean) {
 		this.online.set(online);

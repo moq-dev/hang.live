@@ -25,8 +25,3 @@ second one.
 
 Measure what it adds to `just check` and say so in the PR; the media test sets
 the budget.
-
-## Related
-
-- [Space gesture tests](/quest/m1/space-gesture-tests.md) - the input half of
-  the room canvas
