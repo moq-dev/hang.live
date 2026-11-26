@@ -5,6 +5,7 @@ set fallback
 default:
 	bun install
 	bun run --cwd ../app deps
+	@just dev auth-key
 	bun concurrently --kill-others --names api,app,types,relay,auth --prefix-colors auto \
 		"just api dev" \
 		"just app dev" \
