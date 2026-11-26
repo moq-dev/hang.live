@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, setSystemTime, test } from "bun:test";
 import { Hono } from "hono";
 import * as jose from "jose";
 import * as Auth from "../src/auth";
@@ -6,7 +6,6 @@ import type RootContext from "../src/context";
 import { env } from "./harness";
 
 const auth = new Auth.Context(env);
-const secret = new TextEncoder().encode(env.AUTH_SECRET);
 
 const app = new Hono<{ Variables: { ctx: RootContext } }>()
 	.use(async (c, next) => {
@@ -18,11 +17,16 @@ const app = new Hono<{ Variables: { ctx: RootContext } }>()
 
 const bearer = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } });
 
+afterEach(() => {
+	setSystemTime();
+});
+
+// A real session token whose lifetime has run out, leaving the clock at the time it is checked.
 async function expired(): Promise<string> {
-	const now = Math.floor(Date.now() / 1000);
-	return await new jose.SignJWT({ sub: "someone", iat: now - 120, exp: now - 60 })
-		.setProtectedHeader({ alg: "HS256" })
-		.sign(secret);
+	setSystemTime(new Date("2024-01-01T00:00:00Z"));
+	const token = await auth.create("someone");
+	setSystemTime(new Date("2026-01-01T00:00:00Z"));
+	return token;
 }
 
 async function forged(): Promise<string> {
@@ -49,6 +53,18 @@ test("bad tokens fall back to a guest on optional routes", async () => {
 		expect(res.status).toBe(200);
 		expect(await res.text()).toBe("guest");
 	}
+});
+
+test("a session token works for a year and no longer", async () => {
+	const minted = Date.parse("2026-01-01T00:00:00Z");
+	const year = 365 * 24 * 60 * 60 * 1000;
+	setSystemTime(minted);
+	const token = await auth.create("someone");
+
+	setSystemTime(minted + year - 1000);
+	expect((await app.request("/required", bearer(token))).status).toBe(200);
+	setSystemTime(minted + year);
+	expect((await app.request("/required", bearer(token))).status).toBe(401);
 });
 
 test("tokens signed with another algorithm are refused", async () => {
