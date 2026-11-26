@@ -71,13 +71,14 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 			let path: string | undefined;
 			for await (const grant of Relay.renew(sign, abort.signal)) {
 				// A renewal for another identity means the API dropped our session or guest credential, and a
-				// session that takes tokens only when dialing cannot publish as the new one: start over signed out.
-				if (path !== undefined && grant.path !== path) return Settings.logout();
+				// session that takes tokens only when dialing cannot publish as the new one: reload to dial afresh.
+				if (path !== undefined && grant.path !== path) return window.location.reload();
 				path = grant.path;
 
-				// The token first, so the dial the URL starts presents it.
-				tokens.set([grant.token]);
-				connection.url.set(new URL(grant.relay));
+				// The token first, so the dial the URL starts presents it. An API rolled back past renewal
+				// returns only `url`, with the token in its query.
+				tokens.set(grant.token ? [grant.token] : []);
+				connection.url.set(new URL(grant.relay ?? grant.url));
 				local.identity.set(Moq.Path.from(grant.path));
 				Settings.account.guest.set(grant.guest);
 			}
