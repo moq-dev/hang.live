@@ -233,7 +233,10 @@ export class HangLocalSource {
 		};
 
 		this.signals.run((effect) => {
-			this.location.window.movable.set(effect.get(Settings.draggable));
+			const movable = effect.get(Settings.draggable);
+			this.location.window.movable.set(movable);
+			// A fresh handle each time, so a move asked before a lock can't land after it.
+			if (movable) this.location.window.handle.set(Math.random().toString(36).substring(2, 15));
 		});
 
 		serveExtras(this.broadcast, this.location, this.chat, this.signals);

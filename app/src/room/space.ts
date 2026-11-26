@@ -6,6 +6,7 @@ import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
 import type { GLContext } from "./gl/context";
+import type { Position } from "./metadata";
 import * as Peers from "./peers";
 import * as Physics from "./physics";
 import type { Sound } from "./sound";
@@ -30,6 +31,8 @@ export class Space {
 
 	#hovering: Broadcast | undefined = undefined;
 	#dragging?: Broadcast;
+	// Where the dragged tile was before the gesture, restored if its peer locks it mid-gesture.
+	#grabbed?: Position;
 
 	#scale = new Signal<number>(1.0);
 
@@ -105,6 +108,7 @@ export class Space {
 			(mouse.y - bounds.position.y) / bounds.size.y,
 		);
 		broadcast.dragPoint.set(dragPoint);
+		this.#grab(broadcast);
 
 		// Bump the z-index unless we're already at the top.
 		broadcast.position.update((prev) => ({
@@ -115,7 +119,6 @@ export class Space {
 		}));
 
 		document.body.style.cursor = "grabbing";
-		this.#dragging = broadcast;
 	}
 
 	#onMouseUp(_: MouseEvent) {
@@ -284,6 +287,7 @@ export class Space {
 				(mouse.y - bounds.position.y) / bounds.size.y,
 			);
 			broadcast.dragPoint.set(dragPoint);
+			this.#grab(broadcast);
 
 			// Bump the z-index unless we're already at the top.
 			broadcast.position.update((prev) => ({
@@ -292,8 +296,6 @@ export class Space {
 				y: mouse.y / viewport.y - 0.5,
 				z: prev.z === this.#maxZ ? this.#maxZ : ++this.#maxZ,
 			}));
-
-			this.#dragging = broadcast;
 		}
 		// Two touches - start pinch zoom
 		else if (this.#touches.size === 2) {
@@ -319,7 +321,7 @@ export class Space {
 			this.#pinchStartScale = broadcast.position.peek().s ?? 1;
 
 			// Set as dragging to track which broadcast we're zooming
-			this.#dragging = broadcast;
+			this.#grab(broadcast);
 
 			// Bump the z-index
 			broadcast.position.update((prev) => ({
@@ -449,7 +451,7 @@ export class Space {
 					// Publish the old broadcast's position
 					this.#publishPosition(this.#dragging);
 				}
-				this.#dragging = broadcast;
+				if (this.#dragging !== broadcast) this.#grab(broadcast);
 			}
 		}
 
@@ -564,10 +566,12 @@ export class Space {
 				effect.cleanup(() => {
 					for (const moves of this.#moves()) Peers.drop(moves, handle);
 
-					// A lock mid-gesture ends it, putting the tile back where the peer last placed itself.
+					// A lock mid-gesture ends it, putting the tile back where the peer last placed itself, or
+					// where it was before the gesture if the peer never did.
 					if (this.#dragging !== broadcast) return;
 					this.#dragging = undefined;
-					const placed = source.location.window.position.peek();
+					document.body.style.cursor = "default";
+					const placed = source.location.window.position.peek() ?? this.#grabbed;
 					if (placed) broadcast.position.update((prev) => ({ ...prev, ...placed }));
 				});
 
@@ -779,6 +783,12 @@ export class Space {
 		this.#rip = [];
 		this.ordered.set([]);
 		this.lookup.clear();
+	}
+
+	// Start a gesture on `broadcast`, remembering where it was.
+	#grab(broadcast: Broadcast) {
+		this.#dragging = broadcast;
+		this.#grabbed = { ...broadcast.position.peek() };
 	}
 
 	// Publish the current position to the network.
