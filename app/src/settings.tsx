@@ -439,6 +439,6 @@ export function Modal(props: { sound: Sound }): JSX.Element {
 	);
 }
 
-export function supportsWebGPU() {
+function supportsWebGPU() {
 	return !!navigator.gpu;
 }

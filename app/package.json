@@ -5,8 +5,7 @@
 	"description": "",
 	"type": "module",
 	"scripts": {
-		"dev": "bunx --bun vite --open",
-		"build": "bun run deps && bunx --bun vite build",
+		"build": "bun run deps && bunx --bun vite build --mode live",
 		"check": "bun run --cwd ../api build && tsc --noEmit && biome check",
 		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",

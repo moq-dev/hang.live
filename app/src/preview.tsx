@@ -80,10 +80,9 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 	);
 }
 
-export function PreviewRoom(props: { connection: Moq.Connection; name?: string }): JSX.Element {
+export function PreviewRoom(props: { connection: Moq.Connection }): JSX.Element {
 	const room = new Preview.Room({
 		connection: props.connection,
-		path: props.name ? Moq.Path.from(props.name) : undefined,
 		enabled: true,
 	});
 	onCleanup(() => room.close());
@@ -105,7 +104,7 @@ export function PreviewRoom(props: { connection: Moq.Connection; name?: string }
 					</div>
 				}
 			>
-				<div class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-500">
+				<div class="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
 					<For each={members().values().toArray()}>
 						{(member) => <Show when={member}>{(member) => <PreviewMember member={member()} />}</Show>}
 					</For>

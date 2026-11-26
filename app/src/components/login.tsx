@@ -3,7 +3,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "../api";
 import { unreachable } from "../util/unreachable";
 
-export default function Login(props: { error?: string; small?: boolean }): JSX.Element {
+export default function Login(props: { small?: boolean }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
 
 	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
@@ -47,13 +47,6 @@ export default function Login(props: { error?: string; small?: boolean }): JSX.E
 			class="flex flex-wrap gap-3 max-w-xs text-center justify-center mx-auto"
 			classList={{ "flex-col": !props.small }}
 		>
-			{/* Error message */}
-			<Show when={props.error}>
-				<div class="bg-red-500/20 border border-red-400/30 rounded-2xl p-4 text-red-300 text-center">
-					{props.error}
-				</div>
-			</Show>
-
 			<For each={Api.oauthProviders}>
 				{(provider) => (
 					<button

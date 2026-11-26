@@ -2,19 +2,13 @@
 	// Check the configuration file schema, the main reason why we're not using TOML.
 	"$schema": "./node_modules/wrangler/config-schema.json",
 
-	// Cloudflare Pages configuration
+	// Cloudflare Workers static assets serving the built app.
 	"name": "hang-dev",
 	"compatibility_date": "2025-07-09",
 
-	// Static asset configuration for Pages
 	"assets": {
 		"directory": "./dist",
 		"not_found_handling": "single-page-application"
-	},
-
-	// Development server configuration
-	"dev": {
-		"port": 1420
 	},
 
 	"env": {

@@ -5,7 +5,7 @@ set fallback
 dev:
 	just ../dev/auth-key
 	bun wrangler d1 migrations apply DB --local
-	bun wrangler dev --var "RELAY_SECRET:$(cat ../dev/root.jwk)"
+	bun wrangler dev --var "RELAY_SECRET:$(cat ../dev/root.jwk)" --var "RELAY_URL:http://localhost:4443"
 
 build:
 	bun run build

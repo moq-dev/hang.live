@@ -61,8 +61,9 @@ export class Space {
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
 		this.#signals.event(canvas.element, "mousemove", this.#onMouseMove.bind(this));
-		this.#signals.event(canvas.element, "mouseup", this.#onMouseUp.bind(this));
-		this.#signals.event(canvas.element, "mouseleave", this.#onMouseLeave.bind(this));
+		// Releasing the button and leaving the canvas both end a drag.
+		this.#signals.event(canvas.element, "mouseup", this.#onMouseRelease.bind(this));
+		this.#signals.event(canvas.element, "mouseleave", this.#onMouseRelease.bind(this));
 		this.#signals.event(canvas.element, "wheel", this.#onMouseWheel.bind(this), { passive: false });
 
 		this.#signals.event(canvas.element, "touchstart", this.#onTouchStart.bind(this), { passive: false });
@@ -122,7 +123,7 @@ export class Space {
 		document.body.style.cursor = "grabbing";
 	}
 
-	#onMouseUp(_: MouseEvent) {
+	#onMouseRelease() {
 		if (this.#dragging) {
 			this.#publishPosition(this.#dragging);
 
@@ -172,19 +173,6 @@ export class Space {
 				document.body.style.cursor = "grab";
 			}
 		} else {
-			if (this.#hovering) {
-				this.#hovering.name.setHovering(false);
-				this.#hovering = undefined;
-			}
-			document.body.style.cursor = "default";
-		}
-	}
-
-	#onMouseLeave() {
-		if (this.#dragging) {
-			this.#publishPosition(this.#dragging);
-
-			this.#dragging = undefined;
 			if (this.#hovering) {
 				this.#hovering.name.setHovering(false);
 				this.#hovering = undefined;
