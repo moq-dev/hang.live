@@ -139,7 +139,14 @@ export class Captioner {
 
 				const node = new AudioWorkletNode(context, "captions", { numberOfInputs: 1, numberOfOutputs: 0 });
 				root.connect(node);
-				inner.cleanup(() => root.disconnect(node));
+				inner.cleanup(() => {
+					// A closing capture disconnects its whole root before this runs, removing the edge already.
+					try {
+						root.disconnect(node);
+					} catch (err) {
+						if (!(err instanceof DOMException && err.name === "InvalidAccessError")) throw err;
+					}
+				});
 				// A muted speaker's caption ends with their audio, and their next words start afresh.
 				inner.cleanup(() => {
 					if (stopped) return;
