@@ -83,6 +83,7 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 				<Preview
 					room={props.room}
 					local={local}
+					sound={sound}
 					connection={connection}
 					error={joinError()}
 					retry={() => setAttempt((n) => n + 1)}
@@ -143,6 +144,7 @@ function App(props: {
 function Preview(props: {
 	room: string;
 	local: Local;
+	sound: Sound;
 	connection: Moq.Connection;
 	error?: string;
 	retry: () => void;
@@ -200,7 +202,7 @@ function Preview(props: {
 				<div class="flex-1 min-w-[300px] grow space-y-6">
 					<Show when={status("connected")} fallback={<div class="text-center text-gray-400">Loading...</div>}>
 						<div class="rounded-2xl border border-gray-800 p-6">
-							<Profile local={props.local} />
+							<Profile local={props.local} sound={props.sound} />
 							<Show when={!authenticated()}>
 								<div class="text-center text-gray-400 my-4">
 									...or sign in to customize your profile
