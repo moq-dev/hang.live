@@ -573,19 +573,21 @@ export class Space {
 					const carrier = this.#carrier();
 					const pending = carrier ? Peers.drop(carrier, handle) : false;
 
-					// A lock mid-gesture ends it.
+					// A lock mid-gesture ends it, pinch included, so a later touch can't resume its baseline.
 					const dragging = this.#dragging === broadcast;
 					if (dragging) {
 						this.#dragging = undefined;
+						this.#pinchStartDistance = 0;
+						this.#pinchStartScale = 1;
 						document.body.style.cursor = "default";
 					}
 
-					// A lock that rejects our move puts the tile back where the peer last placed itself, or where
-					// it was before our moves if the peer never did. A departing tile is already fading away.
+					// A lock that rejects our move puts the tile back where it was before our moves, overlaid with
+					// whatever placement the peer published. A departing tile is already fading away.
 					if (!dragging && !pending) return;
 					if (!broadcast.visible.peek()) return;
-					const placed = source.location.window.position.peek() ?? this.#homes.get(broadcast);
-					if (placed) broadcast.position.update((prev) => ({ ...prev, ...placed }));
+					const placed = { ...this.#homes.get(broadcast), ...source.location.window.position.peek() };
+					broadcast.position.update((prev) => ({ ...prev, ...placed }));
 				});
 
 				// Stop asking once it confirms the move we asked for.
