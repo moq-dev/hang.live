@@ -75,10 +75,7 @@ async function info(app: App, token: string) {
 }
 
 test("redirects are checked by parsed origin, not by prefix", () => {
-	for (const ok of [
-		"https://hang.test/oauth/room",
-		"https://hang.test/oauth/room?x=1",
-	]) {
+	for (const ok of ["https://hang.test/oauth/room", "https://hang.test/oauth/room?x=1"]) {
 		expect(OAuth.validRedirect(env, ok)).toBe(true);
 	}
 
@@ -117,7 +114,6 @@ test("login refuses to start toward a foreign redirect", async () => {
 	expect(ok.status).toBe(200);
 	const url = new URL(((await ok.json()) as { url: string }).url);
 	expect(JSON.parse(url.searchParams.get("state") ?? "")).toMatchObject({ challenge });
-
 });
 
 test("a forged callback redirect is rejected before any account is touched", async () => {
