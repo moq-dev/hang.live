@@ -51,7 +51,7 @@ export const router = rpc
 
 		// A grant to watch every favorited room, renewed by fetching the list again.
 		const preview = await ctx.room.signPreview(favorites.map((f) => f.room));
-		return c.json({ favorites, preview });
+		return c.json({ favorites, preview, url: preview && Room.legacyUrl(preview) });
 	})
 	// Check if a room is favorited
 	.get("/:room", rpc.withParam(z.object({ room: Room.nameSchema })), Auth.required, async (c) => {

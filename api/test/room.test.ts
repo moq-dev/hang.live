@@ -43,13 +43,13 @@ async function join() {
 	return { key, auth, call };
 }
 
-type Joined = { url: string; token: string; lifetime: number; path: string; guest?: string };
+type Joined = { url: string; relay: string; token: string; lifetime: number; path: string; guest?: string };
 
 test("join grants publishing only beneath the participant identity", async () => {
 	const { key, room } = await context();
 	const grant = await room.sign("friends", "guest/alice");
 	// The relay refuses a path with an empty segment, so no trailing slash.
-	expect(grant.url.href).toBe("https://relay.example/hang/friends");
+	expect(grant.relay.href).toBe("https://relay.example/hang/friends");
 	const claims = await MoqAuth.Key.verify(key, grant.token);
 	expect(claims.root).toBe("hang/friends");
 	expect(MoqAuth.Claims.authorize(claims, "hang/friends").publish.matches("guest/alice/camera")).toBe(true);
@@ -82,7 +82,7 @@ test("previews subscribe only to the requested rooms and cannot publish", async 
 	const { key, room } = await context();
 	const grant = await room.signPreview(["friends", "work"]);
 	if (!grant) throw new Error("expected a grant");
-	expect(grant.url.href).toBe("https://relay.example/hang");
+	expect(grant.relay.href).toBe("https://relay.example/hang");
 	const permissions = MoqAuth.Claims.authorize(await MoqAuth.Key.verify(key, grant.token), "hang");
 	expect(permissions.subscribe.matches("friends/guest/alice/camera")).toBe(true);
 	expect(permissions.subscribe.matches("work/guest/bob/camera")).toBe(true);
@@ -108,8 +108,14 @@ test("a guest rejoins as itself only with the credential it was issued", async (
 	expect(again.path).toBe(first.path);
 	expect(again.guest).toBe(first.guest);
 
-	// Another guest's path is visible to the whole room, so naming it proves nothing.
-	expect((await call({ guest: first.path })).status).toBe(400);
+	// Another guest's path is visible to the whole room, so naming it proves nothing: it joins as a new guest.
+	const named = (await (await call({ guest: first.path })).json()) as Joined;
+	expect(named.path).not.toBe(first.path);
+	expect(guestSchema.safeParse(named.path).success).toBe(true);
+
+	// Tabs open from before renewal dial the token-carrying URL as is.
+	expect(first.relay).toBe("https://relay.example/hang/friends");
+	expect(first.url).toBe(`https://relay.example/hang/friends?jwt=${first.token}`);
 });
 
 test("a forged or borrowed guest credential is refused", async () => {

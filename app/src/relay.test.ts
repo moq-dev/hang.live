@@ -54,23 +54,28 @@ test("a failed renewal retries while the token still works", async () => {
 	expect(calls).toEqual([0, 540, 570]);
 });
 
-test("renewals that keep failing throw once the token expired, without a burst", async () => {
+test("renewals outlasting the token back off until the API answers again", async () => {
 	const { calls, sign } = signer([
 		{ token: "a", lifetime: 600 },
-		...Array.from({ length: 100 }, () => new Error("offline")),
+		...Array.from({ length: 20 }, () => new Error("offline")),
+		{ token: "b", lifetime: 600 },
 	]);
 	const grants = renew(sign, new AbortController().signal);
 	await grants.next();
-	let error: unknown;
-	try {
-		await clock.drive(grants.next());
-	} catch (err) {
-		error = err;
+	expect((await clock.drive(grants.next())).value?.token).toBe("b");
+
+	// Halving what remains, floored at a second, then doubling since expiry: no burst either side.
+	const before = calls.filter((at) => at < 600);
+	expect(before.slice(0, 3)).toEqual([0, 540, 570]);
+	expect(before.length).toBeLessThan(10);
+	const after = calls.filter((at) => at >= 600);
+	const gaps = after.slice(1).map((at, i) => at - (after[i] ?? 0));
+	for (const [i, gap] of gaps.entries()) {
+		expect(gap).toBeGreaterThanOrEqual(1);
+		expect(gap).toBeLessThanOrEqual(60);
+		if (i > 0) expect(gap).toBeGreaterThanOrEqual(gaps[i - 1] ?? 0);
 	}
-	expect(error).toEqual(new Error("offline"));
-	expect(calls.at(-1)).toBeGreaterThanOrEqual(600);
-	// Halving what remains, floored at a second: 540, 570, 585, ... then once a second at the end.
-	expect(calls.length).toBeLessThan(15);
+	expect(gaps.at(-1)).toBe(60);
 });
 
 test("the first sign failing throws at once", async () => {

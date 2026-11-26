@@ -56,7 +56,7 @@ export function Home(): JSX.Element {
 		const load = async () => {
 			for await (const data of Relay.renew(sign, abort.signal)) {
 				tokens.set(data.preview ? [data.preview.token] : []);
-				connection.url.set(data.preview ? new URL(data.preview.url) : undefined);
+				connection.url.set(data.preview ? new URL(data.preview.relay) : undefined);
 				setFavorites(data.favorites);
 			}
 		};

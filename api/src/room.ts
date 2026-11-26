@@ -2,7 +2,7 @@ import * as MoqAuth from "@moq/auth";
 import { wall } from "@moq/clock";
 import { z } from "zod";
 import * as Auth from "./auth";
-import { guestTokenSchema, isValidRoom, ROOM_NAME_ERROR } from "./client";
+import { guestSchema, guestTokenSchema, isValidRoom, ROOM_NAME_ERROR } from "./client";
 import * as rpc from "./rpc";
 
 export const nameSchema = z.string().check(z.minLength(1), z.maxLength(100)).refine(isValidRoom, ROOM_NAME_ERROR);
@@ -14,9 +14,16 @@ export const LIFETIME = 2 * 60 * 60;
 
 // A relay URL and the token that admits its holder there for `lifetime` seconds.
 export interface Grant {
-	url: URL;
+	relay: URL;
 	token: string;
 	lifetime: number;
+}
+
+// The relay URL carrying its token, which tabs open from before renewal dial as is; remove once they are gone.
+export function legacyUrl(grant: Grant): URL {
+	const url = new URL(grant.relay);
+	url.searchParams.set("jwt", grant.token);
+	return url;
 }
 
 type Relay = Record<"RELAY_SECRET" | "RELAY_PREFIX" | "RELAY_URL", string>;
@@ -46,7 +53,7 @@ export class Context {
 		const expires = Math.floor(wall().asUnixMillis() / 1000) + LIFETIME;
 		const token = await MoqAuth.Key.sign(this.#key, { root, ...grants, expires });
 		// The token rides apart from the URL, so the app can replace it without redialing.
-		return { url: new URL(root, this.#env.RELAY_URL), token, lifetime: LIFETIME };
+		return { relay: new URL(root, this.#env.RELAY_URL), token, lifetime: LIFETIME };
 	}
 }
 
@@ -54,33 +61,36 @@ export const joinSchema = z.object({
 	name: nameSchema,
 });
 
-export const router = rpc
-	.router()
-	.post(
-		"/:room/join",
-		rpc.withParam(z.object({ room: nameSchema })),
-		rpc.withJson(z.object({ guest: guestTokenSchema.optional() })),
-		Auth.optional,
-		async (c) => {
-			const ctx = c.var.ctx;
-			const room = c.req.valid("param").room;
-			const credential = c.req.valid("json").guest;
+export const router = rpc.router().post(
+	"/:room/join",
+	rpc.withParam(z.object({ room: nameSchema })),
+	rpc.withJson(
+		z.object({
+			// A tab open from before credentials sends its bare guest path, which proves nothing, so it joins as a new guest.
+			guest: z.union([guestTokenSchema, guestSchema.transform(() => undefined)]).optional(),
+		}),
+	),
+	Auth.optional,
+	async (c) => {
+		const ctx = c.var.ctx;
+		const room = c.req.valid("param").room;
+		const credential = c.req.valid("json").guest;
 
-			let path: string;
-			let guest: string | undefined;
-			if (c.var.account_id) {
-				path = c.var.account_id;
-			} else if (credential) {
-				// Guest paths are public to the room, so only the credential the API issued proves one.
-				const verified = await ctx.auth.verifyGuest(credential);
-				if (!verified) return c.text("Invalid guest credential", 401);
-				path = verified;
-				guest = credential;
-			} else {
-				({ path, credential: guest } = await ctx.auth.createGuest());
-			}
+		let path: string;
+		let guest: string | undefined;
+		if (c.var.account_id) {
+			path = c.var.account_id;
+		} else if (credential) {
+			// Guest paths are public to the room, so only the credential the API issued proves one.
+			const verified = await ctx.auth.verifyGuest(credential);
+			if (!verified) return c.text("Invalid guest credential", 401);
+			path = verified;
+			guest = credential;
+		} else {
+			({ path, credential: guest } = await ctx.auth.createGuest());
+		}
 
-			const grant = await ctx.room.sign(room, path);
-			return c.json({ ...grant, path, guest });
-		},
-	);
+		const grant = await ctx.room.sign(room, path);
+		return c.json({ ...grant, url: legacyUrl(grant), path, guest });
+	},
+);
