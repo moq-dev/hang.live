@@ -22,6 +22,11 @@ profile exists.
 - Support a "Private (E2EE)" toggle when starting a room that generates a room
   credential and embeds it in the URL `#fragment` (never sent to `api/` or the
   relay).
+- Keep a private room's name out of `api/` and the relay: the join route
+  ([`room.ts`](/api/src/room.ts)) and the relay grant's root take a random
+  opaque room ID the client generates with the credential, the page URL path
+  names only that ID, and participant-scoped publishing stays as it is. Verify
+  that the join request and relay grant carry no plaintext room name.
 - Follow the pinned profile's credential, opaque broadcast path, and epoch
   rules: each publisher instance mints a fresh epoch, announced as the route's
   instance rather than in the path, never reused under one credential across

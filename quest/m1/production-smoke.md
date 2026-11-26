@@ -25,7 +25,7 @@ against production instead of Vite and `moq-relay`. It stays out of PR CI and
   accessibility) and have the smoke read it on both pages.
 - Fail on any page error and on WebGL errors, the same filter the local smoke
   uses.
-- Run as the last step of each deploy job from
+- Run as the last step of the production deploy job from
   [deploy-staging-and-release](/quest/m1/deploy-staging-and-release.md),
   printing the rollback command on failure, and hourly on a self-hosted runner
   so a relay or API outage between deploys surfaces too. A scheduled failure

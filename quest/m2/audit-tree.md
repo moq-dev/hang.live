@@ -15,7 +15,8 @@ Run the `tree` audit: `quest audit tree` prints what it checks, what each findin
 - Check that each milestone's `Required` still encodes the maintainer's
   ordering (m2 after m1).
 - Quests waiting on a deploy or the maintainer's machine: check whether
-  `hang.live` now runs `main` before calling their plans stale.
+  the commit each waits on is live where it needs it before calling their
+  plans stale.
 
 ## Audit
 
