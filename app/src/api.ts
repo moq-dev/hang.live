@@ -63,8 +63,7 @@ export class Client {
 		return this.#authenticated;
 	}
 
-	// NOTE: Returns when the login is started, not when it's finished.
-	// callback() has to be called to finish the login.
+	// Redirect to the provider's login page; loginComplete() finishes the login after the OAuth redirect returns.
 	async loginStart(provider: Api.OAuth.ProviderId, url = window.location.href) {
 		// Redirect back to the current URL with an /oauth prefix, which the Oauth route strips.
 		// NOTE: pathname starts with a slash.
