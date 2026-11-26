@@ -80,8 +80,10 @@ export class Vector {
 		return new Vector(this.x * scalar, this.y * scalar);
 	}
 
+	// A zero vector has no direction, so it stays zero instead of becoming NaN.
 	normalize() {
 		const length = this.length();
+		if (length === 0) return new Vector(0, 0);
 		return new Vector(this.x / length, this.y / length);
 	}
 

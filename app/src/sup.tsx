@@ -62,7 +62,10 @@ export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 	const publish = solid(local.camera.enabled);
 
 	return (
-		<Show when={publish()} fallback={<Preview room={props.room} local={local} connection={connection} />}>
+		<Show
+			when={publish()}
+			fallback={<Preview room={props.room} local={local} sound={sound} connection={connection} />}
+		>
 			<App connection={connection} canvas={props.canvas} room={props.room} sound={sound} local={local} />
 		</Show>
 	);
@@ -114,7 +117,7 @@ function App(props: {
 	);
 }
 
-function Preview(props: { room: string; local: Local; connection: Moq.Connection }): JSX.Element {
+function Preview(props: { room: string; local: Local; sound: Sound; connection: Moq.Connection }): JSX.Element {
 	const status = createSelector(solid(props.connection.status));
 	const authenticated = solid(Api.client.authenticated);
 
@@ -159,7 +162,7 @@ function Preview(props: { room: string; local: Local; connection: Moq.Connection
 				<div class="flex-1 min-w-[300px] grow space-y-6">
 					<Show when={status("connected")} fallback={<div class="text-center text-gray-400">Loading...</div>}>
 						<div class="rounded-2xl border border-gray-800 p-6">
-							<Profile local={props.local} />
+							<Profile local={props.local} sound={props.sound} />
 							<Show when={!authenticated()}>
 								<div class="text-center text-gray-400 my-4">
 									...or sign in to customize your profile

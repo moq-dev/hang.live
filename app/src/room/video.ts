@@ -3,17 +3,58 @@ import * as Api from "../api";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import { Bounds, Vector } from "./geometry";
+import type { GLContext } from "./gl/context";
 import * as Meme from "./meme";
 
-//export type VideoSource = Watch.Video.Source | Publish.Video.Encoder;
+/** One tile's textures on a live GL context. */
+export class Textures {
+	gl: WebGL2RenderingContext;
+	/** The latest video frame. */
+	frame: WebGLTexture;
+	/** The avatar shown without video. */
+	avatar: WebGLTexture;
+	/** The meme video or emoji drawn on top. */
+	meme: WebGLTexture;
+
+	constructor(context: GLContext) {
+		const gl = context.gl;
+		this.gl = gl;
+		this.frame = gl.createTexture();
+		this.avatar = gl.createTexture();
+		this.meme = gl.createTexture();
+
+		// Start each as a transparent pixel so it is renderable before its first upload.
+		const empty = new Uint8Array([0, 0, 0, 0]);
+		for (const texture of [this.frame, this.avatar, this.meme]) {
+			gl.bindTexture(gl.TEXTURE_2D, texture);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, empty);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		}
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
+
+	/** Replace a texture's contents with `source`. */
+	upload(texture: WebGLTexture, source: TexImageSource) {
+		const gl = this.gl;
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
+
+	close() {
+		this.gl.deleteTexture(this.frame);
+		this.gl.deleteTexture(this.avatar);
+		this.gl.deleteTexture(this.meme);
+	}
+}
 
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
 	// So we use the Video class directly to get individual frames.
 	broadcast: Broadcast;
-
-	// The avatar image.
-	avatar = new Image();
 
 	// The size of the avatar in pixels.
 	avatarSize = new Signal<Vector | undefined>(undefined);
@@ -36,11 +77,8 @@ export class Video {
 	memeActive: Signal<boolean> = new Signal<boolean>(false);
 	memeChroma = false; // whether to use chroma key for greenscreen removal
 
-	// WebGL textures for this broadcast
-	frameTexture: WebGLTexture; // Video texture
-	avatarTexture: WebGLTexture; // Avatar texture
-	memeTexture: WebGLTexture; // Meme texture
-	#gl: WebGL2RenderingContext;
+	/** This tile's textures on the live GL context, unset while it is lost. */
+	textures = new Signal<Textures | undefined>(undefined);
 
 	// Render avatars and emojis at this size
 	#renderSize = new Signal<number>(128);
@@ -48,36 +86,8 @@ export class Video {
 	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
 
-		this.#gl = broadcast.canvas.gl;
-
-		// Create the textures
-		this.frameTexture = this.#gl.createTexture();
-		this.avatarTexture = this.#gl.createTexture();
-		this.memeTexture = this.#gl.createTexture();
-
-		// Initialize textures with 1x1 transparent pixel to make them renderable
-		const emptyPixel = new Uint8Array([0, 0, 0, 0]);
-		for (const texture of [this.frameTexture, this.avatarTexture, this.memeTexture]) {
-			this.#gl.bindTexture(this.#gl.TEXTURE_2D, texture);
-			this.#gl.texImage2D(
-				this.#gl.TEXTURE_2D,
-				0,
-				this.#gl.RGBA,
-				1,
-				1,
-				0,
-				this.#gl.RGBA,
-				this.#gl.UNSIGNED_BYTE,
-				emptyPixel,
-			);
-			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_S, this.#gl.CLAMP_TO_EDGE);
-			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_WRAP_T, this.#gl.CLAMP_TO_EDGE);
-			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MIN_FILTER, this.#gl.LINEAR);
-			this.#gl.texParameteri(this.#gl.TEXTURE_2D, this.#gl.TEXTURE_MAG_FILTER, this.#gl.LINEAR);
-		}
-		this.#gl.bindTexture(this.#gl.TEXTURE_2D, null);
-
 		// Set up texture upload effects
+		this.broadcast.signals.run(this.#runTextures.bind(this));
 		this.broadcast.signals.run(this.#runFrame.bind(this));
 		this.broadcast.signals.run(this.#runMeme.bind(this));
 		this.broadcast.signals.run(this.#runMemeBounds.bind(this));
@@ -88,11 +98,21 @@ export class Video {
 		this.broadcast.signals.run(this.#runRenderSize.bind(this));
 	}
 
+	// Each new context needs its own textures, which the upload effects then fill again.
+	#runTextures(effect: Effect) {
+		const context = effect.get(this.broadcast.canvas.context);
+		if (!context) return;
+
+		const textures = new Textures(context);
+		effect.cleanup(() => textures.close());
+		effect.set(this.textures, textures);
+	}
+
 	#runAvatar(effect: Effect) {
 		let avatar = effect.get(this.broadcast.source.user.avatar);
 		if (!avatar) {
 			// Don't unset the avatar if it's already set.
-			if (this.avatar) return;
+			if (this.avatarSize.peek()) return;
 
 			// Set a random default avatar while the user details are loading.
 			avatar = Api.randomAvatar();
@@ -123,28 +143,20 @@ export class Video {
 			effect.set(this.avatarSize, avatarSize);
 
 			effect.run((effect) => {
+				const textures = effect.get(this.textures);
+				if (!textures) return;
+
 				const size = effect.get(this.#renderSize);
-				this.#imageToTexture(newAvatar, this.avatarTexture, size);
+				const canvas = document.createElement("canvas");
+				canvas.width = size;
+				canvas.height = size;
+				const ctx = canvas.getContext("2d");
+				if (!ctx) throw new Error("Failed to get context");
+				ctx.drawImage(newAvatar, 0, 0, size, size);
+
+				textures.upload(textures.avatar, canvas);
 			});
 		});
-	}
-
-	#imageToTexture(src: HTMLImageElement, dst: WebGLTexture, size: number) {
-		const canvas = document.createElement("canvas");
-		canvas.width = size;
-		canvas.height = size;
-		const ctx = canvas.getContext("2d");
-		if (!ctx) throw new Error("Failed to get context");
-		ctx.drawImage(src, 0, 0, size, size);
-
-		const gl = this.#gl;
-		gl.bindTexture(gl.TEXTURE_2D, dst);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
 	#runTargetSize(effect: Effect) {
@@ -173,7 +185,8 @@ export class Video {
 			this.frameActive = !!frame;
 		}
 
-		if (frame) this.#frameToTexture(frame, this.frameTexture);
+		const textures = effect.get(this.textures);
+		if (frame && textures) textures.upload(textures.frame, frame);
 	}
 
 	#runMeme(effect: Effect) {
@@ -203,8 +216,6 @@ export class Video {
 
 		effect.cleanup(() => this.memeActive.set(false));
 
-		const gl = this.#gl;
-
 		effect.run((effect) => {
 			if (effect.get(paused)) return; // Gate everything on the pause state
 
@@ -230,13 +241,8 @@ export class Video {
 				if (element.currentTime > 0 && element.readyState > HTMLMediaElement.HAVE_CURRENT_DATA) {
 					this.memeActive.set(true);
 
-					gl.bindTexture(gl.TEXTURE_2D, this.memeTexture);
-					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, element);
-					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-					gl.bindTexture(gl.TEXTURE_2D, null);
+					const textures = this.textures.peek();
+					textures?.upload(textures.meme, element);
 				}
 
 				if (!element.paused && !element.ended) {
@@ -346,8 +352,10 @@ export class Video {
 
 		effect.run((effect) => {
 			// Audio meme - render emoji to texture
+			const textures = effect.get(this.textures);
+			if (!textures) return;
+
 			const size = effect.get(this.#renderSize);
-			const gl = this.#gl;
 
 			// Create offscreen canvas
 			const canvas = document.createElement("canvas");
@@ -363,14 +371,7 @@ export class Video {
 			// Shift down slightly to compensate for emoji baseline issues
 			ctx.fillText(emoji, size / 2, size * 0.56);
 
-			// Upload to texture
-			gl.bindTexture(gl.TEXTURE_2D, this.memeTexture);
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-			gl.bindTexture(gl.TEXTURE_2D, null);
+			textures.upload(textures.meme, canvas);
 
 			this.#memeSize.set(Vector.create(size, size));
 		});
@@ -382,17 +383,6 @@ export class Video {
 	#runMemeTransition(effect: Effect) {
 		effect.get(this.memeActive);
 		this.#memeTransition = performance.now();
-	}
-
-	#frameToTexture(src: VideoFrame, dst: WebGLTexture) {
-		const gl = this.#gl;
-		gl.bindTexture(gl.TEXTURE_2D, dst);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
 	#runRenderSize(effect: Effect) {
@@ -423,11 +413,5 @@ export class Video {
 		} else {
 			this.memeOpacity = Math.max(0, 1 - memeElapsed / TRANSITION_DURATION);
 		}
-	}
-
-	close() {
-		this.#gl.deleteTexture(this.frameTexture);
-		this.#gl.deleteTexture(this.avatarTexture);
-		this.#gl.deleteTexture(this.memeTexture);
 	}
 }

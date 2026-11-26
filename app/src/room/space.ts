@@ -5,6 +5,9 @@ import { Vector } from "./geometry";
 import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
+import type { GLContext } from "./gl/context";
+import * as Peers from "./peers";
+import * as Physics from "./physics";
 import type { Sound } from "./sound";
 
 export type SpaceProps = {
@@ -32,10 +35,10 @@ export class Space {
 
 	#maxZ = 0;
 
-	// WebGL renderers
-	#borderRenderer: BorderRenderer;
-	#audioRenderer: AudioRenderer;
-	#broadcastRenderer: BroadcastRenderer;
+	// WebGL renderers for the live context.
+	#renderers?: Renderers;
+
+	#stepper = new Physics.Stepper();
 
 	// Touch handling for mobile
 	#touches = new Map<number, { x: number; y: number }>();
@@ -49,10 +52,7 @@ export class Space {
 		this.sound = sound;
 		this.profile = props?.profile ?? false;
 
-		// Initialize WebGL renderers
-		this.#borderRenderer = new BorderRenderer(canvas);
-		this.#audioRenderer = new AudioRenderer(canvas);
-		this.#broadcastRenderer = new BroadcastRenderer(canvas);
+		this.#signals.run(this.#runRenderers.bind(this));
 
 		// Use the new eventListener helper that automatically handles cleanup
 		this.#signals.event(canvas.element, "mousedown", this.#onMouseDown.bind(this));
@@ -68,16 +68,19 @@ export class Space {
 
 		this.#signals.run(this.#runScale.bind(this));
 
-		// Register tick and render methods separately
-		this.canvas.onRender = this.#render.bind(this);
-		this.#signals.cleanup(() => {
-			this.canvas.onRender = undefined;
-		});
+		// Physics steps with each rendered frame, so it pauses whenever the canvas is hidden.
+		this.#signals.set(this.canvas.scene, this.#frame.bind(this));
+	}
 
-		// Run tick separately from render at 60fps
-		this.#signals.run((effect) => {
-			const interval = setInterval(() => this.#tickAll(), 1000 / 60);
-			effect.cleanup(() => clearInterval(interval));
+	#runRenderers(effect: Effect) {
+		const context = effect.get(this.canvas.context);
+		if (!context) return;
+
+		const renderers = new Renderers(context);
+		this.#renderers = renderers;
+		effect.cleanup(() => {
+			this.#renderers = undefined;
+			renderers.close();
 		});
 	}
 
@@ -140,9 +143,8 @@ export class Space {
 			const deltaY = mouse.y - currentCenter.y;
 
 			// Add to deformation velocity based on mouse movement (additive)
-			this.#dragging.deformVelocity = this.#dragging.deformVelocity.add(
-				Vector.create(deltaX * 0.12, deltaY * 0.12), // Reduced from 0.2 to 0.12
-			);
+			const deform = this.#dragging.deform;
+			deform.velocity = deform.velocity.add(Vector.create(deltaX * 0.12, deltaY * 0.12));
 
 			// Update the position but don't publish it yet.
 			this.#dragging.position.mutate((position) => {
@@ -237,7 +239,7 @@ export class Space {
 		}
 
 		// Add to zoom deformation based on scale direction and magnitude (additive)
-		broadcast.zoomDeform += scale * 5; // Reduced from 15 to 5
+		broadcast.deform.zoom += scale * 5; // Reduced from 15 to 5
 
 		// Update the scale, publishing it.
 		broadcast.position.update((prev) => ({
@@ -352,9 +354,8 @@ export class Space {
 			const deltaY = mouse.y - currentCenter.y;
 
 			// Add to deformation velocity based on touch movement (additive)
-			this.#dragging.deformVelocity = this.#dragging.deformVelocity.add(
-				Vector.create(deltaX * 0.12, deltaY * 0.12), // Reduced from 0.2 to 0.12
-			);
+			const deform = this.#dragging.deform;
+			deform.velocity = deform.velocity.add(Vector.create(deltaX * 0.12, deltaY * 0.12));
 
 			// Update the position but don't publish it yet.
 			this.#dragging.position.update((prev) => ({
@@ -395,7 +396,7 @@ export class Space {
 
 				// Add to zoom deformation based on scale delta (additive)
 				const scaleDelta = newScale - oldScale;
-				this.#dragging.zoomDeform += scaleDelta * 5; // Reduced from 15 to 5
+				this.#dragging.deform.zoom += scaleDelta * 5; // Reduced from 15 to 5
 
 				// Update the scale
 				this.#dragging.position.update((prev) => ({
@@ -554,6 +555,24 @@ export class Space {
 			}));
 		});
 
+		if (source.role === "watch") {
+			broadcast.signals.run((effect) => {
+				const handle = effect.get(source.location.window.handle);
+				if (!handle) return;
+
+				// Stop asking a peer to move once it leaves.
+				effect.cleanup(() => {
+					for (const moves of this.#moves()) Peers.drop(moves, handle);
+				});
+
+				// Stop asking once it publishes the position we asked for.
+				effect.run((effect) => {
+					const published = effect.get(source.location.window.position);
+					for (const moves of this.#moves()) Peers.settle(moves, handle, published);
+				});
+			});
+		}
+
 		broadcast.signals.run((effect) => {
 			if (!effect.get(broadcast.visible)) return;
 
@@ -597,7 +616,11 @@ export class Space {
 		// Wait for the fade to complete, roughly.
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		this.#rip.splice(this.#rip.indexOf(broadcast), 1);
+		// Space.close may have closed it already.
+		const index = this.#rip.indexOf(broadcast);
+		if (index < 0) return broadcast.source;
+
+		this.#rip.splice(index, 1);
 		broadcast.close();
 
 		return broadcast.source;
@@ -610,39 +633,38 @@ export class Space {
 		return all;
 	}
 
-	// Tick physics separately from rendering
-	#tickAll() {
-		const now = performance.now();
+	// Step the physics for the time since the last frame, then draw it.
+	#frame(now: DOMHighResTimeStamp) {
+		const steps = this.#stepper.advance();
+		for (let i = 0; i < steps; i++) this.#step();
 
+		for (const broadcast of this.#rip) broadcast.tick(now);
+		for (const broadcast of this.ordered.peek()) broadcast.tick(now);
+
+		this.#render(now);
+	}
+
+	#step() {
 		for (const broadcast of this.#rip) {
-			broadcast.tick(now);
+			broadcast.step();
 		}
 
 		const broadcasts = this.ordered.peek();
 
 		for (const broadcast of broadcasts) {
-			broadcast.tick(now);
+			broadcast.step();
 		}
 
 		// Check for collisions.
 		// We might need to optimize this with a quadtree or something.
 		for (let i = 0; i < broadcasts.length; i++) {
 			const a = broadcasts[i];
-			const abounds = a.bounds.peek();
 
 			for (let j = i + 1; j < broadcasts.length; j++) {
 				const b = broadcasts[j];
-				const bbounds = b.bounds.peek();
 
-				// Compute the intersection rectangle.
-				const intersection = abounds.intersects(bbounds);
-				if (!intersection) {
-					continue;
-				}
-
-				// Repel each other based on the size of the intersection.
-				const strength = (2 * intersection.area()) / (abounds.area() + bbounds.area());
-				let force = abounds.middle().sub(bbounds.middle()).mult(strength);
+				let force = Physics.repel(a.bounds.peek(), b.bounds.peek());
+				if (!force) continue;
 
 				if (this.#dragging !== a && this.#dragging !== b) {
 					force = force.mult(10);
@@ -656,6 +678,9 @@ export class Space {
 
 	// Render using WebGL
 	#render(now: DOMHighResTimeStamp) {
+		const renderers = this.#renderers;
+		if (!renderers) return;
+
 		const broadcasts = this.ordered.peek();
 
 		// Render in order: black borders (back) -> audio viz (middle) -> videos (front)
@@ -663,29 +688,29 @@ export class Space {
 
 		// 1. Render black borders (furthest back)
 		for (const broadcast of this.#rip) {
-			this.#borderRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+			renderers.border.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
 		for (const broadcast of broadcasts) {
-			this.#borderRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+			renderers.border.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
 
 		// 2. Render audio visualizations (middle layer)
 		for (const broadcast of this.#rip) {
-			this.#audioRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			renderers.audio.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 		for (const broadcast of broadcasts) {
-			this.#audioRenderer.render(broadcast, this.canvas.camera, this.#maxZ, now);
+			renderers.audio.render(broadcast, this.canvas.camera, this.#maxZ, now);
 		}
 
 		// 3. Render video content (front layer)
 		for (const broadcast of this.#rip) {
-			this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ);
+			renderers.broadcast.render(broadcast, this.canvas.camera, this.#maxZ);
 		}
 
 		// Render all broadcasts (except dragging)
 		for (const broadcast of broadcasts) {
 			if (this.#dragging !== broadcast) {
-				this.#broadcastRenderer.render(broadcast, this.canvas.camera, this.#maxZ, {
+				renderers.broadcast.render(broadcast, this.canvas.camera, this.#maxZ, {
 					hovering: this.#hovering === broadcast || this.profile,
 				});
 			}
@@ -693,7 +718,7 @@ export class Space {
 
 		// Render the dragging broadcast last so it's always on top
 		if (this.#dragging) {
-			this.#broadcastRenderer.render(this.#dragging, this.canvas.camera, this.#maxZ, {
+			renderers.broadcast.render(this.#dragging, this.canvas.camera, this.#maxZ, {
 				dragging: true,
 			});
 		}
@@ -722,10 +747,6 @@ export class Space {
 	}
 
 	close() {
-		this.#borderRenderer.close();
-		this.#audioRenderer.close();
-		this.#broadcastRenderer.close();
-
 		this.#signals.close();
 
 		for (const broadcast of this.ordered.peek()) {
@@ -754,15 +775,40 @@ export class Space {
 			const handle = broadcast.source.location.window.handle.peek();
 			if (!handle) return;
 
-			// TODO optimize this by storing local handles separately.
-			for (const broadcast of this.ordered.peek()) {
-				if (broadcast.source.role === "publish" && broadcast.source.location.peers.enabled.peek()) {
-					broadcast.source.location.peers.positions.set({ [handle]: position });
-					return;
-				}
-			}
-
-			console.warn("no local peers found");
+			// Ask the peer to move through the first local broadcast with Remote Control enabled.
+			const moves = this.#moves(true).at(0);
+			if (moves) Peers.request(moves, handle, position);
 		}
+	}
+
+	// The peer moves each local broadcast publishes, optionally only those that take part in peer dragging.
+	#moves(enabled = false): Signal<Peers.Moves>[] {
+		const moves = [];
+		for (const broadcast of this.ordered.peek()) {
+			const source = broadcast.source;
+			if (source.role !== "publish") continue;
+			if (enabled && !source.location.peers.enabled.peek()) continue;
+			moves.push(source.location.peers.positions);
+		}
+		return moves;
+	}
+}
+
+// The WebGL renderers for one live context.
+class Renderers {
+	border: BorderRenderer;
+	audio: AudioRenderer;
+	broadcast: BroadcastRenderer;
+
+	constructor(context: GLContext) {
+		this.border = new BorderRenderer(context);
+		this.audio = new AudioRenderer(context);
+		this.broadcast = new BroadcastRenderer(context);
+	}
+
+	close() {
+		this.border.close();
+		this.audio.close();
+		this.broadcast.close();
 	}
 }

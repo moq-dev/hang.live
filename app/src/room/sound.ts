@@ -37,7 +37,8 @@ export class Sound {
 	gain: GainNode;
 	suspended: Signal<boolean>;
 
-	#notifications: Map<NotificationSound, Promise<AudioBuffer[]>>;
+	// Loaded on first use, so a Sound that never notifies never fetches them.
+	#notifications = new Map<NotificationSound, Promise<AudioBuffer[]>>();
 	#signals = new Effect();
 
 	constructor(props?: SoundProps) {
@@ -64,23 +65,6 @@ export class Sound {
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
 
-		// TODO only start loading once unmuted.
-		const notifications = new Map();
-
-		for (const [sound, url] of Object.entries(NOTIFICATIONS)) {
-			const urls = Array.isArray(url) ? url : [url];
-			const load = Promise.all(
-				urls.map(async (url) => {
-					const response = await fetch(url);
-					const data = await response.arrayBuffer();
-					return await this.context.decodeAudioData(data);
-				}),
-			);
-			notifications.set(sound, load);
-		}
-
-		this.#notifications = notifications;
-
 		this.#signals.run(this.#runGain.bind(this));
 	}
 
@@ -101,8 +85,15 @@ export class Sound {
 
 	// Return a buffer for the sound, randomly selecting one if there are multiple.
 	async notificationNode(sound: NotificationSound): Promise<AudioBufferSourceNode> {
-		const buffers = await this.#notifications.get(sound);
-		if (!buffers) throw new Error(`Sound "${String(sound)}" not loaded`);
+		let load = this.#notifications.get(sound);
+		if (!load) {
+			const url = NOTIFICATIONS[sound];
+			const urls: readonly string[] = typeof url === "string" ? [url] : url;
+			load = Promise.all(urls.map((url) => this.load(url)));
+			this.#notifications.set(sound, load);
+		}
+
+		const buffers = await load;
 		const buffer = buffers[Math.floor(Math.random() * buffers.length)];
 		return new AudioBufferSourceNode(this.context, { buffer });
 	}

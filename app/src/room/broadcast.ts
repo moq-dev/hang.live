@@ -5,10 +5,10 @@ import { Chat } from "./chat";
 import { Debug } from "./debug";
 import { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
-import { MeshBuffer } from "./gl/mesh";
 import type { HangLocalSource } from "./local";
 import * as Meme from "./meme";
 import { Name } from "./name";
+import { Deform } from "./physics";
 import { Sound } from "./sound";
 import { Video } from "./video";
 import { WatchBroadcast } from "./watch";
@@ -57,18 +57,11 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Drag point in normalized coordinates (0-1) relative to the broadcast
 	dragPoint = new Signal<Vector>(Vector.create(0.5, 0.5));
 
-	// Deformation velocity for the drag effect (decays independently from physics velocity)
-	deformVelocity = Vector.create(0, 0);
-
-	// Zoom deformation for scaling effect (positive = expanding, negative = contracting)
-	// Only applies during user-initiated zooming (mouse wheel or pinch)
-	zoomDeform = 0;
+	// Drag and zoom wobble, decaying independently from the physics velocity.
+	deform = new Deform();
 
 	// Zoom center point in normalized coordinates (0-1) relative to the broadcast
 	zoomCenter = new Signal<Vector>(Vector.create(0.5, 0.5));
-
-	// Shared mesh buffer for all renderers
-	mesh: MeshBuffer;
 
 	// Replaced by position
 	//targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
@@ -100,9 +93,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		this.canvas = props.canvas;
 		this.visible = new Signal(true); // TODO
 		this.scale = props.scale;
-
-		// Create shared mesh buffer
-		this.mesh = new MeshBuffer(props.canvas);
 
 		// Unless provided, start them at the center of the screen with a tiiiiny bit of variance to break ties.
 		const start = () => (Math.random() - 0.5) / 100;
@@ -144,7 +134,10 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		if (!effect.get(this.visible)) {
 			// Change the target position to somewhere outside the screen.
 			this.position.update((prev) => {
-				const offscreen = Vector.create(prev.x, prev.y).normalize().mult(2);
+				let away = Vector.create(prev.x, prev.y).normalize();
+				// A tile at the exact center has no direction to leave in, so it leaves downward.
+				if (away.length() === 0) away = Vector.create(0, 1);
+				const offscreen = away.mult(2);
 				return { ...prev, x: offscreen.x, y: offscreen.y };
 			});
 
@@ -216,27 +209,20 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 		effect.set(this.source.video.target, { pixels: scaled });
 	}
 
+	// Update the time-based fades for a frame at `now`.
 	tick(now: DOMHighResTimeStamp) {
-		this.audio.tick();
 		this.video.tick(now);
-
-		// Update mesh based on deformation velocity and zoom deformation
-		this.mesh.update(this.deformVelocity, this.zoomDeform);
-
-		// Decay deformation effects smoothly over time
-		const DEFORM_DECAY = 0.95; // Higher = slower decay (lasts longer)
-		const ZOOM_DECAY = 0.8; // Zoom decays faster
-
-		// Decay drag deformation velocity
-		this.deformVelocity = this.deformVelocity.mult(DEFORM_DECAY);
-
-		// Decay zoom deformation
-		this.zoomDeform *= ZOOM_DECAY;
 
 		// Update opacity based on online status
 		const fadeTime = 300; // ms
 		const elapsed = now - this.#onlineTransition;
 		this.opacity = this.online.peek() ? Math.min(1, elapsed / fadeTime) : Math.max(0, 1 - elapsed / fadeTime);
+	}
+
+	// Advance the physics by one fixed step.
+	step() {
+		this.audio.tick();
+		this.deform.step();
 
 		const bounds = this.bounds.peek();
 		const viewport = this.canvas.viewport.peek();
@@ -312,21 +298,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Slow down the velocity for the next frame.
 		this.velocity = this.velocity.mult(0.5);
-
-		// Decay the deformation velocity smoothly over time (faster decay than physics velocity)
-		if (this.deformVelocity.length() > 0.01) {
-			this.deformVelocity = this.deformVelocity.mult(0.85);
-		} else {
-			this.deformVelocity = Vector.create(0, 0);
-		}
-
-		// Decay zoom deformation (set by user interaction in Space)
-		// Slower decay than drag to keep mesh subdivided during zoom animation
-		if (Math.abs(this.zoomDeform) > 0.01) {
-			this.zoomDeform *= 0.95;
-		} else {
-			this.zoomDeform = 0;
-		}
 	}
 
 	// Returns true if the broadcaster is locked to a position.
@@ -347,11 +318,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	close() {
 		this.signals.close();
 		this.audio.close();
-		this.video.close();
 		this.chat.close();
 		this.name.close();
 		this.debug.close();
-		this.mesh.close();
 
 		// NOTE: Don't close the source broadcast; we need it for the local preview.
 		// this.source.close();
