@@ -17,9 +17,6 @@ export const LIFETIME = 2 * 60 * 60;
 // relay ends a session once its token expires, yet short enough that a leaked token soon stops working.
 export const EXTERNAL_LIFETIME = 4 * 60 * 60;
 
-// Bits per second an external publisher may send, room for 1080p60 from OBS. The relay paces its session to it.
-export const EXTERNAL_RATE = 10_000_000;
-
 // A relay URL and the token that admits its holder there for `lifetime` seconds.
 export interface Grant {
 	relay: URL;
@@ -67,10 +64,11 @@ export class Context {
 	}
 
 	// Mints an identity no participant holds, so the publish token can never stream as anyone else.
+	// Uncapped like a participant's: the released relay refuses a grant with a `rate`.
 	async signExternal(room: Name): Promise<External> {
 		const path = `external/${Uuid.v4()}`;
 		const root = this.#room(room);
-		const publish = await this.#grant(root, { publish: { path: [path], rate: EXTERNAL_RATE } }, EXTERNAL_LIFETIME);
+		const publish = await this.#grant(root, { publish: [path] }, EXTERNAL_LIFETIME);
 		const subscribe = await this.#grant(root, { subscribe: [""] }, EXTERNAL_LIFETIME);
 		return {
 			relay: publish.relay,

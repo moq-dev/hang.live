@@ -141,7 +141,7 @@ test("a signed-in account joins as itself and gets no guest credential", async (
 	expect(joined.guest).toBeUndefined();
 });
 
-test("an external publisher streams only as its fresh identity, capped and expiring", async () => {
+test("an external publisher streams only as its fresh identity, until it expires", async () => {
 	const { key, call, external } = await join();
 	const participant = ((await (await call({})).json()) as Joined).path;
 
@@ -157,7 +157,7 @@ test("an external publisher streams only as its fresh identity, capped and expir
 	expect(permissions.publish.matches("external/other/camera.hang")).toBe(false);
 	expect(permissions.subscribe.size).toBe(0);
 	expect(decodeJwt(mint.publish)).toMatchObject({
-		publish: { path: [`${mint.path}/**`], rate: Room.EXTERNAL_RATE },
+		publish: [`${mint.path}/**`],
 		exp: START + Room.EXTERNAL_LIFETIME,
 	});
 

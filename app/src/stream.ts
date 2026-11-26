@@ -1,4 +1,5 @@
 // Ready-to-paste settings and `moq` commands for streaming into or out of a room from outside the browser.
+// The commands use only what the released CLI that `moq.sh` installs supports.
 
 /** What the API mints for a tool outside Hang. */
 export interface External {
@@ -22,21 +23,30 @@ export function broadcast(external: External): string {
 	return `${external.path}/camera.hang`;
 }
 
+// One literal shell argument: a participant picks its own path, so it must never run as shell syntax.
+function quote(text: string): string {
+	return `'${text.replaceAll("'", `'\\''`)}'`;
+}
+
+function moq(relay: string, token: string, broadcast: string): string {
+	return `moq --connect ${quote(url(relay, token))} --broadcast ${quote(broadcast)}`;
+}
+
 /** CLI commands that stream into the room under the minted identity. */
-export function ingest(external: External): { capture: string; rtsp: string } {
-	const moq = `moq --connect '${url(external.relay, external.publish)}' --broadcast ${broadcast(external)} import`;
+export function ingest(external: External): { rtmp: string; rtsp: string } {
+	const into = moq(external.relay, external.publish, broadcast(external));
 	return {
-		capture: `${moq} capture`,
-		rtsp: `${moq} rtsp --connect rtsp://camera.local/stream`,
+		rtmp: `${into} import rtmp --listen 127.0.0.1:1935`,
+		rtsp: `ffmpeg -i rtsp://camera.local/stream -c copy -f mpegts - | ${into} import ts`,
 	};
 }
 
 /** CLI commands that restream or record the broadcast at `path`, which only need to watch. */
-export function egress(external: External, path: string): { hls: string; rtmp: string; mp4: string } {
-	const moq = `moq --connect '${url(external.relay, external.subscribe)}' --broadcast ${path} export`;
+export function egress(external: External, path: string): { hls: string; rtmp: string; record: string } {
+	const from = moq(external.relay, external.subscribe, path);
 	return {
-		hls: `${moq} hls --hls-listen '[::]:8089'`,
-		rtmp: `${moq} rtmp --connect rtmp://live.example.com/app/STREAM_KEY`,
-		mp4: `${moq} mp4 --output recording.mp4`,
+		hls: `${from} export hls`,
+		rtmp: `${from} export rtmp --connect rtmp://live.example.com/app/STREAM_KEY`,
+		record: `${from} export fmp4 > recording.mp4`,
 	};
 }

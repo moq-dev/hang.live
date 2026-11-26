@@ -120,8 +120,11 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 				</p>
 				<Copy label="Relay URL" value={Stream.url(external().relay, external().publish)} />
 				<Copy label="Broadcast" value={Stream.broadcast(external())} />
-				<Copy label="Camera and microphone" value={ingest().capture} />
-				<Copy label="IP camera (RTSP)" value={ingest().rtsp} />
+				<Copy
+					label="From any RTMP encoder: run this, then stream to rtmp://127.0.0.1:1935/live/hang"
+					value={ingest().rtmp}
+				/>
+				<Copy label="From an IP camera (RTSP), through ffmpeg" value={ingest().rtsp} />
 			</section>
 
 			<section class="flex flex-col gap-2">
@@ -143,7 +146,7 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 								</label>
 								<Copy label="Serve HLS on port 8089" value={egress().hls} />
 								<Copy label="Restream over RTMP" value={egress().rtmp} />
-								<Copy label="Record to MP4" value={egress().mp4} />
+								<Copy label="Record to MP4" value={egress().record} />
 							</>
 						);
 					}}
