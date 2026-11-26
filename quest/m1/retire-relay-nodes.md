@@ -26,6 +26,8 @@ that last ran `tofu apply`.
    then `cd ../hang-infra/infra && tofu init && tofu destroy`.
    Remove the `moq` NS delegation for the deleted Cloud DNS zone from the
    `hang.live` zone, then delete the worktree and the local `secrets/` copies.
+   Delete the old checkout's untracked `infra/` (state, `terraform.tfvars`,
+   `secrets/`), then remove the `/infra/` line from the root `.gitignore`.
 3. Check: `dig +short moq.hang.live` and `dig +short use.moq.hang.live` print
    nothing, and the Linode dashboard lists no `use`/`usw`/`euc`/`sea`/`pub`
    instances.
