@@ -29,8 +29,6 @@ audit:
   - Fix `exponentialRampToValueAtTime` throwing `RangeError` when unmuting from
     `0` (clamp/anchor starting gain above `GAIN_MIN` or use linear/setTarget
     ramps) in both `Audio` and `Sound.#runGain`.
-  - Initialize new remote `GainNode`s to `0` when audio is muted instead of
-    `Settings.audio.volume`.
   - Route `Sound.notification()` through `this.gain` instead of connecting
     directly to `this.context.destination` so mute and speaker volume apply.
   - Cancel or drop in-flight `Audio.#runMemeAudio` playback if its effect cleans
