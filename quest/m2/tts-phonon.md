@@ -2,7 +2,7 @@
 
 ## Goal
 
-High-quality room text-to-speech runs on Phonon instead of the stale `kokoro-js`, without its dependency stack, and speaks chat messages at least as well as today.
+High-quality room text-to-speech runs on Phonon instead of the stale `kokoro-js`, without its dependency stack, and speaks join and leave announcements at least as well as today.
 Low stays the browser's `speechSynthesis`, with no download.
 
 ## Plan
@@ -18,10 +18,10 @@ Hang uses only `KokoroTTS.from_pretrained` and `generate` with one voice (`app/s
 - Play the stream as it arrives rather than waiting for a whole message.
 - Drop the WebGPU gate on High in `app/src/settings.tsx` if Phonon's CPU path keeps up; keep it only if it does not.
 - Once ORT is gone, remove anything left for it in `app/vite.config.ts` and confirm `dist/` no longer emits the ORT `.wasm` asset.
-- Measure against Kokoro on the same machine and record both in the PR: time from a chat message to its first audio, and the bytes the High setting downloads (worker bundle plus model).
+- Measure against Kokoro on the same machine and record both in the PR: time from a join announcement to its first audio, and the bytes the High setting downloads (worker bundle plus model).
 - Update the privacy page (`app/src/privacy.tsx`) if the model is fetched from a different host than Kokoro's (huggingface.co today).
 
-Verify on the real surface: load a room, pick High, and confirm a chat message is spoken.
+Verify on the real surface: load a room, pick High, and confirm a second participant's join is announced.
 
 ## Related
 

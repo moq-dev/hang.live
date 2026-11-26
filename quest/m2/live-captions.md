@@ -38,7 +38,11 @@ starts and stops the work.
   [`7d1f56f`](https://github.com/moq-dev/hang.live/tree/7d1f56fab788b52ab6d2b7ca41aa029d659eec1a)):
   - the CC toggle in
     [`controls.tsx`](https://github.com/moq-dev/hang.live/blob/7d1f56fab788b52ab6d2b7ca41aa029d659eec1a/app/src/controls.tsx),
-    which re-enables `Settings.captions.render`;
+    backed by a new storage key that defaults to off and is written only
+    when the viewer turns captions on. Delete `Settings.captions.render`:
+    it defaults to on and is already stored as `true` for past visitors, so
+    reusing it would subscribe them, and start transcription, without a
+    click;
   - `pick()` and the per-tile overlay in
     [`captions/overlay.ts`](https://github.com/moq-dev/hang.live/blob/7d1f56fab788b52ab6d2b7ca41aa029d659eec1a/app/src/room/captions/overlay.ts)
     with its
@@ -54,17 +58,21 @@ starts and stops the work.
     captions play on its clock, with the tile's gain keeping it silent when
     room audio is off.
 - Drop #65's publish half (worklet, segmenter, Whisper worker, model download,
-  WebGPU-only gate) and delete the unused `Settings.captions.capture` key,
-  which defaults to on for WebGPU browsers.
+  WebGPU-only gate) and delete the unused `Settings.captions.capture` key.
 - Hide the CC toggle in encrypted rooms ([E2EE rooms](/quest/m2/e2ee-rooms.md)):
   a transcriber cannot read ciphertext.
 - Name moq.pro as the transcription provider on the privacy page
   (`app/src/privacy.tsx`): a participant's audio is sent to it for
   transcription while anyone in the room shows captions.
+- Captions trail the audio by the transcriber's lag, since Hang plays at low
+  latency and `@moq/watch` shows a late revision on arrival. Keep room
+  latency as is, and measure that lag (from when a phrase plays to when its
+  caption shows) on the real surface, recording it in the PR.
 - Add an automated signal that a transcript frame arrives: a check against the
   production relay that publishes speech into a room, turns captions on, and
-  fails when no transcript frame arrives in time. Run it after deploy or on a
-  schedule, not as a PR gate, since it depends on moq.pro.
+  fails when no transcript frame arrives in time, reporting the lag above.
+  Run it after deploy or on a schedule, not as a PR gate, since it depends on
+  moq.pro.
 - The [AI voice agent](/quest/m2/ai-voice-agent.md) publishes a broadcast too,
   so its speech gets captions the same way, with no work there.
 
@@ -80,15 +88,20 @@ starts and stops the work.
   derivative catalog on the production relay lists a transcript rendition.
 - Maintainer: decide how a Hang session reaches transcripts. Room tokens are
   rooted at `RELAY_PREFIX/<room>` (`api/src/room.ts`), but a transcript and its
-  derivative catalog may be announced outside that root. Options: (a) re-root
-  room tokens at `RELAY_PREFIX` with subscribe `<room>` and publish
-  `<room>/<identity>`; (b) have moq.pro announce transcripts beneath the room
-  root, so today's tokens cover them; (c) a second subscribe-only connection
-  for transcripts. Recommendation: (a), since one connection and one token
-  keep working wherever upstream names the derivative, and it changes only
-  `api/src/room.ts` and the paths the app joins. An agent cannot take this:
-  the maintainer said nothing is decided yet. Check: this item is replaced by
-  a decision in the Plan.
+  derivative catalog may be announced outside that root. (If upstream names
+  the derivative beneath its source, as `moq-transcode` does with
+  `<source>/transcode.hang`, today's tokens already cover it and this item
+  clears.) Options: (a) re-root room tokens at `RELAY_PREFIX`, with subscribe
+  `<room>` plus wherever moq.pro announces that room's transcripts, and
+  publish `<room>/<identity>`; the join response and the app's paths change
+  together, so tabs still holding an old token keep working until it renews;
+  (b) have moq.pro announce transcripts beneath the room root, so today's
+  tokens cover them unchanged; (c) a second subscribe-only connection for
+  transcripts. Recommendation: (a), since one connection and one token can
+  grant several prefixes, so Hang does not depend on where moq.pro names the
+  derivative, and it changes only `api/src/room.ts` and the paths the app
+  joins. An agent cannot take this: the maintainer said nothing is decided
+  yet. Check: this item is replaced by a decision in the Plan.
 
 ## Related
 
