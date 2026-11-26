@@ -18,8 +18,9 @@ Found while aligning `api/src/room.ts` with `@moq/auth`:
   `guest` value.
 - Join and preview tokens carry no `expires`, so a leaked relay URL, or one
   minted for a since-deleted account, publishes forever. Sign with an expiry
-  and renew in-band through `Moq.Connection`'s `tokens` dials (see
-  `moq/js/net/src/connection/pool.ts`), re-calling the join endpoint before
-  expiry.
+  and renew in-band: re-call the join endpoint before expiry and set the new
+  token on a `tokens` signal passed to `Moq.Connection` (see
+  `moq/js/net/src/connection/pool.ts`), which presents it over AUTH on a live
+  session. `Dials` asks only when dialing, so it cannot renew one.
 - Cover both in `api/test/room.test.ts`: a forged guest is refused, and a
   token's `exp` is set.
