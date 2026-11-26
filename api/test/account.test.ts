@@ -70,6 +70,16 @@ test("a failed delete of the replaced upload still reports the committed save", 
 	expect(bucket.objects.size).toBe(2);
 });
 
+test("an upload for an account deleted meanwhile is removed, not orphaned", async () => {
+	const { ctx, bucket } = harness();
+	const { id } = await ctx.account.create({ name: "Alice", email: "alice@example.com" });
+	await ctx.account.delete(id);
+
+	// A session token outlives its account, so the update still runs.
+	await expect(ctx.account.update(id, { avatar: png() })).rejects.toThrow();
+	expect(bucket.objects.size).toBe(0);
+});
+
 test("deleting an account removes its favorites and upload, and retries after an R2 failure", async () => {
 	const { ctx, bucket, sqlite } = harness();
 	const alice = await ctx.account.create({ name: "Alice", email: "alice@example.com" });
