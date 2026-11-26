@@ -113,7 +113,7 @@ export class Video {
 
 	#runAvatar(effect: Effect) {
 		// Keep the last avatar while the user details are missing, and pick a random one only for a tile that never had one.
-		const avatar = effect.get(this.broadcast.source.user.avatar) ?? this.#avatar ?? Api.randomAvatar();
+		const avatar = effect.get(this.broadcast.source.user.avatar) || this.#avatar || Api.randomAvatar();
 		this.#avatar = avatar;
 
 		// TODO only set the avatar if it successfully loads

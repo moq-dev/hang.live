@@ -533,9 +533,6 @@ export class Space {
 		});
 
 		if (source.role === "publish") {
-			// A publisher reused later, such as a new screen share, must not replay moves nobody settles anymore.
-			broadcast.signals.cleanup(() => source.location.peers.positions.set(undefined));
-
 			// When the media source changes, bump the z-index to the highest known value.
 			broadcast.signals.run((effect) => {
 				if (!effect.get(source.enabled)) return;
@@ -608,6 +605,7 @@ export class Space {
 		broadcast.setOnline(false);
 
 		this.lookup.delete(path);
+		this.#leave(broadcast);
 
 		// Move it from the main list to the rip list.
 		this.ordered.update((prev) => prev.filter((b) => b !== broadcast));
@@ -631,9 +629,16 @@ export class Space {
 
 	clear(): Broadcast[] {
 		const all = this.ordered.peek();
+		for (const broadcast of all) this.#leave(broadcast);
 		this.ordered.set([]);
 		this.lookup.clear();
 		return all;
+	}
+
+	// Forget the peer moves a departing local publisher asked for, right away, since a publisher reused
+	// later (such as a new screen share) would replay them, and nothing settles them anymore.
+	#leave(broadcast: Broadcast) {
+		if (broadcast.source.role === "publish") broadcast.source.location.peers.positions.set(undefined);
 	}
 
 	// Step the physics for the time since the last frame, then draw it.
@@ -753,6 +758,7 @@ export class Space {
 		this.#signals.close();
 
 		for (const broadcast of this.ordered.peek()) {
+			this.#leave(broadcast);
 			broadcast.close();
 		}
 
@@ -782,9 +788,7 @@ export class Space {
 			const moves = this.#moves(true).at(0);
 			if (!moves) return;
 
-			Peers.request(moves, handle, position);
-			// A peer already there never publishes again to settle it.
-			Peers.settle(moves, handle, broadcast.source.location.window.position.peek());
+			Peers.request(moves, handle, { to: position, from: broadcast.source.location.window.position.peek() });
 		}
 	}
 
