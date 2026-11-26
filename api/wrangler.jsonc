@@ -41,7 +41,7 @@
 		"API_URL": "http://localhost:3000",
 		"APP_URL": "http://localhost:1420",
 
-		// "AUTH_SECRET": <stored in .dev.vars>
+		// "AUTH_SECRET": <set by `just api dev`>
 
 		"GOOGLE_CLIENT_ID": "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com",
 		// "GOOGLE_CLIENT_SECRET": <stored in .dev.vars>
