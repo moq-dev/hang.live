@@ -320,8 +320,12 @@ export class Space {
 			this.#pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
 			this.#pinchStartScale = broadcast.position.peek().s ?? 1;
 
-			// Set as dragging to track which broadcast we're zooming
-			this.#grab(broadcast);
+			// Track which broadcast we're zooming. Re-grab only on a new target, so a drag that
+			// turns into a pinch keeps the tile's pre-gesture placement.
+			if (this.#dragging !== broadcast) {
+				if (this.#dragging) this.#publishPosition(this.#dragging);
+				this.#grab(broadcast);
+			}
 
 			// Bump the z-index
 			broadcast.position.update((prev) => ({
