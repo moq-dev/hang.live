@@ -29,5 +29,3 @@ fixed up.
 
 - [Retire relay nodes](/quest/m1/retire-relay-nodes.md) - `hang.live` deployed
   against `moq.pro` with the self-hosted relays gone
-- [Room token identity](/quest/m1/room-token-identity.md) - stops one guest
-  publishing as another before Hang is promoted to a wider audience

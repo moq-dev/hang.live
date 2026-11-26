@@ -1,0 +1,17 @@
+{
+	"$schema": "./node_modules/fallow/schema.json",
+	// moq/ is upstream's tree, checked by its own fallow config.
+	"ignorePatterns": ["moq/**", ".direnv/**"],
+	"ignoreDependencies": [
+		// dev/justfile runs it by name.
+		"concurrently",
+		// api/tsconfig.json maps @moq/* to generated declarations under moq/, which fallow counts as file imports.
+		"@moq/auth",
+		"@moq/clock"
+	],
+	"rules": {
+		// fallow only warns on these by default.
+		"unused-dev-dependencies": "error",
+		"unused-optional-dependencies": "error"
+	}
+}
