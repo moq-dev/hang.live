@@ -11,7 +11,7 @@ Neither TypeScript nor Biome has a missing-docs rule, and `moq/` enforces none f
 
 - Gate with a small Bun script run by `just check` that walks `app/src` and `api/src` (skipping tests and `.d.ts`) and fails on an `export` declaration not directly preceded by a `//` or `/** */` comment. Recommended over `eslint-plugin-jsdoc`, which would add a second linter toolchain for one rule.
 - Write each comment the way you'd say it out loud; skip restating the name.
-- Land after the parallel m1 audits (code, tests, room-token-identity) that edit the same files, to avoid churn.
+- Land after the open m1 code audit, which edits the same files, to avoid churn.
 
 ## Related
 
