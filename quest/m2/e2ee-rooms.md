@@ -3,24 +3,77 @@
 ## Goal
 
 Participants can create or join a private room whose media, spatial positions,
-chat, and track names are end-to-end encrypted and signed client-side using a
-key held only in the URL `#fragment`, so the relay forwards only ciphertext.
+chat, and track names are end-to-end encrypted client-side under a key held
+only in the URL `#fragment`, so `api/` and the relay see only opaque names and
+ciphertext.
 
 ## Plan
 
-Build on `moq/js/crypto` (`@moq/crypto` `E2ee` + `Sign`, implementing
-`moq-e2ee-00` and `moq-sign-00`):
+Hang builds no cryptography. It consumes `@moq/e2ee` from the pinned `moq/`
+submodule and the encrypted publish, watch, and room wiring upstream ships.
+Missing pieces go to `moq-dev/moq`, not here.
 
-- Add `moq/js/crypto` to Hang's workspace once its browser integration is ready,
-  and upstream any missing `@moq/room` / `@moq/publish` / `@moq/watch` E2EE
-  wiring into `moq-dev/moq` rather than reimplementing encryption in Hang.
-- Support a "Private (E2EE)" toggle when starting a room that generates a room
-  credential and embeds it in the URL `#fragment` (never sent to `api/` or the
-  relay).
-- Derive opaque broadcast paths and per-run epochs per `moq-e2ee` rules (never
-  reusing an epoch under one credential across runs/restarts), encrypt media and
-  Hang's `location`/`chat` tracks, and verify Ed25519 signatures where enabled.
-- Display a clear lock/verification indicator in the room header and warn users
-  if they open an E2EE room link without a key fragment.
-- Verify in tests that relay-visible paths/payloads carry no plaintext room
-  metadata, chat, or media frames.
+### Upstream state
+
+Checked 2026-11-25 against pinned `moq/` (`28d8eb84d6`) and `moq-dev/moq` main
+(`901714058b`):
+
+- `moq/js/e2ee` (`@moq/e2ee`) exists. The `moq/js/crypto` package, `E2ee`/`Sign`
+  classes, and profiles `moq-e2ee-00`/`moq-sign-00` that this quest first named
+  do not. It implements profile `moq-e2ee-01-wip`, is `private`, and its README
+  says the format is still changing.
+- Upstream marked E2EE "not ready yet" on 2026-11-16. The finished format is
+  `quest/m3/e2ee-format.md`, and the browser wiring (`quest/m5/e2ee/browser.md`,
+  needing `consumer.md` and `net-wrap/js.md`) sits in m5. `@moq/publish` and
+  `@moq/watch` don't take a credential yet.
+- `@moq/room` has no encrypted mode, and no upstream quest owns one. Its roster
+  reads identity and kind from announced path segments
+  (`moq/js/room/src/path.ts`), but `Credential.path(semantic)` is one-way, so a
+  subscriber can't parse an opaque path back into a participant.
+- No JS signing package exists. The upstream epic makes sender authenticity
+  against another credential holder an explicit non-goal, and the Rust
+  `moq-sign` crate was folded into `moq-crypto`. So this quest no longer
+  promises Ed25519 signatures (see Waiting).
+
+### Hang work once upstream lands
+
+- Add `moq/js/e2ee` to the root `package.json` workspaces.
+- Show a "Private (E2EE)" toggle when starting a room. It generates the
+  `Credential` (a 32-byte `crypto.getRandomValues` secret) and puts it only in
+  the URL `#fragment`. Keep it in memory only: no `localStorage`, settings,
+  analytics, logs, or HTML attributes (the same rule `browser.md` sets for the
+  components). Pass it to the components through their programmatic API.
+- Keep the credential away from `api/` and the relay. The room name `api/` signs
+  a token for is an opaque id derived from the credential, so the join route
+  (`api/src/room.ts`) is unchanged. The display name travels inside an
+  encrypted track. Private rooms use their own URL route, so a link missing its
+  fragment is recognisable and shows a "missing key" warning instead of an
+  empty room.
+- Publish each participant broadcast through the upstream encrypted wrapper. A
+  fresh `credential.produce()` runs on every publish, re-publish, and page load,
+  and Hang never caches or persists a generation. `@moq/e2ee` mints the epoch
+  itself and has no explicit-epoch API, so it can't reuse an epoch under one
+  credential. A unit test pins that two publishes under one credential announce
+  different epochs.
+- The `location`, chat, and metadata tracks (`app/src/room/metadata.ts`) are
+  tracks on that broadcast, so the wrapper encrypts their names and payloads
+  with no Hang-side crypto.
+- Turn off the stats track and `echo` while a credential is set, which
+  `browser.md` requires.
+- Add a lock indicator to the room header.
+- Test by capturing every relay-visible announce path, track name, and payload
+  byte from an in-memory origin. Assert that none contains the room name,
+  participant names, `camera`/`screen`/`location`/`chat`, chat text, location
+  JSON, or known media frame bytes. Separately assert that the join request
+  body and URL carry no credential bytes. Time comes from a `@moq/clock` manual
+  clock (`app/src/room/**` bans raw time functions), and no test sleeps.
+- The participant identity segment in announce paths (`account_id`, or the
+  guest id from [room tokens](/quest/m1/room-token-identity.md)) stays
+  relay-visible. The relay already learns it from the token it verifies. A
+  private room accepts that and hides only names and content.
+
+## Waiting
+
+- moq-dev/moq: encrypted browser publish and watch. Check: `quest/m3/e2ee-format.md` and `quest/m5/e2ee/browser.md` are gone from moq main, `moq/js/e2ee/package.json` is no longer `private`, and `grep -rn Credential moq/js/publish/src moq/js/watch/src` finds a credential property. Then bump the pin.
+- moq-dev/moq: an encrypted `@moq/room` roster that finds participants and their kind without parsing plaintext path segments, for example an opaque per-participant path plus a kind and identity carried in an encrypted track. No upstream quest owns this yet. Advance it with `/quest-plan` in moq-dev/moq. Check: `grep -rn e2ee moq/js/room/src` finds the mode.
+- Maintainer: should private rooms also sign each participant's media (Ed25519, the original `moq-sign-00` plan) so one credential holder can't impersonate another? Options: (a) drop signing; anyone with the link is trusted alike, matching upstream's non-goal (recommended: no JS signer exists, and identity spoofing inside a link-shared room is a smaller risk than the relay reading content); (b) keep it and plan an upstream JS signing quest first. An agent can't decide product scope.
