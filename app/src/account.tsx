@@ -217,8 +217,8 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 		if (!file) return;
 
 		// Validate file type
-		if (!file.type.startsWith("image/")) {
-			setMessage({ type: "error", text: "Please select an image file" });
+		if (!(Api.avatarTypes as readonly string[]).includes(file.type)) {
+			setMessage({ type: "error", text: "Choose a PNG, JPEG, GIF, or WebP image" });
 			return;
 		}
 
@@ -320,7 +320,7 @@ function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
 									<label class="flex-1">
 										<input
 											type="file"
-											accept="image/*"
+											accept={Api.avatarTypes.join(",")}
 											onChange={handleAvatarUpload}
 											class="hidden"
 										/>

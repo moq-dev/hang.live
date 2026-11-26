@@ -2,7 +2,7 @@ import { createMiddleware } from "hono/factory";
 import * as JWT from "jose";
 import { z } from "zod";
 import { Account } from ".";
-import { accountIdSchema } from "./client";
+import { accountIdSchema, oauthChallenge } from "./client";
 import RootContext from "./context";
 
 // Use ZOD to validate the payload
@@ -14,10 +14,21 @@ const tokenSchema = z.object({
 
 export type Token = z.infer<typeof tokenSchema>;
 
+const codeSchema = z.object({
+	sub: accountIdSchema,
+	challenge: z.string(),
+});
+
+// Login codes carry this header type so they can never pass as a session token, or vice versa.
+const CODE_TYPE = "hang-oauth-code";
+
+// Long enough to load the app from a deep link, short enough that a leaked code soon expires.
+const CODE_LIFETIME = 5 * 60;
+
 export class Context {
 	#secretKey: Uint8Array;
 
-	constructor(env: Env) {
+	constructor(env: { AUTH_SECRET: string }) {
 		this.#secretKey = new TextEncoder().encode(env.AUTH_SECRET);
 	}
 
@@ -33,15 +44,50 @@ export class Context {
 			.sign(this.#secretKey);
 	}
 
+	// Returns the session, or undefined for a token that is malformed, expired, forged, or not a session.
 	async verify(token: string): Promise<Token | undefined> {
-		const { payload } = await JWT.jwtVerify(token, this.#secretKey);
-		const parsed = tokenSchema.safeParse(payload);
+		let verified: JWT.JWTVerifyResult;
+		try {
+			verified = await JWT.jwtVerify(token, this.#secretKey, { algorithms: ["HS256"] });
+		} catch {
+			return;
+		}
+
+		if (verified.protectedHeader.typ !== undefined) return;
+
+		const parsed = tokenSchema.safeParse(verified.payload);
 		if (!parsed.success) {
 			console.warn("failed to verify token", parsed.error);
 			return;
 		}
 
 		return parsed.data;
+	}
+
+	// Mint a short-lived login code that only the holder of the challenge's verifier can redeem.
+	async createCode(account: Account.Id, challenge: string): Promise<string> {
+		return await new JWT.SignJWT({ challenge })
+			.setProtectedHeader({ alg: "HS256", typ: CODE_TYPE })
+			.setSubject(account)
+			.setIssuedAt()
+			.setExpirationTime(`${CODE_LIFETIME}s`)
+			.sign(this.#secretKey);
+	}
+
+	// Exchange a login code and its verifier for a session token, or undefined if either is wrong.
+	async redeemCode(code: string, verifier: string): Promise<string | undefined> {
+		let payload: JWT.JWTPayload;
+		try {
+			({ payload } = await JWT.jwtVerify(code, this.#secretKey, { algorithms: ["HS256"], typ: CODE_TYPE }));
+		} catch {
+			return;
+		}
+
+		const parsed = codeSchema.safeParse(payload);
+		if (!parsed.success) return;
+		if ((await oauthChallenge(verifier)) !== parsed.data.challenge) return;
+
+		return await this.create(parsed.data.sub);
 	}
 }
 
