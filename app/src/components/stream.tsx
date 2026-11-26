@@ -1,12 +1,42 @@
+import * as Moq from "@moq/net";
+import { parse } from "@moq/room";
+import { Effect, Signal } from "@moq/signals";
 import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "../api";
 import type { Room } from "../room";
+import { fallbackName } from "../room/name";
 import * as Stream from "../stream";
 import { solid } from "../util/solid";
 import Tooltip from "./tooltip";
 
 type Minted = { external: Stream.External; expires: Date };
+type Choice = { path: string; label: string };
+
+// The tokens per room, kept past the button's unmount (the mobile Settings menu closing) so reopening shows the identity
+// OBS was already given; a mint in flight is shared rather than repeated.
+const minting = new Map<string, Promise<Minted>>();
+
+async function mint(room: string): Promise<Minted> {
+	const response = await Api.client.routes.room[":room"].external.$post({ param: { room } });
+	if (!response.ok) throw new Error(response.statusText || `HTTP ${response.status}`);
+	const external = await response.json();
+	return { external, expires: new Date(Date.now() + external.lifetime * 1000) };
+}
+
+// The room's tokens while they last, minting new ones once they expire or a mint failed.
+async function tokens(room: string): Promise<Minted> {
+	const cached = minting.get(room);
+	if (cached !== undefined) {
+		const minted = await cached.catch(() => undefined);
+		if (minted && minted.expires.getTime() > Date.now()) return minted;
+		if (minting.get(room) !== cached) return tokens(room);
+	}
+
+	const next = mint(room);
+	minting.set(room, next);
+	return next;
+}
 
 /** A button opening the settings and commands to stream into or out of the room from OBS or the CLI. */
 export function StreamButton(props: { name: string; room: Room }): JSX.Element {
@@ -14,19 +44,12 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 	const [minted, setMinted] = createSignal<Minted | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
 
-	// Keep the tokens while they last, so reopening shows the identity OBS was already given.
 	const show = async () => {
 		setOpen(true);
 		setError(undefined);
-		const current = minted();
-		if (current && current.expires.getTime() > Date.now()) return;
-
 		setMinted(undefined);
 		try {
-			const response = await Api.client.routes.room[":room"].external.$post({ param: { room: props.name } });
-			if (!response.ok) throw new Error(response.statusText || `HTTP ${response.status}`);
-			const external = await response.json();
-			setMinted({ external, expires: new Date(Date.now() + external.lifetime * 1000) });
+			setMinted(await tokens(props.name));
 		} catch (err) {
 			console.error("Failed to mint stream tokens", err);
 			setError(err instanceof Error ? err.message : String(err));
@@ -101,13 +124,35 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 	const external = () => props.minted.external;
 	const ingest = createMemo(() => Stream.ingest(external()));
 
-	// Anyone on screen, the local tiles included, can be recorded or restreamed.
-	const ordered = solid(props.room.space.ordered);
-	const paths = createMemo(() => ordered().map((broadcast) => broadcast.path));
+	// Anyone on screen sending media, the local tiles included, can be recorded or restreamed.
+	const signals = new Effect();
+	onCleanup(() => signals.close());
+	const listed = new Signal<Choice[]>([]);
+	signals.run((effect) => {
+		const choices: Choice[] = [];
+		for (const broadcast of effect.get(props.room.space.ordered)) {
+			const source = broadcast.source;
+			if (source.role === "fake" || !Stream.pasteable(broadcast.path)) continue;
+
+			const media =
+				source.role === "watch"
+					? (effect.get(source.video.catalog) ?? effect.get(source.audio.catalog))
+					: (effect.get(source.video.source) ?? effect.get(source.audio.source));
+			if (!media) continue;
+
+			const name = effect.get(source.user.name);
+			const screen = parse(Moq.Path.from(broadcast.path))?.kind === "screen";
+			const label = name ? `${name}${screen ? " (screen)" : ""}` : fallbackName(broadcast.path);
+			choices.push({ path: broadcast.path, label });
+		}
+		listed.set(choices);
+	});
+	const choices = solid(listed);
 	const [picked, setPicked] = createSignal<string | undefined>(undefined);
 	const target = createMemo(() => {
 		const pick = picked();
-		return pick && paths().includes(pick) ? pick : paths()[0];
+		const all = choices();
+		return all.find((choice) => choice.path === pick)?.path ?? all[0]?.path;
 	});
 
 	return (
@@ -141,10 +186,12 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 										value={path()}
 										onChange={(e) => setPicked(e.currentTarget.value)}
 									>
-										<For each={paths()}>{(path) => <option value={path}>{path}</option>}</For>
+										<For each={choices()}>
+											{(choice) => <option value={choice.path}>{choice.label}</option>}
+										</For>
 									</select>
 								</label>
-								<Copy label="Serve HLS on port 8089" value={egress().hls} />
+								<Copy label="Serve HLS on port 8089, open to your network" value={egress().hls} />
 								<Copy label="Restream over RTMP" value={egress().rtmp} />
 								<Copy label="Record to MP4" value={egress().record} />
 							</>

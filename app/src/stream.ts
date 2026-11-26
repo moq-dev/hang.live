@@ -1,6 +1,9 @@
 // Ready-to-paste settings and `moq` commands for streaming into or out of a room from outside the browser.
 // The commands use only what the released CLI that `moq.sh` installs supports.
 
+import * as Moq from "@moq/net";
+import { broadcastPath } from "@moq/room";
+
 /** What the API mints for a tool outside Hang. */
 export interface External {
 	relay: string;
@@ -20,7 +23,13 @@ export function url(relay: string, token: string): string {
 
 /** Where a tool streams its camera, so the room opens it like a participant's. */
 export function broadcast(external: External): string {
-	return `${external.path}/camera.hang`;
+	return broadcastPath(Moq.Path.from(external.path), "camera");
+}
+
+/** Whether `path` can go in a pasted command: a terminal may act on control characters before the shell quotes them. */
+export function pasteable(path: string): boolean {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point.
+	return !/[\u0000-\u001f\u007f-\u009f]/.test(path);
 }
 
 // One literal shell argument: a participant picks its own path, so it must never run as shell syntax.
@@ -37,7 +46,8 @@ export function ingest(external: External): { rtmp: string; rtsp: string } {
 	const into = moq(external.relay, external.publish, broadcast(external));
 	return {
 		rtmp: `${into} import rtmp --listen 127.0.0.1:1935`,
-		rtsp: `ffmpeg -i rtsp://camera.local/stream -c copy -f mpegts - | ${into} import ts`,
+		// Cameras often send G.711 audio, which the TS importer doesn't carry, so only the video passes through as is.
+		rtsp: `ffmpeg -i rtsp://camera.local/stream -c:v copy -c:a aac -f mpegts - | ${into} import ts`,
 	};
 }
 

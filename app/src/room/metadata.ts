@@ -231,7 +231,7 @@ function serveSnapshot<T>(
 
 export type ConsumedExtras = {
 	location: LocationFields;
-	/** Whether the broadcast publishes its location, which a tool outside Hang, such as OBS, does not. */
+	/** Whether the broadcast publishes its location, which a tool outside Hang, such as OBS, does not; true until its catalog says. */
 	located: Getter<boolean>;
 	chat: ChatFields;
 	close: () => void;
@@ -251,8 +251,12 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 	const locationTrack = signals.computed((effect) => effect.get(hang)?.location?.track);
 	const chatTrack = signals.computed((effect) => effect.get(hang)?.chat?.track);
 	const messagesTrack = signals.computed((effect) => effect.get(hang)?.messages?.track);
-	const located = new Signal(false);
-	signals.run((effect) => located.set(effect.get(locationTrack) !== undefined));
+	// Until the catalog arrives, assume a location is coming, so a participant's tile stays locked meanwhile.
+	const located = new Signal(true);
+	signals.run((effect) => {
+		const catalog = effect.get(broadcast.out.catalog);
+		located.set(catalog === undefined || effect.get(locationTrack) !== undefined);
+	});
 	// A broadcast advertising the window sends messages only there.
 	const windowed = signals.computed((effect) => effect.get(messagesTrack) !== undefined);
 

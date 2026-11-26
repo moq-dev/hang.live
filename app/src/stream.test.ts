@@ -27,6 +27,14 @@ test("egress watches with the subscribe token, never the publish one", () => {
 	}
 });
 
+test("a path with control characters is never offered for pasting", () => {
+	expect(Stream.pasteable("guest/alice/camera.hang")).toBe(true);
+	expect(Stream.pasteable("guest/é/camera.hang")).toBe(true);
+	for (const control of ["\n", "\r", "\u001b", "\u007f", "\u009b"]) {
+		expect(Stream.pasteable(`guest/a${control}b/camera.hang`)).toBe(false);
+	}
+});
+
 test("a participant's chosen path stays one literal shell argument", () => {
 	const { hls } = Stream.egress(external, "guest/a/'$(touch pwned)'/camera.hang");
 	expect(hls).toContain(`--broadcast 'guest/a/'\\''$(touch pwned)'\\''/camera.hang' export hls`);
