@@ -7,4 +7,3 @@ set -euxo pipefail
 winget install bun
 winget install just
 winget install 1password-cli
-winget install rustup
