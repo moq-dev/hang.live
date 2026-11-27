@@ -11,7 +11,7 @@ Baseline from the first run ([moq-dev/hang.live#60](https://github.com/moq-dev/h
 - Harnesses: Claude Code (Opus 5.5, Sonnet 5.5) wrote most PRs; Codex (GPT-6.1/6.2 Sol) reviewed; Antigravity (Gemini 4 Neon) wrote two.
 - `quest messages` hosts, with the unnamed directories it dropped entries of: fedora 5, desktop 51, nixos 2, mini 1, kixtop 6.
 - Loaded sizes:
-  - Claude Code: root `AGENTS.md` 648 B; `app/AGENTS.md` 868 B and `api/AGENTS.md` 887 B on demand; 8 skill descriptions totaling 857 chars.
+  - Claude Code: root `AGENTS.md` 549 B; `app/AGENTS.md` 1,004 B and `api/AGENTS.md` 1,017 B on demand; 8 skill descriptions totaling 857 chars.
   - Codex and Antigravity: root `AGENTS.md` only; the `.agents/skills` descriptions also total 857 chars. Codex reads a nested file only when started under it; Antigravity never does.
 - Guidance pages: every link in `quest guide prompting`, plus the Opus 5.5, Sonnet 5.5, GPT-6.2 Sol, and Antigravity skills pages, read 2026-11-25. No Gemini 4 or GPT-6.1 prompting page existed.
 - Rules kept against the evidence:
@@ -21,7 +21,7 @@ Baseline from the first run ([moq-dev/hang.live#60](https://github.com/moq-dev/h
 
 Check first:
 - Claude sessions load `app/AGENTS.md` and `api/AGENTS.md` after a Read tool call on a file there (not `rg` or `git diff`); they appear as PostToolUse hook context in transcripts. No `CLAUDE.md` has come back.
-- The SessionStart hook in `.claude/settings.json` either runs cleanly or is gone, as #60 decided.
+- No repository SessionStart hook has come back: #60 deleted the direnv one, since the user-level dev-shell hook loads the dev shell.
 
 ## Audit
 

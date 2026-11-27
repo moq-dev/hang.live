@@ -14,7 +14,7 @@
     nixpkgs.follows = "moq/nixpkgs";
     flake-utils.follows = "moq/flake-utils";
     # Quest's CLI, which serves the guide and the skills its stubs call.
-    # Bump the tag, then rerun `quest init`.
+    # Untagged, so flake.lock alone pins it: `nix flake update quest`, then rerun `quest init`.
     quest = {
       url = "github:kixel-ai/quest";
       inputs.nixpkgs.follows = "nixpkgs";
