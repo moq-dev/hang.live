@@ -18,7 +18,7 @@ import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
-import type { Broadcast } from "./room/broadcast";
+import { level } from "./room/audio";
 import type { Canvas } from "./room/canvas";
 import type { HangLocalSource, Local } from "./room/local";
 import type { Sound } from "./room/sound";
@@ -118,7 +118,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 								aria-label="Open publish menu"
 							>
 								<Show when={micActive()}>
-									<Visualize tile={props.room.camera} />
+									<Visualize audio={props.local.camera.audio} />
 								</Show>
 								<span class="icon-[mdi--broadcast]" />
 							</button>
@@ -147,7 +147,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 								mobile() && expandedSection() === "publish" ? "slideInFromLeft 0.3s ease-out" : "none",
 						}}
 					>
-						<Microphone local={props.local} tile={props.room.camera} />
+						<Microphone local={props.local} />
 						<Camera local={props.local} room={props.room} />
 						<Screen local={props.local} room={props.room} />
 					</div>
@@ -294,8 +294,7 @@ function CaptureStatus(props: {
 	);
 }
 
-/** The microphone toggle and device menu, metering `tile`'s audio. */
-export function Microphone(props: { local: Local; tile: Getter<Broadcast | undefined> }): JSX.Element {
+export function Microphone(props: { local: Local }): JSX.Element {
 	const retry = new Capture.Retry({
 		enabled: props.local.core.microphone.enabled,
 		error: props.local.microphone.out.error,
@@ -394,7 +393,7 @@ export function Microphone(props: { local: Local; tile: Getter<Broadcast | undef
 						"text-red-500": root() && volume() === 0,
 					}}
 				>
-					<Visualize tile={props.tile} />
+					<Visualize audio={props.local.camera.audio} />
 					<span
 						class={
 							state() === "pending"
@@ -762,8 +761,8 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 	);
 }
 
-// Renders `tile`'s audio level as a meter in the background of an element.
-function Visualize(props: { tile: Getter<Broadcast | undefined> }): JSX.Element {
+// Renders a volume meter in the background of an element.
+function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
@@ -778,16 +777,29 @@ function Visualize(props: { tile: Getter<Broadcast | undefined> }): JSX.Element 
 		return `hsla(${hue}, 80%, 40%, ${alpha})`;
 	});
 
-	const tile = solid(props.tile);
+	const root = solid(props.audio.root);
 
 	createEffect(() => {
-		const broadcast = tile();
-		if (!broadcast) return;
+		const node = root();
+		if (!node) return;
 
-		// The tile measures its level each physics step; sample it each frame.
+		const analyzer = new AnalyserNode(node.context, {
+			fftSize: 1024,
+		});
+		const data = new Uint8Array(analyzer.frequencyBinCount); // half of fftSize
+
+		node.connect(analyzer);
+		onCleanup(() => analyzer.disconnect());
+
 		let animation: number | undefined;
+		let smoothed = 0;
+
 		const tick = () => {
-			setPower(broadcast.audio.volume);
+			analyzer.getByteTimeDomainData(data);
+			for (let i = 0; i < data.length; i++) data[i] = Math.abs(data[i] - 128);
+			smoothed = level(smoothed, data);
+
+			setPower(smoothed);
 			animation = requestAnimationFrame(tick);
 		};
 

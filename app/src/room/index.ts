@@ -1,11 +1,10 @@
 import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import { parse } from "@moq/room";
-import { Effect, Signal } from "@moq/signals";
-import type { Broadcast } from "./broadcast";
+import { Effect } from "@moq/signals";
 import type { Canvas } from "./canvas";
 import { NetworkDebug } from "./debug";
-import { type HangLocalSource, Local } from "./local";
+import { Local } from "./local";
 import { Locator } from "./locator";
 import * as Peers from "./peers";
 import type { Sound } from "./sound";
@@ -24,9 +23,6 @@ export class Room {
 	local: Local;
 	space: Space;
 
-	/** Our camera's tile while we're in the room. */
-	readonly camera = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
-
 	#signals = new Effect();
 
 	constructor(props: RoomProps) {
@@ -38,20 +34,16 @@ export class Room {
 		this.#signals.cleanup(() => network.close());
 
 		// Our camera's tile is up for as long as we're in the room, and our screen's while we share it.
-		for (const [source, shown, tile] of [
-			[this.local.camera, () => true, this.camera],
-			[this.local.share, (effect: Effect) => !!effect.get(this.local.screen.out.source), undefined],
+		for (const [source, shown] of [
+			[this.local.camera, () => true],
+			[this.local.share, (effect: Effect) => !!effect.get(this.local.screen.out.source)],
 		] as const) {
 			this.#signals.run((effect) => {
 				if (!effect.get(Local.join) || !shown(effect)) return;
 
 				const path = effect.get(source.name);
 				const broadcast = this.space.add(path, source);
-				tile?.set(broadcast);
-				effect.cleanup(() => {
-					void this.space.remove(path);
-					tile?.set(undefined);
-				});
+				effect.cleanup(() => void this.space.remove(path));
 
 				// Point out the new tile, briefly.
 				const locator = new Locator(broadcast);

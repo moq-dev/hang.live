@@ -1,9 +1,8 @@
 import * as Clock from "@moq/clock";
-import { Effect, Signal } from "@moq/signals";
+import { Effect } from "@moq/signals";
 import { createSignal, type JSX, onCleanup, Show } from "solid-js";
 import * as Api from "../api";
 import { Camera, Microphone } from "../controls";
-import type { Broadcast } from "../room/broadcast";
 import { Canvas } from "../room/canvas";
 import type { HangLocalSource, Local } from "../room/local";
 import { Sound } from "../room/sound";
@@ -69,7 +68,7 @@ export default function Profile(props: { local: Local; sound?: Sound }): JSX.Ele
 
 			{/* Media Controls */}
 			<div class="flex gap-3 justify-center mb-6">
-				<Microphone local={props.local} tile={local.tile} />
+				<Microphone local={props.local} />
 				<Camera local={props.local} />
 				<Show when={authenticated()}>
 					<Tooltip content="Edit your profile" position="top">
@@ -122,8 +121,6 @@ export default function Profile(props: { local: Local; sound?: Sound }): JSX.Ele
 class LocalPreview {
 	canvas: Canvas;
 	space?: Space;
-	/** The preview's tile, unset without WebGL2. */
-	readonly tile = new Signal<Broadcast | undefined>(undefined);
 
 	// A muted sound of our own, only when the page has none to share.
 	#sound?: Sound;
@@ -146,7 +143,6 @@ class LocalPreview {
 		this.space = space;
 
 		const broadcast = space.add("local", camera);
-		this.tile.set(broadcast);
 		this.signals.cleanup(() => space.remove("local"));
 
 		this.signals.run((effect: Effect) => {

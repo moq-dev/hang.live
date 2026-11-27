@@ -4,6 +4,13 @@ import type { Broadcast } from "./broadcast";
 import type * as Meme from "./meme";
 import { fade, PannedSound, type Sound, steer } from "./sound";
 
+/** Smooth `previous` toward the RMS of `magnitudes`, each a sample's distance from silence in an analyser's bytes. */
+export function level(previous: number, magnitudes: ArrayLike<number>): number {
+	let sum = 0;
+	for (let i = 0; i < magnitudes.length; i++) sum += magnitudes[i] * magnitudes[i];
+	return previous * 0.7 + (Math.sqrt(sum) / magnitudes.length) * 0.3;
+}
+
 export class Audio {
 	broadcast: Broadcast;
 	pan = new Signal(0);
@@ -17,8 +24,6 @@ export class Audio {
 	// We use a different AudioContext for notifications, so we need a separate analyser.
 	// TODO reuse if the sample rate is the same?
 	sound: PannedSound;
-
-	#volumeSmoothed = 0;
 
 	// Public volume for visualization (0 to 1)
 	volume = 0;
@@ -160,19 +165,7 @@ export class Audio {
 			}
 		}
 
-		// Calculate RMS volume
-		let sum = 0;
-		for (let i = 0; i < soundBuffer.length; i++) {
-			const sample = soundBuffer[i];
-			sum += sample * sample;
-		}
-		const volume = Math.sqrt(sum) / soundBuffer.length;
-
-		// Smooth the volume with exponential moving average
-		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
-
-		// Store the smoothed volume (already in the right range from the buffer values)
-		this.volume = this.#volumeSmoothed;
+		this.volume = level(this.volume, soundBuffer);
 	}
 
 	close() {
