@@ -83,7 +83,7 @@ Checked 2026-11-25 against pinned `moq/` (`28d8eb84d6`) and `moq-dev/moq` main
   with no Hang-side crypto. So is the `hang/live.json` datagram track for live
   cursors and drags, which the profile covers with its own datagram key domain.
 - Discover private-room participants through upstream's encrypted roster in
-  both views: the lobby preview (`app/src/room/preview/room.ts`) and the 3D
+  both views: the lobby preview (`PreviewRoom` in `app/src/preview.tsx`) and the 3D
   room's own announce loop (`app/src/room/index.ts`), which today parses
   plaintext path segments and would drop every opaque path, leaving the joined
   room empty. The 3D room uses upstream's discovery-only API, which yields
