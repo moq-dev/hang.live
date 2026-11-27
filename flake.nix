@@ -59,7 +59,7 @@
             moq.packages.${system}.moq
           ];
         };
-        # Only what `just smoke` needs, all from cache.nixos.org, for a runner that cannot use nix.moq.dev.
+        # Only what `just smoke` needs, so the hourly smoke skips fetching the relay and CLIs.
         devShells.smoke = pkgs.mkShell {
           inherit PLAYWRIGHT_BROWSERS_PATH;
           nativeBuildInputs = with pkgs; [

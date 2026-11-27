@@ -35,8 +35,7 @@ async function step<T>(name: string, run: () => Promise<T>): Promise<T> {
 
 // Opens the room's join screen as a guest with a known name.
 async function open(browser: Playwright.Browser, name: string): Promise<Playwright.Page> {
-	// SwiftShader draws the full-page canvas on the CPU every frame; at larger sizes it starves the
-	// pages on a two-core runner.
+	// SwiftShader draws the full-page canvas on the CPU every frame, so keep it small for a CI runner.
 	const page = await browser.newPage({ viewport: { width: 320, height: 240 } });
 	page.setDefaultTimeout(TIMEOUT);
 	const log: string[] = [];
@@ -45,9 +44,8 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 	page.on("console", (message) => {
 		// Chromium reports GL errors as WebGL console messages, and the canvas logs a throwing frame.
 		if (/WebGL|render error/.test(message.text())) errors.push(`${name}: ${message.text()}`);
-		// WIP: if (message.type() === "debug") return;
 		log.push(`${message.type()}: ${message.text()}`);
-		if (log.length > 150) log.shift();
+		if (log.length > 100) log.shift();
 	});
 	await page.addInitScript((name) => {
 		// A returning guest's saved name, so the other page can tell this one apart.
