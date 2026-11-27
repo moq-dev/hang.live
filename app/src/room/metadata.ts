@@ -469,14 +469,15 @@ function subscribeLive(
 				const datagram = await effect.race(consumer.recv());
 				if (!datagram) break;
 				if (latest !== undefined && datagram.sequence <= latest) continue;
-				latest = datagram.sequence;
 				const value = parseLive(decoder.decode(datagram.payload));
 				if (!value) {
 					// Once per subscription, so a peer sending garbage at frame rate cannot flood the console.
 					if (!warned) console.warn(`dropping malformed datagrams on ${name}`);
 					warned = true;
+					// Leaves `latest` alone, so a dropped datagram cannot shadow a valid one still in flight.
 					continue;
 				}
+				latest = datagram.sequence;
 				live.cursor.set(value.cursor);
 				live.window.set(value.window);
 				live.peer.set(value.peer);
