@@ -74,8 +74,6 @@ type LocationValue = {
 };
 
 type ChatValue = {
-	// Superseded by the `messages` window; still written for readers that predate it.
-	message?: string;
 	typing?: boolean;
 };
 
@@ -113,7 +111,6 @@ const LiveSchema: z.ZodMiniType<LiveValue> = z.object({
 });
 
 const ChatSchema: z.ZodMiniType<ChatValue> = z.object({
-	message: z.optional(z.string()),
 	typing: z.optional(z.boolean()),
 });
 
@@ -121,7 +118,7 @@ const ChatSchema: z.ZodMiniType<ChatValue> = z.object({
 export type HangCatalog = RoomHangCatalog & {
 	/** A datagram track of `LiveValue`s. A broadcast without it updates its window only on release. */
 	live?: TrackRef;
-	/** `@moq/room`'s chat message window. A broadcast without it sends messages on `chat` instead. */
+	/** `@moq/room`'s chat message window. A broadcast without it sends no messages. */
 	messages?: TrackRef;
 };
 
@@ -239,7 +236,6 @@ export function serveExtras(
 	serveLive(broadcast, location.live, effect);
 
 	serveSnapshot(broadcast, TRACK.chat, effect, (effect) => ({
-		message: effect.get(chat.message.latest),
 		typing: effect.get(chat.typing.active),
 	}));
 
@@ -357,8 +353,6 @@ export function consumeExtras(
 		const catalog = effect.get(broadcast.out.catalog);
 		located.set(catalog === undefined || effect.get(locationTrack) !== undefined);
 	});
-	// A broadcast advertising the window sends messages only there.
-	const windowed = signals.computed((effect) => effect.get(messagesTrack) !== undefined);
 
 	signals.run((effect) => {
 		const active = effect.get(broadcast.out.active);
@@ -392,15 +386,10 @@ export function consumeExtras(
 	signals.run((effect) => {
 		const active = effect.get(broadcast.out.active);
 		const track = effect.get(chatTrack);
-		const legacy = !effect.get(windowed);
-		effect.cleanup(() => {
-			if (legacy) chat.message.latest.set(undefined);
-			chat.typing.active.set(undefined);
-		});
+		effect.cleanup(() => chat.typing.active.set(undefined));
 		if (!active || track === undefined) return;
 
 		subscribeJson(active, track, ChatSchema, effect, (value) => {
-			if (legacy) chat.message.latest.set(value.message);
 			chat.typing.active.set(value.typing);
 		});
 	});
