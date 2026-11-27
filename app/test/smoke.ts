@@ -21,6 +21,8 @@ const TIMEOUT = 30_000;
 
 const errors: string[] = [];
 let current = "launch Chromium";
+// Each page's recent console output and what it shows, printed when a step fails.
+const opened: { name: string; page: Playwright.Page; console: string[] }[] = [];
 
 async function step<T>(name: string, run: () => Promise<T>): Promise<T> {
 	current = name;
@@ -36,10 +38,15 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 	// SwiftShader draws the full-page canvas on the CPU, so keep it small.
 	const page = await browser.newPage({ viewport: { width: 640, height: 480 } });
 	page.setDefaultTimeout(TIMEOUT);
+	const log: string[] = [];
+	opened.push({ name, page, console: log });
 	page.on("pageerror", (error) => errors.push(`${name}: ${error.message}`));
-	// Chromium reports GL errors as WebGL console messages, and the canvas logs a throwing frame.
 	page.on("console", (message) => {
+		// Chromium reports GL errors as WebGL console messages, and the canvas logs a throwing frame.
 		if (/WebGL|render error/.test(message.text())) errors.push(`${name}: ${message.text()}`);
+		if (message.type() === "debug") return;
+		log.push(`${message.type()}: ${message.text()}`);
+		if (log.length > 50) log.shift();
 	});
 	await page.addInitScript((name) => {
 		// A returning guest's saved name, so the other page can tell this one apart.
@@ -100,6 +107,10 @@ try {
 } catch (error) {
 	console.error(`smoke failed at step "${current}" on ${url.href}`);
 	console.error(error);
+	for (const { name, page, console: log } of opened) {
+		console.error(`\n${name} console:\n${log.join("\n")}`);
+		console.error(`\n${name} shows:\n${await page.locator("body").ariaSnapshot().catch(String)}`);
+	}
 	process.exitCode = 1;
 } finally {
 	await browser.close();
