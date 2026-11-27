@@ -6,8 +6,6 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
-  push:
-    branches: ["quest/m1/production-smoke"]
 
 permissions:
   contents: read
@@ -62,7 +60,7 @@ jobs:
             "The hourly \`just smoke https://hang.live\` is failing." \
             "Latest failure: $run" \
             "$log" \
-            "A passing scheduled run closes this issue.")
+            "The next passing run on main closes this issue.")
           issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
             --jq "map(select(.title == env.TITLE))[0].number // empty")
           if [ -n "$issue" ]; then
