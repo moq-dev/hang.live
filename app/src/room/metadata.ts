@@ -315,6 +315,8 @@ function serveLive(broadcast: { net: Publish.Broadcast["net"] }, live: LocationF
 
 export type ConsumedExtras = {
 	location: LocationFields;
+	/** Whether the broadcast publishes its location, which a tool outside Hang, such as OBS, does not; true until its catalog says. */
+	located: Getter<boolean>;
 	chat: ChatFields;
 	close: () => void;
 };
@@ -328,6 +330,8 @@ export function consumeExtras(
 	datagrams: Getter<boolean>,
 ): ConsumedExtras {
 	const location = locationFields();
+	// Only the peer names its handle; a local one would send moves to a window that never applies them.
+	location.window.handle.set(undefined);
 	const chat = chatFields();
 	const signals = new Effect();
 
@@ -338,6 +342,12 @@ export function consumeExtras(
 	const liveTrack = signals.computed((effect) => effect.get(hang)?.live?.track);
 	const chatTrack = signals.computed((effect) => effect.get(hang)?.chat?.track);
 	const messagesTrack = signals.computed((effect) => effect.get(hang)?.messages?.track);
+	// Until the catalog arrives, assume a location is coming, so a participant's tile stays locked meanwhile.
+	const located = new Signal(true);
+	signals.run((effect) => {
+		const catalog = effect.get(broadcast.out.catalog);
+		located.set(catalog === undefined || effect.get(locationTrack) !== undefined);
+	});
 	// A broadcast advertising the window sends messages only there.
 	const windowed = signals.computed((effect) => effect.get(messagesTrack) !== undefined);
 
@@ -397,6 +407,7 @@ export function consumeExtras(
 
 	return {
 		location,
+		located,
 		chat,
 		close: () => signals.close(),
 	};

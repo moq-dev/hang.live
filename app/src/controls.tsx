@@ -15,6 +15,7 @@ import {
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Capture from "./capture";
 import { MemeSelector } from "./components/meme-selector";
+import { StreamButton } from "./components/stream";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
@@ -28,7 +29,7 @@ import { solid } from "./util/solid";
 
 type MobileSection = "publish" | "settings" | null;
 
-export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
+export function Controls(props: { name: string; room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	const mobile = isMobile();
 	const [expandedSection, setExpandedSection] = createSignal<MobileSection>(null);
 	const tutorial = solid(Settings.tutorial.step);
@@ -225,6 +226,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						}}
 					>
 						<Volume />
+						<StreamButton name={props.name} room={props.room} />
 						<Advanced sound={props.room.space.sound} />
 						<Fullscreen canvas={props.canvas} />
 					</div>

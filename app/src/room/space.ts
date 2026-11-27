@@ -196,7 +196,13 @@ export class Space {
 	}
 
 	add(id: string, source: BroadcastSource): Broadcast {
-		const broadcast = new Broadcast({ source, canvas: this.canvas, sound: this.sound, scale: this.#scale });
+		const broadcast = new Broadcast({
+			path: id,
+			source,
+			canvas: this.canvas,
+			sound: this.sound,
+			scale: this.#scale,
+		});
 
 		// Put new broadcasts on top of the stack.
 		// NOTE: This is not sent over the network.

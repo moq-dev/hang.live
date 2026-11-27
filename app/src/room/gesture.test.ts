@@ -38,7 +38,7 @@ function remote(handle: string, x: number, y: number, position?: Required<Positi
 		handle: new Signal<string | undefined>(handle),
 		applied: new Signal<string[] | undefined>([]),
 	};
-	return tile({ role: "watch", location: { window } }, x, y, position);
+	return tile({ role: "watch", location: { window }, located: new Signal(true) }, x, y, position);
 }
 
 // A room with our camera far off in the corner, plus `others`.
@@ -202,6 +202,21 @@ test("our own tile publishes its placement directly instead of asking a peer", (
 
 	expect(r.gesture.up()).toBe(r.camera);
 	expect(r.camera.source.location.window.position.peek()).toMatchObject({ x: 0, y: 0 });
+	expect(r.moves.peek()).toBeUndefined();
+});
+
+test("a tile from outside Hang moves locally without asking anyone", () => {
+	const obs = remote("a", 0, 0);
+	obs.source.location.window.handle.set(undefined);
+	obs.source.located = new Signal(false);
+	const r = room(obs);
+
+	expect(r.gesture.down(at(100, 100))).toBe(obs);
+	expect(r.gesture.dragging).toBe(obs);
+	r.gesture.move(at(750, 750));
+	expect(r.gesture.up()).toBe(obs);
+
+	expect(obs.position.peek()).toMatchObject({ x: 0.25, y: 0.25 });
 	expect(r.moves.peek()).toBeUndefined();
 });
 

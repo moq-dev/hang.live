@@ -25,6 +25,8 @@ type Position = {
 };
 
 export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
+	/** Where the broadcast sits beneath the room. */
+	path: string;
 	source: T;
 	canvas: Canvas;
 	sound: Sound;
@@ -32,6 +34,7 @@ export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
 }
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
+	readonly path: string;
 	source: T;
 	canvas: Canvas;
 
@@ -81,6 +84,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	signals = new Effect();
 
 	constructor(props: BroadcastProps<T>) {
+		this.path = props.path;
 		this.source = props.source;
 		this.canvas = props.canvas;
 		this.visible = new Signal(true); // TODO
