@@ -1,4 +1,4 @@
-import { Route, Router, useLocation } from "@solidjs/router";
+import { Route, Router, type RouteSectionProps, useCurrentMatches, useLocation } from "@solidjs/router";
 import { onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { render } from "solid-js/web";
@@ -24,7 +24,7 @@ function Hang(): JSX.Element {
 	return (
 		<>
 			{background}
-			<Router>
+			<Router root={Root}>
 				<Route path="/" component={() => (authenticated() ? <Home /> : <About />)} />
 				<Route path="/about" component={() => <About />} />
 				<Route path="/account" component={() => <Account />} />
@@ -34,6 +34,16 @@ function Hang(): JSX.Element {
 				<Route path="*" component={() => <Fallback canvas={canvas} />} />
 			</Router>
 		</>
+	);
+}
+
+// The router matches no route at all, not even `*`, when the path has an empty segment like `/a//b`.
+function Root(props: RouteSectionProps): JSX.Element {
+	const matches = useCurrentMatches();
+	return (
+		<Show when={matches().length > 0} fallback={<NotFound />}>
+			{props.children}
+		</Show>
 	);
 }
 
