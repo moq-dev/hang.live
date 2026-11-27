@@ -100,11 +100,12 @@ try {
 	// The room plays this on joining only if its audio already runs, a race, so decode it directly:
 	// a deploy from a checkout without Git LFS content serves a pointer file in its place.
 	await step("the join sound decodes", () =>
-		a.evaluate(async () => {
-			const response = await fetch("/notification/select.opus");
+		// evaluate() takes no timeout, so bound the download, body included.
+		a.evaluate(async (timeout) => {
+			const response = await fetch("/notification/select.opus", { signal: AbortSignal.timeout(timeout) });
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			await new OfflineAudioContext(1, 1, 48_000).decodeAudioData(await response.arrayBuffer());
-		}),
+		}, TIMEOUT),
 	);
 	const b = await step("B opens the room", () => open(chromium, "Smoke B"));
 	await step("B's join screen lists A", async () => {
