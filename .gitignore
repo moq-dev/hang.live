@@ -28,6 +28,4 @@ dist-ssr
 # Generated relay keys/tokens
 *.jwk
 *.jwt
-# Local state and credentials of the retired relay deployment; drop with quest/m1/retire-relay-nodes.md
-/infra/
 .wrangler

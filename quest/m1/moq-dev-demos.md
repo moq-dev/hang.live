@@ -24,8 +24,3 @@ fixed up.
 - Keep Hang's own landing/about links pointing to `https://moq.dev` and
   `https://github.com/moq-dev/moq` so visitors can move cleanly between both
   sites.
-
-## Required
-
-- [Retire relay nodes](/quest/m1/retire-relay-nodes.md) - `hang.live` deployed
-  against `moq.pro` with the self-hosted relays gone
