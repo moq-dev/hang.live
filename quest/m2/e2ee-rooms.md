@@ -80,9 +80,8 @@ Checked 2026-11-25 against pinned `moq/` (`28d8eb84d6`) and `moq-dev/moq` main
   subscribers.
 - The `location`, chat, and metadata tracks (`app/src/room/metadata.ts`) are
   tracks on that broadcast, so the wrapper encrypts their names and payloads
-  with no Hang-side crypto. So are the datagram tracks for live cursors and
-  drags from [datagrams-p2p](/quest/m2/datagrams-p2p.md), which the profile
-  covers with its own datagram key domain.
+  with no Hang-side crypto. So is the `hang/live.json` datagram track for live
+  cursors and drags, which the profile covers with its own datagram key domain.
 - Discover private-room participants through upstream's encrypted roster in
   both views: the lobby preview (`app/src/room/preview/room.ts`) and the 3D
   room's own announce loop (`app/src/room/index.ts`), which today parses
