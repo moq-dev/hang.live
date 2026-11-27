@@ -6,7 +6,6 @@ import { About } from "./about";
 import { Account } from "./account";
 import * as Api from "./api";
 import { Home } from "./home";
-import { Icons } from "./icons";
 import { NotFound } from "./not-found";
 import { Oauth } from "./oauth";
 import Privacy from "./privacy";
@@ -14,7 +13,7 @@ import { Canvas } from "./room/canvas";
 import { Sup } from "./sup";
 import { solid } from "./util/solid";
 
-export function Hang(): JSX.Element {
+function Hang(): JSX.Element {
 	const background = (<canvas class="fixed inset-0 w-full h-full bg-black" />) as HTMLCanvasElement;
 
 	const canvas = new Canvas(background);
@@ -32,7 +31,6 @@ export function Hang(): JSX.Element {
 				<Route path="/home" component={() => <Home />} />
 				<Route path="/privacy" component={() => <Privacy />} />
 				<Route path="/oauth/*redirect" component={() => <Oauth />} />
-				{import.meta.env.DEV && <Route path="/dev/icons" component={Icons} />}
 				<Route path="*" component={() => <Fallback canvas={canvas} />} />
 			</Router>
 		</>
