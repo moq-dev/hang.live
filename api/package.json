@@ -21,7 +21,7 @@
 		"types": "for package in clock pattern auth; do bun run --cwd ../moq/js/$package tsc --project tsconfig.build.json --emitDeclarationOnly --incremental --tsBuildInfoFile dist/hang.tsbuildinfo || exit $?; done"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "^0.7.2",
+		"@hono/zod-validator": "^0.9.1",
 		"@moq/auth": "workspace:*",
 		"@moq/clock": "workspace:*",
 		"drizzle-orm": "^0.45.4",
@@ -32,7 +32,7 @@
 	},
 	"devDependencies": {
 		"typescript": "7.0.2",
-		"@types/bun": "^1.4.4"
+		"@types/bun": "^1.4.5"
 	},
 	"packageManager": "bun@1.4.2"
 }
