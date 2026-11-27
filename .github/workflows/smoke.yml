@@ -1,7 +1,7 @@
 name: Production smoke
 
 # Joins hang.live from two headless browsers every hour, so a site, API, or relay outage
-# between deploys surfaces; the production deploy runs the same `just smoke` after each deploy.
+# between deploys surfaces; each deploy (deploy.yml) runs the same `just smoke` after it ships.
 on:
   schedule:
     - cron: "17 * * * *"
@@ -33,6 +33,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The smoke that shipped with production, since main's may already expect unreleased UI.
+          ref: release
           # Bun's workspaces include the moq/ packages.
           submodules: recursive
           persist-credentials: false

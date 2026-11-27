@@ -17,7 +17,3 @@ check:
 # Regenerate worker-configuration.d.ts from wrangler.jsonc.
 types:
 	bun wrangler types
-
-deploy: build
-	bun wrangler d1 migrations apply DB --env live --remote
-	bun wrangler deploy --env live

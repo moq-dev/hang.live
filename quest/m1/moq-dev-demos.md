@@ -11,7 +11,7 @@ full spatial multi-participant MoQ application live.
 Decided 2026-11-25 (maintainer): add Hang back to `moq.dev` demos once it is
 fixed up.
 
-- Deploy `main` if `hang.live` is behind it (`just deploy`), then verify
+- Cut a [release](/CONTRIBUTING.md#releases) if `hang.live` is behind `main`, then verify
   `https://hang.live` end to end in a real browser against `moq.pro`
   (landing page demo, guest join, camera/mic toggle recovery, screen share,
   chat/memes, and room previews).

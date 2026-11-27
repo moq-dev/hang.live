@@ -17,6 +17,16 @@
 	},
 
 	"env": {
+		// Staging, deployed from every merge to main.
+		"staging": {
+			"name": "hang-staging",
+			"account_id": "dd618f5dbd5da77b8296f1613c301f5c",
+			"route": {
+				"pattern": "new.hang.live",
+				"custom_domain": true
+			}
+		},
+
 		// Production environment configuration
 		"live": {
 			"name": "hang-live",
