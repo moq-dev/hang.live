@@ -72,9 +72,9 @@ ship env:
 	app="(cd app && bun wrangler rollback --env {{env}})"
 	trap 'echo "error: deploying {{env}} failed before any Worker changed" >&2' ERR
 	(cd api && bun wrangler d1 migrations apply DB --env "{{env}}" --remote)
-	trap 'echo "error: deploying {{env}} failed; roll back the API Worker with: $api" >&2' ERR
+	# A Worker's version changes only once its upload succeeds, after which only its trigger update can still fail.
+	trap 'echo "error: deploying {{env}} failed; roll back the API Worker with: $api only if the output above shows it uploaded a version" >&2' ERR
 	(cd api && bun wrangler deploy --env "{{env}}")
-	# The app's version changes only once its upload succeeds, after which only its trigger update can still fail.
 	trap 'echo "error: deploying {{env}} failed; roll back the API Worker with: $api, and the app Worker with: $app only if the output above shows it uploaded a version" >&2' ERR
 	(cd app && bun wrangler deploy --env "{{env}}")
 	trap - ERR
