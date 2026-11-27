@@ -11,7 +11,7 @@ export interface Info {
 }
 
 // One row per favorited room, created by migrations/0003_favorites.sql.
-export const table = sqliteTable(
+const table = sqliteTable(
 	"favorites",
 	{
 		accountId: text("account_id").notNull(),

@@ -23,10 +23,12 @@ Delete all three and their tests in `api/test/room.test.ts` and
 then fails to join until it is reloaded. Its token expires within `LIFETIME`
 (two hours) anyway, and it has no renewal.
 
-## Waiting
+The build that added `relay` reached production on 2026-11-27 (`just deploy`
+from `4f30924`): `POST https://api.hang.live/room/x/join` returns `relay`,
+`token`, and `lifetime`, and a guest joined a room in a browser.
 
-- Maintainer: deploy the build that added `relay` to the join response
-  (`just deploy`), since the Cloudflare credentials it needs are the
-  maintainer's. Check that `curl -s -X POST -H 'Content-Type: application/json'
-  -d '{}' https://api.hang.live/room/x/join` returns a `relay` field, then wait
-  a day for open tabs to reload.
+## Scheduled
+
+- 2026-11-28 - one full day after `4f30924`, whose join response carries
+  `relay`, was deployed to `hang.live` on 2026-11-27, so open tabs from the
+  earlier build have reloaded

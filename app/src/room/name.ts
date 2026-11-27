@@ -1,6 +1,18 @@
+import * as Moq from "@moq/net";
+import { parse } from "@moq/room";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
+
+/** A short label from a broadcast path: each identity segment cut to 8 characters, so a UUID stays readable. */
+export function fallbackName(path: string): string {
+	const valid = Moq.Path.from(path);
+	const parsed = parse(valid);
+	const name = Moq.Path.parts(parsed?.identity ?? valid)
+		.map((segment) => segment.slice(0, 8))
+		.join("/");
+	return parsed?.kind === "screen" ? `${name} (screen)` : name;
+}
 
 export class Name {
 	broadcast: Broadcast;
@@ -33,7 +45,9 @@ export class Name {
 		// Update name text
 		effect.run((effect) => {
 			const name = effect.get(this.broadcast.source.user.name);
-			root.textContent = name || "";
+			// A tool outside Hang, such as OBS, names no user.
+			const fallback = this.broadcast.source.role === "watch" ? fallbackName(this.broadcast.path) : "";
+			root.textContent = name || fallback;
 		});
 
 		this.broadcast.overlay(effect, root, (tile, canvas) => {

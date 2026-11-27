@@ -6,7 +6,7 @@ import { unreachable } from "../util/unreachable";
 export default function Login(props: { small?: boolean }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
 
-	const getProviderIcon = (provider: Api.OAuth.ProviderId) => {
+	const getProviderIcon = (provider: Api.ProviderId) => {
 		switch (provider) {
 			case "apple":
 				return "icon-[mdi--apple]";
@@ -19,7 +19,7 @@ export default function Login(props: { small?: boolean }): JSX.Element {
 		}
 	};
 
-	const getProviderColor = (provider: Api.OAuth.ProviderId) => {
+	const getProviderColor = (provider: Api.ProviderId) => {
 		switch (provider) {
 			case "apple":
 				return "bg-gray-600 hover:bg-gray-700";
@@ -32,7 +32,7 @@ export default function Login(props: { small?: boolean }): JSX.Element {
 		}
 	};
 
-	const handleProviderLogin = async (provider: Api.OAuth.ProviderId) => {
+	const handleProviderLogin = async (provider: Api.ProviderId) => {
 		setLoading(true);
 		try {
 			await Api.client.loginStart(provider);

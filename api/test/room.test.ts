@@ -24,7 +24,7 @@ async function context() {
 	return { key, room };
 }
 
-// The join route over a real signer and guest issuer.
+// The room routes over a real signer and guest issuer.
 async function join() {
 	const { key, room } = await context();
 	const auth = new Auth.Context(env);
@@ -40,10 +40,16 @@ async function join() {
 			headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
 			body: JSON.stringify(body),
 		});
-	return { key, auth, call };
+	const external = async () => {
+		const response = await app.request("/room/friends/external", { method: "POST" });
+		expect(response.status).toBe(200);
+		return (await response.json()) as External;
+	};
+	return { key, auth, call, external };
 }
 
 type Joined = { url: string; relay: string; token: string; lifetime: number; path: string; guest?: string };
+type External = { relay: string; path: string; publish: string; subscribe: string; lifetime: number };
 
 test("join grants publishing only beneath the participant identity", async () => {
 	const { key, room } = await context();
@@ -133,6 +139,39 @@ test("a signed-in account joins as itself and gets no guest credential", async (
 	const joined = (await (await call({ guest: issued.credential }, await auth.create("account-1"))).json()) as Joined;
 	expect(joined.path).toBe("account-1");
 	expect(joined.guest).toBeUndefined();
+});
+
+test("an external publisher streams only as its fresh identity, until it expires", async () => {
+	const { key, call, external } = await join();
+	const participant = ((await (await call({})).json()) as Joined).path;
+
+	const mint = await external();
+	expect(mint.relay).toBe("https://relay.example/hang/friends");
+	expect(mint.path).toMatch(/^external\/[0-9a-f-]{36}$/);
+	expect(mint.lifetime).toBe(Room.EXTERNAL_LIFETIME);
+
+	const publish = await MoqAuth.Key.verify(key, mint.publish);
+	const permissions = MoqAuth.Claims.authorize(publish, "hang/friends");
+	expect(permissions.publish.matches(`${mint.path}/camera.hang`)).toBe(true);
+	expect(permissions.publish.matches(`${participant}/camera.hang`)).toBe(false);
+	expect(permissions.publish.matches("external/other/camera.hang")).toBe(false);
+	expect(permissions.subscribe.size).toBe(0);
+	expect(decodeJwt(mint.publish)).toMatchObject({
+		publish: [`${mint.path}/**`],
+		exp: START + Room.EXTERNAL_LIFETIME,
+	});
+
+	const egress = MoqAuth.Claims.authorize(await MoqAuth.Key.verify(key, mint.subscribe), "hang/friends");
+	expect(egress.subscribe.matches(`${participant}/camera.hang`)).toBe(true);
+	expect(egress.publish.size).toBe(0);
+	expect(decodeJwt(mint.subscribe).exp).toBe(START + Room.EXTERNAL_LIFETIME);
+
+	// Each mint is a new identity, so one tool can never stream as another.
+	expect((await external()).path).not.toBe(mint.path);
+
+	setSystemTime((START + Room.EXTERNAL_LIFETIME) * 1000);
+	await expect(MoqAuth.Key.verify(key, mint.publish)).rejects.toThrow("expired");
+	await expect(MoqAuth.Key.verify(key, mint.subscribe)).rejects.toThrow("expired");
 });
 
 test("guest identities cannot become wildcard grants", () => {

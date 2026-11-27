@@ -266,6 +266,34 @@ test("a watcher recovers every chat message a delivery gap skipped", async () =>
 	}
 });
 
+test("a broadcast without Hang's location, as OBS publishes, is placed locally", async () => {
+	const net = new Net.Broadcast.Producer();
+	const catalog = new Signal<ExtendedCatalog | undefined>(undefined);
+	const extras = consumeExtras(
+		{ out: { catalog, active: new Signal<Net.Broadcast.Consumer | undefined>(net.consume()) } },
+		new Signal(true),
+	);
+	try {
+		// Locked until the catalog says whether a location is coming.
+		await flush();
+		expect(extras.located.peek()).toBe(true);
+
+		// A plain `.hang` catalog: media only, no `hang` section.
+		catalog.set({});
+		await flush();
+		expect(extras.located.peek()).toBe(false);
+		expect(extras.location.window.position.peek()).toBeUndefined();
+		expect(extras.location.window.handle.peek()).toBeUndefined();
+
+		catalog.set({ hang: { location: { track: "hang/location.json" } } });
+		await flush();
+		expect(extras.located.peek()).toBe(true);
+	} finally {
+		extras.close();
+		net.close();
+	}
+});
+
 // Serve live state from `local` and read it back the way a watcher does, on a manual clock.
 function live(datagrams = new Signal(true)) {
 	const clock = new Manual();

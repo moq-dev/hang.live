@@ -23,7 +23,7 @@ export function Account(): JSX.Element {
 }
 
 function AccountLoad(): JSX.Element {
-	const [info, setInfo] = createSignal<Api.Account.Info | undefined>(undefined);
+	const [info, setInfo] = createSignal<Api.AccountInfo | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
 	const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
 	const [deleting, setDeleting] = createSignal(false);
@@ -149,7 +149,7 @@ function AccountLoad(): JSX.Element {
 	);
 }
 
-function AccountLoaded(props: { info: Api.Account.Info }): JSX.Element {
+function AccountLoaded(props: { info: Api.AccountInfo }): JSX.Element {
 	const [info, setInfo] = createSignal(props.info);
 	const [name, setName] = createSignal<string | undefined>(props.info.name);
 	const [avatar, setAvatar] = createSignal<File | string | undefined>(props.info.avatar);

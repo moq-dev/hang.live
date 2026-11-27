@@ -7,11 +7,10 @@ Run the `code` audit: `quest audit code` prints what it checks, what each findin
 ## Plan
 
 Baseline from the m1 run (2026-11-25): about 18k lines of TypeScript in `api/` and `app/`; `moq/` is upstream and out of scope.
-Run `bunx fallow dead-code` (fallow 3.44.0, moq's dead-code tool) for unused files, exports, and types; [dead-code-gate](/quest/m1/dead-code-gate.md) puts that run in `just check`.
+`just check` runs `fallow dead-code` (fallow 3.44.0, moq's dead-code tool), so unused files, exports, and types already fail the gate; `.fallowrc.jsonc` turns off unused class members, so grep those by hand.
 
 Check first:
 
-- `joinSchema` in `api/src/room.ts`, which nothing uses; the m1 run left it to `room-token-identity`, which rewrote that file.
 - Unused class members, which fallow over-reports through context objects and Comlink proxies: grep each method name (the m1 run found dead `Bounds`, `Badge`, and `TTS` methods this way).
 - Props and signals that are always passed the same value or never read, in `app/src/room/` (`broadcast.ts`, `fake.ts`, `local.ts`, `watch.ts` share a structural `BroadcastSource` union whose placeholder fields hide dead branches in `debug.ts`).
 - Local copies of `@moq/room` and other `@moq/*` exports (the m1 run moved `metadata.ts` onto `@moq/room`'s `TRACK`, `PRIORITY`, and `HangCatalog`).
