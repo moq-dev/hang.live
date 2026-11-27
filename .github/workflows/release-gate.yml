@@ -1,0 +1,47 @@
+name: Release gate
+
+# Production only receives a tree staging already deployed and smoke-checked: a PR into `release`
+# passes only when its merge candidate has the same tree as a `main` commit whose staging deploy
+# succeeded. Trees, not commits, so a release merge commit passes when it adds no change of its own.
+# A backport never ran on staging, so it fails here; the maintainer merges it past the gate.
+on:
+  pull_request:
+    branches: [release]
+    # `edited` runs the gate when a main PR is retargeted to release.
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: release-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Release gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # GITHUB_SHA is the merge candidate; the ruleset keeps the PR up to date, so it is what merges.
+          tree=$(gh api "repos/$GH_REPO/git/commits/$GITHUB_SHA" --jq .tree.sha)
+          # Only main deploys to staging; newest first.
+          for deployment in $(gh api "repos/$GH_REPO/deployments?environment=staging&per_page=100" --jq '.[] | "\(.id):\(.sha)"'); do
+            id=${deployment%%:*}
+            sha=${deployment#*:}
+            [ "$(gh api "repos/$GH_REPO/git/commits/$sha" --jq .tree.sha)" = "$tree" ] || continue
+            state=$(gh api "repos/$GH_REPO/deployments/$id/statuses?per_page=1" --jq '.[0].state // "none"')
+            if [ "$state" = success ]; then
+              echo "Staging deployed and checked this tree at $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$sha"
+              exit 0
+            fi
+            echo "Staging's deploy of $sha, which has this tree, is $state."
+          done
+          echo "error: no successful staging deploy has this PR's merged tree $tree. Release a main commit once its Deploy run is green (which reruns this gate), or merge a backport past the gate." >&2
+          exit 1

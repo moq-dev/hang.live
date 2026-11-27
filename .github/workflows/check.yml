@@ -5,7 +5,7 @@ permissions:
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "release"]
     # Converting to a draft or closing cancels the in-flight run through the concurrency group.
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, closed]
 

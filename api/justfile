@@ -18,6 +18,7 @@ check:
 types:
 	bun wrangler types
 
-deploy: build
-	bun wrangler d1 migrations apply DB --env live --remote
-	bun wrangler deploy --env live
+# Apply D1 migrations, then deploy the Worker, to an environment: staging or live.
+deploy env: build
+	bun wrangler d1 migrations apply DB --env "{{env}}" --remote
+	bun wrangler deploy --env "{{env}}"

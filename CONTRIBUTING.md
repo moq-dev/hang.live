@@ -30,6 +30,33 @@ Run expensive checks with `quest gate just check` and `quest gate just build`.
 frontend, local relay, and auth service.
 App builds also refresh the pinned decoder assets, including through `just deploy`.
 
+# Releases
+
+`main` is the trunk and `release` is what ships. Every merge to `main` deploys
+staging (`new.hang.live`), and every change to `release` deploys production
+(`hang.live`): D1 migrations, the API Worker, then the app Worker. Each deploy
+then checks the API's `/health`, that the site serves the exact build it
+shipped, and `just smoke` joins a room from two browsers; a failure fails the
+run and prints the `wrangler rollback` commands. Staging has its own D1, R2,
+auth secret, and relay key, which can only sign tokens for `staging/` rooms.
+
+- Cut a release by opening a PR from `main` into `release` and merging it with
+  a merge commit. The `Release gate` check passes only when the merged tree
+  matches a `main` commit whose staging deploy succeeded; a release PR opened
+  before that deploy finishes passes once the deploy reruns it.
+- Land a serious fix on `main` first, then port it onto `release` as its own
+  PR. Its tree never ran on staging, so the gate fails it; once `Check` passes,
+  an admin merges it past the gate with `gh pr merge --merge --admin`. The
+  production deploy's checks and `wrangler rollback` are its safety net.
+- `release` must be up to date to merge, so after a backport the next release
+  PR first merges `release` into `main` (its "Update branch" button), and waits
+  for that commit's staging deploy.
+- `just deploy staging` or `just deploy live` deploys the checkout by hand, for
+  a hotfix or a rollback. It needs `CLOUDFLARE_API_TOKEN` with the deploy
+  token, and Git LFS content (`git lfs pull`).
+- The hourly `Production smoke` runs the smoke from `release`, so it tests
+  production with the smoke that shipped with it.
+
 # MoQ updates
 
 Update the `moq/` gitlink and `inputs.moq.url` in `flake.nix` to the same
