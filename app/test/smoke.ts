@@ -45,9 +45,9 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 	page.on("console", (message) => {
 		// Chromium reports GL errors as WebGL console messages, and the canvas logs a throwing frame.
 		if (/WebGL|render error/.test(message.text())) errors.push(`${name}: ${message.text()}`);
-		if (message.type() === "debug") return;
+		// WIP: if (message.type() === "debug") return;
 		log.push(`${message.type()}: ${message.text()}`);
-		if (log.length > 50) log.shift();
+		if (log.length > 150) log.shift();
 	});
 	await page.addInitScript((name) => {
 		// A returning guest's saved name, so the other page can tell this one apart.

@@ -47,6 +47,7 @@ jobs:
       - name: Smoke
         run: |
           set -o pipefail
+          (while sleep 5; do uptime; done) &
           nix develop .#smoke --command bash -c 'bun install --frozen-lockfile && just smoke https://hang.live' 2>&1 | tee "$RUNNER_TEMP/smoke.log"
 
       - name: File or update the tracking issue
