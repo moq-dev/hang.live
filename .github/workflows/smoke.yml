@@ -39,6 +39,13 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Diagnose
+        run: |
+          ls -la /nix 2>&1 | head; ls /nix/var/nix/profiles/default/bin 2>&1 | head; ls ~/.nix-profile/bin 2>&1 | head
+          head -3 /etc/os-release; nproc; free -g; df -h / | tail -1; id; sudo -n true && echo SUDO || echo NOSUDO
+          which bun node docker chromium google-chrome || true
+          echo "$PATH"
+
       - name: Smoke
         run: |
           set -o pipefail
