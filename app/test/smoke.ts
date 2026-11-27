@@ -35,8 +35,9 @@ async function step<T>(name: string, run: () => Promise<T>): Promise<T> {
 
 // Opens the room's join screen as a guest with a known name.
 async function open(browser: Playwright.Browser, name: string): Promise<Playwright.Page> {
-	// SwiftShader draws the full-page canvas on the CPU, so keep it small.
-	const page = await browser.newPage({ viewport: { width: 640, height: 480 } });
+	// SwiftShader draws the full-page canvas on the CPU every frame; at larger sizes it starves the
+	// pages on a two-core runner.
+	const page = await browser.newPage({ viewport: { width: 320, height: 240 } });
 	page.setDefaultTimeout(TIMEOUT);
 	const log: string[] = [];
 	opened.push({ name, page, console: log });
