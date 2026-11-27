@@ -8,17 +8,12 @@ import { worklet } from "../moq/js/common/vite-plugin-worklet.ts";
 
 // https://vite.dev/config/
 export default defineConfig(() => {
-	// Avoid bundling 23MB of WASM for optional AI features.
-	// TODO fix this for MoQ, why isn't it defaulting to using a CDN?
-	const external = ["onnxruntime-web"];
-
 	return {
 		build: {
 			target: "esnext",
 			sourcemap: process.env.NODE_ENV === "production" ? false : ("inline" as const),
 			rolldownOptions: {
 				input: "index.html",
-				external,
 			},
 		},
 		optimizeDeps: {
@@ -27,9 +22,6 @@ export default defineConfig(() => {
 
 		worker: {
 			format: "es" as const,
-			rolldownOptions: {
-				external,
-			},
 		},
 
 		plugins: [
@@ -50,13 +42,6 @@ export default defineConfig(() => {
 			open: true,
 			strictPort: true,
 			hmr: false,
-			headers: {
-				"Access-Control-Allow-Origin": "*",
-				"Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-				"Access-Control-Allow-Headers": "Range",
-				"Access-Control-Expose-Headers": "Accept-Ranges, Content-Range, Content-Length",
-				"Accept-Ranges": "bytes",
-			},
 			fs: {
 				allow: [
 					".",

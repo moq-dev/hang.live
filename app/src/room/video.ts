@@ -2,7 +2,7 @@ import { type Effect, Signal } from "@moq/signals";
 import * as Api from "../api";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import { timestamp } from "./canvas";
+import { fade, timestamp } from "./canvas";
 import { Bounds, Vector } from "./geometry";
 import type { GLContext } from "./gl/context";
 import type * as Meme from "./meme";
@@ -324,18 +324,6 @@ export class Video {
 			else if (part === "right") xPos = 1;
 			else if (part === "top") yPos = 0;
 			else if (part === "bottom") yPos = 1;
-			else if (part === "center") {
-				// Keep defaults
-			} else if (part.endsWith("%")) {
-				const value = parseFloat(part) / 100;
-				if (positionParts.length === 1) {
-					xPos = value;
-				} else if (positionParts.indexOf(part) === 0) {
-					xPos = value;
-				} else {
-					yPos = value;
-				}
-			}
 		}
 
 		// Calculate offset in texture coordinates (0-1 range)
@@ -396,22 +384,7 @@ export class Video {
 
 	// Update opacity values based on current time (called once per frame)
 	tick(now: DOMHighResTimeStamp) {
-		const TRANSITION_DURATION = 300; // ms
-
-		// Calculate frame opacity
-		const frameElapsed = now - this.#frameTransition;
-		if (this.frameActive) {
-			this.frameOpacity = Math.min(1, Math.max(0, frameElapsed / TRANSITION_DURATION));
-		} else {
-			this.frameOpacity = Math.max(0, 1 - frameElapsed / TRANSITION_DURATION);
-		}
-
-		// Calculate meme opacity
-		const memeElapsed = now - this.#memeTransition;
-		if (this.memeActive.peek()) {
-			this.memeOpacity = Math.min(1, Math.max(0, memeElapsed / TRANSITION_DURATION));
-		} else {
-			this.memeOpacity = Math.max(0, 1 - memeElapsed / TRANSITION_DURATION);
-		}
+		this.frameOpacity = fade(this.frameActive, this.#frameTransition, now);
+		this.memeOpacity = fade(this.memeActive.peek(), this.#memeTransition, now);
 	}
 }

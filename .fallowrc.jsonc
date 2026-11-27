@@ -2,16 +2,33 @@
 	"$schema": "./node_modules/fallow/schema.json",
 	// moq/ is upstream's tree, checked by its own fallow config.
 	"ignorePatterns": ["moq/**", ".direnv/**"],
+	// app/test/media.browser.ts loads these pages through Vite by URL.
+	"supportEntry": ["app/test/*.html"],
+	// Check entry exports too, so the API's package surface carries only what the app imports.
+	"includeEntryExports": true,
+	"ignoreExports": [
+		// api/wrangler.jsonc names it as the Worker's handler.
+		{ "file": "api/src/index.ts", "exports": ["default"] }
+	],
 	"ignoreDependencies": [
 		// dev/justfile runs it by name.
 		"concurrently",
 		// api/tsconfig.json maps @moq/* to generated declarations under moq/, which fallow counts as file imports.
 		"@moq/auth",
-		"@moq/clock"
+		"@moq/clock",
+		// @iconify/tailwind4 in app/index.css loads these icon sets by name from `icon-[set--name]` classes.
+		"@iconify-json/material-symbols",
+		"@iconify-json/mdi"
 	],
+	// The Nix dev shell provides these.
+	"ignoreBinaries": ["just", "moq-relay"],
 	"rules": {
 		// fallow only warns on these by default.
 		"unused-dev-dependencies": "error",
-		"unused-optional-dependencies": "error"
+		"unused-optional-dependencies": "error",
+		// Methods called through a context object or Comlink proxy look unused; the `code` audit greps for them instead.
+		"unused-class-members": "off",
+		// Modules are imported as namespaces, so `Account.Info` and `Fave.Info` never collide.
+		"duplicate-exports": "off"
 	}
 }

@@ -2,7 +2,6 @@ import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
-import type { Bounds, Vector } from "./geometry";
 import type { HangLocalSource } from "./local";
 
 export class Locator {
@@ -57,38 +56,11 @@ export class Locator {
 		});
 		root.appendChild(text);
 
-		// Update the position based on broadcast bounds
-		const updatePosition = (bounds: Bounds, viewport: Vector) => {
-			const canvasRect = this.broadcast.canvas.element.getBoundingClientRect();
-
-			// Scale bounds from canvas coordinates to page coordinates
-			const scaleX = canvasRect.width / viewport.x;
-			const scaleY = canvasRect.height / viewport.y;
-
-			// Calculate position above the broadcast
-			const x = (bounds.position.x + bounds.size.x / 2) * scaleX + canvasRect.left;
-			const y = bounds.position.y * scaleY + canvasRect.top;
-
-			// Position the locator, with some gap above the broadcast
-			const gap = 60; // Distance above the broadcast
-			const top = Math.max(canvasRect.top, y - gap);
-			const left = Math.min(Math.max(canvasRect.left, x), canvasRect.left + canvasRect.width);
-
-			root.style.left = `${left}px`;
-			root.style.top = `${top}px`;
-		};
-
-		// Update position when bounds or viewport change
-		effect.run((effect) => {
-			const bounds = effect.get(this.broadcast.bounds);
-			const viewport = effect.get(this.broadcast.canvas.viewport);
-			updatePosition(bounds, viewport);
-		});
-
-		// Set z-index based on broadcast z-index
-		effect.run((effect) => {
-			const z = effect.get(this.broadcast.position).z;
-			root.style.zIndex = `${100 + z}`;
+		// Point at the middle of the tile's top edge from a little above it, kept within the canvas.
+		this.broadcast.overlay(effect, root, (tile, canvas) => {
+			const gap = 60;
+			root.style.left = `${Math.min(Math.max(canvas.left, tile.x + tile.width / 2), canvas.right)}px`;
+			root.style.top = `${Math.max(canvas.top, tile.y - gap)}px`;
 		});
 
 		// Control opacity based on visible signal

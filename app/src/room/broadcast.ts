@@ -1,12 +1,13 @@
 import { Effect, Signal } from "@moq/signals";
 import { Audio } from "./audio";
-import { type Canvas, timestamp } from "./canvas";
+import { type Canvas, fade, timestamp } from "./canvas";
 import { Chat } from "./chat";
 import { Debug } from "./debug";
 import type { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
 import type { HangLocalSource } from "./local";
 import * as Meme from "./meme";
+import type * as Metadata from "./metadata";
 import { Name } from "./name";
 import { Deform } from "./physics";
 import type { Sound } from "./sound";
@@ -14,14 +15,6 @@ import { Video } from "./video";
 import { WatchBroadcast } from "./watch";
 
 export type BroadcastSource = WatchBroadcast | HangLocalSource | FakeBroadcast;
-
-export type ChatMessage = {
-	audio?: HTMLAudioElement;
-	video?: HTMLVideoElement;
-	element: Node;
-	received: DOMHighResTimeStamp;
-	expires: DOMHighResTimeStamp;
-};
 
 // Catalog.Position but all fields are required.
 type Position = {
@@ -32,6 +25,8 @@ type Position = {
 };
 
 export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
+	/** Where the broadcast sits beneath the room. */
+	path: string;
 	source: T;
 	canvas: Canvas;
 	sound: Sound;
@@ -39,6 +34,7 @@ export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
 }
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
+	readonly path: string;
 	source: T;
 	canvas: Canvas;
 
@@ -63,16 +59,15 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// Zoom center point in normalized coordinates (0-1) relative to the broadcast
 	zoomCenter = new Signal<Vector>(Vector.create(0.5, 0.5));
 
-	// Replaced by position
-	//targetPosition = Vector.create(0, 0); // -0.5 to 0.5, sent over the network
-	//targetScale = 1.0; // 1 is 100%
-
 	visible: Signal<boolean>;
 
 	// The target position of the broadcast, while bounds contains the actual position.
-	// This is separate from the source.location.current so we can temporarily use our own value.
+	// This is separate from the source's location window so we can temporarily use our own value.
 	// After we learn the real position over the network, we'll replace it.
 	position: Signal<Position>;
+
+	/** Where peers' drags hold this window right now, by sender, streamed over datagrams until the snapshot catches up. */
+	holds = new Signal<ReadonlyMap<object, Metadata.Position>>(new Map());
 
 	// The meme video/audio we're rendering, if any.
 	meme = new Signal<Meme.AV | undefined>(undefined);
@@ -89,6 +84,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	signals = new Effect();
 
 	constructor(props: BroadcastProps<T>) {
+		this.path = props.path;
 		this.source = props.source;
 		this.canvas = props.canvas;
 		this.visible = new Signal(true); // TODO
@@ -107,9 +103,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		this.video = new Video(this);
 		this.audio = new Audio(this, props.sound);
-		this.chat = new Chat(this, props.canvas);
-		this.name = new Name(this, props.canvas);
-		this.debug = new Debug(this, props.canvas);
+		this.chat = new Chat(this);
+		this.name = new Name(this);
+		this.debug = new Debug(this);
 
 		const viewport = this.canvas.viewport.peek();
 
@@ -160,9 +156,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	}
 
 	#runChat(effect: Effect) {
-		const enabled = effect.get(this.source.chat.message.enabled);
-		if (!enabled) return;
-
 		const msg = effect.get(this.source.chat.message.latest);
 		if (!msg) return;
 
@@ -212,10 +205,29 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	tick(now: DOMHighResTimeStamp) {
 		this.video.tick(now);
 
-		// Update opacity based on online status
-		const fadeTime = 300; // ms
-		const elapsed = now - this.#onlineTransition;
-		this.opacity = this.online.peek() ? Math.min(1, elapsed / fadeTime) : Math.max(0, 1 - elapsed / fadeTime);
+		this.opacity = fade(this.online.peek(), this.#onlineTransition, now);
+	}
+
+	/**
+	 * Keep `root`, an element floating over the canvas, stacked with this tile and placed by `place` from the
+	 * tile's and the canvas's page rectangles whenever the tile moves, the canvas resizes, or the page scrolls.
+	 * Returns a function that places it again now, for when its own size changes.
+	 */
+	overlay(effect: Effect, root: HTMLElement, place: (tile: DOMRect, canvas: DOMRect) => void): () => void {
+		const update = () => place(this.canvas.page(this.bounds.peek()), this.canvas.element.getBoundingClientRect());
+
+		effect.run((effect) => {
+			effect.get(this.bounds);
+			effect.get(this.canvas.viewport);
+			update();
+		});
+		effect.event(window, "scroll", update, { passive: true });
+
+		effect.run((effect) => {
+			root.style.zIndex = `${100 + effect.get(this.position).z}`;
+		});
+
+		return update;
 	}
 
 	// Advance the physics by one fixed step.
@@ -297,15 +309,6 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		// Slow down the velocity for the next frame.
 		this.velocity = this.velocity.mult(0.5);
-	}
-
-	// Returns true if the broadcaster is locked to a position.
-	locked(): boolean {
-		if (this.source instanceof WatchBroadcast) {
-			return !this.source.location.window.handle.peek();
-		}
-
-		return false;
 	}
 
 	// Called when online status changes to trigger fade transition

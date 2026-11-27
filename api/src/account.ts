@@ -12,10 +12,9 @@ import type * as Storage from "./storage";
 import * as Tables from "./tables";
 
 export type Id = AccountId;
-export const idSchema = accountIdSchema;
 
 // Account schemas
-export const infoSchema = z.object({
+const infoSchema = z.object({
 	id: accountIdSchema,
 	name: nameSchema,
 	avatar: z.string(),
@@ -32,8 +31,8 @@ export interface Create {
 
 const table = Tables.accounts;
 
-export type Row = typeof table.$inferSelect;
-export type NewRow = typeof table.$inferInsert;
+type Row = typeof table.$inferSelect;
+type NewRow = typeof table.$inferInsert;
 
 export const router = rpc
 	.router()
@@ -105,12 +104,21 @@ export class Context {
 		return this.#rowToInfo(result.at(0)?.accounts);
 	}
 
+	async #avatar(id: Id): Promise<Pick<Row, "avatar" | "avatarType"> | undefined> {
+		const rows = await this.db
+			.select({ avatar: table.avatar, avatarType: table.avatarType })
+			.from(table)
+			.where(eq(table.id, id))
+			.limit(1);
+		return rows.at(0);
+	}
+
 	#rowToInfo(row?: Row): Info | undefined {
 		if (!row) return;
 
 		return {
 			...row,
-			id: idSchema.parse(row.id),
+			id: accountIdSchema.parse(row.id),
 			avatar: Avatar.url(this.env, row.avatarType, row.avatar),
 		};
 	}
@@ -155,13 +163,7 @@ export class Context {
 
 	// The external avatar URL an account still holds from before signup copied provider avatars into R2.
 	async externalAvatar(id: Id): Promise<string | undefined> {
-		const row = (
-			await this.db
-				.select({ avatar: table.avatar, avatarType: table.avatarType })
-				.from(table)
-				.where(eq(table.id, id))
-				.limit(1)
-		).at(0);
+		const row = await this.#avatar(id);
 		return row?.avatarType === "url" && !Avatar.isDefault(row.avatar) ? row.avatar : undefined;
 	}
 
@@ -196,15 +198,7 @@ export class Context {
 			avatarType = "url";
 		}
 
-		const old = avatar
-			? (
-					await this.db
-						.select({ avatar: table.avatar, avatarType: table.avatarType })
-						.from(table)
-						.where(eq(table.id, id))
-						.limit(1)
-				).at(0)
-			: undefined;
+		const old = avatar ? await this.#avatar(id) : undefined;
 
 		const updated = await this.db
 			.update(table)
@@ -239,14 +233,7 @@ export class Context {
 	}
 
 	async delete(id: Id): Promise<void> {
-		// Get avatar info before deleting
-		const account = (
-			await this.db
-				.select({ avatar: table.avatar, avatarType: table.avatarType })
-				.from(table)
-				.where(eq(table.id, id))
-				.limit(1)
-		).at(0);
+		const account = await this.#avatar(id);
 
 		// Delete the R2 avatar while the row still names it, so a failed delete can be retried.
 		// R2 deletes of a missing key succeed, so a retry after a failed row delete also works.

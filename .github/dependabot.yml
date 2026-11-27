@@ -1,0 +1,38 @@
+# cooldown.default-days holds back any newly published version until it is at
+# least N days old, so a compromised release (supply-chain attack) is noticed
+# and yanked before we pull it in. Security updates bypass the cooldown. It
+# only gates Dependabot-driven updates, not a manual `bun update`.
+#
+# Left out on purpose: the `moq/` submodule and flake inputs move together by
+# hand (see CONTRIBUTING.md, "MoQ updates").
+# Alerts and security updates are repository settings, enforced by dotfiles'
+# `repo-settings`; this file enables neither.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # One root lockfile covers the app, the API Worker, and the moq/js workspaces.
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      bun:
+        patterns:
+          - "*"
+    ignore:
+      # Pinned to the Nix shell's Playwright driver, so it moves with a nixpkgs
+      # bump rather than ahead of it.
+      - dependency-name: "playwright"

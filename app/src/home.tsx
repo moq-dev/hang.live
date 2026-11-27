@@ -32,7 +32,7 @@ export function Home(): JSX.Element {
 	const authenticated = solid(Api.client.authenticated);
 
 	// Undefined while loading, and null when signed out.
-	const [favorites, setFavorites] = createSignal<Api.Fave.Info[] | null>();
+	const [favorites, setFavorites] = createSignal<Api.FaveInfo[] | null>();
 	const [reload, setReload] = createSignal(0);
 
 	createEffect(() => {
@@ -141,7 +141,6 @@ export function Home(): JSX.Element {
 															// Collapsed cards stay mounted so their rooms still count toward the badge.
 															hidden={!showMore() && index() >= 6}
 															room={favorite.room}
-															createdAt={favorite.created_at}
 															onRemove={handleRemove}
 															connection={connection}
 															badge={badge}
@@ -192,7 +191,6 @@ export function Home(): JSX.Element {
 function FavoriteRoom(props: {
 	hidden: boolean;
 	room: string;
-	createdAt: number;
 	onRemove: (room: string) => void;
 	connection: Moq.Connection;
 	badge: Badge;

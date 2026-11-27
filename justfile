@@ -21,7 +21,7 @@ check:
 	set -euo pipefail
 	bun install --frozen-lockfile
 	quest check
-	bun fallow dead-code --unused-deps
+	bun fallow dead-code
 	bun run check
 	bun run --cwd api test
 	bun run --cwd app test

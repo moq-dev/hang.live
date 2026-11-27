@@ -2,17 +2,18 @@ import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import type * as Meme from "./meme";
-import { fade, PannedSound, type Sound } from "./sound";
+import { fade, PannedSound, type Sound, steer } from "./sound";
 
-const FADE_TIME = 0.2;
-
-export type AudioProps = {
-	pan?: number;
-};
+/** Smooth `previous` toward the RMS of `magnitudes`, each a sample's distance from silence in an analyser's bytes. */
+export function level(previous: number, magnitudes: ArrayLike<number>): number {
+	let sum = 0;
+	for (let i = 0; i < magnitudes.length; i++) sum += magnitudes[i] * magnitudes[i];
+	return previous * 0.7 + (Math.sqrt(sum) / magnitudes.length) * 0.3;
+}
 
 export class Audio {
 	broadcast: Broadcast;
-	pan: Signal<number>;
+	pan = new Signal(0);
 
 	#analyser?: AnalyserNode;
 	#analyserBuffer = new Uint8Array(1024);
@@ -24,16 +25,13 @@ export class Audio {
 	// TODO reuse if the sample rate is the same?
 	sound: PannedSound;
 
-	#volumeSmoothed = 0;
-
 	// Public volume for visualization (0 to 1)
 	volume = 0;
 
 	#signals = new Effect();
 
-	constructor(broadcast: Broadcast, sound: Sound, props?: AudioProps) {
+	constructor(broadcast: Broadcast, sound: Sound) {
 		this.broadcast = broadcast;
-		this.pan = new Signal(props?.pan ?? 0);
 
 		this.sound = new PannedSound(sound, this.pan);
 
@@ -57,12 +55,7 @@ export class Audio {
 
 		this.#signals.run((effect) => {
 			const panner = effect.get(this.#panner);
-			if (!panner) return;
-
-			effect.cleanup(() => panner.pan.cancelScheduledValues(panner.context.currentTime));
-
-			const pan = Math.max(-1, Math.min(1, effect.get(this.pan)));
-			panner.pan.linearRampToValueAtTime(pan, panner.context.currentTime + FADE_TIME);
+			if (panner) steer(effect, panner, effect.get(this.pan));
 		});
 
 		this.#signals.run((effect) => {
@@ -154,10 +147,6 @@ export class Audio {
 	tick() {
 		// Get audio from the notification/meme context
 		const soundBuffer = this.sound.analyze();
-		if (!soundBuffer) {
-			this.volume *= 0.95; // Fade out when no analyser
-			return;
-		}
 
 		// Take the absolute value of the distance from 128 (silence)
 		for (let i = 0; i < soundBuffer.length; i++) {
@@ -176,19 +165,7 @@ export class Audio {
 			}
 		}
 
-		// Calculate RMS volume
-		let sum = 0;
-		for (let i = 0; i < soundBuffer.length; i++) {
-			const sample = soundBuffer[i];
-			sum += sample * sample;
-		}
-		const volume = Math.sqrt(sum) / soundBuffer.length;
-
-		// Smooth the volume with exponential moving average
-		this.#volumeSmoothed = this.#volumeSmoothed * 0.7 + volume * 0.3;
-
-		// Store the smoothed volume (already in the right range from the buffer values)
-		this.volume = this.#volumeSmoothed;
+		this.volume = level(this.volume, soundBuffer);
 	}
 
 	close() {

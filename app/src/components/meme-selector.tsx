@@ -3,7 +3,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import type { HangLocalSource } from "../room/local";
 import * as Meme from "../room/meme";
 import Settings from "../settings";
-import { solid } from "../util/solid";
+import { onClickOutside, solid } from "../util/solid";
 
 export type Tab = "emoji" | "audio" | "video";
 
@@ -12,6 +12,8 @@ export type MemeSelectorProps = {
 	chatInput: HTMLInputElement | undefined;
 	chatMessage: string;
 	setChatMessage: Setter<string>;
+	/** The button that opens and closes the selector, so its click doesn't count as one outside. */
+	toggle: HTMLElement | undefined;
 	onClose: () => void;
 };
 
@@ -360,23 +362,12 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 		onCleanup(() => window.removeEventListener("keydown", handleKeyDown));
 	});
 
-	// Handle clicking outside
-	const handleClickOutside = (e: MouseEvent) => {
-		if (modal() && !modal()?.contains(e.target as Node)) {
-			props.onClose();
-		}
-	};
+	onClickOutside(
+		() => [modal(), props.toggle],
+		() => props.onClose(),
+	);
 
 	onMount(() => {
-		// Delay to prevent immediate close from the button click that opened it
-		const timer = setTimeout(() => {
-			window.addEventListener("click", handleClickOutside);
-		}, 100);
-		onCleanup(() => {
-			clearTimeout(timer);
-			window.removeEventListener("click", handleClickOutside);
-		});
-
 		// Add non-passive wheel listener to prevent scroll propagation
 		const handleWheel = (e: WheelEvent) => {
 			e.stopPropagation();
@@ -388,11 +379,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	});
 
 	const sendMeme = (memeName: string) => {
-		// Send the slash command
-		if (props.broadcast.chat.message.enabled.peek()) {
-			// Force a notification so picking the same meme again replays it.
-			props.broadcast.chat.message.latest.set(`/${memeName}`, true);
-		}
+		// Send the slash command, forced so picking the same meme again replays it.
+		props.broadcast.chat.message.latest.set(`/${memeName}`, true);
 		props.onClose();
 	};
 

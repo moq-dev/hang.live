@@ -310,8 +310,6 @@ export const VIDEO = {
 		fit: "contain",
 		position: "right",
 	},
-	// TODO: It should go over the screenshare, not the webcam, and should be in the top right corner.
-	// "speedrun": { source: [{ file: "speedrun.webm", mime: 'video/webm; codecs="vp9"' }] },
 	"pizza-time": {
 		paths: [
 			{ path: "pizza-time.webm", mime: 'video/webm; codecs="vp9"' },
@@ -372,8 +370,8 @@ export type AudioName = keyof typeof AUDIO;
 export type VideoName = keyof typeof VIDEO;
 
 // Lookup tables for slash commands (without hyphens)
-export const AUDIO_LOOKUP: Record<string, AudioName> = {};
-export const VIDEO_LOOKUP: Record<string, VideoName> = {};
+const AUDIO_LOOKUP: Record<string, AudioName> = {};
+const VIDEO_LOOKUP: Record<string, VideoName> = {};
 
 // Build lookup tables for slash commands without hyphens
 for (const [key] of Object.entries(AUDIO)) {
@@ -1269,8 +1267,6 @@ export const EMOJI_CATEGORIES = {
 	],
 } as const;
 
-export const ALL_EMOJIS = Object.values(EMOJI_CATEGORIES).flat();
-
 export function audio(name: AudioName): Audio {
 	const source = AUDIO[name];
 
@@ -1316,14 +1312,11 @@ export function video(name: VideoName): Video | undefined {
 // Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
 export function load(name: string): AV | undefined {
 	// Make the name lowercase and remove hyphens for lookup
-	const lower = name.toLowerCase();
-	const key = lower.replace(/-/g, "");
+	const key = name.toLowerCase().replace(/-/g, "");
 
-	const v = VIDEO_LOOKUP[key] || (lower as VideoName);
-	if (VIDEO[v]) return video(v);
-
-	const a = AUDIO_LOOKUP[key] || (lower as AudioName);
-	if (AUDIO[a]) return audio(a);
+	// Peers choose the key, so only the tables' own entries count, never inherited ones like `constructor`.
+	if (Object.hasOwn(VIDEO_LOOKUP, key)) return video(VIDEO_LOOKUP[key]);
+	if (Object.hasOwn(AUDIO_LOOKUP, key)) return audio(AUDIO_LOOKUP[key]);
 
 	return undefined;
 }

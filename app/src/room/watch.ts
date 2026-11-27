@@ -28,6 +28,8 @@ export class WatchBroadcast {
 	readonly #flip = new Signal(false);
 
 	readonly location: LocationFields;
+	/** Whether the peer publishes where its tile sits; a tile from a tool outside Hang is placed only locally. */
+	readonly located: Getter<boolean>;
 	readonly chat: ChatFields;
 	readonly user: {
 		id: Getter<string | undefined>;
@@ -42,15 +44,15 @@ export class WatchBroadcast {
 		target: Signal<Watch.Video.Target | undefined>;
 		active: Getter<string | undefined>;
 		error: Getter<Error | undefined>;
+		stats: Getter<Watch.Video.Stats | undefined>;
 		flip: Signal<boolean>;
-		source: Getter<undefined>;
 	};
 	readonly audio: {
 		root: Getter<AudioNode | undefined>;
 		catalog: Getter<Catalog.Audio | undefined>;
 		active: Getter<string | undefined>;
 		error: Getter<Error | undefined>;
-		source: Getter<undefined>;
+		stats: Getter<Watch.Audio.Stats | undefined>;
 	};
 
 	readonly signals = new Effect();
@@ -74,13 +76,17 @@ export class WatchBroadcast {
 		this.signals.cleanup(() => this.#player.close());
 
 		const metadata = consume(this.#player.broadcast);
-		const extras = consumeExtras(this.#player.broadcast);
+		// Only WebTransport carries datagrams; over the WebSocket fallback, windows move on release instead.
+		const datagrams = new Signal(false);
+		this.signals.run((effect) => datagrams.set(effect.get(props.connection.transport) === "webtransport"));
+		const extras = consumeExtras(this.#player.broadcast, datagrams);
 		this.signals.cleanup(() => {
 			metadata.close();
 			extras.close();
 		});
 
 		this.location = extras.location;
+		this.located = extras.located;
 		this.chat = extras.chat;
 		this.user = metadata.user;
 
@@ -97,15 +103,15 @@ export class WatchBroadcast {
 			target: this.#target,
 			active: decoder.video.source.out.track,
 			error: decoder.video.out.error,
+			stats: decoder.video.out.stats,
 			flip: this.#flip,
-			source: new Signal(undefined),
 		};
 		this.audio = {
 			root: decoder.audio.out.root,
 			catalog: decoder.audio.source.out.catalog,
 			active: decoder.audio.source.out.track,
 			error: decoder.audio.out.error,
-			source: new Signal(undefined),
+			stats: decoder.audio.out.stats,
 		};
 
 		// A decode failure otherwise only shows as a frozen avatar or silence.

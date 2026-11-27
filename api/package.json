@@ -1,7 +1,7 @@
 {
 	"name": "@hang/api",
 	"version": "0.0.1",
-	"description": "TypeScript backend server for Hang using tRPC, Drizzle, and Cloudflare Workers",
+	"description": "Hang API on Cloudflare Workers, using Hono and Drizzle",
 	"private": true,
 	"type": "module",
 	"exports": {

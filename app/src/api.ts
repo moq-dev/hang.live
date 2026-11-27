@@ -9,8 +9,12 @@ export * from "@hang/api/client";
 import { Effect, Signal } from "@moq/signals";
 import Settings from "./settings";
 
-export class Client {
-	// TODO Make two separate routes for authenticated and unauthenticated.
+function routes(token: string | undefined) {
+	const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+	return hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
+}
+
+class Client {
 	routes: ReturnType<typeof hc<Api.App>>;
 
 	#authenticated: Signal<boolean>;
@@ -21,17 +25,13 @@ export class Client {
 		const token = Settings.oauth.token.peek();
 
 		this.#authenticated = new Signal(!!token);
-		const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-		this.routes = hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
+		this.routes = routes(token);
 
+		// The account info request below drops a token the API rejects.
 		this.signals.run((effect: Effect) => {
-			// TODO async verify the token is valid
 			const token = effect.get(Settings.oauth.token);
 			this.#authenticated.set(!!token);
-
-			// Annoying duplication, but I don't want to leave this.routes uninitialized.
-			const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-			this.routes = hc<Api.App>(import.meta.env.VITE_API_URL, { headers });
+			this.routes = routes(token);
 		});
 
 		this.signals.run((effect) => {
@@ -64,7 +64,7 @@ export class Client {
 	}
 
 	// Redirect to the provider's login page; loginComplete() finishes the login after the OAuth redirect returns.
-	async loginStart(provider: Api.OAuth.ProviderId, url = window.location.href) {
+	async loginStart(provider: Api.ProviderId, url = window.location.href) {
 		// Redirect back to the current URL with an /oauth prefix, which the Oauth route strips.
 		// NOTE: pathname starts with a slash.
 		const parts = new URL(url);

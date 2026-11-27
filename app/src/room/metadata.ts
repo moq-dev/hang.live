@@ -1,9 +1,9 @@
 /**
- * hang.live catalog extras: location, typing, and chat messages.
+ * hang.live catalog extras: location, live pointers, typing, and chat messages.
  *
  * User/preview are served by `@moq/room`. This module adds `hang/location.json`,
- * `hang/chat.json` (typing), and `@moq/room`'s `chat` message window on the same
- * catalog `hang` section.
+ * the `hang/live.json` datagram track, `hang/chat.json` (typing), and `@moq/room`'s
+ * `chat` message window on the same catalog `hang` section.
  */
 
 import * as Clock from "@moq/clock";
@@ -11,19 +11,22 @@ import type { Root as CatalogRoot } from "@moq/hang/catalog";
 import * as Json from "@moq/json";
 import * as Moq from "@moq/net";
 import type * as Publish from "@moq/publish";
-import { Chat, type Preview, type User } from "@moq/room";
-import { Effect, Signal } from "@moq/signals";
+import { Chat, PRIORITY, type HangCatalog as RoomHangCatalog, TRACK, type TrackRef, type User } from "@moq/room";
+import { Effect, type Getter, Signal } from "@moq/signals";
 import type * as Watch from "@moq/watch";
 import * as z from "zod/mini";
 
-export type { Preview, User };
+export type { User };
 
-const TRACKS = {
-	location: "hang/location.json",
-	chat: "hang/chat.json",
-} as const;
+/** The datagram track of `LiveValue`s, beside `@moq/room`'s well-known tracks. */
+const LIVE_TRACK = "hang/live.json";
 
-const HANG_PRIORITY = 90;
+// While a pointer or drag is live, it repeats this often even when still, so viewers can tell a quiet
+// sender from one that vanished without its last datagram.
+const LIVE_REPEAT = Clock.Duration.millis(250);
+
+/** How long a viewer keeps the last live state without hearing from its sender. */
+export const LIVE_EXPIRY = Clock.Duration.millis(1000);
 
 export type Position = {
 	x?: number;
@@ -35,7 +38,27 @@ export type Position = {
 /** A move asked of a peer, with the ID it echoes back once applied. Older peers send no ID. */
 export type Request = Position & { id?: string };
 
-export type LocationValue = {
+/** A point in room coordinates, each axis spanning -0.5 to 0.5 across the viewport. */
+export type Point = { x: number; y: number };
+
+/** A peer's window that a drag holds somewhere, addressed by the handle that peer publishes. */
+export type LivePeer = { handle: string; position: Position };
+
+/**
+ * One datagram of pointer state, superseded by the next one or by the location snapshot.
+ *
+ * Datagrams may drop, so each carries the whole state rather than a change.
+ */
+type LiveValue = {
+	/** The sender's pointer, on its camera broadcast only. */
+	cursor?: Point;
+	/** This broadcast's own window, while its owner drags it. */
+	window?: Position;
+	/** A peer's window the sender drags, on its camera broadcast only. */
+	peer?: LivePeer;
+};
+
+type LocationValue = {
 	window?: {
 		position?: Position;
 		/** Where peers address moves; absent while the publisher refuses them. */
@@ -48,27 +71,23 @@ export type LocationValue = {
 	};
 };
 
-export type ChatValue = {
+type ChatValue = {
 	// Superseded by the `messages` window; still written for readers that predate it.
 	message?: string;
 	typing?: boolean;
 };
 
 // A remote publisher's values are untrusted, so each is validated before it reaches the UI.
-const PositionSchema: z.ZodMiniType<Position> = z.object({
+const PositionShape = {
 	x: z.optional(z.number()),
 	y: z.optional(z.number()),
 	z: z.optional(z.number()),
 	s: z.optional(z.number()),
-});
+};
 
-const RequestSchema: z.ZodMiniType<Request> = z.object({
-	x: z.optional(z.number()),
-	y: z.optional(z.number()),
-	z: z.optional(z.number()),
-	s: z.optional(z.number()),
-	id: z.optional(z.string()),
-});
+const PositionSchema: z.ZodMiniType<Position> = z.object(PositionShape);
+
+const RequestSchema: z.ZodMiniType<Request> = z.object({ ...PositionShape, id: z.optional(z.string()) });
 
 const LocationSchema: z.ZodMiniType<LocationValue> = z.object({
 	window: z.optional(
@@ -85,18 +104,22 @@ const LocationSchema: z.ZodMiniType<LocationValue> = z.object({
 	),
 });
 
+const LiveSchema: z.ZodMiniType<LiveValue> = z.object({
+	cursor: z.optional(z.object({ x: z.number(), y: z.number() })),
+	window: z.optional(PositionSchema),
+	peer: z.optional(z.object({ handle: z.string(), position: PositionSchema })),
+});
+
 const ChatSchema: z.ZodMiniType<ChatValue> = z.object({
 	message: z.optional(z.string()),
 	typing: z.optional(z.boolean()),
 });
 
-export type HangCatalog = {
-	user?: { track: string };
-	preview?: { track: string };
-	location?: { track: string };
-	chat?: { track: string };
+export type HangCatalog = RoomHangCatalog & {
+	/** A datagram track of `LiveValue`s. A broadcast without it updates its window only on release. */
+	live?: TrackRef;
 	/** `@moq/room`'s chat message window. A broadcast without it sends messages on `chat` instead. */
-	messages?: { track: string };
+	messages?: TrackRef;
 };
 
 export type ExtendedCatalog = CatalogRoot & {
@@ -114,15 +137,19 @@ export type LocationFields = {
 	peers: {
 		positions: Signal<Record<string, Request> | undefined>;
 	};
+	/** Pointer state streamed over datagrams, cleared once its sender goes quiet. */
+	live: {
+		cursor: Signal<Point | undefined>;
+		window: Signal<Position | undefined>;
+		peer: Signal<LivePeer | undefined>;
+	};
 };
 
 export type ChatFields = {
 	message: {
-		enabled: Signal<boolean>;
 		latest: Signal<string | undefined>;
 	};
 	typing: {
-		enabled: Signal<boolean>;
 		active: Signal<boolean | undefined>;
 	};
 };
@@ -131,12 +158,18 @@ export function locationFields(): LocationFields {
 	return {
 		window: {
 			position: new Signal<Position | undefined>(undefined),
-			handle: new Signal<string | undefined>(Math.random().toString(36).substring(2, 15)),
+			// Unset until a publisher picks one or a watched broadcast's location names it.
+			handle: new Signal<string | undefined>(undefined),
 			movable: new Signal(true),
 			applied: new Signal<string[] | undefined>(undefined),
 		},
 		peers: {
 			positions: new Signal<Record<string, Request> | undefined>(undefined),
+		},
+		live: {
+			cursor: new Signal<Point | undefined>(undefined),
+			window: new Signal<Position | undefined>(undefined),
+			peer: new Signal<LivePeer | undefined>(undefined),
 		},
 	};
 }
@@ -144,17 +177,15 @@ export function locationFields(): LocationFields {
 export function chatFields(): ChatFields {
 	return {
 		message: {
-			enabled: new Signal(true),
 			latest: new Signal<string | undefined>(undefined),
 		},
 		typing: {
-			enabled: new Signal(true),
 			active: new Signal<boolean | undefined>(undefined),
 		},
 	};
 }
 
-/** Publish location and chat tracks on a `@moq/room` camera/screen broadcast. */
+/** Publish location, live, and chat tracks on a `@moq/room` camera/screen broadcast. */
 export function serveExtras(
 	broadcast: { net: Publish.Broadcast["net"]; catalog: Pick<Publish.Broadcast["catalog"], "mutate"> },
 	location: LocationFields,
@@ -164,8 +195,9 @@ export function serveExtras(
 	broadcast.catalog.mutate((catalog) => {
 		const extended = catalog as ExtendedCatalog;
 		extended.hang ??= {};
-		extended.hang.location = { track: TRACKS.location };
-		extended.hang.chat = { track: TRACKS.chat };
+		extended.hang.location = { track: TRACK.location };
+		extended.hang.live = { track: LIVE_TRACK };
+		extended.hang.chat = { track: TRACK.chat };
 		extended.hang.messages = { track: Chat.TRACK };
 	});
 
@@ -174,12 +206,13 @@ export function serveExtras(
 			const hang = (catalog as ExtendedCatalog).hang;
 			if (!hang) return;
 			delete hang.location;
+			delete hang.live;
 			delete hang.chat;
 			delete hang.messages;
 		});
 	});
 
-	serveSnapshot(broadcast, TRACKS.location, effect, (effect) => {
+	serveSnapshot(broadcast, TRACK.location, effect, (effect) => {
 		// Peers address moves by handle and show a tile without one as locked.
 		const movable = effect.get(location.window.movable);
 		return {
@@ -195,7 +228,9 @@ export function serveExtras(
 		};
 	});
 
-	serveSnapshot(broadcast, TRACKS.chat, effect, (effect) => ({
+	serveLive(broadcast, location.live, effect);
+
+	serveSnapshot(broadcast, TRACK.chat, effect, (effect) => ({
 		message: effect.get(chat.message.latest),
 		typing: effect.get(chat.typing.active),
 	}));
@@ -228,7 +263,7 @@ function serveSnapshot<T>(
 		// Timed like `@moq/room`'s own snapshots, so each update opens its group at the write time.
 		const track = net.createTrack(name, {
 			timescale: Moq.Time.Timescale.MILLI,
-			priority: HANG_PRIORITY,
+			priority: PRIORITY,
 			refresh: { ratio: 8 },
 			compression: "deflate",
 		});
@@ -247,15 +282,56 @@ function serveSnapshot<T>(
 	});
 }
 
+function serveLive(broadcast: { net: Publish.Broadcast["net"] }, live: LocationFields["live"], effect: Effect): void {
+	const encoder = new TextEncoder();
+
+	effect.run((effect) => {
+		const net = effect.get(broadcast.net);
+		if (!net) return;
+
+		// Datagrams reach only viewers whose transport carries them; the rest wait for the snapshot.
+		const track = net.createDatagrams(LIVE_TRACK, {
+			timescale: Moq.Time.Timescale.MILLI,
+			priority: PRIORITY,
+		});
+		if (!track) throw new Error(`the datagram track ${LIVE_TRACK} already exists`);
+		effect.cleanup(() => track.finish());
+
+		effect.run((effect) => {
+			const value: LiveValue = {
+				cursor: effect.get(live.cursor),
+				window: effect.get(live.window),
+				peer: effect.get(live.peer),
+			};
+			const payload = encoder.encode(JSON.stringify(value));
+			const send = () => track.append(Moq.Time.Timestamp.now(), payload);
+
+			// An empty state goes out once, so viewers drop the pointer without waiting for it to expire.
+			send();
+			if (value.cursor || value.window || value.peer) effect.interval(send, LIVE_REPEAT);
+		});
+	});
+}
+
 export type ConsumedExtras = {
 	location: LocationFields;
+	/** Whether the broadcast publishes its location, which a tool outside Hang, such as OBS, does not; true until its catalog says. */
+	located: Getter<boolean>;
 	chat: ChatFields;
 	close: () => void;
 };
 
-/** Subscribe to location and chat on a watched broadcast. */
-export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "catalog" | "active"> }): ConsumedExtras {
+/**
+ * Subscribe to location and chat on a watched broadcast, and to live pointers while `datagrams` says the
+ * connection's transport carries them.
+ */
+export function consumeExtras(
+	broadcast: { out: Pick<Watch.Broadcast["out"], "catalog" | "active"> },
+	datagrams: Getter<boolean>,
+): ConsumedExtras {
 	const location = locationFields();
+	// Only the peer names its handle; a local one would send moves to a window that never applies them.
+	location.window.handle.set(undefined);
 	const chat = chatFields();
 	const signals = new Effect();
 
@@ -263,8 +339,15 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 	// keeps its subscription instead of reopening it and replaying the window.
 	const hang = signals.computed((effect) => (effect.get(broadcast.out.catalog) as ExtendedCatalog | undefined)?.hang);
 	const locationTrack = signals.computed((effect) => effect.get(hang)?.location?.track);
+	const liveTrack = signals.computed((effect) => effect.get(hang)?.live?.track);
 	const chatTrack = signals.computed((effect) => effect.get(hang)?.chat?.track);
 	const messagesTrack = signals.computed((effect) => effect.get(hang)?.messages?.track);
+	// Until the catalog arrives, assume a location is coming, so a participant's tile stays locked meanwhile.
+	const located = new Signal(true);
+	signals.run((effect) => {
+		const catalog = effect.get(broadcast.out.catalog);
+		located.set(catalog === undefined || effect.get(locationTrack) !== undefined);
+	});
 	// A broadcast advertising the window sends messages only there.
 	const windowed = signals.computed((effect) => effect.get(messagesTrack) !== undefined);
 
@@ -285,6 +368,16 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 			location.window.applied.set(value.window?.applied);
 			location.peers.positions.set(value.peers?.positions);
 		});
+	});
+
+	signals.run((effect) => {
+		const active = effect.get(broadcast.out.active);
+		const track = effect.get(liveTrack);
+		const enabled = effect.get(datagrams);
+		effect.cleanup(() => clearLive(location.live));
+		if (!active || track === undefined || !enabled) return;
+
+		subscribeLive(active, track, effect, location.live);
 	});
 
 	signals.run((effect) => {
@@ -314,6 +407,7 @@ export function consumeExtras(broadcast: { out: Pick<Watch.Broadcast["out"], "ca
 
 	return {
 		location,
+		located,
 		chat,
 		close: () => signals.close(),
 	};
@@ -332,7 +426,7 @@ function subscribeJson<T>(
 	effect: Effect,
 	update: (value: T) => void,
 ): void {
-	const consumer = new Json.Snapshot.Consumer<T>({ track: broadcast.track(name), schema, priority: HANG_PRIORITY });
+	const consumer = new Json.Snapshot.Consumer<T>({ track: broadcast.track(name), schema, priority: PRIORITY });
 	effect.cleanup(() => consumer.close());
 	effect.spawn(async () => {
 		// A failed read ends the loop, so release the subscription instead of downloading what nothing reads.
@@ -346,6 +440,75 @@ function subscribeJson<T>(
 			consumer.close();
 		}
 	});
+}
+
+function clearLive(live: LocationFields["live"]) {
+	live.cursor.set(undefined);
+	live.window.set(undefined);
+	live.peer.set(undefined);
+}
+
+/**
+ * Feed each live datagram on `name` to `live`, clearing it once the sender goes quiet.
+ *
+ * Unlike {@link subscribeJson}, a datagram that does not match is dropped rather than ending the
+ * subscription: each one stands alone, so one bad datagram from a peer must not silence its later ones.
+ */
+function subscribeLive(
+	broadcast: Moq.Broadcast.Consumer,
+	name: string,
+	effect: Effect,
+	live: LocationFields["live"],
+): void {
+	const consumer = broadcast.datagrams(name);
+	effect.cleanup(() => consumer.close());
+
+	// Bumped per datagram, restarting the expiry.
+	const heard = new Signal(0);
+	effect.run((effect) => {
+		if (effect.get(heard) === 0) return;
+		effect.timer(() => clearLive(live), LIVE_EXPIRY);
+	});
+
+	effect.spawn(async () => {
+		const decoder = new TextDecoder();
+		// Datagrams arrive in any order, and a stale one could revive a drag its sender released.
+		let latest: bigint | undefined;
+		let warned = false;
+		try {
+			for (;;) {
+				const datagram = await effect.race(consumer.recv());
+				if (!datagram) break;
+				if (latest !== undefined && datagram.sequence <= latest) continue;
+				const value = parseLive(decoder.decode(datagram.payload));
+				if (!value) {
+					// Once per subscription, so a peer sending garbage at frame rate cannot flood the console.
+					if (!warned) console.warn(`dropping malformed datagrams on ${name}`);
+					warned = true;
+					// Leaves `latest` alone, so a dropped datagram cannot shadow a valid one still in flight.
+					continue;
+				}
+				latest = datagram.sequence;
+				live.cursor.set(value.cursor);
+				live.window.set(value.window);
+				live.peer.set(value.peer);
+				heard.update((count) => count + 1);
+			}
+		} finally {
+			consumer.close();
+		}
+	});
+}
+
+function parseLive(text: string): LiveValue | undefined {
+	let json: unknown;
+	try {
+		json = JSON.parse(text);
+	} catch {
+		return undefined;
+	}
+	const result = LiveSchema.safeParse(json);
+	return result.success ? result.data : undefined;
 }
 
 // Groups the publisher ended early rather than failed; the next group restates the window.
@@ -432,5 +595,3 @@ function subscribeMessages(
 		}
 	});
 }
-
-export type PreviewInfo = Preview;

@@ -1,10 +1,10 @@
 import * as Clock from "@moq/clock";
 import * as Moq from "@moq/net";
 import { parse } from "@moq/room";
-import { Effect, Signal } from "@moq/signals";
-import type { Broadcast } from "./broadcast";
+import { Effect } from "@moq/signals";
 import type { Canvas } from "./canvas";
-import { type HangLocalSource, Local } from "./local";
+import { NetworkDebug } from "./debug";
+import { Local } from "./local";
 import { Locator } from "./locator";
 import * as Peers from "./peers";
 import type { Sound } from "./sound";
@@ -23,8 +23,6 @@ export class Room {
 	local: Local;
 	space: Space;
 
-	#cameraBroadcast = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
-	#shareBroadcast = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
 	#signals = new Effect();
 
 	constructor(props: RoomProps) {
@@ -32,35 +30,32 @@ export class Room {
 		this.local = props.local;
 		this.space = new Space(props.canvas, props.sound);
 
-		this.#signals.run((effect) => {
-			if (!effect.get(Local.join)) {
-				const all = this.space.clear();
-				for (const broadcast of all) {
-					broadcast.close();
-				}
-				return;
-			}
+		const network = new NetworkDebug(this.connection);
+		this.#signals.cleanup(() => network.close());
 
-			const cameraPath = effect.get(this.local.camera.name);
-			const camera = this.space.add(cameraPath, this.local.camera);
-			this.#cameraBroadcast.set(camera as Broadcast<HangLocalSource>);
-			effect.cleanup(() => {
-				void this.space.remove(cameraPath);
-				this.#cameraBroadcast.set(undefined);
+		// Our camera's tile is up for as long as we're in the room, and our screen's while we share it.
+		for (const [source, shown] of [
+			[this.local.camera, () => true],
+			[this.local.share, (effect: Effect) => !!effect.get(this.local.screen.out.source)],
+		] as const) {
+			this.#signals.run((effect) => {
+				if (!effect.get(Local.join) || !shown(effect)) return;
+
+				const path = effect.get(source.name);
+				const broadcast = this.space.add(path, source);
+				effect.cleanup(() => void this.space.remove(path));
+
+				// Point out the new tile, briefly.
+				const locator = new Locator(broadcast);
+				effect.cleanup(() => locator.close());
+				effect.timer(() => locator.close(), Clock.Duration.millis(8000));
 			});
-		});
+		}
 
+		// Leaving drops every other tile at once; our own fade out as they're removed above.
 		this.#signals.run((effect) => {
-			if (!effect.get(Local.join)) return;
-			if (!effect.get(this.local.screen.out.source)) return;
-
-			const sharePath = effect.get(this.local.share.name);
-			const share = this.space.add(sharePath, this.local.share);
-			this.#shareBroadcast.set(share as Broadcast<HangLocalSource>);
-			effect.cleanup(() => {
-				void this.space.remove(sharePath);
-				this.#shareBroadcast.set(undefined);
-			});
+			if (effect.get(Local.join)) return;
+			for (const broadcast of this.space.clear()) broadcast.close();
 		});
 
 		// Discover remote broadcasts ourselves: `@moq/room`'s roster would open a second watch per
@@ -108,22 +103,6 @@ export class Room {
 		this.#signals.timer(() => {
 			this.space.sound.tts.enabled.set(true);
 		}, Clock.Duration.millis(1000));
-
-		this.#signals.run((effect) => {
-			const cameraBroadcast = effect.get(this.#cameraBroadcast);
-			if (!cameraBroadcast) return;
-			const locator = new Locator(cameraBroadcast);
-			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Clock.Duration.millis(8000));
-		});
-
-		this.#signals.run((effect) => {
-			const shareBroadcast = effect.get(this.#shareBroadcast);
-			if (!shareBroadcast) return;
-			const locator = new Locator(shareBroadcast);
-			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Clock.Duration.millis(8000));
-		});
 
 		this.#signals.run((effect) => {
 			if (effect.get(this.local.webcam.out.source) || effect.get(this.local.microphone.out.source)) {

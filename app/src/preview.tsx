@@ -1,7 +1,7 @@
 import * as Moq from "@moq/net";
+import * as MoqRoom from "@moq/room";
 import { createEffect, For, onCleanup, type Setter, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import * as Preview from "./room/preview";
 import * as Sanitize from "./room/sanitize";
 import { solid } from "./util/solid";
 
@@ -10,14 +10,13 @@ export function PreviewRoomCompact(props: {
 	path?: string;
 	setMemberCount: Setter<number>;
 }): JSX.Element {
-	const room = new Preview.Room({
+	const room = new MoqRoom.Room({
 		connection: props.connection,
-		path: props.path ? Moq.Path.from(props.path) : undefined,
-		enabled: true,
+		prefix: props.path ? Moq.Path.from(props.path) : undefined,
 	});
 	onCleanup(() => room.close());
 
-	const members = solid(room.members);
+	const members = solid(room.remotes);
 	createEffect(() => {
 		props.setMemberCount(members().size);
 	});
@@ -34,7 +33,7 @@ export function PreviewRoomCompact(props: {
 	);
 }
 
-function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
+function PreviewMemberCompact(props: { member: MoqRoom.Remote }): JSX.Element {
 	const info = solid(props.member.preview);
 
 	return (
@@ -80,15 +79,11 @@ function PreviewMemberCompact(props: { member: Preview.Member }): JSX.Element {
 	);
 }
 
-export function PreviewRoom(props: { connection: Moq.Connection; name?: string }): JSX.Element {
-	const room = new Preview.Room({
-		connection: props.connection,
-		path: props.name ? Moq.Path.from(props.name) : undefined,
-		enabled: true,
-	});
+export function PreviewRoom(props: { connection: Moq.Connection }): JSX.Element {
+	const room = new MoqRoom.Room({ connection: props.connection });
 	onCleanup(() => room.close());
 
-	const members = solid(room.members);
+	const members = solid(room.remotes);
 
 	return (
 		<div class="bg-gray-900/30 rounded-2xl p-6 border border-gray-800">
@@ -115,7 +110,7 @@ export function PreviewRoom(props: { connection: Moq.Connection; name?: string }
 	);
 }
 
-function PreviewMember(props: { member: Preview.Member }): JSX.Element {
+function PreviewMember(props: { member: MoqRoom.Remote }): JSX.Element {
 	const info = solid(props.member.preview);
 	return (
 		<Show

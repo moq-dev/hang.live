@@ -11,7 +11,7 @@ import * as Tables from "./tables";
 import { unreachable } from "./util";
 
 export type ProviderId = (typeof providers)[number];
-export const providerIdSchema = z.enum(providers);
+const providerIdSchema = z.enum(providers);
 
 export class Context {
 	env: Env;
@@ -26,10 +26,6 @@ export class Context {
 		return new Provider(this.env, this.db, id);
 	}
 
-	async getLinks(account: Account.Id): Promise<Row[]> {
-		return await this.db.select().from(table).where(eq(table.accountId, account));
-	}
-
 	// Whether any sign-in method on the account never proved control of its email address.
 	async hasUnverifiedLink(account: Account.Id): Promise<boolean> {
 		const rows = await this.db
@@ -41,7 +37,7 @@ export class Context {
 	}
 }
 
-export class Provider {
+class Provider {
 	#clientId: string;
 	#clientSecret: string;
 	#redirectUri: string;
@@ -167,10 +163,6 @@ export class Provider {
 	}
 
 	async #generateAppleJwt(): Promise<string> {
-		if (this.id !== "apple") {
-			throw new Error("Apple JWT generation only available for Apple provider");
-		}
-
 		// The private key is stored in APPLE_CLIENT_SECRET as base64 content only
 		// Construct proper PEM format
 		const base64Content = this.env.APPLE_CLIENT_SECRET.trim();
@@ -224,9 +216,6 @@ export class Provider {
 			// Ask for the largest size we render, instead of whatever Discord defaults to.
 			avatarUrl = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=512`;
 		}
-		// If avatar is null/undefined, we could construct a default avatar URL, but it's better to leave it undefined
-		// Default Discord avatars: https://cdn.discordapp.com/embed/avatars/{discriminator % 5}.png
-		// But discriminator is being phased out, so we'll leave avatar as undefined for default avatars
 
 		return {
 			provider: this.id,
@@ -383,7 +372,7 @@ const appleCallbackUserSchema = z.object({
 });
 
 // The display name in Apple's first-authorization user field, if any.
-export function appleName(user: string): string | undefined {
+function appleName(user: string): string | undefined {
 	let json: unknown;
 	try {
 		json = JSON.parse(user);
@@ -448,7 +437,7 @@ function avatarFrom(provider: ProviderId, url: string): boolean {
 	}
 }
 
-export interface User {
+interface User {
 	provider: ProviderId;
 	providerId: string;
 	email?: string;
@@ -460,25 +449,11 @@ export interface User {
 
 const table = Tables.linked;
 
-export type Row = typeof table.$inferSelect;
-export type NewRow = typeof table.$inferInsert;
-
-export const loginSchema = z.object({
-	provider: providerIdSchema,
-});
-
-export const loginResponseSchema = z.object({
-	url: z.string(),
-});
-
-export const callbackSchema = z.object({
+const callbackSchema = z.object({
 	code: z.string(),
 	state: z.string(),
 	user: z.string().nullable().optional(),
 });
-
-export type Login = z.infer<typeof loginSchema>;
-export type LoginResponse = z.infer<typeof loginResponseSchema>;
 
 export const router = rpc
 	.router()
@@ -516,7 +491,6 @@ export const router = rpc
 		async (c) => {
 			const ctx = c.var.ctx;
 
-			// Validate provider parameter using Zod
 			const provider = ctx.oauth.provider(c.req.valid("param").provider);
 
 			// Handle both GET (Google/Discord) and POST (Apple form_post) callbacks
