@@ -11,13 +11,14 @@
 
   inputs = {
     moq.url = "github:moq-dev/moq/28d8eb84d640c2db6b516e1a1115c34400975787";
-    nixpkgs.follows = "moq/nixpkgs";
+    # quest's nixpkgs, so every repository's dev shell gets the same C compiler and mbx
+    # shares build scripts, proc-macros, and the crates built on them across repositories.
+    nixpkgs.follows = "quest/nixpkgs";
     flake-utils.follows = "moq/flake-utils";
     # Quest's CLI, which serves the guide and the skills its stubs call.
     # Untagged, so flake.lock alone pins it: `nix flake update quest`, then rerun `quest init`.
     quest = {
       url = "github:kixel-ai/quest";
-      inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
       # Its own nixpkgs pin only supplies Bun, which ours already matches; following
       # ours skips fetching a second nixpkgs on every cold shell (~15s in CI).
