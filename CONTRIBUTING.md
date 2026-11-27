@@ -59,7 +59,8 @@ Report public API and wire impact, including when there is none. Mark a
 breaking change with `!` and explain migration.
 
 No CI runs on pull requests: `just check` and `just build` are the checks, so
-run them locally before every push.
+run them locally before every push. Nobody pushes a bot's PR (Dependabot, the
+quest lock bump), so whoever merges one runs them on its head first.
 
 Open a draft once scope is settled. Run local checks, commit, push the explicit
 branch refspec, and run `quest review --base origin/main` before marking it

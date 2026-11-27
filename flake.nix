@@ -20,7 +20,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
       # Its own nixpkgs pin only supplies Bun, which ours already matches; following
-      # ours skips fetching a second nixpkgs on every cold shell (~15s in CI).
+      # ours skips fetching a second nixpkgs on every cold shell (~15s).
       inputs.nixpkgs-bun.follows = "nixpkgs";
     };
   };
