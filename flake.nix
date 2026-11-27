@@ -51,6 +51,9 @@
           inherit PLAYWRIGHT_BROWSERS_PATH;
           nativeBuildInputs = with pkgs; [
             bun
+            # Wrangler's local dev server refuses to run under Bun, whose fetch()
+            # ignores Miniflare's dispatcher; `bun wrangler` picks Node from PATH.
+            nodejs_24
             just
             rsync
             git-lfs

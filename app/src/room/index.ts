@@ -11,6 +11,7 @@ import type { Sound } from "./sound";
 import { Space } from "./space";
 import { WatchBroadcast } from "./watch";
 
+// What a room needs: the relay connection, canvas, sound, and our own broadcasts.
 export interface RoomProps {
 	connection: Moq.Connection;
 	canvas: Canvas;
@@ -18,6 +19,7 @@ export interface RoomProps {
 	local: Local;
 }
 
+// A joined room, which watches every peer and lays them out beside our own tiles.
 export class Room {
 	connection: Moq.Connection;
 	local: Local;

@@ -11,6 +11,7 @@ export function level(previous: number, magnitudes: ArrayLike<number>): number {
 	return previous * 0.7 + (Math.sqrt(sum) / magnitudes.length) * 0.3;
 }
 
+/** A tile's audio and meme sounds, panned toward the tile, with the volume its ring draws. */
 export class Audio {
 	broadcast: Broadcast;
 	pan = new Signal(0);

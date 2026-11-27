@@ -15,6 +15,7 @@ const updateHue = () => {
 
 updateHue();
 
+// A CSS gradient around the hue that shifts every second.
 export default function Gradient() {
 	const SATURATION = "75%";
 	const LIGHTNESS = "40%";

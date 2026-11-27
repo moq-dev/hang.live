@@ -16,6 +16,7 @@ import { Effect, type Getter, Signal } from "@moq/signals";
 import type * as Watch from "@moq/watch";
 import * as z from "zod/mini";
 
+/** A broadcast's user details, as `@moq/room` publishes them. */
 export type { User };
 
 /** The datagram track of `LiveValue`s, beside `@moq/room`'s well-known tracks. */
@@ -28,6 +29,7 @@ const LIVE_REPEAT = Clock.Duration.millis(250);
 /** How long a viewer keeps the last live state without hearing from its sender. */
 export const LIVE_EXPIRY = Clock.Duration.millis(1000);
 
+/** A window's placement: x and y in room coordinates, z order, and scale `s`. */
 export type Position = {
 	x?: number;
 	y?: number;
@@ -115,6 +117,7 @@ const ChatSchema: z.ZodMiniType<ChatValue> = z.object({
 	typing: z.optional(z.boolean()),
 });
 
+/** The catalog's `hang` section, adding Hang's tracks to `@moq/room`'s. */
 export type HangCatalog = RoomHangCatalog & {
 	/** A datagram track of `LiveValue`s. A broadcast without it updates its window only on release. */
 	live?: TrackRef;
@@ -122,10 +125,12 @@ export type HangCatalog = RoomHangCatalog & {
 	messages?: TrackRef;
 };
 
+/** A broadcast catalog with Hang's section. */
 export type ExtendedCatalog = CatalogRoot & {
 	hang?: HangCatalog;
 };
 
+/** A broadcast's window placement, moves asked of peers, and live pointer state, as signals. */
 export type LocationFields = {
 	window: {
 		position: Signal<Position | undefined>;
@@ -145,6 +150,7 @@ export type LocationFields = {
 	};
 };
 
+/** A broadcast's latest chat message and typing state, as signals. */
 export type ChatFields = {
 	message: {
 		latest: Signal<string | undefined>;
@@ -154,6 +160,7 @@ export type ChatFields = {
 	};
 };
 
+/** Location signals with nothing published or received yet. */
 export function locationFields(): LocationFields {
 	return {
 		window: {
@@ -174,6 +181,7 @@ export function locationFields(): LocationFields {
 	};
 }
 
+/** Chat signals with nothing published or received yet. */
 export function chatFields(): ChatFields {
 	return {
 		message: {
@@ -313,6 +321,7 @@ function serveLive(broadcast: { net: Publish.Broadcast["net"] }, live: LocationF
 	});
 }
 
+/** The location and chat read from a watched broadcast, which stop updating on `close`. */
 export type ConsumedExtras = {
 	location: LocationFields;
 	/** Whether the broadcast publishes its location, which a tool outside Hang, such as OBS, does not; true until its catalog says. */

@@ -14,6 +14,7 @@ export function fallbackName(path: string): string {
 	return parsed?.kind === "screen" ? `${name} (screen)` : name;
 }
 
+/** The name label over a tile's top-left corner. */
 export class Name {
 	broadcast: Broadcast;
 

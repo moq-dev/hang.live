@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import Layout from "./layout/web";
 
+// The 404 page.
 export function NotFound(): JSX.Element {
 	return (
 		<Layout>

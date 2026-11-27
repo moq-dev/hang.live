@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import Gradient from "./gradient";
 
+// A horizontal rule in the shifting hue gradient.
 export default function Divider(): JSX.Element {
 	return (
 		/* Make a thick black outline around the gradient. */

@@ -4,6 +4,7 @@ import type { KokoroTTS } from "kokoro-js";
 type Options = NonNullable<Parameters<typeof KokoroTTS.from_pretrained>[1]>;
 type ProgressInfo = Parameters<NonNullable<Options["progress_callback"]>>[0];
 
+// Tracks how much of the Kokoro model has downloaded.
 export class Progress {
 	#models = new Map<string, Map<string, { loaded: number; total: number } | undefined>>();
 	#next: Promise<number>;

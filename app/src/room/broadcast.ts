@@ -14,6 +14,7 @@ import type { Sound } from "./sound";
 import { Video } from "./video";
 import { WatchBroadcast } from "./watch";
 
+// Anything a tile can show: a remote broadcast, one of ours, or a demo fake.
 export type BroadcastSource = WatchBroadcast | HangLocalSource | FakeBroadcast;
 
 // Catalog.Position but all fields are required.
@@ -24,6 +25,7 @@ type Position = {
 	s: number;
 };
 
+// What a tile is built from.
 export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
 	/** Where the broadcast sits beneath the room. */
 	path: string;
@@ -33,6 +35,7 @@ export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
 	scale: Signal<number>;
 }
 
+// One tile in the room: a broadcast's placement, video, audio, chat, and name.
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	readonly path: string;
 	source: T;

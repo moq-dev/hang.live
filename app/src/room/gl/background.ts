@@ -3,6 +3,7 @@ import backgroundVertSource from "./background.vert";
 import type { GLContext } from "./context";
 import { Shader, type Uniform1f, type Uniform2f } from "./shader";
 
+// Draws the animated background behind the tiles.
 export class BackgroundRenderer {
 	#glContext: GLContext;
 	#program: Shader;

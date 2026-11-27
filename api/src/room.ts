@@ -5,7 +5,9 @@ import * as Auth from "./auth";
 import { guestSchema, guestTokenSchema, isValidRoom, ROOM_NAME_ERROR } from "./client";
 import * as rpc from "./rpc";
 
+// Parses a room name: 1 to 100 URL-safe characters.
 export const nameSchema = z.string().check(z.minLength(1), z.maxLength(100)).refine(isValidRoom, ROOM_NAME_ERROR);
+// A room name that passed `nameSchema`.
 export type Name = z.infer<typeof nameSchema>;
 
 // Seconds a room or preview token admits its holder; the app renews it before then.
@@ -41,6 +43,7 @@ export function legacyUrl(grant: Grant): URL {
 
 type Relay = Record<"RELAY_SECRET" | "RELAY_PREFIX" | "RELAY_URL", string>;
 
+// Signs relay tokens scoped to rooms with the relay's secret key.
 export class Context {
 	#key: MoqAuth.Key;
 	#env: Relay;
@@ -94,6 +97,7 @@ export class Context {
 	}
 }
 
+// Routes under /room to join a room or connect an external tool such as OBS.
 export const router = rpc
 	.router()
 	.post(

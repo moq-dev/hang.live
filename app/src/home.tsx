@@ -13,6 +13,7 @@ import * as Relay from "./relay";
 import { Local } from "./room/local";
 import { solid } from "./util/solid";
 
+// The signed-in home page, with live previews of favorite hangs.
 export function Home(): JSX.Element {
 	const [showMore, setShowMore] = createSignal(false);
 

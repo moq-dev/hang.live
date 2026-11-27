@@ -8,6 +8,7 @@ interface Props {
 	settings: readonly Signals.Getter<unknown>[];
 }
 
+// Retries a failed capture: turns it off, then on again once the error clears, unless the user changed it meanwhile.
 export class Retry {
 	#attempt: Signals.Effect | undefined;
 	#closed = false;

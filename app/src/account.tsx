@@ -11,6 +11,7 @@ import { Local } from "./room/local";
 import Settings from "./settings";
 import { solid } from "./util/solid";
 
+// The account page: profile settings when signed in, a login prompt otherwise.
 export function Account(): JSX.Element {
 	const authenticated = solid(Api.client.authenticated);
 	return (

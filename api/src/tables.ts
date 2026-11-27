@@ -2,6 +2,7 @@
 
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+// One row per account, unique by email address.
 export const accounts = sqliteTable("accounts", {
 	id: text("id").primaryKey(),
 	email: text("email").notNull().unique(),
@@ -12,6 +13,7 @@ export const accounts = sqliteTable("accounts", {
 	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+// The OAuth sign-ins linked to each account, at most one per provider.
 export const linked = sqliteTable(
 	"accounts_linked",
 	{

@@ -10,9 +10,11 @@ import * as rpc from "./rpc";
 import * as Tables from "./tables";
 import { unreachable } from "./util";
 
+// An OAuth provider a user can sign in with.
 export type ProviderId = (typeof providers)[number];
 const providerIdSchema = z.enum(providers);
 
+// The OAuth sign-ins linked to accounts in D1, and the providers that perform them.
 export class Context {
 	env: Env;
 	db: Database.Context;
@@ -455,6 +457,7 @@ const callbackSchema = z.object({
 	user: z.string().nullable().optional(),
 });
 
+// Routes under /auth to start an OAuth login, take the provider's callback, and redeem the login code.
 export const router = rpc
 	.router()
 	.get(

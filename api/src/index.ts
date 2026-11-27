@@ -25,6 +25,8 @@ const app = new Hono<{ Bindings: Env }>()
 	.route("/room", Room.router)
 	.route("/public", Storage.router);
 
+/** The API's routes as a type, which the app's Hono RPC client is built from. */
 export type App = typeof app;
 
+/** The Worker handler that wrangler.jsonc deploys. */
 export default app satisfies ExportedHandler<Env>;

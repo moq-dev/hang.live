@@ -1,6 +1,6 @@
 import type { Broadcast } from "../broadcast";
 
-// Typed uniform wrappers
+// A float uniform.
 export class Uniform1f {
 	#location: WebGLUniformLocation;
 	#gl: WebGL2RenderingContext;
@@ -15,6 +15,7 @@ export class Uniform1f {
 	}
 }
 
+// A vec2 uniform.
 export class Uniform2f {
 	#location: WebGLUniformLocation;
 	#gl: WebGL2RenderingContext;
@@ -29,6 +30,7 @@ export class Uniform2f {
 	}
 }
 
+// A vec3 uniform.
 export class Uniform3f {
 	#location: WebGLUniformLocation;
 	#gl: WebGL2RenderingContext;
@@ -43,6 +45,7 @@ export class Uniform3f {
 	}
 }
 
+// A vec4 uniform.
 export class Uniform4f {
 	#location: WebGLUniformLocation;
 	#gl: WebGL2RenderingContext;
@@ -57,6 +60,7 @@ export class Uniform4f {
 	}
 }
 
+// An int uniform, which also binds a sampler to a texture unit.
 export class Uniform1i {
 	#location: WebGLUniformLocation;
 	#gl: WebGL2RenderingContext;
@@ -71,6 +75,7 @@ export class Uniform1i {
 	}
 }
 
+// A 4x4 matrix uniform.
 export class UniformMatrix4fv {
 	#location: WebGLUniformLocation;
 	#gl: WebGL2RenderingContext;
@@ -117,6 +122,7 @@ export class Deformation {
 	}
 }
 
+// A compiled and linked shader program.
 export class Shader {
 	gl: WebGL2RenderingContext;
 	program: WebGLProgram;

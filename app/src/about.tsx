@@ -7,6 +7,7 @@ import { Canvas } from "./room/canvas";
 import { FakeRoom } from "./room/fake";
 import { solid } from "./util/solid";
 
+// The signed-out landing page, pitching Hang over a demo room.
 export function About(): JSX.Element {
 	const services = ["Meet", "Zoom", "Teams", "Discord", "Skype", "WebEx", "FaceTime", "WhatsApp"];
 	const [currentService, setCurrentService] = createSignal(0);

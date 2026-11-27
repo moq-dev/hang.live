@@ -26,7 +26,7 @@
 	"scripts": {
 		"build": "bun run --cwd app build",
 		"dev": "just dev",
-		"check": "bun run --cwd api check && bun run --cwd app check",
+		"check": "bun scripts/check-export-docs.ts && bun run --cwd api check && bun run --cwd app check",
 		"deploy": "just deploy"
 	},
 	"devDependencies": {
@@ -34,7 +34,7 @@
 		"concurrently": "^10.0.7",
 		"fallow": "3.44.0",
 		"typescript": "7.0.2",
-		"wrangler": "^4.79.0"
+		"wrangler": "^4.165.0"
 	},
 	"packageManager": "bun@1.4.2"
 }

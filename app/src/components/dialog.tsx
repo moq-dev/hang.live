@@ -1,5 +1,6 @@
 import { createSignal, onMount } from "solid-js";
 
+// An info or error message with an icon, which fades in on mount.
 export default function Dialog(props: {
 	icon: string; // Tailwind icon class like "icon-[mdi--information-outline]"
 	title: string;

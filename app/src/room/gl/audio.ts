@@ -14,6 +14,7 @@ import {
 	type UniformMatrix4fv,
 } from "./shader";
 
+// Draws the ring around a tile that pulses with its audio volume.
 export class AudioRenderer {
 	#program: Shader;
 	#meshes: Meshes;
