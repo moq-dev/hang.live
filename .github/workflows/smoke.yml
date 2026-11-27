@@ -41,14 +41,13 @@ jobs:
 
       # The runner has Nix installed but not on the job's PATH.
       - name: Nix
-        run: |
-          echo /nix/var/nix/profiles/default/bin >> "$GITHUB_PATH"
-          /nix/var/nix/profiles/default/bin/nix config show | grep -E '^(substituters|trusted-substituters|trusted-users|extra-substituters)'
+        run: echo /nix/var/nix/profiles/default/bin >> "$GITHUB_PATH"
 
+      # The smoke shell skips the default one's relay and CLI, which this runner would build from source.
       - name: Smoke
         run: |
           set -o pipefail
-          nix develop --accept-flake-config --command bash -c 'bun install --frozen-lockfile && just smoke https://hang.live' 2>&1 | tee "$RUNNER_TEMP/smoke.log"
+          nix develop .#smoke --command bash -c 'bun install --frozen-lockfile && just smoke https://hang.live' 2>&1 | tee "$RUNNER_TEMP/smoke.log"
 
       - name: File or update the tracking issue
         if: failure() && github.ref == 'refs/heads/main'

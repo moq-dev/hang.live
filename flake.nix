@@ -37,17 +37,18 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
+        # The browser tests launch only full Chromium.
+        PLAYWRIGHT_BROWSERS_PATH = "${
+          pkgs.playwright-driver.browsers.override {
+            withFirefox = false;
+            withWebkit = false;
+            withChromiumHeadlessShell = false;
+          }
+        }";
       in
       {
         devShells.default = pkgs.mkShell {
-          # The media check launches only full Chromium.
-          PLAYWRIGHT_BROWSERS_PATH = "${
-            pkgs.playwright-driver.browsers.override {
-              withFirefox = false;
-              withWebkit = false;
-              withChromiumHeadlessShell = false;
-            }
-          }";
+          inherit PLAYWRIGHT_BROWSERS_PATH;
           nativeBuildInputs = with pkgs; [
             bun
             just
@@ -56,6 +57,14 @@
             quest.packages.${system}.default
             moq.packages.${system}.moq-relay
             moq.packages.${system}.moq
+          ];
+        };
+        # Only what `just smoke` needs, all from cache.nixos.org, for a runner that cannot use nix.moq.dev.
+        devShells.smoke = pkgs.mkShell {
+          inherit PLAYWRIGHT_BROWSERS_PATH;
+          nativeBuildInputs = with pkgs; [
+            bun
+            just
           ];
         };
       }
