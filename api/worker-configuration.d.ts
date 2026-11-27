@@ -1,18 +1,18 @@
 /* eslint-disable */
-// Wrangler runtime types with environment bindings updated for the live-only configuration.
+// Wrangler runtime types with environment bindings updated by hand for the staging and live configuration.
 // Runtime types generated with workerd@1.20250906.0 2025-07-09 
 declare namespace Cloudflare {
 	interface Env {
-		API_URL: "http://localhost:3000" | "https://api.hang.live";
-		APP_URL: "http://localhost:1420" | "https://hang.live";
-		GOOGLE_CLIENT_ID: "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com" | "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com";
-		DISCORD_CLIENT_ID: "1392633766010294494" | "1389725440020840548";
-		R2_PUBLIC_URL: "http://localhost:3000/public" | "https://public.hang.live";
+		API_URL: "http://localhost:3000" | "https://api.new.hang.live" | "https://api.hang.live";
+		APP_URL: "http://localhost:1420" | "https://new.hang.live" | "https://hang.live";
+		GOOGLE_CLIENT_ID: "632186286103-6g3knqa8eof9p4bf1ndedgn9r6g68n73.apps.googleusercontent.com" | "1093943946174-915g0a9jpu7gih5emghmtabhge29qgg2.apps.googleusercontent.com" | "632186286103-p5k3rhlsq1bgkku7dluko4nlv4ca4hao.apps.googleusercontent.com";
+		DISCORD_CLIENT_ID: "1392633766010294494" | "1392629623812259940" | "1389725440020840548";
+		R2_PUBLIC_URL: "http://localhost:3000/public" | "https://public.new.hang.live" | "https://public.hang.live";
 		RELAY_URL: "http://localhost:4443" | "https://cdn.moq.dev";
-		RELAY_PREFIX: "demo" | "hang";
-		APPLE_CLIENT_ID: "live.hang.api";
+		RELAY_PREFIX: "demo" | "staging" | "hang";
+		APPLE_CLIENT_ID: "now.hang.api" | "live.hang.api";
 		APPLE_TEAM_ID: "D7D5SDDB5Z";
-		APPLE_KEY_ID: "Q7CN38JH2Z";
+		APPLE_KEY_ID: "KMX7K7944B" | "Q7CN38JH2Z";
 		AUTH_SECRET: string;
 		GOOGLE_CLIENT_SECRET: string;
 		DISCORD_CLIENT_SECRET: string;

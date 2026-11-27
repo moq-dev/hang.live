@@ -59,7 +59,7 @@ In an existing checkout, run `git submodule update --init` first.
 | `just check` | Run quest validation, the unused-code and export-comment checks, type checks, linting, and tests |
 | `just fix` | Auto-fix formatting and lint issues |
 | `just build` | Build all packages |
-| `just deploy` | Deploy the live API and app to Cloudflare |
+| `just deploy <env>` | Deploy the API and app to `staging` or `live` by hand, then check the site |
 
 `just --list` shows the rest.
 

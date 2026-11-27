@@ -1,0 +1,115 @@
+name: Deploy
+
+# Deploys `main` to staging (new.hang.live) and `release` to production (hang.live), then
+# checks the deployed site; `just deploy <env>` is the same path by hand.
+on:
+  push:
+    branches: [main, release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Runs per branch go one at a time, never cut off between migration and Worker, and every queued
+# run is kept; one whose commit its branch has since moved past skips itself for a newer run.
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  target:
+    name: Target
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      env: ${{ steps.target.outputs.env }}
+      current: ${{ steps.target.outputs.current }}
+    steps:
+      - id: target
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF_NAME" in
+            main) env=staging ;;
+            release) env=live ;;
+            *) echo "error: only main (staging) and release (live) deploy, not $GITHUB_REF_NAME" >&2; exit 1 ;;
+          esac
+          # A rerun or a queued run of an older commit would roll the site back, so only the branch's head deploys.
+          head=$(git ls-remote "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          current=$([ "$head" = "$GITHUB_SHA" ] && echo true || echo false)
+          [ "$current" = true ] || echo "::notice::Skipping $GITHUB_SHA: $GITHUB_REF_NAME is now at $head, whose run deploys it."
+          echo "env=$env" >> "$GITHUB_OUTPUT"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy
+    needs: target
+    if: needs.target.outputs.current == 'true'
+    # Not a merge gate, so GitHub's runner may take it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Each environment holds CLOUDFLARE_API_TOKEN and admits only its branch. Its deployment
+    # succeeds only when the whole job does, which the release gate reads for staging.
+    environment:
+      name: ${{ needs.target.outputs.env }}
+      url: ${{ needs.target.outputs.env == 'live' && 'https://hang.live' || 'https://new.hang.live' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          # app/public media is Git LFS; without it the site would ship pointer files.
+          lfs: true
+          persist-credentials: false
+
+      # No GitHub Actions Nix cache: the binary caches serve a cold shell faster.
+      - uses: DeterminateSystems/nix-installer-action@1d87d45818068401a10cf16bdc5f00b24994a83f # main
+        with:
+          determinate: false
+          extra-conf: |
+            accept-flake-config = true
+
+      # Installed and built without the token, so no dependency's install script or build plugin can read it.
+      - name: Package
+        env:
+          DEPLOY_ENV: ${{ needs.target.outputs.env }}
+        run: |
+          nix develop --command bun install --frozen-lockfile
+          nix develop --command just package "$DEPLOY_ENV"
+
+      # "Re-run failed jobs" reuses the Target job's verdict, so check again that this commit is still the branch's head.
+      - name: Still current
+        run: |
+          set -euo pipefail
+          head=$(git ls-remote "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "error: $GITHUB_REF_NAME moved on to $head, whose run deploys it; deploying $GITHUB_SHA would roll the site back." >&2
+            exit 1
+          fi
+
+      # Migrations, the API Worker, the app Worker, then the site checks and `just smoke`.
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DEPLOY_ENV: ${{ needs.target.outputs.env }}
+        run: nix develop --command just ship "$DEPLOY_ENV"
+
+  release-gate:
+    # A release PR opened before its head's staging deploy finished failed (or was cancelled in) its gate; rerun it now.
+    name: Rerun release gate
+    needs: [target, deploy]
+    if: needs.target.outputs.env == 'staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for id in $(gh run list --workflow release-gate.yml --commit "$GITHUB_SHA" --status completed --limit 1 --json databaseId,conclusion --jq '.[] | select(.conclusion != "success") | .databaseId'); do
+            gh run rerun "$id"
+          done
