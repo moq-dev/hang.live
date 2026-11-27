@@ -1,8 +1,10 @@
+// A video file and its MIME type, so the browser can pick a format it plays.
 export type FilePath = {
 	path: string;
 	mime: string;
 };
 
+// How to load and frame a meme video.
 export type VideoSource = {
 	// Single file source or multiple sources with different formats (e.g., WebM, MP4)
 	// When multiple sources provided, the first supported format will be used
@@ -21,23 +23,28 @@ export type VideoSource = {
 	position: "center" | "bottom" | "top left" | "top right" | "bottom left" | "bottom right" | "right";
 };
 
+// A meme sound file and the emoji shown while it plays.
 export type AudioSource = {
 	source: string;
 	emoji: string;
 };
 
+// A loaded meme video element and how to frame it.
 export type Video = {
 	element: HTMLVideoElement;
 } & Omit<VideoSource, "paths">;
 
+// A meme sound's URL and the emoji shown while it plays.
 export interface Audio {
 	url: string;
 	emoji: string;
 	// Unfortunately we can't use HTMLAudioElement because iOS requires user interaction to play.
 }
 
+// A meme a tile plays, video or sound.
 export type AV = Video | Audio;
 
+// Every meme sound, by name.
 export const AUDIO = {
 	"among-us": { source: "among-us.mp3", emoji: "📮" },
 	aww: { source: "aww.mp3", emoji: "🥺" },
@@ -78,6 +85,7 @@ export const AUDIO = {
 	yay: { source: "yay.mp3", emoji: "🎉" },
 } as const satisfies Record<string, AudioSource>;
 
+// Every meme video, by name.
 export const VIDEO = {
 	"another-one": {
 		paths: [
@@ -366,7 +374,9 @@ export const VIDEO = {
 	},
 } as const satisfies Record<string, VideoSource>;
 
+// The name of a meme sound.
 export type AudioName = keyof typeof AUDIO;
+// The name of a meme video.
 export type VideoName = keyof typeof VIDEO;
 
 // Lookup tables for slash commands (without hyphens)
@@ -384,7 +394,7 @@ for (const [key] of Object.entries(VIDEO)) {
 	VIDEO_LOOKUP[lookupKey] = key as VideoName;
 }
 
-// Popular emojis organized by category - expanded set
+// The emoji picker's emoji, by category.
 export const EMOJI_CATEGORIES = {
 	faces: [
 		"😀",
@@ -1267,6 +1277,7 @@ export const EMOJI_CATEGORIES = {
 	],
 } as const;
 
+// A meme sound's URL and emoji.
 export function audio(name: AudioName): Audio {
 	const source = AUDIO[name];
 
@@ -1276,6 +1287,7 @@ export function audio(name: AudioName): Audio {
 	};
 }
 
+// A video element for a meme, or undefined when it lists formats and the browser plays none of them.
 export function video(name: VideoName): Video | undefined {
 	const videoSource = VIDEO[name];
 	const video = document.createElement("video") as HTMLVideoElement;
@@ -1308,8 +1320,8 @@ export function video(name: VideoName): Video | undefined {
 	return { element: video, ...videoSource };
 }
 
-// NOTE: We don't cache elements because the browser will.
-// Otherwise it would be a pain in the butt to manage if the same meme is played simultaneously.
+// The meme a chat command names, ignoring case and hyphens, or undefined for none.
+// Each call makes a new element, so the same meme can play twice at once; the browser caches the file.
 export function load(name: string): AV | undefined {
 	// Make the name lowercase and remove hyphens for lookup
 	const key = name.toLowerCase().replace(/-/g, "");

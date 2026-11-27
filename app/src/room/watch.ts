@@ -5,6 +5,7 @@ import { Effect, type Getter, Signal } from "@moq/signals";
 import * as Watch from "@moq/watch";
 import { type ChatFields, consumeExtras, type LocationFields } from "./metadata";
 
+/** Which remote broadcast to watch, and whether to download its audio and video. */
 export interface WatchBroadcastProps {
 	connection: Moq.Connection;
 	name: Moq.Path.Valid;

@@ -6,6 +6,7 @@ import * as Random from "../util/random";
 import Dialog from "./dialog";
 import Gradient from "./gradient";
 
+// A form to start or join a hang by name, suggesting a random one.
 export default function Create(): JSX.Element {
 	const navigate = useNavigate();
 	const [roomInput, setRoomInput] = createSignal("");

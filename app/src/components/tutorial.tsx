@@ -3,6 +3,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import Settings from "../settings";
 import { solid } from "../util/solid";
 
+// The tips that walk a first-time visitor through the room, one step at a time.
 export function Tutorial(): JSX.Element {
 	const step = solid(Settings.tutorial.step);
 

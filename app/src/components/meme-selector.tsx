@@ -5,8 +5,10 @@ import * as Meme from "../room/meme";
 import Settings from "../settings";
 import { onClickOutside, solid } from "../util/solid";
 
+// Which tab of the meme selector is open.
 export type Tab = "emoji" | "audio" | "video";
 
+// What the meme selector plays memes on and types into.
 export type MemeSelectorProps = {
 	broadcast: HangLocalSource;
 	chatInput: HTMLInputElement | undefined;
@@ -339,6 +341,7 @@ function VideoTab(props: VideoTabProps): JSX.Element {
 // MemeSelector Main Component
 // ============================================================================
 
+// The popup for picking an emoji, sound, or video meme.
 export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	const activeTab = solid(Settings.meme.tab);
 	const [currentlyPlaying, setCurrentlyPlaying] = createSignal<string | null>(null);

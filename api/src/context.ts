@@ -6,6 +6,7 @@ import * as OAuth from "./oauth";
 import * as Room from "./room";
 import * as Storage from "./storage";
 
+// Every module's context for one request, built from the Worker's env.
 export default class Context {
 	env: Env;
 	auth: Auth.Context;

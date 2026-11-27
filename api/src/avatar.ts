@@ -1,9 +1,11 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+// A random bundled default avatar.
 export { randomAvatar as random } from "./client";
 
 const typeSchema = z.enum(["url", "r2"]);
+// Whether an account's avatar is stored as a URL or as an R2 key.
 export type Type = z.infer<typeof typeSchema>;
 
 // Largest accepted upload.
@@ -29,6 +31,7 @@ const FORMATS = [
 	},
 ] as const;
 
+// The file extension an accepted upload is stored under.
 export type Extension = (typeof FORMATS)[number]["extension"];
 
 // The content type served for a stored avatar's extension, or undefined if it is not a safe raster type.
@@ -92,6 +95,7 @@ export function isDefault(avatar: string): boolean {
 	return /^\/avatar\/\d+\.svg$/.test(avatar);
 }
 
+// The URL to load an avatar from, given how it is stored.
 export function url(env: { R2_PUBLIC_URL: string }, type: string, key: string): string {
 	if (type === "url") {
 		return key;

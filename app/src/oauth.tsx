@@ -4,6 +4,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import { client } from "./api";
 import Layout from "./layout/web";
 
+// The OAuth redirect page, which finishes login and returns to the page the user left.
 export function Oauth(): JSX.Element {
 	const [error, setError] = createSignal<string | undefined>(undefined);
 	const [done, setDone] = createSignal(false);

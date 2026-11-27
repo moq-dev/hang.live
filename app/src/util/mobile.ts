@@ -1,5 +1,6 @@
 import { type Accessor, createSignal, onCleanup, onMount } from "solid-js";
 
+// Whether the window is narrow enough for the mobile layout, updated on resize.
 export function isMobile(): Accessor<boolean> {
 	const detectMobile = () => {
 		return window.innerWidth < 768;

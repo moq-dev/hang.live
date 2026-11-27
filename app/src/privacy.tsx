@@ -1,5 +1,6 @@
 import Layout from "./layout/web";
 
+// The privacy policy page.
 export default function Privacy() {
 	return (
 		<Layout>

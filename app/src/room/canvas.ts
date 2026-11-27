@@ -20,6 +20,7 @@ export function fade(active: boolean, since: DOMHighResTimeStamp, now: DOMHighRe
 	return active ? progress : 1 - progress;
 }
 
+/** The room's canvas, which draws the background and every tile with WebGL2. */
 export class Canvas {
 	#canvas: HTMLCanvasElement;
 

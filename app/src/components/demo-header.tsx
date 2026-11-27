@@ -1,5 +1,6 @@
 import type { JSX } from "solid-js/jsx-runtime";
 
+// A DEMO badge over the landing page's demo room.
 export default function DemoHeader(): JSX.Element {
 	return (
 		<div class="absolute top-0 left-0 m-4 z-10 px-4 py-2 bg-black/70 backdrop-blur-sm rounded-lg">

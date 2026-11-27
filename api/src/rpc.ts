@@ -7,6 +7,7 @@ import { createMiddleware } from "hono/factory";
 import type { z } from "zod";
 import type Context from "./context";
 
+// A router whose handlers see the Worker's env and the request's context.
 export function router() {
 	return new Hono<{
 		Bindings: Env;
@@ -16,6 +17,7 @@ export function router() {
 	}>();
 }
 
+// Allows credentialed requests from the app's origin only.
 export const withCors = createMiddleware<{
 	Bindings: Env;
 }>(async (c, next) => {
@@ -29,18 +31,22 @@ export const withCors = createMiddleware<{
 	return corsMiddleware(c, next);
 });
 
+// Validates the form body against `schema`.
 export function withForm<T extends z.ZodType>(schema: T) {
 	return zValidator("form", schema);
 }
 
+// Validates the JSON body against `schema`.
 export function withJson<T extends z.ZodType>(schema: T) {
 	return zValidator("json", schema);
 }
 
+// Validates the query string against `schema`.
 export function withQuery<T extends z.ZodType>(schema: T) {
 	return zValidator("query", schema);
 }
 
+// Validates the path parameters against `schema`.
 export function withParam<T extends z.ZodType>(schema: T) {
 	return zValidator("param", schema);
 }

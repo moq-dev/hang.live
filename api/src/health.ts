@@ -1,5 +1,6 @@
 import * as rpc from "./rpc";
 
+// Routes under /health, reporting that the API is up.
 export const router = rpc.router().get("/", async (c) => {
 	return c.json({
 		status: "ok",

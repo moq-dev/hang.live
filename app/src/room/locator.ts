@@ -4,6 +4,7 @@ import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
 import type { HangLocalSource } from "./local";
 
+// An arrow over our own tile for its first seconds, so we can find ourselves.
 export class Locator {
 	broadcast: Broadcast<HangLocalSource>;
 	signals = new Effect();

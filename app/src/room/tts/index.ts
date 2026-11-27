@@ -116,6 +116,7 @@ function pick(announcements: readonly { text: string; weight: number }[], name: 
 	return undefined;
 }
 
+// Speaks join and leave announcements, with the browser's voice or a Kokoro model in a worker.
 export class TTS {
 	enabled = new Signal(false);
 	context: AudioContext;

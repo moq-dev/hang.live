@@ -56,7 +56,7 @@ In an existing checkout, run `git submodule update --init` first.
 | --- | --- |
 | `just install` | Install workspaces, decoder assets, and API declarations |
 | `just dev` | Run all dev servers |
-| `just check` | Run quest validation, the unused-dependency check, type checks, linting, and tests |
+| `just check` | Run quest validation, the unused-code and export-comment checks, type checks, linting, and tests |
 | `just fix` | Auto-fix formatting and lint issues |
 | `just build` | Build all packages |
 | `just deploy` | Deploy the live API and app to Cloudflare |

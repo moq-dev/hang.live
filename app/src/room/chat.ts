@@ -10,6 +10,7 @@ const worker = new Worker(new URL("./chat-worker.ts", import.meta.url), { type: 
 const parse = Comlink.wrap<typeof ChatWorker>(worker);
 const sanitize = sanitizer(window);
 
+// The chat bubble under a tile, showing its latest message.
 export class Chat {
 	broadcast: Broadcast;
 

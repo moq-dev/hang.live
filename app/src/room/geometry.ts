@@ -1,3 +1,4 @@
+// A rectangle, from its top-left corner and size.
 export class Bounds {
 	position: Vector;
 	size: Vector;
@@ -39,6 +40,7 @@ export class Bounds {
 	}
 }
 
+// A 2D point or size.
 export class Vector {
 	x: number;
 	y: number;

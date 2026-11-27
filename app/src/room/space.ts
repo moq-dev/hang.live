@@ -13,10 +13,12 @@ import { LIVE_EXPIRY, type Point, type Position } from "./metadata";
 import * as Physics from "./physics";
 import type { Sound } from "./sound";
 
+// Whether names show as on the profile page.
 export type SpaceProps = {
 	profile?: boolean;
 };
 
+// The tiles laid out in the room: their order, physics, and drag and touch input.
 export class Space {
 	// All of the broadcasts stored in z-index order.
 	ordered = new Signal<Broadcast[]>([]);

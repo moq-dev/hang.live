@@ -8,6 +8,7 @@ import { isMobile } from "../util/mobile";
 import { solid } from "../util/solid";
 import { Logo } from "./logo";
 
+// The layout inside a room, under its header.
 export default function App(props: { children: JSX.Element; connection: Moq.Connection; room: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col min-h-screen">

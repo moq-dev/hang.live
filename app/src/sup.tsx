@@ -22,6 +22,7 @@ import "@moq/publish/support/element";
 import { Sound } from "./room/sound";
 import Settings from "./settings";
 
+// The room page: a preview before joining, then the canvas and controls.
 export function Sup(props: { canvas: Canvas; room: string }): JSX.Element {
 	if (!props.canvas.supported) return <WebGLUnsupported />;
 

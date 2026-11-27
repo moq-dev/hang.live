@@ -1,5 +1,6 @@
 import { type Accessor, createEffect, createSignal, onCleanup, Show } from "solid-js";
 
+// The "another one" meme video, which plays a little further each time `clicks` goes up past 10.
 export default function AnotherOne(props: { clicks: Accessor<number> }) {
 	// Duration breakpoints for the meme video (in seconds)
 	const BREAKPOINTS = [1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0];

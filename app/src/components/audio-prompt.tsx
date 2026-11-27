@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 
+// A button asking for the click a browser requires before it plays audio.
 export default function AudioPrompt(props: { show: boolean; onClick: () => void }): JSX.Element {
 	return (
 		<Show when={props.show}>
