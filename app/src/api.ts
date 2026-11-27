@@ -64,7 +64,7 @@ class Client {
 	}
 
 	// Redirect to the provider's login page; loginComplete() finishes the login after the OAuth redirect returns.
-	async loginStart(provider: Api.OAuth.ProviderId, url = window.location.href) {
+	async loginStart(provider: Api.ProviderId, url = window.location.href) {
 		// Redirect back to the current URL with an /oauth prefix, which the Oauth route strips.
 		// NOTE: pathname starts with a slash.
 		const parts = new URL(url);

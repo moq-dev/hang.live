@@ -21,8 +21,8 @@ with browser DOM types. `just install` prepares both declaration boundaries.
 The emits are incremental. App checks and builds refresh them, and `just dev`
 watches API source changes so RPC types stay current during development.
 
-`just check` runs Quest validation, an unused-dependency check (`fallow`),
-TypeScript, Biome, and API, app, and media tests.
+`just check` runs Quest validation, a check for unused files, exports, types,
+and dependencies (`fallow`), TypeScript, Biome, and API, app, and media tests.
 
 Run expensive checks with `quest gate just check` and `quest gate just build`.
 `just fix` applies formatting and lint fixes. `just dev` starts the API,

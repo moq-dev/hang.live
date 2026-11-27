@@ -11,7 +11,7 @@ import * as Tables from "./tables";
 import { unreachable } from "./util";
 
 export type ProviderId = (typeof providers)[number];
-export const providerIdSchema = z.enum(providers);
+const providerIdSchema = z.enum(providers);
 
 export class Context {
 	env: Env;
@@ -37,7 +37,7 @@ export class Context {
 	}
 }
 
-export class Provider {
+class Provider {
 	#clientId: string;
 	#clientSecret: string;
 	#redirectUri: string;
@@ -437,7 +437,7 @@ function avatarFrom(provider: ProviderId, url: string): boolean {
 	}
 }
 
-export interface User {
+interface User {
 	provider: ProviderId;
 	providerId: string;
 	email?: string;
