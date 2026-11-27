@@ -11,9 +11,9 @@ import Tooltip from "./tooltip";
 type Minted = { external: Stream.External; expires: Date };
 type Choice = { path: string; label: string };
 
-// Whether a watched catalog section lists any rendition, since one without carries no media.
-function live(section: { renditions: Record<string, unknown> } | undefined): boolean {
-	return section !== undefined && Object.keys(section.renditions).length > 0;
+// Whether a watched catalog section lists an enabled rendition; a muted camera or mic keeps its last one, marked disabled.
+function live(section: { renditions: Record<string, { enabled?: boolean }> } | undefined): boolean {
+	return section !== undefined && Object.values(section.renditions).some((rendition) => rendition.enabled !== false);
 }
 
 // The tokens per room, kept past the button's unmount (the mobile Settings menu closing) so reopening shows the identity
