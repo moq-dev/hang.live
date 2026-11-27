@@ -10,6 +10,7 @@
 		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",
 		"test": "bun test --isolate --conditions=browser --preload ./test/setup.ts src",
+		"smoke": "bun test/smoke.ts",
 		"test:media": "bun run deps && tsc --project test/tsconfig.json && bun test ./test/media.browser.ts"
 	},
 	"license": "MIT",

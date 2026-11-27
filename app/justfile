@@ -10,6 +10,7 @@ build env="development":
 # Deploy the site to Cloudflare Workers
 deploy:
 	just build live
+	@if grep -rlx 'version https://git-lfs.github.com/spec/v1' dist; then echo "error: these are Git LFS pointers; run git lfs pull and deploy again" >&2; exit 1; fi
 	bun wrangler deploy --env live
 
 # Run the app in development mode

@@ -1,0 +1,76 @@
+name: Production smoke
+
+# Joins hang.live from two headless browsers every hour, so a site, API, or relay outage
+# between deploys surfaces; the production deploy runs the same `just smoke` after each deploy.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+  push:
+    branches: ["quest/m1/production-smoke"]
+
+permissions:
+  contents: read
+
+# Runs use separate rooms but share one tracking issue, so queue rather than overlap.
+concurrency:
+  group: production-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Smoke
+    runs-on: [self-hosted, Linux, ARM64, nix]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Files, updates, and closes the one tracking issue.
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TITLE: Production smoke is failing
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Bun's workspaces include the moq/ packages.
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Smoke
+        run: |
+          set -o pipefail
+          nix develop --accept-flake-config --command bash -c 'bun install --frozen-lockfile && just smoke https://hang.live' 2>&1 | tee "$RUNNER_TEMP/smoke.log"
+
+      - name: File or update the tracking issue
+        if: failure() && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          log=$(sed -n '/^smoke failed/,$p' "$RUNNER_TEMP/smoke.log" | head -40)
+          [ -n "$log" ] || log=$(tail -20 "$RUNNER_TEMP/smoke.log" 2>/dev/null || echo "The smoke did not start.")
+          body=$(printf '%s\n\n%s\n\n```\n%s\n```\n\n%s\n' \
+            "The hourly \`just smoke https://hang.live\` is failing." \
+            "Latest failure: $run" \
+            "$log" \
+            "A passing scheduled run closes this issue.")
+          issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+            --jq "map(select(.title == env.TITLE))[0].number // empty")
+          if [ -n "$issue" ]; then
+            # Editing the body keeps the latest failure without notifying every hour.
+            gh issue edit "$issue" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi
+
+      - name: Close the tracking issue
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+            --jq "map(select(.title == env.TITLE))[0].number // empty")
+          if [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "Passing again: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
