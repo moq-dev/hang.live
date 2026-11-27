@@ -13,6 +13,8 @@ Decided 2026-11-26 (maintainer, /quest-run):
 - ✅ Deploy staging on every merge to `main` and production on release (rejected: production on every merge to `main`).
 - ✅ Staging host `new.hang.live` (rejected: `staging.hang.live`, reviving `hang.now`, `*.workers.dev`).
 - ✅ Release trigger: a moq-style `release` branch (rejected: GitHub Release tags, a manual `workflow_dispatch` promote).
+- ✅ Staging relay key: a separate key that moq.pro trusts only for the `staging` root, so unreleased code on `main` cannot mint tokens for production rooms (rejected: reusing production's `RELAY_SECRET`, which would let staging sign tokens for `hang` rooms).
+- ✅ Staging sign-in: point the old `hang.now` Google, Discord, and Apple (`now.hang.api`) sign-in apps, whose IDs are in [#31](https://github.com/moq-dev/hang.live/pull/31)'s diff, at `new.hang.live` and store their secrets in bws (rejected: guest-only staging).
 
 Decided 2026-11-26 (maintainer away, /quest-run coordinator on the implementer's recommendation): accepted the review finding on commit order for queued deploys; this quest settles it when building the workflow, for example by skipping a run whose commit is no longer its branch's head (rejected: a deployment-cursor design up front).
 
@@ -24,6 +26,8 @@ The `hang.now` staging environment was removed as obsolete in [#31](https://gith
 - `app/.env.staging` with the `new.hang.live` origins, built by `vite build --mode staging`; [#57](https://github.com/moq-dev/hang.live/pull/57) deleted the leftover `hang.now` one.
 - `RELAY_URL` stays `https://cdn.moq.dev` (moq.pro), with `RELAY_PREFIX` `staging` so staging rooms never share production's `hang` broadcasts.
 - `AUTH_SECRET` is a fresh random value for staging, set with `wrangler secret put --env staging`.
+- `RELAY_SECRET` for staging is a new key, set with `wrangler secret put --env staging` and never shared with production.
+- The sign-in apps' redirect URIs move to `new.hang.live`; an agent can edit them by driving the maintainer's signed-in browser. Their secrets go from bws into `wrangler secret put --env staging`.
 - Restore `just deploy <env>` (and `just api deploy <env>`, `just app deploy <env>`) taking `staging` or `live`, and regenerate `api/worker-configuration.d.ts`.
 
 Release branch, modeled on moq's (`RELEASE.md`, `.github/workflows/release-gate.yml`, and the `release` ruleset in moq-dev/moq):
@@ -40,6 +44,12 @@ Release branch, modeled on moq's (`RELEASE.md`, `.github/workflows/release-gate.
   Add it through dotfiles' `bin/repo-settings`, where the org rulesets live, not by hand.
 - Document cutting a release and backports in `CONTRIBUTING.md`.
 
+Cloudflare credentials.
+bws `cloudflare-admin-token` is an account-owned token (`cfat_`, verified 2026-11-27 with `/accounts/<id>/tokens/verify`) holding D1, Workers Scripts, and Workers R2 Storage write on the account plus Zone Read and Workers Routes write on the `hang.live` zone, which covers production and staging (same account and zone).
+Wrangler needs `CLOUDFLARE_ACCOUNT_ID` set alongside it, locally and in each GitHub environment.
+The token has no DNS Edit. Cloudflare documents Workers Routes write, not DNS Edit, as what a Worker custom domain needs, since Cloudflare creates its DNS record and certificate, so `new.hang.live` and `api.new.hang.live` should deploy as is.
+Attaching `public.new.hang.live` to the R2 bucket is the least certain step: if it or the first staging deploy fails with an authentication error, ask the maintainer to add DNS Edit on the `hang.live` zone.
+
 Deploy workflow:
 - One workflow on `push` to `main` (staging) and to `release` (production), plus `workflow_dispatch` for redeploys, on GitHub-hosted `ubuntu-latest` (the repository is public and this is not a merge gate).
   Each target runs in its own GitHub environment holding `CLOUDFLARE_API_TOKEN`: `staging` restricted to `main` and `production` restricted to `release`, with `permissions: contents: read`; PR CI stays read-only.
@@ -51,18 +61,13 @@ Deploy workflow:
   A bare 200 from the app origin proves nothing, since its single-page-application fallback answers any path with `index.html`.
   Rollback is `wrangler rollback --env <env>` for the Worker; the job prints that command when the smoke check fails.
 - Seed each environment's secret from bws `cloudflare-admin-token` with `gh secret set --env <environment>`, passing the value by command substitution.
-- After the first green production deploy, drop the "deploy `main`" steps from quests that wait on a manual deploy, such as [Chat window only](/quest/m1/chat-window-only.md) and [MoQ demos](/quest/m1/moq-dev-demos.md).
+- After the first green production deploy, drop the "deploy `main`" steps from quests that wait on a manual deploy, such as [MoQ demos](/quest/m1/moq-dev-demos.md).
 
 ## Waiting
 
-- Maintainer: widen bws `cloudflare-admin-token` to D1 Edit, Workers R2 Storage Edit, and Workers Scripts Edit on the production account and Workers Routes Edit on the `hang.live` zone, covering both the production resources and the new staging ones (in progress 2026-11-25 for production).
-  An agent cannot grant Cloudflare permissions; check with `bunx wrangler d1 migrations list DB --env live --remote` under the token, then let `wrangler d1 create db-hang-staging` and the first staging deploy prove the rest.
-- Maintainer: decide the staging relay key. Options: ✅ recommended, a separate key that moq.pro trusts only for the `staging` root, so unreleased code on `main` cannot mint tokens for production rooms; or reuse production's `RELAY_SECRET`, which needs no moq.pro change but lets staging sign tokens for `hang` rooms.
-  An agent cannot change which keys moq.pro trusts; check by joining a `new.hang.live` room from two tabs.
-- Maintainer: decide staging sign-in. Options: ✅ recommended, point the old `hang.now` Google, Discord, and Apple (`now.hang.api`) sign-in apps, whose IDs are in [#31](https://github.com/moq-dev/hang.live/pull/31)'s diff, at `new.hang.live` and store their secrets in bws; or ship staging with guest join only.
-  An agent can edit the redirect URIs by driving the maintainer's signed-in browser; check by signing in on `new.hang.live`.
+- moq.pro: trust Hang's staging relay key for the `staging` root only, and nothing under `hang`. The maintainer advances it once the staging API has its own `RELAY_SECRET`. Check: two tabs joining a `new.hang.live` room see each other, and a staging token for a `hang/` path is refused.
+- Maintainer (action): store the secrets of the old `hang.now` Google, Discord, and Apple (`now.hang.api`) sign-in apps, Apple's private key included, in bws under names for Hang staging, so staging sign-in can be configured. An agent cannot: this host's bws machine account is read-only, and bws holds none of them yet. Check: `bws secret list | jq -r '.[].key'` lists them.
 
 ## Related
 
-- [Chat window only](/quest/m1/chat-window-only.md) - waits on the same token to deploy `main`
 - [Audit build and CI cost](/quest/m2/audit-cost.md) - weighs the deploy jobs' minutes on its next run
