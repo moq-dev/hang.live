@@ -23,6 +23,7 @@
 		"@moq/publish": "workspace:*",
 		"@moq/room": "workspace:*",
 		"@moq/signals": "workspace:*",
+		"@moq/ui": "workspace:*",
 		"@moq/watch": "workspace:*",
 		"@solidjs/router": "^0.15.3",
 		"@tailwindcss/vite": "^4.1.12",
