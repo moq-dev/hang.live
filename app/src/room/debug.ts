@@ -5,8 +5,6 @@ import * as DOM from "@moq/signals/dom";
 import { formatBitrate, formatFps, formatMillis, graph } from "@moq/ui";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
-import type { Canvas } from "./canvas";
-import type { Bounds, Vector } from "./geometry";
 import type { WatchBroadcast } from "./watch";
 
 // How often the HUD samples counters into its sparklines, matching MoQ's own stats overlays.
@@ -54,14 +52,12 @@ interface Switch {
  * Nothing runs while Debug is off.
  */
 export class Debug {
-	canvas: Canvas;
 	broadcast: Broadcast;
 
 	signals = new Effect();
 
-	constructor(broadcast: Broadcast, canvas: Canvas) {
+	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
-		this.canvas = canvas;
 
 		this.signals.run(this.#render.bind(this));
 	}
@@ -76,24 +72,6 @@ export class Debug {
 		const root = DOM.create("div", {
 			className: "fixed pointer-events-none select-none",
 		});
-
-		// Update the position of the debug overlay when the broadcast bounds or viewport changes
-		const updatePosition = (bounds: Bounds, viewport: Vector) => {
-			// Get the canvas element's position on the page
-			const canvasRect = this.canvas.element.getBoundingClientRect();
-
-			// Scale bounds from canvas coordinates to page coordinates
-			const scaleX = canvasRect.width / viewport.x;
-			const scaleY = canvasRect.height / viewport.y;
-
-			root.style.left = `${Math.round(bounds.position.x * scaleX + canvasRect.left)}px`;
-			root.style.top = `${Math.round(bounds.position.y * scaleY + canvasRect.top)}px`;
-			root.style.width = `${Math.round(bounds.size.x * scaleX)}px`;
-			root.style.height = `${Math.round(bounds.size.y * scaleY)}px`;
-
-			tall = bounds.size.y * scaleY >= ROOMY;
-			fit();
-		};
 
 		// A small tile shows only its renditions, so the sparklines don't bury it. The delivery panel
 		// shares the bottom edge with the audio renditions, so it shows only when both fit side by side
@@ -147,29 +125,14 @@ export class Debug {
 		for (const el of [root, audio, delivery]) resize.observe(el);
 		effect.cleanup(() => resize.disconnect());
 
-		// Update position when bounds, viewport, or zoom change
-		effect.run((effect) => {
-			const bounds = effect.get(this.broadcast.bounds);
-			const viewport = effect.get(this.broadcast.canvas.viewport);
-			updatePosition(bounds, viewport);
-		});
+		this.broadcast.overlay(effect, root, (tile) => {
+			root.style.left = `${Math.round(tile.x)}px`;
+			root.style.top = `${Math.round(tile.y)}px`;
+			root.style.width = `${Math.round(tile.width)}px`;
+			root.style.height = `${Math.round(tile.height)}px`;
 
-		// Update position when window scrolls
-		effect.event(
-			window,
-			"scroll",
-			() => {
-				const bounds = this.broadcast.bounds.peek();
-				const viewport = this.broadcast.canvas.viewport.peek();
-				updatePosition(bounds, viewport);
-			},
-			{ passive: true },
-		);
-
-		// Update z-index based on broadcast position
-		effect.run((effect) => {
-			const z = effect.get(this.broadcast.position).z;
-			root.style.zIndex = `${100 + z}`;
+			tall = tile.height >= ROOMY;
+			fit();
 		});
 
 		DOM.render(effect, document.body, root);

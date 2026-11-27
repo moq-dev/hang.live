@@ -1,20 +1,20 @@
 import { Effect } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import type { Broadcast } from "./broadcast";
-import type { Canvas } from "./canvas";
 import type { WatchBroadcast } from "./watch";
 
 const SVG = "http://www.w3.org/2000/svg";
 
 /** A remote participant's pointer, drawn over the canvas wherever its live datagrams put it. */
 export class Cursor {
-	#broadcast: Broadcast<WatchBroadcast>;
-	#canvas: Canvas;
+	#broadcast: Broadcast;
+	#source: WatchBroadcast;
 	#signals = new Effect();
 
-	constructor(broadcast: Broadcast<WatchBroadcast>, canvas: Canvas) {
+	/** Draw the pointer `source`, the remote side of `broadcast`, streams. */
+	constructor(broadcast: Broadcast, source: WatchBroadcast) {
 		this.#broadcast = broadcast;
-		this.#canvas = canvas;
+		this.#source = source;
 		this.#signals.run(this.#render.bind(this));
 	}
 
@@ -42,7 +42,8 @@ export class Cursor {
 		});
 		root.append(arrow, label);
 
-		const source = this.#broadcast.source;
+		const source = this.#source;
+		const canvas = this.#broadcast.canvas;
 
 		effect.run((effect) => {
 			label.textContent = effect.get(source.user.name) ?? "";
@@ -58,13 +59,13 @@ export class Cursor {
 		effect.run((effect) => {
 			const point = effect.get(source.location.live.cursor);
 			const visible = effect.get(this.#broadcast.visible);
-			const viewport = effect.get(this.#canvas.viewport);
+			const viewport = effect.get(canvas.viewport);
 			if (!point || !visible || viewport.x === 0 || viewport.y === 0) {
 				root.style.opacity = "0";
 				return;
 			}
 
-			const rect = this.#canvas.element.getBoundingClientRect();
+			const rect = canvas.element.getBoundingClientRect();
 			// Clamp to the canvas, since a peer with another aspect ratio may point past our edges.
 			const x = rect.left + Math.min(Math.max(point.x + 0.5, 0), 1) * rect.width;
 			const y = rect.top + Math.min(Math.max(point.y + 0.5, 0), 1) * rect.height;
