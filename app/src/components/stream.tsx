@@ -11,7 +11,7 @@ import Tooltip from "./tooltip";
 type Minted = { external: Stream.External; expires: Date };
 type Choice = { path: string; label: string };
 
-// Whether a watched catalog section lists an enabled rendition; a muted camera or mic keeps its last one, marked disabled.
+// Whether a watched catalog section lists a rendition not marked `enabled: false`, as a camera turned off leaves its last one.
 function live(section: { renditions: Record<string, { enabled?: boolean }> } | undefined): boolean {
 	return section !== undefined && Object.values(section.renditions).some((rendition) => rendition.enabled !== false);
 }
