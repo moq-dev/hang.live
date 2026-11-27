@@ -6,6 +6,8 @@ Staging at `new.hang.live` passes its whole post-deploy check, sign-in included,
 
 ## Plan
 
+Decided 2026-11-27 (maintainer, /quest-merge pick of [#84](https://github.com/moq-dev/hang.live/pull/84)): ✅ keep this follow-up, rewritten to what remains (rejected: drop).
+
 Built by [#84](https://github.com/moq-dev/hang.live/pull/84): the `staging` Wrangler environments (`api-hang-staging` on `api.new.hang.live` with D1 `db-hang-staging` and R2 `public-hang-staging` on `public.new.hang.live`, `hang-staging` on `new.hang.live`), `just deploy <env>` and `just verify <env>`, the `Deploy` and `Release gate` workflows, the `staging` and `live` GitHub environments, the `release` branch with its ruleset, and the hourly smoke checking out `release`.
 Staging's `RELAY_SECRET` is an EdDSA key (kid `343c51e9d4c0672b`) whose JWK carries the scope `root: staging`, publish and subscribe everything beneath it, so even a relay that trusted it for more would refuse a `hang/` token; its only copy is the Worker secret, so rotating it means generating a new one (`moq auth generate --algorithm EdDSA --root staging --publish "" --subscribe ""`) and having moq.pro trust the new public key.
 
