@@ -12,7 +12,7 @@ declare namespace Cloudflare {
 		RELAY_PREFIX: "demo" | "staging" | "hang";
 		APPLE_CLIENT_ID: "now.hang.api" | "live.hang.api";
 		APPLE_TEAM_ID: "D7D5SDDB5Z";
-		APPLE_KEY_ID: "7BQ2ZQY943" | "Q7CN38JH2Z";
+		APPLE_KEY_ID: "KMX7K7944B" | "Q7CN38JH2Z";
 		AUTH_SECRET: string;
 		GOOGLE_CLIENT_SECRET: string;
 		DISCORD_CLIENT_SECRET: string;
