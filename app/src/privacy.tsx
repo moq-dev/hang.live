@@ -41,9 +41,9 @@ export default function Privacy() {
 							data.
 						</li>
 						<li>
-							<strong>Relay Cache</strong>: While you're in a hang, relays keep the last 30 seconds of
-							your video and audio and the last 10 seconds of chat, so late joiners can catch up. They
-							keep your name and avatar for up to a day. All of it is held in memory and never recorded.
+							<strong>Relay Cache</strong>: Relays cache what you share so others can catch up. Someone
+							joining can replay up to 30 seconds of your video and audio, chat from the last 10 seconds,
+							and your name and avatar from up to a day before.
 						</li>
 					</ul>
 				</section>
@@ -79,7 +79,7 @@ export default function Privacy() {
 					<ul class="list-disc pl-6 space-y-2">
 						<li>Account information is stored securely on our servers</li>
 						<li>Authentication tokens are stored locally in your browser</li>
-						<li>Video, audio, and chat are held in relay memory for at most 30 seconds</li>
+						<li>Video, audio, chat, names, and avatars pass through the relay cache described above</li>
 					</ul>
 				</section>
 
