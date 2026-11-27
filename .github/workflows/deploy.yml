@@ -70,19 +70,33 @@ jobs:
           extra-conf: |
             accept-flake-config = true
 
-      # Installed without the token, so no dependency's install script can read it.
-      - name: Install
-        run: nix develop --command bun install --frozen-lockfile
+      # Installed and built without the token, so no dependency's install script or build plugin can read it.
+      - name: Package
+        env:
+          DEPLOY_ENV: ${{ needs.target.outputs.env }}
+        run: |
+          nix develop --command bun install --frozen-lockfile
+          nix develop --command just package "$DEPLOY_ENV"
+
+      # "Re-run failed jobs" reuses the Target job's verdict, so check again that this commit is still the branch's head.
+      - name: Still current
+        run: |
+          set -euo pipefail
+          head=$(git ls-remote "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "error: $GITHUB_REF_NAME moved on to $head, whose run deploys it; deploying $GITHUB_SHA would roll the site back." >&2
+            exit 1
+          fi
 
       # Migrations, the API Worker, the app Worker, then the site checks and `just smoke`.
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DEPLOY_ENV: ${{ needs.target.outputs.env }}
-        run: nix develop --command just deploy "$DEPLOY_ENV"
+        run: nix develop --command just ship "$DEPLOY_ENV"
 
   release-gate:
-    # A release PR opened before its head's staging deploy finished failed its gate; rerun it now.
+    # A release PR opened before its head's staging deploy finished failed (or was cancelled in) its gate; rerun it now.
     name: Rerun release gate
     needs: [target, deploy]
     if: needs.target.outputs.env == 'staging'
@@ -96,6 +110,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          for id in $(gh run list --workflow release-gate.yml --commit "$GITHUB_SHA" --status failure --limit 1 --json databaseId --jq '.[].databaseId'); do
+          for id in $(gh run list --workflow release-gate.yml --commit "$GITHUB_SHA" --status completed --limit 1 --json databaseId,conclusion --jq '.[] | select(.conclusion != "success") | .databaseId'); do
             gh run rerun "$id"
           done

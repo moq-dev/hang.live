@@ -7,8 +7,9 @@ name: Release gate
 on:
   pull_request:
     branches: [release]
-    # `edited` runs the gate when a main PR is retargeted to release.
-    types: [opened, synchronize, reopened, edited]
+    # Not `edited`: a PR retargeted to release has no gate run, so it cannot merge until it is
+    # reopened, which also reruns `Check` against release.
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -36,7 +37,8 @@ jobs:
             id=${deployment%%:*}
             sha=${deployment#*:}
             [ "$(gh api "repos/$GH_REPO/git/commits/$sha" --jq .tree.sha)" = "$tree" ] || continue
-            state=$(gh api "repos/$GH_REPO/deployments/$id/statuses?per_page=1" --jq '.[0].state // "none"')
+            # A newer staging deploy marks this one inactive, which does not undo its success.
+            state=$(gh api "repos/$GH_REPO/deployments/$id/statuses?per_page=100" --jq '[.[].state] | if index("success") then "success" else (.[0] // "none") end')
             if [ "$state" = success ]; then
               echo "Staging deployed and checked this tree at $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$sha"
               exit 0

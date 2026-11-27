@@ -15,7 +15,7 @@ The old `hang.now` Cloudflare resources are deleted, and the `hang.now` domain n
 Remaining, in order:
 - Once moq.pro trusts the staging key, rerun the latest `Deploy` run on `main`; its `just smoke` must pass, which is what the release gate needs.
 - Cut the first release (a PR from `main` into `release`, merged with a merge commit), and watch its `Deploy` run go green on `hang.live`.
-- After that first green production deploy, drop the "deploy `main`" step from quests that wait on a manual deploy, such as [MoQ demos](/quest/m1/moq-dev-demos.md).
+- Automate cutting a release: a `just release` recipe that opens the PR merging `release` into `main` when `main` lacks it, then the release PR, so no person runs the two-PR sequence `CONTRIBUTING.md` describes.
 
 ## Waiting
 

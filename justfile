@@ -49,11 +49,23 @@ smoke origin:
 	bun run --cwd app smoke "{{origin}}"
 
 # Deploy the API and app to an environment, staging or live, then check the deployed site.
-deploy env:
+deploy env: (package env) (ship env)
+
+# Build the app for an environment, staging or live, without credentials or deploying anything.
+package env:
 	@case "{{env}}" in staging|live) ;; *) echo "error: deploy to staging or live, not {{env}}" >&2; exit 1 ;; esac
 	just app lfs
-	just api deploy "{{env}}"
-	just app deploy "{{env}}"
+	just app build "{{env}}"
+
+# Apply D1 migrations, deploy the API and the packaged app to an environment, then check the deployed site.
+ship env:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	case "{{env}}" in staging|live) ;; *) echo "error: deploy to staging or live, not {{env}}" >&2; exit 1 ;; esac
+	trap 'echo "error: deploying {{env}} failed; roll back both Workers with: (cd api && bun wrangler rollback --env {{env}}) && (cd app && bun wrangler rollback --env {{env}})" >&2' ERR
+	(cd api && bun wrangler d1 migrations apply DB --env "{{env}}" --remote && bun wrangler deploy --env "{{env}}")
+	(cd app && bun wrangler deploy --env "{{env}}")
+	trap - ERR
 	just verify "{{env}}"
 
 # Check that an environment serves this checkout's app build and a healthy API, then smoke-join it.
@@ -74,4 +86,9 @@ verify env:
 		false
 	fi
 	curl -fsS -o /dev/null "$VITE_APP_URL$bundle"
-	just smoke "$VITE_APP_URL"
+	# The site serves this build, so a failed join may be the relay's (or its trust of this env's key), not the deploy's.
+	trap - ERR
+	if ! just smoke "$VITE_APP_URL"; then
+		echo "error: {{env}} serves this build, but two browsers could not join a room; check the app, the API, and the relay before rolling back" >&2
+		exit 1
+	fi

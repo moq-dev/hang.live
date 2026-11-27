@@ -17,8 +17,3 @@ check:
 # Regenerate worker-configuration.d.ts from wrangler.jsonc.
 types:
 	bun wrangler types
-
-# Apply D1 migrations, then deploy the Worker, to an environment: staging or live.
-deploy env: build
-	bun wrangler d1 migrations apply DB --env "{{env}}" --remote
-	bun wrangler deploy --env "{{env}}"

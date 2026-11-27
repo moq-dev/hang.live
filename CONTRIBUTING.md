@@ -36,21 +36,26 @@ App builds also refresh the pinned decoder assets, including through `just deplo
 staging (`new.hang.live`), and every change to `release` deploys production
 (`hang.live`): D1 migrations, the API Worker, then the app Worker. Each deploy
 then checks the API's `/health`, that the site serves the exact build it
-shipped, and `just smoke` joins a room from two browsers; a failure fails the
-run and prints the `wrangler rollback` commands. Staging has its own D1, R2,
-auth secret, and relay key, which can only sign tokens for `staging/` rooms.
+shipped, and `just smoke` joins a room from two browsers. Any failure fails
+the run: a failed deploy or site check prints the `wrangler rollback`
+commands, and a failed join, which may be the relay's, says so. Staging has
+its own D1, R2, auth secret, and relay key, which can only sign tokens for
+`staging/` rooms.
 
-- Cut a release by opening a PR from `main` into `release` and merging it with
-  a merge commit. The `Release gate` check passes only when the merged tree
-  matches a `main` commit whose staging deploy succeeded; a release PR opened
-  before that deploy finishes passes once the deploy reruns it.
+- Cut a release in two PRs. First merge `release` into `main` through a PR
+  into `main`, since `release` must be up to date to merge and each release
+  leaves a merge commit `main` lacks; its tree is `main`'s unless `release`
+  holds a backport. Skip it while `main` already contains `release`. Then open
+  a PR from `main` into `release` and merge it with a merge commit. The
+  `Release gate` check passes only when the merged tree matches a `main`
+  commit whose staging deploy succeeded; a release PR opened before that
+  deploy finishes passes once the deploy reruns it.
+- Open release PRs against `release`. A PR retargeted there runs no gate until
+  it is closed and reopened, which also reruns `Check` against `release`.
 - Land a serious fix on `main` first, then port it onto `release` as its own
   PR. Its tree never ran on staging, so the gate fails it; once `Check` passes,
   an admin merges it past the gate with `gh pr merge --merge --admin`. The
   production deploy's checks and `wrangler rollback` are its safety net.
-- `release` must be up to date to merge, so after a backport the next release
-  PR first merges `release` into `main` (its "Update branch" button), and waits
-  for that commit's staging deploy.
 - `just deploy staging` or `just deploy live` deploys the checkout by hand, for
   a hotfix or a rollback. It needs `CLOUDFLARE_API_TOKEN` with the deploy
   token, and Git LFS content (`git lfs pull`).

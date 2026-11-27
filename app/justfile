@@ -11,11 +11,6 @@ build env="development":
 lfs:
 	@if grep -rlx 'version https://git-lfs.github.com/spec/v1' public; then echo "error: these are Git LFS pointers; run git lfs pull" >&2; exit 1; fi
 
-# Deploy the site to Cloudflare Workers in an environment: staging or live.
-deploy env: lfs
-	just build "{{env}}"
-	bun wrangler deploy --env "{{env}}"
-
 # Run the app in development mode
 dev:
 	bun vite dev
