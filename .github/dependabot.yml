@@ -36,3 +36,14 @@ updates:
       # Pinned to the Nix shell's Playwright driver, so it moves with a nixpkgs
       # bump rather than ahead of it.
       - dependency-name: "playwright"
+      # Solid 2 waits on vite-plugin-solid and babel-preset-solid, whose
+      # releases still peer on solid-js ^1. Lift this once both support 2.
+      - dependency-name: "solid-js"
+        versions: [">=2"]
+      - dependency-name: "@solidjs/router"
+        versions: [">=1"]
+      # babel-preset-solid peers on @babel/core ^7; lift with the Solid block.
+      - dependency-name: "@babel/core"
+        versions: [">=8"]
+      - dependency-name: "@babel/preset-typescript"
+        versions: [">=8"]
