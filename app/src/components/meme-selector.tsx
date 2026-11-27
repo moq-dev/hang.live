@@ -388,11 +388,8 @@ export function MemeSelector(props: MemeSelectorProps): JSX.Element {
 	});
 
 	const sendMeme = (memeName: string) => {
-		// Send the slash command
-		if (props.broadcast.chat.message.enabled.peek()) {
-			// Force a notification so picking the same meme again replays it.
-			props.broadcast.chat.message.latest.set(`/${memeName}`, true);
-		}
+		// Send the slash command, forced so picking the same meme again replays it.
+		props.broadcast.chat.message.latest.set(`/${memeName}`, true);
 		props.onClose();
 	};
 

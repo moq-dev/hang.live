@@ -17,10 +17,10 @@ fixed up.
   chat/memes, and room previews).
 - Open a follow-up PR in `moq-dev/moq` linking `https://hang.live` back into the
   demo listings:
-  - `doc/bin/demo.md` (alongside Web demo, MoQ Boy, and CARLA)
-  - `doc/setup/examples.md` and `doc/index.md` (conferencing / `@moq/room` live
+  - [`doc/bin/demo.md`](/moq/doc/bin/demo.md) (alongside Web demo, MoQ Boy, and CARLA)
+  - [`doc/setup/examples.md`](/moq/doc/setup/examples.md) and [`doc/index.md`](/moq/doc/index.md) (conferencing / `@moq/room` live
     demo)
-  - `demo/web/` ("Other demos" links on `moq.dev`)
+  - [`demo/web/`](/moq/demo/web/README.md) ("Other demos" links on `moq.dev`)
 - Keep Hang's own landing/about links pointing to `https://moq.dev` and
   `https://github.com/moq-dev/moq` so visitors can move cleanly between both
   sites.
@@ -29,5 +29,3 @@ fixed up.
 
 - [Retire relay nodes](/quest/m1/retire-relay-nodes.md) - `hang.live` deployed
   against `moq.pro` with the self-hosted relays gone
-- [Room token identity](/quest/m1/room-token-identity.md) - stops one guest
-  publishing as another before Hang is promoted to a wider audience

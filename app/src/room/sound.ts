@@ -1,7 +1,7 @@
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 
-import { TTS, type TTSProps } from "./tts";
+import { TTS } from "./tts";
 
 const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
@@ -18,7 +18,7 @@ const NOTIFICATIONS = {
 } as const;
 
 export type NotificationSound = keyof typeof NOTIFICATIONS;
-const FADE_TIME = 0.2;
+export const FADE_TIME = 0.2;
 
 /**
  * Fade `param` linearly from its current value to `value`, cancelling any fade in progress.
@@ -34,8 +34,6 @@ export function fade(param: AudioParam, value: number, context: BaseAudioContext
 
 export type SoundProps = {
 	enabled?: boolean | Signal<boolean>;
-
-	tts?: TTSProps;
 };
 
 const RESUME_EVENTS = ["click", "touchstart", "touchend", "mousedown", "keydown"];
@@ -74,7 +72,7 @@ export class Sound {
 
 		this.gain = new GainNode(this.context);
 		this.gain.connect(this.context.destination);
-		this.tts = new TTS(this, props?.tts);
+		this.tts = new TTS(this);
 
 		this.#signals.run(this.#runGain.bind(this));
 	}
@@ -132,8 +130,7 @@ export class PannedSound {
 	parent: Sound;
 	#panner: StereoPannerNode;
 
-	// Optional, disabled in potato mode.
-	analyser?: AnalyserNode;
+	analyser: AnalyserNode;
 	#buffer = new Uint8Array(1024);
 
 	pan: Signal<number>;
@@ -148,10 +145,8 @@ export class PannedSound {
 
 		this.pan = pan;
 
-		// Always create the analyser
-		const analyser = new AnalyserNode(this.parent.context, { fftSize: this.#buffer.length });
-		this.#panner.connect(analyser);
-		this.analyser = analyser;
+		this.analyser = new AnalyserNode(this.parent.context, { fftSize: this.#buffer.length });
+		this.#panner.connect(this.analyser);
 
 		this.#signals.run((effect) => {
 			effect.cleanup(() => this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime));
@@ -188,8 +183,7 @@ export class PannedSound {
 	}
 
 	// NOTE: The buffer is reused, so don't hold on to it.
-	analyze(): Uint8Array | undefined {
-		if (!this.analyser) return undefined;
+	analyze(): Uint8Array {
 		this.analyser.getByteTimeDomainData(this.#buffer);
 		return this.#buffer;
 	}
@@ -197,6 +191,6 @@ export class PannedSound {
 	close() {
 		this.#signals.close();
 		this.#panner.disconnect();
-		this.analyser?.disconnect();
+		this.analyser.disconnect();
 	}
 }
