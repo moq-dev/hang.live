@@ -15,7 +15,7 @@ install:
 	bun install --frozen-lockfile
 	bun run --cwd app deps
 
-# Run the CI checks
+# Run every check but the build; no CI runs on pull requests, so run this and `just build` before pushing.
 check:
 	#!/usr/bin/env bash
 	set -euo pipefail

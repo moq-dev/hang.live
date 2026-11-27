@@ -16,12 +16,11 @@ Run the `cost` audit: `quest audit cost` prints what it checks, what each findin
   - Artifacts: `app/dist` is 41 MB, 36 MB of it `meme/` (H.264 and VP9 pairs, picked by codec support), the main JS chunk 1.22 MB (381 KB gzip), and the libav worker 1.83 MB.
     The API Worker uploads 1.20 MB (216 KB gzip); `zod` is most of its dependency source.
 - Rejected on the first run, so don't retry without new evidence:
-  - magic-nix-cache: Actions cache entries are scoped to each PR, and CI never runs on `main`, so every PR re-uploaded the closure (72-133 s) into a cache pinned at its 10 GB cap.
+  - magic-nix-cache, for the hosted `Check` job since removed: Actions cache entries are scoped to each PR, and CI never ran on `main`, so every PR re-uploaded the closure (72-133 s) into a cache pinned at its 10 GB cap.
     Even with the cache populated, `nix develop` took 36-39 s instead of 24-27 s.
-  - Path-filtering quest-only PRs: only 2 of the 20 PRs merged before this run touched only `quest/`, and `Check` is the required status, so a filter needs a job that still reports.
   - Shortening the media test: every phase is real media round-trips guarding the m0 capture bugs; coverage cuts belong to the `tests` audit.
 - Check first:
-  - Measure from recent `Check` runs' step timings (`gh api repos/moq-dev/hang.live/actions/runs/<id>/jobs`); the job log timestamps split `nix develop` by input.
+  - `Check` no longer runs on pull requests, so measure `just check` and `just build` locally, and the merge gate's step timings once one runs; the baseline above came from the old hosted `Check` job.
   - Whether a new flake input pulls a second nixpkgs; `nix flake archive --json --dry-run` lists every input's store path.
     `quest.inputs.nixpkgs-bun.follows` exists only until quest drops that input upstream.
   - Whether `moq-dev/moq` still makes evaluating its packages unpack `rust-overlay`.
