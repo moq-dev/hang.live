@@ -16,7 +16,7 @@ const NOTIFICATIONS = {
 } as const;
 
 export type NotificationSound = keyof typeof NOTIFICATIONS;
-export const FADE_TIME = 0.2;
+const FADE_TIME = 0.2;
 
 /**
  * Fade `param` linearly from its current value to `value`, cancelling any fade in progress.
