@@ -82,8 +82,8 @@ export class Local {
 			frame: this.#frame(this.core.screen.capture),
 			display: this.core.screen.capture.out.display,
 			audioRoot: this.core.screen.audio.root,
-			videoSource: new Signal<unknown>(undefined),
-			audioSource: new Signal<unknown>(undefined),
+			videoSource: this.#signals.computed((effect) => effect.get(this.screen.out.source)?.video),
+			audioSource: this.#signals.computed((effect) => effect.get(this.screen.out.source)?.audio),
 			user: {
 				id: this.core.user.id,
 				name: shareName,
@@ -94,12 +94,6 @@ export class Local {
 			enabled: this.core.screen.enabled,
 		});
 		this.#signals.cleanup(() => this.share.close());
-
-		this.#signals.run((effect) => {
-			const source = effect.get(this.screen.out.source);
-			(this.share.video.source as Signal<unknown>).set(source?.video);
-			(this.share.audio.source as Signal<unknown>).set(source?.audio);
-		});
 
 		this.camera.signals.run((effect) => {
 			const message = effect.get(this.camera.chat.message.latest);
@@ -196,15 +190,10 @@ export class HangLocalSource {
 		display: Getter<{ width: number; height: number } | undefined>;
 		flip: Getter<boolean>;
 		source: Getter<unknown>;
-		catalog: Getter<undefined>;
-		target: Signal<undefined>;
-		active: Getter<undefined>;
 	};
 	readonly audio: {
 		root: Getter<AudioNode | undefined>;
 		source: Getter<unknown>;
-		catalog: Getter<undefined>;
-		active: Getter<undefined>;
 	};
 	readonly enabled: Getter<boolean>;
 	readonly signals = new Effect();
@@ -221,15 +210,10 @@ export class HangLocalSource {
 			display: props.display,
 			flip: new Signal(props.flip),
 			source: props.videoSource,
-			catalog: new Signal(undefined),
-			target: new Signal(undefined),
-			active: new Signal(undefined),
 		};
 		this.audio = {
 			root: props.audioRoot,
 			source: props.audioSource,
-			catalog: new Signal(undefined),
-			active: new Signal(undefined),
 		};
 
 		this.signals.run((effect) => {

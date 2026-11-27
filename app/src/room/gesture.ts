@@ -1,4 +1,4 @@
-import type { Signal } from "@moq/signals";
+import type { Getter, Signal } from "@moq/signals";
 import { type Bounds, Vector } from "./geometry";
 import type { LocationFields, Position } from "./metadata";
 import * as Peers from "./peers";
@@ -26,14 +26,16 @@ export type Local = {
 export type Remote = {
 	role: "watch";
 	location: { window: Pick<LocationFields["window"], "position" | "handle" | "applied"> };
+	/** Whether the peer publishes its location; a tile from a tool outside Hang, such as OBS, moves only locally. */
+	located: Getter<boolean>;
 };
 
 /** One finger on the canvas, in canvas coordinates. */
 export type Touch = { id: number; point: Vector };
 
-/** Whether `tile` belongs to a peer refusing moves. */
+/** Whether `tile` belongs to a peer refusing moves: one that publishes its location but hides its handle. */
 export function locked(tile: Tile): boolean {
-	return tile.source.role === "watch" && !tile.source.location.window.handle.peek();
+	return tile.source.role === "watch" && tile.source.located.peek() && !tile.source.location.window.handle.peek();
 }
 
 /** Hands out stacking indexes, so the newest or grabbed tile draws on top. */

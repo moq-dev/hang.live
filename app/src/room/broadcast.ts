@@ -1,6 +1,6 @@
 import { Effect, Signal } from "@moq/signals";
 import { Audio } from "./audio";
-import { type Canvas, timestamp } from "./canvas";
+import { type Canvas, fade, timestamp } from "./canvas";
 import { Chat } from "./chat";
 import { Debug } from "./debug";
 import type { FakeBroadcast } from "./fake";
@@ -25,6 +25,8 @@ type Position = {
 };
 
 export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
+	/** Where the broadcast sits beneath the room. */
+	path: string;
 	source: T;
 	canvas: Canvas;
 	sound: Sound;
@@ -32,6 +34,7 @@ export interface BroadcastProps<T extends BroadcastSource = BroadcastSource> {
 }
 
 export class Broadcast<T extends BroadcastSource = BroadcastSource> {
+	readonly path: string;
 	source: T;
 	canvas: Canvas;
 
@@ -81,6 +84,7 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	signals = new Effect();
 
 	constructor(props: BroadcastProps<T>) {
+		this.path = props.path;
 		this.source = props.source;
 		this.canvas = props.canvas;
 		this.visible = new Signal(true); // TODO
@@ -99,9 +103,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 
 		this.video = new Video(this);
 		this.audio = new Audio(this, props.sound);
-		this.chat = new Chat(this, props.canvas);
-		this.name = new Name(this, props.canvas);
-		this.debug = new Debug(this, props.canvas);
+		this.chat = new Chat(this);
+		this.name = new Name(this);
+		this.debug = new Debug(this);
 
 		const viewport = this.canvas.viewport.peek();
 
@@ -201,10 +205,29 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	tick(now: DOMHighResTimeStamp) {
 		this.video.tick(now);
 
-		// Update opacity based on online status
-		const fadeTime = 300; // ms
-		const elapsed = now - this.#onlineTransition;
-		this.opacity = this.online.peek() ? Math.min(1, elapsed / fadeTime) : Math.max(0, 1 - elapsed / fadeTime);
+		this.opacity = fade(this.online.peek(), this.#onlineTransition, now);
+	}
+
+	/**
+	 * Keep `root`, an element floating over the canvas, stacked with this tile and placed by `place` from the
+	 * tile's and the canvas's page rectangles whenever the tile moves, the canvas resizes, or the page scrolls.
+	 * Returns a function that places it again now, for when its own size changes.
+	 */
+	overlay(effect: Effect, root: HTMLElement, place: (tile: DOMRect, canvas: DOMRect) => void): () => void {
+		const update = () => place(this.canvas.page(this.bounds.peek()), this.canvas.element.getBoundingClientRect());
+
+		effect.run((effect) => {
+			effect.get(this.bounds);
+			effect.get(this.canvas.viewport);
+			update();
+		});
+		effect.event(window, "scroll", update, { passive: true });
+
+		effect.run((effect) => {
+			root.style.zIndex = `${100 + effect.get(this.position).z}`;
+		});
+
+		return update;
 	}
 
 	// Advance the physics by one fixed step.

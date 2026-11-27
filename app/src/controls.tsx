@@ -15,20 +15,22 @@ import {
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Capture from "./capture";
 import { MemeSelector } from "./components/meme-selector";
+import { StreamButton } from "./components/stream";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
+import { level } from "./room/audio";
 import type { Canvas } from "./room/canvas";
 import type { HangLocalSource, Local } from "./room/local";
 import type { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Speaker from "./speaker";
 import { isMobile } from "./util/mobile";
-import { solid } from "./util/solid";
+import { onClickOutside, solid } from "./util/solid";
 
 type MobileSection = "publish" | "settings" | null;
 
-export function Controls(props: { room: Room; local: Local; canvas: Canvas }): JSX.Element {
+export function Controls(props: { name: string; room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	const mobile = isMobile();
 	const [expandedSection, setExpandedSection] = createSignal<MobileSection>(null);
 	const tutorial = solid(Settings.tutorial.step);
@@ -51,23 +53,10 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 	let publishRef: HTMLDivElement | undefined;
 	let settingsRef: HTMLDivElement | undefined;
 
-	onMount(() => {
-		const handleClick = (e: MouseEvent) => {
-			if (!mobile() || !expandedSection()) return;
-
-			const target = e.target as Node;
-			const expanded = expandedSection();
-
-			// Check if click is inside the expanded section
-			if (expanded === "publish" && publishRef?.contains(target)) return;
-			if (expanded === "settings" && settingsRef?.contains(target)) return;
-
-			// Click is outside the expanded section, so collapse
-			collapseAll();
-		};
-		document.addEventListener("click", handleClick, true); // Use capture phase
-		onCleanup(() => document.removeEventListener("click", handleClick, true));
-	});
+	onClickOutside(() => {
+		const expanded = expandedSection();
+		return [expanded === "publish" ? publishRef : expanded === "settings" ? settingsRef : undefined];
+	}, collapseAll);
 
 	return (
 		<>
@@ -225,6 +214,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 						}}
 					>
 						<Volume />
+						<StreamButton name={props.name} room={props.room} />
 						<Advanced sound={props.room.space.sound} />
 						<Fullscreen canvas={props.canvas} />
 					</div>
@@ -357,21 +347,10 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	let menuRef: HTMLDivElement | undefined;
 	let buttonRef: HTMLButtonElement | undefined;
 
-	onMount(() => {
-		const handleClick = (e: MouseEvent) => {
-			if (
-				showMenu() &&
-				menuRef &&
-				buttonRef &&
-				!menuRef.contains(e.target as Node) &&
-				!buttonRef.contains(e.target as Node)
-			) {
-				setShowMenu(false);
-			}
-		};
-		document.addEventListener("click", handleClick);
-		onCleanup(() => document.removeEventListener("click", handleClick));
-	});
+	onClickOutside(
+		() => [menuRef, buttonRef],
+		() => setShowMenu(false),
+	);
 
 	// Request permissions
 	const requestPermissions = () => {
@@ -585,22 +564,10 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	let menuRef: HTMLDivElement | undefined;
 	let buttonRef: HTMLButtonElement | undefined;
 
-	onMount(() => {
-		const handleClick = (e: MouseEvent) => {
-			if (
-				showMenu() &&
-				menuRef &&
-				buttonRef &&
-				!menuRef.contains(e.target as Node) &&
-				!buttonRef.contains(e.target as Node)
-			) {
-				setShowMenu(false);
-			}
-		};
-
-		document.addEventListener("click", handleClick);
-		onCleanup(() => document.removeEventListener("click", handleClick));
-	});
+	onClickOutside(
+		() => [menuRef, buttonRef],
+		() => setShowMenu(false),
+	);
 
 	// Request permissions
 	const requestPermissions = () => {
@@ -831,15 +798,8 @@ function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): J
 
 		const tick = () => {
 			analyzer.getByteTimeDomainData(data);
-
-			// Convert from [0, 255] to [-1, 1]
-			let sum = 0;
-			for (let i = 0; i < data.length; i++) {
-				const sample = data[i] - 128;
-				sum += sample * sample;
-			}
-			const power = Math.sqrt(sum) / data.length;
-			smoothed = smoothed * 0.7 + power * 0.3;
+			for (let i = 0; i < data.length; i++) data[i] = Math.abs(data[i] - 128);
+			smoothed = level(smoothed, data);
 
 			setPower(smoothed);
 			animation = requestAnimationFrame(tick);
@@ -865,6 +825,7 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
 	const [showMemeSelector, setShowMemeSelector] = createSignal(false);
+	const [memeButton, setMemeButton] = createSignal<HTMLButtonElement>();
 
 	// Update typing status in preview
 	createEffect(() => {
@@ -934,6 +895,7 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 			<Tooltip content="Memes & Emojis" position="top">
 				<button
 					type="button"
+					ref={setMemeButton}
 					onClick={() => setShowMemeSelector((prev) => !prev)}
 					aria-label="Open meme selector"
 					aria-expanded={showMemeSelector()}
@@ -949,6 +911,7 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 					chatInput={input()}
 					chatMessage={message()}
 					setChatMessage={setMessage}
+					toggle={memeButton()}
 					onClose={() => setShowMemeSelector(false)}
 				/>
 			</Show>
@@ -1045,19 +1008,10 @@ function Advanced(props: { sound: Sound }): JSX.Element {
 	};
 
 	// Hide if clicked outside
-	const handleClick = (e: MouseEvent) => {
-		if (showSettings() && !button()?.contains(e.target as Node) && !modal()?.contains(e.target as Node)) {
-			setShowSettings(false);
-		}
-	};
-
-	onMount(() => {
-		window.addEventListener("click", handleClick);
-	});
-
-	onCleanup(() => {
-		window.removeEventListener("click", handleClick);
-	});
+	onClickOutside(
+		() => [button(), modal()],
+		() => setShowSettings(false),
+	);
 
 	return (
 		<>

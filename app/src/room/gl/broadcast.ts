@@ -5,6 +5,7 @@ import type { Camera } from "./camera";
 import type { GLContext } from "./context";
 import { Meshes } from "./mesh";
 import {
+	Deformation,
 	Shader,
 	type Uniform1f,
 	type Uniform1i,
@@ -34,11 +35,7 @@ export class BroadcastRenderer {
 	#u_memeBounds: Uniform4f;
 	#u_memeChromaKey: Uniform1i;
 	#u_flip: Uniform1i;
-	#u_dragPoint: Uniform2f;
-	#u_velocity: Uniform2f;
-	#u_dragStrength: Uniform1f;
-	#u_zoomDeform: Uniform1f;
-	#u_zoomCenter: Uniform2f;
+	#deformation: Deformation;
 
 	constructor(context: GLContext) {
 		this.#context = context;
@@ -60,13 +57,10 @@ export class BroadcastRenderer {
 		this.#u_memeBounds = this.#program.createUniform4f("u_memeBounds");
 		this.#u_memeChromaKey = this.#program.createUniform1i("u_memeChromaKey");
 		this.#u_flip = this.#program.createUniform1i("u_flip");
-		this.#u_dragPoint = this.#program.createUniform2f("u_dragPoint");
-		this.#u_velocity = this.#program.createUniform2f("u_velocity");
-		this.#u_dragStrength = this.#program.createUniform1f("u_dragStrength");
-		this.#u_zoomDeform = this.#program.createUniform1f("u_zoomDeform");
-		this.#u_zoomCenter = this.#program.createUniform2f("u_zoomCenter");
 
-		this.#meshes = new Meshes(context, this.#program.createAttribute("a_position").location);
+		this.#deformation = new Deformation(this.#program);
+
+		this.#meshes = new Meshes(context, this.#program.createAttribute("a_position"));
 	}
 
 	render(
@@ -85,9 +79,6 @@ export class BroadcastRenderer {
 		const gl = this.#context.gl;
 		const bounds = broadcast.bounds.peek();
 		const scale = broadcast.zoom.peek();
-		const dragPoint = broadcast.dragPoint.peek();
-		const deform = broadcast.deform;
-		const zoomCenter = broadcast.zoomCenter.peek();
 
 		// Set projection matrix
 		this.#u_projection.set(camera.projection);
@@ -106,14 +97,7 @@ export class BroadcastRenderer {
 		// Set size for SDF calculation
 		this.#u_size.set(bounds.size.x, bounds.size.y);
 
-		// Set drag deformation uniforms (using deformVelocity which decays separately)
-		this.#u_dragPoint.set(dragPoint.x, dragPoint.y);
-		this.#u_velocity.set(deform.velocity.x, deform.velocity.y);
-		this.#u_dragStrength.set(0.5); // Halved for subtler effect
-
-		// Set zoom deformation uniforms
-		this.#u_zoomDeform.set(deform.zoom);
-		this.#u_zoomCenter.set(zoomCenter.x, zoomCenter.y);
+		this.#deformation.set(broadcast);
 
 		// Set opacity
 		let opacity = broadcast.opacity;
@@ -154,7 +138,7 @@ export class BroadcastRenderer {
 		// Set chroma key flag
 		this.#u_memeChromaKey.set(broadcast.video.memeChroma ? 1 : 0);
 
-		this.#meshes.draw(deform.active);
+		this.#meshes.draw(broadcast.deform.active);
 	}
 
 	close() {

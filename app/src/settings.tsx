@@ -11,26 +11,6 @@ import { solid } from "./util/solid";
 const ttsSchema = z.enum(["none", "low", "high"]);
 type TTS = z.infer<typeof ttsSchema>;
 
-// We use this function to verify the setting is valid and prevent defaulting to "low".
-// Otherwise, we might start downloading the model.
-function loadTTS() {
-	// Load and validate announcements setting
-	const ttsRaw = localStorage.getItem("settings.audio.tts");
-	if (ttsRaw) {
-		const parsed = ttsSchema.safeParse(ttsRaw);
-		if (parsed.success) {
-			return parsed.data;
-		}
-	}
-	return "low";
-}
-
-// Gain from the microphone's 0-200% slider; anything else, NaN included, resets to unity.
-function loadGain(): number {
-	const gain = Number.parseFloat(localStorage.getItem("settings.microphone.gain") ?? "1");
-	return gain >= 0 && gain <= 2 ? gain : 1;
-}
-
 // The signed-in identity, forgotten on logout while device and UI preferences stay.
 const ACCOUNT_KEYS = [
 	"settings.oauth.token",
@@ -40,77 +20,92 @@ const ACCOUNT_KEYS = [
 	"settings.account.avatar",
 ];
 
-// A bare guest path stored by an older build proves nothing, so it is dropped for a fresh guest.
-const guest = Api.guestTokenSchema.safeParse(localStorage.getItem("settings.account.guest"));
 const effect = new Effect();
 
+// A setting loaded from `key` with `parse`, and stored again whenever it changes; unset or empty removes it.
+function persisted<T extends string | number | boolean | undefined>(
+	key: string,
+	parse: (stored: string | null) => T,
+): Signal<T> {
+	const signal = new Signal(parse(localStorage.getItem(key)));
+	effect.subscribe(signal, (value) => {
+		if (value === undefined || value === "") localStorage.removeItem(key);
+		else localStorage.setItem(key, value.toString());
+	});
+	return signal;
+}
+
+// Without WebGPU, captions can't be transcribed here, so capture stays off and the stored choice is dropped.
+if (!supportsWebGPU()) localStorage.removeItem("settings.captions.capture");
+
 const Settings = {
-	draggable: new Signal(localStorage.getItem("settings.draggable") !== "false"),
+	draggable: persisted("settings.draggable", (stored) => stored !== "false"),
 
 	audio: {
 		...Speaker.load(localStorage, effect),
-		tts: new Signal<TTS>(loadTTS()),
+		// An invalid value loads as the default rather than "none", which would skip the model download.
+		tts: persisted<TTS>("settings.audio.tts", (stored) => ttsSchema.safeParse(stored).data ?? "low"),
 	},
 
 	captions: {
-		render: new Signal(localStorage.getItem("settings.captions.render") !== "false"),
-		capture: new Signal(supportsWebGPU() ? localStorage.getItem("settings.captions.capture") !== "false" : false),
+		render: persisted("settings.captions.render", (stored) => stored !== "false"),
+		capture: supportsWebGPU()
+			? persisted("settings.captions.capture", (stored) => stored !== "false")
+			: new Signal(false),
 	},
 
 	// Device states that persist across sessions
 	microphone: {
-		enabled: new Signal(localStorage.getItem("settings.microphone.enabled") === "true"),
-		gain: new Signal(loadGain()),
-		device: new Signal(localStorage.getItem("settings.microphone.device") ?? undefined),
+		enabled: persisted("settings.microphone.enabled", (stored) => stored === "true"),
+		// Gain from the microphone's 0-200% slider; anything else, NaN included, resets to unity.
+		gain: persisted("settings.microphone.gain", (stored) => {
+			const gain = Number.parseFloat(stored ?? "1");
+			return Speaker.validVolume(gain) ? gain : 1;
+		}),
+		device: persisted("settings.microphone.device", (stored) => stored ?? undefined),
 	},
 	camera: {
-		enabled: new Signal(localStorage.getItem("settings.camera.enabled") === "true"),
-		device: new Signal(localStorage.getItem("settings.camera.device") ?? undefined),
+		enabled: persisted("settings.camera.enabled", (stored) => stored === "true"),
+		device: persisted("settings.camera.device", (stored) => stored ?? undefined),
 	},
 
 	// Cached account identity and profile.
 	account: {
 		// The credential the API issued our random guest/ identity, presented to rejoin as it on reload.
-		guest: new Signal<string | undefined>(guest.success ? guest.data : undefined),
-		name: new Signal<string | undefined>(localStorage.getItem("settings.account.name") ?? Api.randomName()),
-		avatar: new Signal<string | undefined>(localStorage.getItem("settings.account.avatar") ?? Api.randomAvatar()),
+		// A bare guest path stored by an older build proves nothing, so it is dropped for a fresh guest.
+		guest: persisted("settings.account.guest", (stored) => Api.guestTokenSchema.safeParse(stored).data),
+		name: persisted<string | undefined>("settings.account.name", (stored) => stored ?? Api.randomName()),
+		avatar: persisted<string | undefined>("settings.account.avatar", (stored) => stored ?? Api.randomAvatar()),
 	},
 
 	oauth: {
-		token: new Signal<string | undefined>(localStorage.getItem("settings.oauth.token") ?? undefined),
+		token: persisted("settings.oauth.token", (stored) => stored ?? undefined),
 		// The secret for an in-progress login, redeemed with the code the OAuth redirect returns.
-		verifier: new Signal<string | undefined>(localStorage.getItem("settings.oauth.verifier") ?? undefined),
+		verifier: persisted("settings.oauth.verifier", (stored) => stored ?? undefined),
 	},
 
 	// Meme selector settings
 	meme: {
-		tab: new Signal((localStorage.getItem("settings.meme.tab") as Tab) ?? "emoji"),
+		tab: persisted("settings.meme.tab", (stored) => (stored as Tab | null) ?? "emoji"),
 	},
 
 	// Tutorial settings
 	tutorial: {
-		step: new Signal(Number.parseInt(localStorage.getItem("settings.tutorial.step") ?? "0", 10)),
+		step: persisted("settings.tutorial.step", (stored) => Number.parseInt(stored ?? "0", 10)),
 	},
 
 	// Rendering settings
 	render: {
-		scale: new Signal<number>(
-			(() => {
-				const stored = localStorage.getItem("settings.render.scale");
-				if (stored) {
-					const parsed = Number.parseFloat(stored);
-					if (!Number.isNaN(parsed) && parsed > 0 && parsed <= window.devicePixelRatio) {
-						return parsed;
-					}
-				}
-				return window.devicePixelRatio;
-			})(),
-		),
+		// The canvas's pixels per CSS pixel, at most the display's own.
+		scale: persisted("settings.render.scale", (stored) => {
+			const parsed = Number.parseFloat(stored ?? "");
+			return parsed > 0 && parsed <= window.devicePixelRatio ? parsed : window.devicePixelRatio;
+		}),
 	},
 
 	// Debug settings
 	debug: {
-		tracks: new Signal(localStorage.getItem("settings.debug.tracks") === "true"),
+		tracks: persisted("settings.debug.tracks", (stored) => stored === "true"),
 	},
 
 	// Sign out and reload as a fresh guest.
@@ -119,111 +114,6 @@ const Settings = {
 		window.location.reload();
 	},
 };
-
-effect.subscribe(Settings.draggable, (draggable) => {
-	localStorage.setItem("settings.draggable", draggable.toString());
-});
-
-effect.subscribe(Settings.microphone.gain, (gain) => {
-	localStorage.setItem("settings.microphone.gain", gain.toString());
-});
-
-effect.subscribe(Settings.captions.render, (closedCaptions) => {
-	localStorage.setItem("settings.captions.render", closedCaptions.toString());
-});
-
-effect.subscribe(Settings.captions.capture, (transcription) => {
-	if (!supportsWebGPU()) {
-		// Don't save this setting if WebGPU is not supported.
-		localStorage.removeItem("settings.captions.capture");
-	} else {
-		localStorage.setItem("settings.captions.capture", transcription.toString());
-	}
-});
-
-effect.subscribe(Settings.audio.tts, (tts) => {
-	localStorage.setItem("settings.audio.tts", tts);
-});
-
-effect.subscribe(Settings.microphone.enabled, (enabled) => {
-	localStorage.setItem("settings.microphone.enabled", enabled.toString());
-});
-
-effect.subscribe(Settings.camera.enabled, (enabled) => {
-	localStorage.setItem("settings.camera.enabled", enabled.toString());
-});
-
-effect.subscribe(Settings.account.guest, (id) => {
-	if (id) {
-		localStorage.setItem("settings.account.guest", id);
-	} else {
-		localStorage.removeItem("settings.account.guest");
-	}
-});
-
-effect.subscribe(Settings.account.name, (name) => {
-	if (name) {
-		localStorage.setItem("settings.account.name", name);
-	} else {
-		localStorage.removeItem("settings.account.name");
-	}
-});
-
-effect.subscribe(Settings.account.avatar, (avatar) => {
-	if (avatar) {
-		localStorage.setItem("settings.account.avatar", avatar);
-	} else {
-		localStorage.removeItem("settings.account.avatar");
-	}
-});
-
-effect.subscribe(Settings.oauth.token, (token) => {
-	if (token) {
-		localStorage.setItem("settings.oauth.token", token);
-	} else {
-		localStorage.removeItem("settings.oauth.token");
-	}
-});
-
-effect.subscribe(Settings.oauth.verifier, (verifier) => {
-	if (verifier) {
-		localStorage.setItem("settings.oauth.verifier", verifier);
-	} else {
-		localStorage.removeItem("settings.oauth.verifier");
-	}
-});
-
-effect.subscribe(Settings.meme.tab, (tab) => {
-	localStorage.setItem("settings.meme.tab", tab);
-});
-
-effect.subscribe(Settings.microphone.device, (device) => {
-	if (device) {
-		localStorage.setItem("settings.microphone.device", device);
-	} else {
-		localStorage.removeItem("settings.microphone.device");
-	}
-});
-
-effect.subscribe(Settings.camera.device, (device) => {
-	if (device) {
-		localStorage.setItem("settings.camera.device", device);
-	} else {
-		localStorage.removeItem("settings.camera.device");
-	}
-});
-
-effect.subscribe(Settings.tutorial.step, (step) => {
-	localStorage.setItem("settings.tutorial.step", step.toString());
-});
-
-effect.subscribe(Settings.render.scale, (ratio) => {
-	localStorage.setItem("settings.render.scale", ratio.toString());
-});
-
-effect.subscribe(Settings.debug.tracks, (enabled) => {
-	localStorage.setItem("settings.debug.tracks", enabled.toString());
-});
 
 export default Settings;
 

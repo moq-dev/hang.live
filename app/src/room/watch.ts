@@ -28,6 +28,8 @@ export class WatchBroadcast {
 	readonly #flip = new Signal(false);
 
 	readonly location: LocationFields;
+	/** Whether the peer publishes where its tile sits; a tile from a tool outside Hang is placed only locally. */
+	readonly located: Getter<boolean>;
 	readonly chat: ChatFields;
 	readonly user: {
 		id: Getter<string | undefined>;
@@ -44,7 +46,6 @@ export class WatchBroadcast {
 		error: Getter<Error | undefined>;
 		stats: Getter<Watch.Video.Stats | undefined>;
 		flip: Signal<boolean>;
-		source: Getter<undefined>;
 	};
 	readonly audio: {
 		root: Getter<AudioNode | undefined>;
@@ -52,7 +53,6 @@ export class WatchBroadcast {
 		active: Getter<string | undefined>;
 		error: Getter<Error | undefined>;
 		stats: Getter<Watch.Audio.Stats | undefined>;
-		source: Getter<undefined>;
 	};
 
 	readonly signals = new Effect();
@@ -86,6 +86,7 @@ export class WatchBroadcast {
 		});
 
 		this.location = extras.location;
+		this.located = extras.located;
 		this.chat = extras.chat;
 		this.user = metadata.user;
 
@@ -104,7 +105,6 @@ export class WatchBroadcast {
 			error: decoder.video.out.error,
 			stats: decoder.video.out.stats,
 			flip: this.#flip,
-			source: new Signal(undefined),
 		};
 		this.audio = {
 			root: decoder.audio.out.root,
@@ -112,7 +112,6 @@ export class WatchBroadcast {
 			active: decoder.audio.source.out.track,
 			error: decoder.audio.out.error,
 			stats: decoder.audio.out.stats,
-			source: new Signal(undefined),
 		};
 
 		// A decode failure otherwise only shows as a frozen avatar or silence.
