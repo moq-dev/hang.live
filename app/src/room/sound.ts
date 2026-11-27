@@ -44,7 +44,7 @@ export type SoundProps = {
 
 const RESUME_EVENTS = ["click", "touchstart", "touchend", "mousedown", "keydown"];
 
-/** The app's audio output: one context and gain for every tile, notification, and announcement. */
+/** The app's own audio output: one context and gain for notifications, meme sounds, and Kokoro announcements. */
 export class Sound {
 	enabled: Signal<boolean>;
 	tts: TTS;
