@@ -44,9 +44,9 @@ build:
 	bun install --frozen-lockfile
 	bun run build
 
-# Join a deployed site, such as https://hang.live, from two headless browsers and check each sees the other, and loaded the given module bundle, if any.
-smoke origin bundle="":
-	bun run --cwd app smoke "{{origin}}" "{{bundle}}"
+# Join a deployed site, such as https://hang.live, from two headless browsers and check each sees the other, and was served the given index.html, if any.
+smoke origin page="":
+	bun run --cwd app smoke "{{origin}}" "{{ if page == "" { "" } else { absolute_path(page) } }}"
 
 # Deploy the API and app to an environment, staging or live, then check the deployed site.
 deploy env: (package env) (ship env)
@@ -112,7 +112,7 @@ verify env:
 	serves / /index.html
 	serves "$bundle" "$bundle"
 	# The site serves this build, so a failed join may be the relay's (or its trust of this env's key), not the deploy's.
-	if ! just smoke "$VITE_APP_URL" "$bundle"; then
+	if ! just smoke "$VITE_APP_URL" app/dist/index.html; then
 		echo "error: {{env}} serves this build, but two browsers could not join a room; check the app, the API, and the relay before rolling back" >&2
 		exit 1
 	fi
