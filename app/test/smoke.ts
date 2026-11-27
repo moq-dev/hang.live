@@ -10,8 +10,11 @@ declare global {
 }
 
 const target = process.argv[2];
-if (!target) throw new Error("usage: bun test/smoke.ts <origin>, such as https://hang.live");
+if (!target) throw new Error("usage: bun test/smoke.ts <origin> [bundle], such as https://hang.live");
 const origin = new URL(target);
+// The module script a just-deployed build's page loads, such as /assets/index-<hash>.js: while Cloudflare
+// propagates a deploy, a page may still come from the previous build, which must not stand in for this one.
+const bundle = process.argv[3];
 
 // A fresh room under a prefix kept for the smoke, so neither a visitor nor an overlapping run changes who is in it.
 // Rooms are not stored and guests mint only a `guest/<uuid>` path, so a run leaves nothing behind.
@@ -61,7 +64,11 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 		Object.defineProperty(Navigator.prototype, "setAppBadge", { configurable: true, value: badge });
 		Object.defineProperty(Navigator.prototype, "clearAppBadge", { configurable: true, value: () => badge(0) });
 	}, name);
-	await page.goto(url.href);
+	const response = await page.goto(url.href);
+	// The served page, not the live DOM, which the app adds scripts to.
+	if (bundle && !(await response?.text())?.includes(` src="${bundle}"`)) {
+		throw new Error(`${name} was served a page of another build, not the one loading ${bundle}`);
+	}
 	return page;
 }
 
