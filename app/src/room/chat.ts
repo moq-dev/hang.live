@@ -3,9 +3,7 @@ import { Effect, Signal } from "@moq/signals";
 import * as DOM from "@moq/signals/dom";
 import * as Comlink from "comlink";
 import type { Broadcast } from "./broadcast";
-import type { Canvas } from "./canvas";
 import type ChatWorker from "./chat-worker";
-import type { Bounds, Vector } from "./geometry";
 import { sanitizer } from "./sanitize";
 
 const worker = new Worker(new URL("./chat-worker.ts", import.meta.url), { type: "module" });
@@ -13,14 +11,12 @@ const parse = Comlink.wrap<typeof ChatWorker>(worker);
 const sanitize = sanitizer(window);
 
 export class Chat {
-	canvas: Canvas;
 	broadcast: Broadcast;
 
 	signals = new Effect();
 
-	constructor(broadcast: Broadcast, canvas: Canvas) {
+	constructor(broadcast: Broadcast) {
 		this.broadcast = broadcast;
-		this.canvas = canvas;
 
 		this.signals.run(this.#render.bind(this));
 	}
@@ -35,39 +31,17 @@ export class Chat {
 		icon.className = "text-link-hue scale-x-[-1]";
 		DOM.render(effect, root, icon);
 
-		// Update the position of the message when the broadcast bounds, viewport, or message (width) changes.
-		const updatePosition = (bounds: Bounds, viewport: Vector) => {
-			// Get the canvas element's position on the page
-			const canvasRect = this.canvas.element.getBoundingClientRect();
-
-			// Scale bounds from canvas coordinates to page coordinates
-			const scaleX = canvasRect.width / viewport.x;
-			const scaleY = canvasRect.height / viewport.y;
-
-			// Transform bounds to page coordinates
-			const pageBounds = {
-				x: bounds.position.x * scaleX + canvasRect.left,
-				y: bounds.position.y * scaleY + canvasRect.top,
-				width: bounds.size.x * scaleX,
-				height: bounds.size.y * scaleY,
-			};
-
-			// Position message below the broadcast
-			const messageTop = pageBounds.y + pageBounds.height;
-			const top = Math.round(Math.min(canvasRect.top + canvasRect.height - root.clientHeight - 40, messageTop));
-
-			// Center message horizontally on broadcast
-			const messageCenterX = pageBounds.x + pageBounds.width / 2;
+		// Place the message below the tile, centered on it and kept within the canvas.
+		const place = this.broadcast.overlay(effect, root, (tile, canvas) => {
+			const top = Math.round(Math.min(canvas.bottom - root.clientHeight - 40, tile.bottom));
+			const center = tile.x + tile.width / 2;
 			const left = Math.round(
-				Math.min(
-					Math.max(canvasRect.left, messageCenterX - root.clientWidth / 2),
-					canvasRect.left + canvasRect.width - root.clientWidth,
-				),
+				Math.min(Math.max(canvas.left, center - root.clientWidth / 2), canvas.right - root.clientWidth),
 			);
 
 			root.style.left = `${left}px`;
 			root.style.top = `${top}px`;
-		};
+		});
 
 		// Save the previous message so we can fade-out.
 		const message = new Signal<Node | undefined>(undefined);
@@ -101,7 +75,8 @@ export class Chat {
 			root.appendChild(msg);
 			effect.cleanup(() => root.removeChild(msg));
 
-			updatePosition(this.broadcast.bounds.peek(), this.broadcast.canvas.viewport.peek());
+			// Its width changed, so center it again.
+			place();
 		});
 
 		effect.run((effect) => {
@@ -113,30 +88,6 @@ export class Chat {
 				DOM.setClass(effect, root, "opacity-100", "pointer-events-auto");
 			}
 		});
-
-		effect.run((effect) => {
-			const z = effect.get(this.broadcast.position).z;
-			root.style.zIndex = `${100 + z}`;
-		});
-
-		// Move the chat around to the correct position while there's a message or typing.
-		effect.run((effect) => {
-			const bounds = effect.get(this.broadcast.bounds);
-			const viewport = effect.get(this.broadcast.canvas.viewport);
-			updatePosition(bounds, viewport);
-		});
-
-		// Update position when window scrolls
-		effect.event(
-			window,
-			"scroll",
-			() => {
-				const bounds = this.broadcast.bounds.peek();
-				const viewport = this.broadcast.canvas.viewport.peek();
-				updatePosition(bounds, viewport);
-			},
-			{ passive: true },
-		);
 
 		effect.run((effect) => {
 			const typing = effect.get(this.broadcast.source.chat.typing.active);

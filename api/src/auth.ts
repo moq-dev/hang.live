@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import * as JWT from "jose";
 import { z } from "zod";
-import type { Account } from ".";
+import type * as Account from "./account";
 import { accountIdSchema, guestSchema, oauthChallenge } from "./client";
 import type RootContext from "./context";
 

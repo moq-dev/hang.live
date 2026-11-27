@@ -16,7 +16,7 @@ const NOTIFICATIONS = {
 } as const;
 
 export type NotificationSound = keyof typeof NOTIFICATIONS;
-export const FADE_TIME = 0.2;
+const FADE_TIME = 0.2;
 
 /**
  * Fade `param` linearly from its current value to `value`, cancelling any fade in progress.
@@ -28,6 +28,12 @@ export function fade(param: AudioParam, value: number, context: BaseAudioContext
 	param.cancelScheduledValues(now);
 	param.setValueAtTime(param.value, now);
 	param.linearRampToValueAtTime(value, now + FADE_TIME);
+}
+
+/** Ramp `panner` to `pan` for as long as `effect` runs, the same way for a tile's voice and its sounds. */
+export function steer(effect: Effect, panner: StereoPannerNode, pan: number) {
+	effect.cleanup(() => panner.pan.cancelScheduledValues(panner.context.currentTime));
+	panner.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, pan)), panner.context.currentTime + FADE_TIME);
 }
 
 export type SoundProps = {
@@ -146,12 +152,7 @@ export class PannedSound {
 		this.analyser = new AnalyserNode(this.parent.context, { fftSize: this.#buffer.length });
 		this.#panner.connect(this.analyser);
 
-		this.#signals.run((effect) => {
-			effect.cleanup(() => this.#panner.pan.cancelScheduledValues(this.#panner.context.currentTime));
-
-			const pan = Math.max(-1, Math.min(1, effect.get(this.pan) * 2));
-			this.#panner.pan.linearRampToValueAtTime(pan, this.#panner.context.currentTime + FADE_TIME);
-		});
+		this.#signals.run((effect) => steer(effect, this.#panner, effect.get(this.pan)));
 	}
 
 	async notification(sound: NotificationSound) {

@@ -5,6 +5,7 @@ import type { Camera } from "./camera";
 import type { GLContext } from "./context";
 import { Meshes } from "./mesh";
 import {
+	Deformation,
 	Shader,
 	type Uniform1f,
 	type Uniform2f,
@@ -29,11 +30,7 @@ export class AudioRenderer {
 	#u_color: Uniform3f;
 	#u_time: Uniform1f;
 	#u_finalAlpha: Uniform1f;
-	#u_dragPoint: Uniform2f;
-	#u_velocity: Uniform2f;
-	#u_dragStrength: Uniform1f;
-	#u_zoomDeform: Uniform1f;
-	#u_zoomCenter: Uniform2f;
+	#deformation: Deformation;
 
 	constructor(context: GLContext) {
 		this.#program = new Shader(context.gl, audioVertSource, audioFragSource);
@@ -50,22 +47,16 @@ export class AudioRenderer {
 		this.#u_color = this.#program.createUniform3f("u_color");
 		this.#u_time = this.#program.createUniform1f("u_time");
 		this.#u_finalAlpha = this.#program.createUniform1f("u_finalAlpha");
-		this.#u_dragPoint = this.#program.createUniform2f("u_dragPoint");
-		this.#u_velocity = this.#program.createUniform2f("u_velocity");
-		this.#u_dragStrength = this.#program.createUniform1f("u_dragStrength");
-		this.#u_zoomDeform = this.#program.createUniform1f("u_zoomDeform");
-		this.#u_zoomCenter = this.#program.createUniform2f("u_zoomCenter");
 
-		this.#meshes = new Meshes(context, this.#program.createAttribute("a_position").location);
+		this.#deformation = new Deformation(this.#program);
+
+		this.#meshes = new Meshes(context, this.#program.createAttribute("a_position"));
 	}
 
 	render(broadcast: Broadcast, camera: Camera, maxZ: number, now: DOMHighResTimeStamp) {
 		const bounds = broadcast.bounds.peek();
 		const scale = broadcast.zoom.peek();
 		const volume = broadcast.audio.volume;
-		const dragPoint = broadcast.dragPoint.peek();
-		const deform = broadcast.deform;
-		const zoomCenter = broadcast.zoomCenter.peek();
 
 		this.#program.use();
 
@@ -145,16 +136,9 @@ export class AudioRenderer {
 
 		this.#u_color.set(r, g, b);
 
-		// Set drag deformation uniforms (using deformVelocity which decays separately)
-		this.#u_dragPoint.set(dragPoint.x, dragPoint.y);
-		this.#u_velocity.set(deform.velocity.x, deform.velocity.y);
-		this.#u_dragStrength.set(0.5); // Halved for subtler effect
+		this.#deformation.set(broadcast);
 
-		// Set zoom deformation uniforms
-		this.#u_zoomDeform.set(deform.zoom);
-		this.#u_zoomCenter.set(zoomCenter.x, zoomCenter.y);
-
-		this.#meshes.draw(deform.active);
+		this.#meshes.draw(broadcast.deform.active);
 	}
 
 	close() {

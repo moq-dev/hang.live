@@ -153,7 +153,7 @@ function App(props: {
 
 	return (
 		<AppLayout connection={room.connection} room={props.room}>
-			<Controls room={room} local={props.local} canvas={props.canvas} />
+			<Controls name={props.room} room={room} local={props.local} canvas={props.canvas} />
 		</AppLayout>
 	);
 }

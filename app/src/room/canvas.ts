@@ -1,7 +1,7 @@
 import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
-import { Vector } from "./geometry";
+import { type Bounds, Vector } from "./geometry";
 import { BackgroundRenderer } from "./gl/background";
 import { Camera } from "./gl/camera";
 import { GLContext } from "./gl/context";
@@ -9,6 +9,15 @@ import { GLContext } from "./gl/context";
 /** The installed clock's time in the timebase requestAnimationFrame passes, so fades start in step with frames. */
 export function timestamp(): DOMHighResTimeStamp {
 	return Clock.now().since(Clock.Instant.ZERO).asMillis();
+}
+
+// How long a tile, its video, or its meme takes to fade in or out, in milliseconds.
+const FADE = 300;
+
+/** The opacity at `now` of something fading in while `active`, or out otherwise, since `since`. */
+export function fade(active: boolean, since: DOMHighResTimeStamp, now: DOMHighResTimeStamp): number {
+	const progress = Math.min(1, Math.max(0, (now - since) / FADE));
+	return active ? progress : 1 - progress;
 }
 
 export class Canvas {
@@ -196,6 +205,20 @@ export class Canvas {
 		const canvasY = (pageY / rect.height) * viewport.y;
 
 		return Vector.create(canvasX, canvasY);
+	}
+
+	/** Where `bounds`, in canvas coordinates, sits on the page. */
+	page(bounds: Bounds): DOMRect {
+		const rect = this.#canvas.getBoundingClientRect();
+		const viewport = this.viewport.peek();
+		const scaleX = rect.width / viewport.x;
+		const scaleY = rect.height / viewport.y;
+		return new DOMRect(
+			bounds.position.x * scaleX + rect.left,
+			bounds.position.y * scaleY + rect.top,
+			bounds.size.x * scaleX,
+			bounds.size.y * scaleY,
+		);
 	}
 
 	close() {
