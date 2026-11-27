@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import * as Account from "./account";
-import * as Avatar from "./avatar";
 import { withContext } from "./context";
 import * as Fave from "./fave";
 import * as Health from "./health";
@@ -9,7 +8,12 @@ import * as Room from "./room";
 import * as rpc from "./rpc";
 import * as Storage from "./storage";
 
-export { Account, Avatar, Fave, Health, OAuth, Room };
+/** An account's public profile. */
+export type { Info as AccountInfo } from "./account";
+/** A favorited room. */
+export type { Info as FaveInfo } from "./fave";
+/** An OAuth provider the API signs in with. */
+export type { ProviderId } from "./oauth";
 
 const app = new Hono<{ Bindings: Env }>()
 	.use(withContext)

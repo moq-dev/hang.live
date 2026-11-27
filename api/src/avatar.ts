@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export { randomAvatar as random } from "./client";
 
-export const typeSchema = z.enum(["url", "r2"]);
+const typeSchema = z.enum(["url", "r2"]);
 export type Type = z.infer<typeof typeSchema>;
 
 // Largest accepted upload.

@@ -49,7 +49,7 @@ export type LivePeer = { handle: string; position: Position };
  *
  * Datagrams may drop, so each carries the whole state rather than a change.
  */
-export type LiveValue = {
+type LiveValue = {
 	/** The sender's pointer, on its camera broadcast only. */
 	cursor?: Point;
 	/** This broadcast's own window, while its owner drags it. */
