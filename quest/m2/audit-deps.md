@@ -13,8 +13,8 @@ Run the `deps` audit: `quest audit deps` prints what it checks, what each findin
   - `bun audit --prod` for advisories in runtime dependencies (the API's `hono` and `drizzle-orm`, the chat path's `marked` and `dompurify`).
   - `playwright` stays pinned to the Nix shell's `playwright-driver` version; move it only with the nixpkgs pin.
   - `solid-js` 2 and `@solidjs/router` 2 wait on `vite-plugin-solid` and `babel-preset-solid` supporting Solid 2; Babel 8 waits on `babel-preset-solid` accepting `@babel/core` 8.
-  - `kokoro-js` was stale on the first run; skip it if [TTS off kokoro-js](/quest/m2/tts-off-kokoro-js.md) replaced it.
-- `just check` runs `fallow dead-code --unused-deps`, so unused dependencies fail the gate; it misses `@types/*` packages whose runtime package is gone and binaries nothing runs, so check those by hand.
+  - `kokoro-js` was stale on the first run; skip it if [TTS on Phonon](/quest/m2/tts-phonon.md) replaced it.
+- `just check` runs `fallow dead-code`, so unused dependencies fail the gate; it misses `@types/*` packages whose runtime package is gone and binaries nothing runs, so check those by hand.
 
 ## Audit
 

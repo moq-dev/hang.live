@@ -30,7 +30,6 @@
 		"comlink": "^4.4.2",
 		"dompurify": "^3.5.0",
 		"hono": "^4.13.22",
-		"jszip": "^3.10.1",
 		"kokoro-js": "^1.2.1",
 		"marked": "^18.3.0",
 		"solid-js": "^1.9.9",

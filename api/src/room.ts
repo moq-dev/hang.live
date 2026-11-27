@@ -57,10 +57,6 @@ export class Context {
 	}
 }
 
-export const joinSchema = z.object({
-	name: nameSchema,
-});
-
 export const router = rpc.router().post(
 	"/:room/join",
 	rpc.withParam(z.object({ room: nameSchema })),

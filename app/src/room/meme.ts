@@ -310,8 +310,6 @@ export const VIDEO = {
 		fit: "contain",
 		position: "right",
 	},
-	// TODO: It should go over the screenshare, not the webcam, and should be in the top right corner.
-	// "speedrun": { source: [{ file: "speedrun.webm", mime: 'video/webm; codecs="vp9"' }] },
 	"pizza-time": {
 		paths: [
 			{ path: "pizza-time.webm", mime: 'video/webm; codecs="vp9"' },

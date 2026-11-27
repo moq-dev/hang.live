@@ -5,7 +5,6 @@ import { TTS } from "./tts";
 
 const NOTIFICATIONS = {
 	bup: "/notification/bup.opus",
-	//bye: "/notification/bye.opus",
 	chat: [
 		"/notification/chat1.opus",
 		"/notification/chat2.opus",
@@ -14,7 +13,6 @@ const NOTIFICATIONS = {
 		"/notification/chat5.opus",
 	],
 	select: "/notification/select.opus",
-	//sup: "/notification/sup.opus",
 } as const;
 
 export type NotificationSound = keyof typeof NOTIFICATIONS;

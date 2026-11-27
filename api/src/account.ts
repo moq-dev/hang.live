@@ -14,7 +14,7 @@ import * as Tables from "./tables";
 export type Id = AccountId;
 
 // Account schemas
-export const infoSchema = z.object({
+const infoSchema = z.object({
 	id: accountIdSchema,
 	name: nameSchema,
 	avatar: z.string(),
@@ -31,8 +31,8 @@ export interface Create {
 
 const table = Tables.accounts;
 
-export type Row = typeof table.$inferSelect;
-export type NewRow = typeof table.$inferInsert;
+type Row = typeof table.$inferSelect;
+type NewRow = typeof table.$inferInsert;
 
 export const router = rpc
 	.router()

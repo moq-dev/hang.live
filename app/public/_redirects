@@ -1,1 +1,2 @@
+# Serve room links as-is: without this rewrite, the asset handler 307s /@room to /%40room, which the app renders as not found.
 /@* / 200

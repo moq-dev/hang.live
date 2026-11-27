@@ -32,7 +32,7 @@ export function Home(): JSX.Element {
 	const authenticated = solid(Api.client.authenticated);
 
 	// Undefined while loading, and null when signed out.
-	const [favorites, setFavorites] = createSignal<Api.Fave.Info[] | null>();
+	const [favorites, setFavorites] = createSignal<Api.FaveInfo[] | null>();
 	const [reload, setReload] = createSignal(0);
 
 	createEffect(() => {
