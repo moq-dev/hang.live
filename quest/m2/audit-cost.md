@@ -21,7 +21,7 @@ Run the `cost` audit: `quest audit cost` prints what it checks, what each findin
   - Path-filtering quest-only PRs: only 2 of the 20 PRs merged before this run touched only `quest/`, and `Check` is the required status, so a filter needs a job that still reports.
   - Shortening the media test: every phase is real media round-trips guarding the m0 capture bugs; coverage cuts belong to the `tests` audit.
 - Check first:
-  - Measure from recent `Check` runs' step timings (`gh api repos/moq-dev/hang.live/actions/runs/<id>/jobs`); the job log timestamps split `nix develop` by input.
+  - `Check` no longer runs on pull requests, so measure `just check` and `just build` locally, and the merge gate's step timings once one runs; the baseline above came from the old hosted `Check` job.
   - Whether a new flake input pulls a second nixpkgs; `nix flake archive --json --dry-run` lists every input's store path.
     `quest.inputs.nixpkgs-bun.follows` exists only until quest drops that input upstream.
   - Whether `moq-dev/moq` still makes evaluating its packages unpack `rust-overlay`.
