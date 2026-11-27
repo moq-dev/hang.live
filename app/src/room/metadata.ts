@@ -440,7 +440,8 @@ function clearLive(live: LocationFields["live"]) {
 /**
  * Feed each live datagram on `name` to `live`, clearing it once the sender goes quiet.
  *
- * As in {@link subscribeJson}, a datagram that does not match ends the subscription.
+ * Unlike {@link subscribeJson}, a datagram that does not match is dropped rather than ending the
+ * subscription: each one stands alone, so one bad datagram from a peer must not silence its later ones.
  */
 function subscribeLive(
 	broadcast: Moq.Broadcast.Consumer,
@@ -462,13 +463,20 @@ function subscribeLive(
 		const decoder = new TextDecoder();
 		// Datagrams arrive in any order, and a stale one could revive a drag its sender released.
 		let latest: bigint | undefined;
+		let warned = false;
 		try {
 			for (;;) {
 				const datagram = await effect.race(consumer.recv());
 				if (!datagram) break;
 				if (latest !== undefined && datagram.sequence <= latest) continue;
 				latest = datagram.sequence;
-				const value = LiveSchema.parse(JSON.parse(decoder.decode(datagram.payload)));
+				const value = parseLive(decoder.decode(datagram.payload));
+				if (!value) {
+					// Once per subscription, so a peer sending garbage at frame rate cannot flood the console.
+					if (!warned) console.warn(`dropping malformed datagrams on ${name}`);
+					warned = true;
+					continue;
+				}
 				live.cursor.set(value.cursor);
 				live.window.set(value.window);
 				live.peer.set(value.peer);
@@ -478,6 +486,17 @@ function subscribeLive(
 			consumer.close();
 		}
 	});
+}
+
+function parseLive(text: string): LiveValue | undefined {
+	let json: unknown;
+	try {
+		json = JSON.parse(text);
+	} catch {
+		return undefined;
+	}
+	const result = LiveSchema.safeParse(json);
+	return result.success ? result.data : undefined;
 }
 
 // Groups the publisher ended early rather than failed; the next group restates the window.

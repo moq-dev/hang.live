@@ -347,7 +347,7 @@ test("a transport without datagrams keeps only the snapshot", async () => {
 	expect(room.remote.cursor.peek()).toBeUndefined();
 });
 
-test("a malformed live datagram ends the subscription", async () => {
+test("a malformed live datagram is dropped and later ones still arrive", async () => {
 	const net = new Net.Broadcast.Producer();
 	const catalog = new Signal<ExtendedCatalog>({ hang: { live: { track: "hang/live.json" } } });
 	const track = net.createDatagrams("hang/live.json", { timescale: Net.Time.Timescale.MILLI });
@@ -360,11 +360,17 @@ test("a malformed live datagram ends the subscription", async () => {
 		track.append(Net.Time.Timestamp.now(), new TextEncoder().encode(JSON.stringify(value)));
 	try {
 		await flush();
-		send({ cursor: { x: "left", y: 0 } });
+		send({ cursor: { x: 0.1, y: 0.1 } });
 		await flush();
-		send({ cursor: { x: 0, y: 0 } });
+		// A non-finite coordinate serializes as null.
+		send({ cursor: { x: Number.NaN, y: 0 } });
+		track.append(Net.Time.Timestamp.now(), new TextEncoder().encode("{not json"));
 		await flush();
-		expect(extras.location.live.cursor.peek()).toBeUndefined();
+		expect(extras.location.live.cursor.peek()).toEqual({ x: 0.1, y: 0.1 });
+
+		send({ cursor: { x: 0.2, y: -0.2 } });
+		await flush();
+		expect(extras.location.live.cursor.peek()).toEqual({ x: 0.2, y: -0.2 });
 	} finally {
 		extras.close();
 		track.finish();

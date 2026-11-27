@@ -122,7 +122,11 @@ export class Space {
 	#onMouseMove(e: MouseEvent) {
 		const mouse = this.canvas.relative(e.clientX, e.clientY);
 		const viewport = this.canvas.viewport.peek();
-		this.#pointer = { x: mouse.x / viewport.x - 0.5, y: mouse.y / viewport.y - 0.5 };
+		// Before the first resize the viewport is empty, and dividing by it would publish NaN.
+		this.#pointer =
+			viewport.x > 0 && viewport.y > 0
+				? { x: mouse.x / viewport.x - 0.5, y: mouse.y / viewport.y - 0.5 }
+				: undefined;
 		if (this.#gesture.move(mouse)) return;
 
 		const broadcast = this.#gesture.at(mouse);
