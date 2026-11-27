@@ -21,10 +21,12 @@ function live(section: { renditions: Record<string, { enabled?: boolean }> } | u
 const minting = new Map<string, Promise<Minted>>();
 
 async function mint(room: string): Promise<Minted> {
+	// Counted from before the request, so the tokens are retired no later than the API's signed expiry.
+	const sent = Date.now();
 	const response = await Api.client.routes.room[":room"].external.$post({ param: { room } });
 	if (!response.ok) throw new Error(response.statusText || `HTTP ${response.status}`);
 	const external = await response.json();
-	return { external, expires: new Date(Date.now() + external.lifetime * 1000) };
+	return { external, expires: new Date(sent + external.lifetime * 1000) };
 }
 
 // The room's tokens while they last, minting new ones once they expire or a mint failed.
@@ -46,6 +48,8 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 	const [open, setOpen] = createSignal(false);
 	const [minted, setMinted] = createSignal<Minted | undefined>(undefined);
 	const [error, setError] = createSignal<string | undefined>(undefined);
+	// The broadcast picked to record, kept here so replacing expired tokens keeps it.
+	const [picked, setPicked] = createSignal<string | undefined>(undefined);
 
 	const show = async () => {
 		setOpen(true);
@@ -110,7 +114,10 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 						<Show when={error()}>
 							{(error) => (
 								<div role="alert" class="text-red-400">
-									Couldn't create stream tokens: {error()}
+									Couldn't create stream tokens: {error()}{" "}
+									<button type="button" onClick={show} class="underline cursor-pointer">
+										Retry
+									</button>
 								</div>
 							)}
 						</Show>
@@ -122,7 +129,9 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 								</Show>
 							}
 						>
-							{(minted) => <Details minted={minted()} room={props.room} />}
+							{(minted) => (
+								<Details minted={minted()} room={props.room} picked={picked()} onPick={setPicked} />
+							)}
 						</Show>
 					</div>
 				</div>
@@ -131,7 +140,12 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 	);
 }
 
-function Details(props: { minted: Minted; room: Room }): JSX.Element {
+function Details(props: {
+	minted: Minted;
+	room: Room;
+	picked: string | undefined;
+	onPick: (path: string) => void;
+}): JSX.Element {
 	const external = () => props.minted.external;
 	const ingest = createMemo(() => Stream.ingest(external()));
 
@@ -160,8 +174,7 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 	// Options are keyed by path, so a refresh keeps the selected one in place.
 	const paths = createMemo(() => choices().map((choice) => choice.path));
 	const labels = createMemo(() => new Map(choices().map((choice) => [choice.path, choice.label])));
-	const [picked, setPicked] = createSignal<string | undefined>(undefined);
-	const target = createMemo(() => picked() ?? paths()[0]);
+	const target = createMemo(() => props.picked ?? paths()[0]);
 	// A picked broadcast that stopped sending keeps its place, so the commands never switch to someone else.
 	const offline = createMemo(() => {
 		const path = target();
@@ -201,7 +214,7 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 									<select
 										class="bg-gray-900 border border-white/20 rounded px-2 py-1 text-white"
 										value={path()}
-										onChange={(e) => setPicked(e.currentTarget.value)}
+										onChange={(e) => props.onPick(e.currentTarget.value)}
 									>
 										<For each={options()}>
 											{(each) => (
