@@ -21,6 +21,8 @@ const expected = process.argv[3] ? await Bun.file(process.argv[3]).text() : unde
 const room = `hang-smoke-${crypto.randomUUID()}`;
 const url = new URL(`/@${room}`, origin);
 const TIMEOUT = 30_000;
+// How long `just verify` allows a deploy to reach every machine at a location.
+const PROPAGATION = 30_000;
 
 const errors: string[] = [];
 let current = "start";
@@ -64,16 +66,33 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 		Object.defineProperty(Navigator.prototype, "setAppBadge", { configurable: true, value: badge });
 		Object.defineProperty(Navigator.prototype, "clearAppBadge", { configurable: true, value: () => badge(0) });
 	}, name);
-	const response = await page.goto(url.href);
-	// The served page, since the app changes the live DOM, less the line where Cloudflare's Web Analytics
-	// inserts its beacon into pages served to browsers.
-	const served = (await response?.text())
-		?.split("\n")
-		.filter((line) => !line.startsWith('<script type="module" src="https://static.cloudflareinsights.com/'))
-		.join("\n");
-	if (expected !== undefined && served !== expected) {
-		throw new Error(`${name} was served a page other than ${process.argv[3]}`);
+	let stale: Error | undefined;
+	if (expected !== undefined) {
+		// A location can serve either build until the deploy reaches all of its machines, so refetch the page
+		// until it is this build's before the browser loads it.
+		await page.route(url.href, async (route) => {
+			const deadline = performance.now() + PROPAGATION;
+			for (;;) {
+				const response = await route.fetch();
+				// Less the line where Cloudflare's Web Analytics inserts its beacon into pages served to browsers.
+				const served = (await response.text())
+					.split("\n")
+					.filter(
+						(line) => !line.startsWith('<script type="module" src="https://static.cloudflareinsights.com/'),
+					)
+					.join("\n");
+				if (served === expected) return route.fulfill({ response });
+				if (performance.now() > deadline) {
+					stale = new Error(`${name} was served a page other than ${process.argv[3]} for 30 s`);
+					return route.abort();
+				}
+				await Bun.sleep(500);
+			}
+		});
 	}
+	await page.goto(url.href, { timeout: PROPAGATION + TIMEOUT }).catch((error) => {
+		throw stale ?? error;
+	});
 	return page;
 }
 
