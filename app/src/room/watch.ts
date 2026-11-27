@@ -42,6 +42,7 @@ export class WatchBroadcast {
 		target: Signal<Watch.Video.Target | undefined>;
 		active: Getter<string | undefined>;
 		error: Getter<Error | undefined>;
+		stats: Getter<Watch.Video.Stats | undefined>;
 		flip: Signal<boolean>;
 		source: Getter<undefined>;
 	};
@@ -50,6 +51,7 @@ export class WatchBroadcast {
 		catalog: Getter<Catalog.Audio | undefined>;
 		active: Getter<string | undefined>;
 		error: Getter<Error | undefined>;
+		stats: Getter<Watch.Audio.Stats | undefined>;
 		source: Getter<undefined>;
 	};
 
@@ -97,6 +99,7 @@ export class WatchBroadcast {
 			target: this.#target,
 			active: decoder.video.source.out.track,
 			error: decoder.video.out.error,
+			stats: decoder.video.out.stats,
 			flip: this.#flip,
 			source: new Signal(undefined),
 		};
@@ -105,6 +108,7 @@ export class WatchBroadcast {
 			catalog: decoder.audio.source.out.catalog,
 			active: decoder.audio.source.out.track,
 			error: decoder.audio.out.error,
+			stats: decoder.audio.out.stats,
 			source: new Signal(undefined),
 		};
 
