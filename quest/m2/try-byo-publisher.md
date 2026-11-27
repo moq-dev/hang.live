@@ -17,4 +17,7 @@ with the CLI from `moq.sh` and play the file.
 
 - Maintainer (PC): stream from OBS into hang.live as the Plan describes, then
   announce it. An agent can't: it has no OBS install or camera, and validated
-  only against the local dev relay with an `ffmpeg` test pattern.
+  only against the local dev relay with an `ffmpeg` test pattern. The feature
+  reaches production with the first hang.live deploy after it landed (the
+  2026-11-27 deploy, from main `4f30924`, predates it); check that the antenna
+  button shows beside Settings in a hang on hang.live.
