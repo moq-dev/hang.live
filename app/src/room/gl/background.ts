@@ -1,7 +1,7 @@
 import backgroundFragSource from "./background.frag";
 import backgroundVertSource from "./background.vert";
 import type { GLContext } from "./context";
-import { type Attribute, Shader, type Uniform1f, type Uniform2f } from "./shader";
+import { Shader, type Uniform1f, type Uniform2f } from "./shader";
 
 export class BackgroundRenderer {
 	#glContext: GLContext;
@@ -12,7 +12,7 @@ export class BackgroundRenderer {
 	// Typed uniforms and attributes
 	#u_resolution: Uniform2f;
 	#u_time: Uniform1f;
-	#a_position: Attribute;
+	#a_position: number;
 
 	constructor(glContext: GLContext) {
 		this.#glContext = glContext;
@@ -46,8 +46,8 @@ export class BackgroundRenderer {
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.#positionBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
 
-		gl.enableVertexAttribArray(this.#a_position.location);
-		gl.vertexAttribPointer(this.#a_position.location, 2, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(this.#a_position);
+		gl.vertexAttribPointer(this.#a_position, 2, gl.FLOAT, false, 0, 0);
 
 		gl.bindVertexArray(null);
 	}

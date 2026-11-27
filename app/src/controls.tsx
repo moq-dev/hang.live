@@ -18,13 +18,14 @@ import { MemeSelector } from "./components/meme-selector";
 import Tooltip from "./components/tooltip";
 import { Tutorial } from "./components/tutorial";
 import type { Room } from "./room";
+import type { Broadcast } from "./room/broadcast";
 import type { Canvas } from "./room/canvas";
 import type { HangLocalSource, Local } from "./room/local";
 import type { Sound } from "./room/sound";
 import Settings, { Modal } from "./settings";
 import * as Speaker from "./speaker";
 import { isMobile } from "./util/mobile";
-import { solid } from "./util/solid";
+import { onClickOutside, solid } from "./util/solid";
 
 type MobileSection = "publish" | "settings" | null;
 
@@ -51,23 +52,10 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 	let publishRef: HTMLDivElement | undefined;
 	let settingsRef: HTMLDivElement | undefined;
 
-	onMount(() => {
-		const handleClick = (e: MouseEvent) => {
-			if (!mobile() || !expandedSection()) return;
-
-			const target = e.target as Node;
-			const expanded = expandedSection();
-
-			// Check if click is inside the expanded section
-			if (expanded === "publish" && publishRef?.contains(target)) return;
-			if (expanded === "settings" && settingsRef?.contains(target)) return;
-
-			// Click is outside the expanded section, so collapse
-			collapseAll();
-		};
-		document.addEventListener("click", handleClick, true); // Use capture phase
-		onCleanup(() => document.removeEventListener("click", handleClick, true));
-	});
+	onClickOutside(() => {
+		const expanded = expandedSection();
+		return [expanded === "publish" ? publishRef : expanded === "settings" ? settingsRef : undefined];
+	}, collapseAll);
 
 	return (
 		<>
@@ -130,7 +118,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 								aria-label="Open publish menu"
 							>
 								<Show when={micActive()}>
-									<Visualize audio={props.local.camera.audio} />
+									<Visualize tile={props.room.camera} />
 								</Show>
 								<span class="icon-[mdi--broadcast]" />
 							</button>
@@ -159,7 +147,7 @@ export function Controls(props: { room: Room; local: Local; canvas: Canvas }): J
 								mobile() && expandedSection() === "publish" ? "slideInFromLeft 0.3s ease-out" : "none",
 						}}
 					>
-						<Microphone local={props.local} />
+						<Microphone local={props.local} tile={props.room.camera} />
 						<Camera local={props.local} room={props.room} />
 						<Screen local={props.local} room={props.room} />
 					</div>
@@ -306,7 +294,8 @@ function CaptureStatus(props: {
 	);
 }
 
-export function Microphone(props: { local: Local }): JSX.Element {
+/** The microphone toggle and device menu, metering `tile`'s audio. */
+export function Microphone(props: { local: Local; tile: Getter<Broadcast | undefined> }): JSX.Element {
 	const retry = new Capture.Retry({
 		enabled: props.local.core.microphone.enabled,
 		error: props.local.microphone.out.error,
@@ -357,21 +346,10 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	let menuRef: HTMLDivElement | undefined;
 	let buttonRef: HTMLButtonElement | undefined;
 
-	onMount(() => {
-		const handleClick = (e: MouseEvent) => {
-			if (
-				showMenu() &&
-				menuRef &&
-				buttonRef &&
-				!menuRef.contains(e.target as Node) &&
-				!buttonRef.contains(e.target as Node)
-			) {
-				setShowMenu(false);
-			}
-		};
-		document.addEventListener("click", handleClick);
-		onCleanup(() => document.removeEventListener("click", handleClick));
-	});
+	onClickOutside(
+		() => [menuRef, buttonRef],
+		() => setShowMenu(false),
+	);
 
 	// Request permissions
 	const requestPermissions = () => {
@@ -416,7 +394,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 						"text-red-500": root() && volume() === 0,
 					}}
 				>
-					<Visualize audio={props.local.camera.audio} />
+					<Visualize tile={props.tile} />
 					<span
 						class={
 							state() === "pending"
@@ -585,22 +563,10 @@ export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	let menuRef: HTMLDivElement | undefined;
 	let buttonRef: HTMLButtonElement | undefined;
 
-	onMount(() => {
-		const handleClick = (e: MouseEvent) => {
-			if (
-				showMenu() &&
-				menuRef &&
-				buttonRef &&
-				!menuRef.contains(e.target as Node) &&
-				!buttonRef.contains(e.target as Node)
-			) {
-				setShowMenu(false);
-			}
-		};
-
-		document.addEventListener("click", handleClick);
-		onCleanup(() => document.removeEventListener("click", handleClick));
-	});
+	onClickOutside(
+		() => [menuRef, buttonRef],
+		() => setShowMenu(false),
+	);
 
 	// Request permissions
 	const requestPermissions = () => {
@@ -796,8 +762,8 @@ function Screen(props: { local: Local; room: Room }): JSX.Element {
 	);
 }
 
-// Renders a volume meter in the background of an element.
-function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): JSX.Element {
+// Renders `tile`'s audio level as a meter in the background of an element.
+function Visualize(props: { tile: Getter<Broadcast | undefined> }): JSX.Element {
 	const [power, setPower] = createSignal<number | undefined>(undefined);
 
 	const top = createMemo(() => {
@@ -812,36 +778,16 @@ function Visualize(props: { audio: { root: Getter<AudioNode | undefined> } }): J
 		return `hsla(${hue}, 80%, 40%, ${alpha})`;
 	});
 
-	const root = solid(props.audio.root);
+	const tile = solid(props.tile);
 
 	createEffect(() => {
-		const node = root();
-		if (!node) return;
+		const broadcast = tile();
+		if (!broadcast) return;
 
-		const analyzer = new AnalyserNode(node.context, {
-			fftSize: 1024,
-		});
-		const data = new Uint8Array(analyzer.frequencyBinCount); // half of fftSize
-
-		node.connect(analyzer);
-		onCleanup(() => analyzer.disconnect());
-
+		// The tile measures its level each physics step; sample it each frame.
 		let animation: number | undefined;
-		let smoothed = 0;
-
 		const tick = () => {
-			analyzer.getByteTimeDomainData(data);
-
-			// Convert from [0, 255] to [-1, 1]
-			let sum = 0;
-			for (let i = 0; i < data.length; i++) {
-				const sample = data[i] - 128;
-				sum += sample * sample;
-			}
-			const power = Math.sqrt(sum) / data.length;
-			smoothed = smoothed * 0.7 + power * 0.3;
-
-			setPower(smoothed);
+			setPower(broadcast.audio.volume);
 			animation = requestAnimationFrame(tick);
 		};
 
@@ -865,6 +811,7 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 	const [input, setInput] = createSignal<HTMLInputElement | undefined>(undefined);
 	const [message, setMessage] = createSignal("");
 	const [showMemeSelector, setShowMemeSelector] = createSignal(false);
+	const [memeButton, setMemeButton] = createSignal<HTMLButtonElement>();
 
 	// Update typing status in preview
 	createEffect(() => {
@@ -934,6 +881,7 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 			<Tooltip content="Memes & Emojis" position="top">
 				<button
 					type="button"
+					ref={setMemeButton}
 					onClick={() => setShowMemeSelector((prev) => !prev)}
 					aria-label="Open meme selector"
 					aria-expanded={showMemeSelector()}
@@ -949,6 +897,7 @@ function Chat(props: { broadcast: HangLocalSource; room: Room }): JSX.Element {
 					chatInput={input()}
 					chatMessage={message()}
 					setChatMessage={setMessage}
+					toggle={memeButton()}
 					onClose={() => setShowMemeSelector(false)}
 				/>
 			</Show>
@@ -1045,19 +994,10 @@ function Advanced(props: { sound: Sound }): JSX.Element {
 	};
 
 	// Hide if clicked outside
-	const handleClick = (e: MouseEvent) => {
-		if (showSettings() && !button()?.contains(e.target as Node) && !modal()?.contains(e.target as Node)) {
-			setShowSettings(false);
-		}
-	};
-
-	onMount(() => {
-		window.addEventListener("click", handleClick);
-	});
-
-	onCleanup(() => {
-		window.removeEventListener("click", handleClick);
-	});
+	onClickOutside(
+		() => [button(), modal()],
+		() => setShowSettings(false),
+	);
 
 	return (
 		<>

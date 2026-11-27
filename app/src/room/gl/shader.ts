@@ -1,3 +1,5 @@
+import type { Broadcast } from "../broadcast";
+
 // Typed uniform wrappers
 export class Uniform1f {
 	#location: WebGLUniformLocation;
@@ -83,12 +85,35 @@ export class UniformMatrix4fv {
 	}
 }
 
-// Typed attribute wrapper
-export class Attribute {
-	readonly location: number;
+/** The drag and zoom wobble uniforms `deformation.glsl` reads, shared by every tile renderer. */
+export class Deformation {
+	#dragPoint: Uniform2f;
+	#velocity: Uniform2f;
+	#dragStrength: Uniform1f;
+	#zoomDeform: Uniform1f;
+	#zoomCenter: Uniform2f;
 
-	constructor(location: number) {
-		this.location = location;
+	constructor(shader: Shader) {
+		this.#dragPoint = shader.createUniform2f("u_dragPoint");
+		this.#velocity = shader.createUniform2f("u_velocity");
+		this.#dragStrength = shader.createUniform1f("u_dragStrength");
+		this.#zoomDeform = shader.createUniform1f("u_zoomDeform");
+		this.#zoomCenter = shader.createUniform2f("u_zoomCenter");
+	}
+
+	/** Set the uniforms to `broadcast`'s wobble, for the program in use. */
+	set(broadcast: Pick<Broadcast, "dragPoint" | "zoomCenter" | "deform">) {
+		const dragPoint = broadcast.dragPoint.peek();
+		const zoomCenter = broadcast.zoomCenter.peek();
+		const deform = broadcast.deform;
+
+		this.#dragPoint.set(dragPoint.x, dragPoint.y);
+		// The wobble's own velocity, which decays apart from the physics.
+		this.#velocity.set(deform.velocity.x, deform.velocity.y);
+		// Halved for a subtler effect.
+		this.#dragStrength.set(0.5);
+		this.#zoomDeform.set(deform.zoom);
+		this.#zoomCenter.set(zoomCenter.x, zoomCenter.y);
 	}
 }
 
@@ -188,8 +213,9 @@ export class Shader {
 		return new UniformMatrix4fv(this.#getUniform(name), this.gl);
 	}
 
-	createAttribute(name: string): Attribute {
-		return new Attribute(this.#getAttribute(name));
+	/** The location of the vertex attribute `name`. */
+	createAttribute(name: string): number {
+		return this.#getAttribute(name);
 	}
 
 	cleanup() {

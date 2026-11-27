@@ -3,7 +3,8 @@ import * as Signals from "@moq/signals";
 /** The speaker slider and stored gain share this range. */
 export const VOLUME_RANGE = { min: 0, max: 2, step: 0.01 };
 
-function validVolume(value: number): boolean {
+/** Whether `value` is a gain the volume sliders can set. */
+export function validVolume(value: number): boolean {
 	return Number.isFinite(value) && value >= VOLUME_RANGE.min && value <= VOLUME_RANGE.max;
 }
 

@@ -24,8 +24,9 @@ export class Room {
 	local: Local;
 	space: Space;
 
-	#cameraBroadcast = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
-	#shareBroadcast = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
+	/** Our camera's tile while we're in the room. */
+	readonly camera = new Signal<Broadcast<HangLocalSource> | undefined>(undefined);
+
 	#signals = new Effect();
 
 	constructor(props: RoomProps) {
@@ -36,35 +37,33 @@ export class Room {
 		const network = new NetworkDebug(this.connection);
 		this.#signals.cleanup(() => network.close());
 
-		this.#signals.run((effect) => {
-			if (!effect.get(Local.join)) {
-				const all = this.space.clear();
-				for (const broadcast of all) {
-					broadcast.close();
-				}
-				return;
-			}
+		// Our camera's tile is up for as long as we're in the room, and our screen's while we share it.
+		for (const [source, shown, tile] of [
+			[this.local.camera, () => true, this.camera],
+			[this.local.share, (effect: Effect) => !!effect.get(this.local.screen.out.source), undefined],
+		] as const) {
+			this.#signals.run((effect) => {
+				if (!effect.get(Local.join) || !shown(effect)) return;
 
-			const cameraPath = effect.get(this.local.camera.name);
-			const camera = this.space.add(cameraPath, this.local.camera);
-			this.#cameraBroadcast.set(camera as Broadcast<HangLocalSource>);
-			effect.cleanup(() => {
-				void this.space.remove(cameraPath);
-				this.#cameraBroadcast.set(undefined);
+				const path = effect.get(source.name);
+				const broadcast = this.space.add(path, source);
+				tile?.set(broadcast);
+				effect.cleanup(() => {
+					void this.space.remove(path);
+					tile?.set(undefined);
+				});
+
+				// Point out the new tile, briefly.
+				const locator = new Locator(broadcast);
+				effect.cleanup(() => locator.close());
+				effect.timer(() => locator.close(), Clock.Duration.millis(8000));
 			});
-		});
+		}
 
+		// Leaving drops every other tile at once; our own fade out as they're removed above.
 		this.#signals.run((effect) => {
-			if (!effect.get(Local.join)) return;
-			if (!effect.get(this.local.screen.out.source)) return;
-
-			const sharePath = effect.get(this.local.share.name);
-			const share = this.space.add(sharePath, this.local.share);
-			this.#shareBroadcast.set(share as Broadcast<HangLocalSource>);
-			effect.cleanup(() => {
-				void this.space.remove(sharePath);
-				this.#shareBroadcast.set(undefined);
-			});
+			if (effect.get(Local.join)) return;
+			for (const broadcast of this.space.clear()) broadcast.close();
 		});
 
 		// Discover remote broadcasts ourselves: `@moq/room`'s roster would open a second watch per
@@ -112,22 +111,6 @@ export class Room {
 		this.#signals.timer(() => {
 			this.space.sound.tts.enabled.set(true);
 		}, Clock.Duration.millis(1000));
-
-		this.#signals.run((effect) => {
-			const cameraBroadcast = effect.get(this.#cameraBroadcast);
-			if (!cameraBroadcast) return;
-			const locator = new Locator(cameraBroadcast);
-			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Clock.Duration.millis(8000));
-		});
-
-		this.#signals.run((effect) => {
-			const shareBroadcast = effect.get(this.#shareBroadcast);
-			if (!shareBroadcast) return;
-			const locator = new Locator(shareBroadcast);
-			effect.cleanup(() => locator.close());
-			effect.timer(() => locator.close(), Clock.Duration.millis(8000));
-		});
 
 		this.#signals.run((effect) => {
 			if (effect.get(this.local.webcam.out.source) || effect.get(this.local.microphone.out.source)) {

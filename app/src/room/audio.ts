@@ -2,7 +2,7 @@ import { Effect, Signal } from "@moq/signals";
 import Settings from "../settings";
 import type { Broadcast } from "./broadcast";
 import type * as Meme from "./meme";
-import { FADE_TIME, fade, PannedSound, type Sound } from "./sound";
+import { fade, PannedSound, type Sound, steer } from "./sound";
 
 export class Audio {
 	broadcast: Broadcast;
@@ -50,12 +50,7 @@ export class Audio {
 
 		this.#signals.run((effect) => {
 			const panner = effect.get(this.#panner);
-			if (!panner) return;
-
-			effect.cleanup(() => panner.pan.cancelScheduledValues(panner.context.currentTime));
-
-			const pan = Math.max(-1, Math.min(1, effect.get(this.pan)));
-			panner.pan.linearRampToValueAtTime(pan, panner.context.currentTime + FADE_TIME);
+			if (panner) steer(effect, panner, effect.get(this.pan));
 		});
 
 		this.#signals.run((effect) => {

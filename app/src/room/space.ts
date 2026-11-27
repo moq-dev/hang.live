@@ -83,10 +83,7 @@ export class Space {
 			if (effect.get(this.canvas.visible) && effect.get(this.canvas.context)) return;
 			this.#pointer = undefined;
 			// Ends a mouse drag as well as a touch one, publishing where the tile landed.
-			if (this.#gesture.touchCancel()) {
-				this.#hover(undefined);
-				document.body.style.cursor = "default";
-			}
+			this.#release(this.#gesture.touchCancel());
 			this.#stream();
 		});
 	}
@@ -109,14 +106,19 @@ export class Space {
 	}
 
 	#onMouseRelease() {
-		if (!this.#gesture.up()) return;
-		this.#hover(undefined);
-		document.body.style.cursor = "default";
+		this.#release(this.#gesture.up());
 	}
 
 	#onMouseLeave() {
 		this.#pointer = undefined;
 		this.#onMouseRelease();
+	}
+
+	// Clear the hover and grab cursor once a gesture lets go of `tile`, if it held one.
+	#release(tile: Broadcast | undefined) {
+		if (!tile) return;
+		this.#hover(undefined);
+		document.body.style.cursor = "default";
 	}
 
 	#onMouseMove(e: MouseEvent) {
@@ -171,12 +173,12 @@ export class Space {
 
 	#onTouchEnd(e: TouchEvent) {
 		const ended = Array.from(e.changedTouches, (touch) => touch.identifier);
-		if (this.#gesture.touchEnd(ended, this.#fingers(e.touches))) this.#hover(undefined);
+		this.#release(this.#gesture.touchEnd(ended, this.#fingers(e.touches)));
 		if (e.touches.length === 0) e.preventDefault();
 	}
 
 	#onTouchCancel(e: TouchEvent) {
-		if (this.#gesture.touchCancel()) this.#hover(undefined);
+		this.#release(this.#gesture.touchCancel());
 		e.preventDefault();
 	}
 
@@ -195,7 +197,8 @@ export class Space {
 		broadcast?.name.setHovering(true);
 	}
 
-	add(id: string, source: BroadcastSource): Broadcast {
+	/** Add a tile for `source` under `id`, which must be new. */
+	add<T extends BroadcastSource>(id: string, source: T): Broadcast<T> {
 		const broadcast = new Broadcast({ source, canvas: this.canvas, sound: this.sound, scale: this.#scale });
 
 		// Put new broadcasts on top of the stack.
@@ -254,7 +257,7 @@ export class Space {
 		this.#runHeld(broadcast);
 
 		if (source.role === "watch") {
-			const cursor = new Cursor(broadcast as Broadcast<typeof source>, this.canvas);
+			const cursor = new Cursor(broadcast, source);
 			broadcast.signals.cleanup(() => cursor.close());
 
 			// A peer dragging its own window streams where it is.
