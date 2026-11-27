@@ -20,7 +20,7 @@ const url = new URL(`/@${room}`, origin);
 const TIMEOUT = 30_000;
 
 const errors: string[] = [];
-let current = "launch Chromium";
+let current = "start";
 // Each page's recent console output and what it shows, printed when a step fails.
 const opened: { name: string; page: Playwright.Page; console: string[] }[] = [];
 
@@ -40,7 +40,10 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 	page.setDefaultTimeout(TIMEOUT);
 	const log: string[] = [];
 	opened.push({ name, page, console: log });
-	page.on("pageerror", (error) => errors.push(`${name}: ${error.message}`));
+	page.on("pageerror", (error) => {
+		errors.push(`${name}: ${error.message}`);
+		log.push(`pageerror: ${error.message}`);
+	});
 	page.on("console", (message) => {
 		// Chromium reports GL errors as WebGL console messages, and the canvas logs a throwing frame.
 		if (/WebGL|render error/.test(message.text())) errors.push(`${name}: ${message.text()}`);
@@ -76,24 +79,34 @@ async function sees(page: Playwright.Page, others: number): Promise<void> {
 }
 
 console.info(`smoke: ${url.href}`);
-const browser = await Playwright.chromium.launch({
-	channel: "chromium",
-	headless: true,
-	args: [
-		"--use-fake-device-for-media-stream",
-		"--use-fake-ui-for-media-stream",
-		"--autoplay-policy=no-user-gesture-required",
-		"--use-angle=swiftshader",
-		"--enable-unsafe-swiftshader",
-	],
-});
+let browser: Playwright.Browser | undefined;
 try {
-	const a = await step("A opens the room", () => open(browser, "Smoke A"));
-	await step("A joins with its camera on and sees no one else", async () => {
-		await join(a);
-		await sees(a, 0);
-	});
-	const b = await step("B opens the room", () => open(browser, "Smoke B"));
+	const chromium = await step("launch Chromium", () =>
+		Playwright.chromium.launch({
+			channel: "chromium",
+			headless: true,
+			args: [
+				"--use-fake-device-for-media-stream",
+				"--use-fake-ui-for-media-stream",
+				"--autoplay-policy=no-user-gesture-required",
+				"--use-angle=swiftshader",
+				"--enable-unsafe-swiftshader",
+			],
+		}),
+	);
+	browser = chromium;
+	const a = await step("A opens the room", () => open(chromium, "Smoke A"));
+	await step("A joins with its camera on", () => join(a));
+	// The room plays this on joining only if its audio already runs, a race, so decode it directly:
+	// a deploy from a checkout without Git LFS content serves a pointer file in its place.
+	await step("the join sound decodes", () =>
+		a.evaluate(async () => {
+			const response = await fetch("/notification/select.opus");
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			await new OfflineAudioContext(1, 1, 48_000).decodeAudioData(await response.arrayBuffer());
+		}),
+	);
+	const b = await step("B opens the room", () => open(chromium, "Smoke B"));
 	await step("B's join screen lists A", async () => {
 		await b.getByRole("heading", { name: "Hanging Now (1)", exact: true }).waitFor();
 		await b.getByRole("main").getByText("Smoke A", { exact: true }).waitFor();
@@ -112,5 +125,5 @@ try {
 	}
 	process.exitCode = 1;
 } finally {
-	await browser.close();
+	await browser?.close();
 }

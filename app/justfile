@@ -7,10 +7,13 @@ build env="development":
 	bun run deps
 	bun vite build --mode "{{env}}"
 
+# Refuse to ship the Git LFS pointer files a checkout without LFS content holds in place of media.
+lfs:
+	@if grep -rlx 'version https://git-lfs.github.com/spec/v1' public; then echo "error: these are Git LFS pointers; run git lfs pull" >&2; exit 1; fi
+
 # Deploy the site to Cloudflare Workers
-deploy:
+deploy: lfs
 	just build live
-	@if grep -rlx 'version https://git-lfs.github.com/spec/v1' dist; then echo "error: these are Git LFS pointers; run git lfs pull and deploy again" >&2; exit 1; fi
 	bun wrangler deploy --env live
 
 # Run the app in development mode

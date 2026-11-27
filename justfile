@@ -50,5 +50,6 @@ smoke origin:
 
 # Deploy the live API and app to Cloudflare.
 deploy:
+	just app lfs
 	just api deploy
 	just app deploy
