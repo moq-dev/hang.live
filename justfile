@@ -44,7 +44,12 @@ build:
 	bun install --frozen-lockfile
 	bun run build
 
+# Join a deployed site, such as https://hang.live, from two headless browsers and check each sees the other.
+smoke origin:
+	bun run --cwd app smoke "{{origin}}"
+
 # Deploy the live API and app to Cloudflare.
 deploy:
+	just app lfs
 	just api deploy
 	just app deploy

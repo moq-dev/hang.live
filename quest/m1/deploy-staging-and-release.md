@@ -54,12 +54,15 @@ Deploy workflow:
 - One workflow on `push` to `main` (staging) and to `release` (production), plus `workflow_dispatch` for redeploys, on GitHub-hosted `ubuntu-latest` (the repository is public and this is not a merge gate).
   Each target runs in its own GitHub environment holding `CLOUDFLARE_API_TOKEN`: `staging` restricted to `main` and `production` restricted to `release`, with `permissions: contents: read`; PR CI stays read-only.
 - `concurrency` per target with `cancel-in-progress: false` and `queue: max`, so a newer run never cuts one off between migration and Worker or replaces a pending one; settle commit order as decided above.
-- Check out with `submodules: recursive` like `Check`, plus `lfs: true`: `app/public` media is Git LFS, and `Check` skips LFS, so a plain checkout would ship pointer files.
+- Check out with `submodules: recursive` like `Check`, plus `lfs: true`: `app/public` media is Git LFS, and `Check` skips LFS, so a plain checkout would ship pointer files (`just deploy` now refuses them).
 - Run `nix develop --command bash -c 'bun install --frozen-lockfile && just deploy <env>'`, since `just deploy` installs nothing, without the Actions Nix cache, which the first cost audit measured as slower than none.
 - Migrations run before the new Worker, so each must work with the Worker already live; `api/AGENTS.md` already keeps them additive.
 - Smoke check after each deploy, failing the job otherwise: the API origin's `/health` answers 200, and the app origin's `/` serves exactly the `app/dist/index.html` this run built, whose hashed main bundle also answers 200.
   A bare 200 from the app origin proves nothing, since its single-page-application fallback answers any path with `index.html`.
-  Rollback is `wrangler rollback --env <env>` for the Worker; the job prints that command when the smoke check fails.
+  Then `just smoke <app origin>` joins one room from two headless Chromium pages with fake cameras and checks each sees the other, naming the step that broke; run it on staging too, so the green staging deploy the release gate requires includes it.
+  It needs the dev shell's Chromium, which `nix develop` already provides.
+  Rollback is `wrangler rollback --env <env>` for the Worker; the job prints that command when either check fails.
+- Point the hourly `Production smoke` workflow's checkout at `release` once it exists, so it tests production with the smoke that shipped with it rather than `main`'s, whose selectors may already expect unreleased UI.
 - Seed each environment's secret from bws `cloudflare-admin-token` with `gh secret set --env <environment>`, passing the value by command substitution.
 - After the first green production deploy, drop the "deploy `main`" steps from quests that wait on a manual deploy, such as [MoQ demos](/quest/m1/moq-dev-demos.md).
 
