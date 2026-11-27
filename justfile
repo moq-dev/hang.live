@@ -62,8 +62,19 @@ ship env:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	case "{{env}}" in staging|live) ;; *) echo "error: deploy to staging or live, not {{env}}" >&2; exit 1 ;; esac
-	trap 'echo "error: deploying {{env}} failed; roll back both Workers with: (cd api && bun wrangler rollback --env {{env}}) && (cd app && bun wrangler rollback --env {{env}})" >&2' ERR
-	(cd api && bun wrangler d1 migrations apply DB --env "{{env}}" --remote && bun wrangler deploy --env "{{env}}")
+	source "app/.env.{{env}}"
+	# Refuse a build packaged for another environment before anything changes.
+	if ! grep -rqF "$VITE_API_URL" app/dist/assets; then
+		echo "error: app/dist was not packaged for {{env}}; run just package {{env}}" >&2
+		exit 1
+	fi
+	api="(cd api && bun wrangler rollback --env {{env}})"
+	app="(cd app && bun wrangler rollback --env {{env}})"
+	trap 'echo "error: deploying {{env}} failed before any Worker changed" >&2' ERR
+	(cd api && bun wrangler d1 migrations apply DB --env "{{env}}" --remote)
+	trap 'echo "error: deploying {{env}} failed; roll back the API Worker with: $api" >&2' ERR
+	(cd api && bun wrangler deploy --env "{{env}}")
+	trap 'echo "error: deploying {{env}} failed; roll back both Workers with: $api && $app" >&2' ERR
 	(cd app && bun wrangler deploy --env "{{env}}")
 	trap - ERR
 	just verify "{{env}}"

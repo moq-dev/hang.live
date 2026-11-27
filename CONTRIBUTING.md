@@ -42,11 +42,11 @@ commands, and a failed join, which may be the relay's, says so. Staging has
 its own D1, R2, auth secret, and relay key, which can only sign tokens for
 `staging/` rooms.
 
-- Cut a release in two PRs. First merge `release` into `main` through a PR
-  into `main`, since `release` must be up to date to merge and each release
-  leaves a merge commit `main` lacks; its tree is `main`'s unless `release`
-  holds a backport. Skip it while `main` already contains `release`. Then open
-  a PR from `main` into `release` and merge it with a merge commit. The
+- Cut a release in two PRs, each merged with a merge commit. First merge
+  `release` into `main` through a PR into `main`, since `release` must be up
+  to date to merge and each release leaves a merge commit `main` lacks; its
+  tree is `main`'s unless `release` holds a backport. Skip it while `main`
+  already contains `release`. Then open a PR from `main` into `release`. The
   `Release gate` check passes only when the merged tree matches a `main`
   commit whose staging deploy succeeded; a release PR opened before that
   deploy finishes passes once the deploy reruns it.
