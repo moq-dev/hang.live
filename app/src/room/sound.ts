@@ -15,6 +15,7 @@ const NOTIFICATIONS = {
 	select: "/notification/select.opus",
 } as const;
 
+/** One of the app's notification sounds. */
 export type NotificationSound = keyof typeof NOTIFICATIONS;
 const FADE_TIME = 0.2;
 
@@ -36,12 +37,14 @@ export function steer(effect: Effect, panner: StereoPannerNode, pan: number) {
 	panner.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, pan)), panner.context.currentTime + FADE_TIME);
 }
 
+/** Whether sound starts enabled. */
 export type SoundProps = {
 	enabled?: boolean | Signal<boolean>;
 };
 
 const RESUME_EVENTS = ["click", "touchstart", "touchend", "mousedown", "keydown"];
 
+/** The app's audio output: one context and gain for every tile, notification, and announcement. */
 export class Sound {
 	enabled: Signal<boolean>;
 	tts: TTS;
@@ -130,6 +133,7 @@ export class Sound {
 	}
 }
 
+/** A sound panned left or right, with an analyser for its level. */
 export class PannedSound {
 	parent: Sound;
 	#panner: StereoPannerNode;

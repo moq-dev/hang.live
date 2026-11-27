@@ -2,6 +2,7 @@ import type * as Moq from "@moq/net";
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { solid } from "../util/solid";
 
+// The hang.live logo, which shows whether the connection is live.
 export function Logo(props: { connection?: Moq.Connection; link?: string }) {
 	const status = props.connection ? solid(props.connection.status) : () => "connected";
 

@@ -3,6 +3,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "../api";
 import { unreachable } from "../util/unreachable";
 
+// Sign-in buttons, one per OAuth provider.
 export default function Login(props: { small?: boolean }): JSX.Element {
 	const [loading, setLoading] = createSignal(false);
 

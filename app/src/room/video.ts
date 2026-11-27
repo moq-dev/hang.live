@@ -53,6 +53,7 @@ export class Textures {
 	}
 }
 
+/** A tile's video: the latest frame, or the avatar without one, plus any meme on top. */
 export class Video {
 	// We don't use the Video renderer that comes with hang because it assumes a single video source.
 	// So we use the Video class directly to get individual frames.

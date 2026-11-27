@@ -3,6 +3,7 @@ import Divider from "../components/divider";
 import Tooltip from "../components/tooltip";
 import { Logo } from "./logo";
 
+// The layout outside a room, with the logo and account links.
 export default function Web(props: { children: JSX.Element; link?: string }) {
 	return (
 		<div class="p-4 mx-auto w-full flex flex-col max-w-[1150px]">

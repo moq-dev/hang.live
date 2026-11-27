@@ -5,11 +5,13 @@ import type { Position, User } from "./metadata";
 import { Sound } from "./sound";
 import { Space } from "./space";
 
+// Where a demo tile starts and who it claims to be.
 export type FakeBroadcastProps = {
 	position?: Position;
 	user?: User;
 };
 
+// A tile with no media, for the landing page's demo room.
 export class FakeBroadcast {
 	readonly role = "fake" as const;
 	sound: Sound;
@@ -159,6 +161,7 @@ export class FakeBroadcast {
 	}
 }
 
+// The landing page's demo room, filled with fake tiles.
 export class FakeRoom {
 	space: Space;
 	sound: Sound;

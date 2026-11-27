@@ -5,6 +5,7 @@ import type { JSX } from "solid-js/jsx-runtime";
 import * as Sanitize from "./room/sanitize";
 import { solid } from "./util/solid";
 
+// A favorite hang's card on the home page, showing who is in it and reporting how many.
 export function PreviewRoomCompact(props: {
 	connection: Moq.Connection;
 	path?: string;
@@ -79,6 +80,7 @@ function PreviewMemberCompact(props: { member: MoqRoom.Remote }): JSX.Element {
 	);
 }
 
+// The list of who is already in a room, shown before joining it.
 export function PreviewRoom(props: { connection: Moq.Connection }): JSX.Element {
 	const room = new MoqRoom.Room({ connection: props.connection });
 	onCleanup(() => room.close());

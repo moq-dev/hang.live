@@ -2,6 +2,7 @@ import { createEffect, createSignal, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { Portal } from "solid-js/web";
 
+// Shows `content` above or below its children on hover, or while `force` is true.
 export default function Tooltip(props: {
 	content: string;
 	position: "top" | "bottom";

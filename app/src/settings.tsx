@@ -115,8 +115,10 @@ const Settings = {
 	},
 };
 
+// The user's settings, persisted in localStorage.
 export default Settings;
 
+// The settings dialog.
 export function Modal(props: { sound: Sound }): JSX.Element {
 	const draggable = solid(Settings.draggable);
 	const debugTracks = solid(Settings.debug.tracks);

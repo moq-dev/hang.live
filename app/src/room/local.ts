@@ -6,6 +6,7 @@ import { Effect, type Getter, Signal } from "@moq/signals";
 import Settings from "../settings";
 import { type ChatFields, chatFields, type LocationFields, locationFields, serveExtras } from "./metadata";
 
+/** Where and as whom we publish; an unset name or avatar comes from the stored account. */
 export interface LocalProps {
 	connection?: Moq.Connection;
 	identity?: Signal<Moq.Path.Valid> | Moq.Path.Valid;
@@ -161,6 +162,7 @@ export class Local {
 	}
 }
 
+/** What a local camera or screen source reads its media and user details from. */
 export interface HangLocalSourceProps {
 	broadcast: Publish.Broadcast;
 	frame: Getter<VideoFrame | undefined>;

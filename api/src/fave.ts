@@ -5,6 +5,7 @@ import * as Auth from "./auth";
 import * as Room from "./room";
 import * as rpc from "./rpc";
 
+// A favorited room and when it was added, in Unix seconds.
 export interface Info {
 	room: string;
 	created_at: number;
@@ -22,6 +23,7 @@ const table = sqliteTable(
 	(t) => [primaryKey({ columns: [t.accountId, t.room] })],
 );
 
+// Routes under /fave to list, check, add, and remove the signed-in account's favorite rooms.
 export const router = rpc
 	.router()
 	// Add a room to favorites

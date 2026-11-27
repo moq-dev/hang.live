@@ -3,6 +3,7 @@ import { Progress } from "./progress";
 
 const modelName = "onnx-community/Kokoro-82M-v1.0-ONNX";
 
+// The Kokoro speech model on WebGPU, which the TTS worker runs.
 export class TTS {
 	#progress: Progress;
 	#model: Promise<KokoroTTS>;

@@ -1,5 +1,6 @@
 import type { Vector } from "../geometry";
 
+// The projection from canvas pixels to WebGL clip space.
 export class Camera {
 	projection: Float32Array;
 

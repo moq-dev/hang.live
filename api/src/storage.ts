@@ -2,6 +2,7 @@ import { z } from "zod";
 import * as Avatar from "./avatar";
 import * as rpc from "./rpc";
 
+// Stores uploads in the public R2 bucket under random keys.
 export class Context {
 	#bucket: R2Bucket;
 

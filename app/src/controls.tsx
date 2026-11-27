@@ -30,6 +30,7 @@ import { onClickOutside, solid } from "./util/solid";
 
 type MobileSection = "publish" | "settings" | null;
 
+// The room's toolbar for publishing and settings, collapsed into sections on mobile.
 export function Controls(props: { name: string; room: Room; local: Local; canvas: Canvas }): JSX.Element {
 	const mobile = isMobile();
 	const [expandedSection, setExpandedSection] = createSignal<MobileSection>(null);
@@ -296,6 +297,7 @@ function CaptureStatus(props: {
 	);
 }
 
+// The microphone toggle and device picker, which retries a failed capture.
 export function Microphone(props: { local: Local }): JSX.Element {
 	const retry = new Capture.Retry({
 		enabled: props.local.core.microphone.enabled,
@@ -526,6 +528,7 @@ export function Microphone(props: { local: Local }): JSX.Element {
 	);
 }
 
+// The camera toggle and device picker, which retries a failed capture.
 export function Camera(props: { local: Local; room?: Room }): JSX.Element {
 	const retry = new Capture.Retry({
 		enabled: props.local.core.camera.enabled,

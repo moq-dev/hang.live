@@ -14,6 +14,7 @@ import {
 	type UniformMatrix4fv,
 } from "./shader";
 
+// Draws a tile's video or avatar, with any meme on top.
 export class BroadcastRenderer {
 	#context: GLContext;
 	#program: Shader;

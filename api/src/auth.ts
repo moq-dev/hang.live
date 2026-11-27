@@ -12,6 +12,7 @@ const tokenSchema = z.object({
 	iat: z.number(),
 });
 
+// The claims of a verified session token.
 export type Token = z.infer<typeof tokenSchema>;
 
 const codeSchema = z.object({
@@ -31,6 +32,7 @@ const GUEST_TYPE = "hang-guest";
 // Long enough to load the app from a deep link, short enough that a leaked code soon expires.
 const CODE_LIFETIME = 5 * 60;
 
+// Signs and verifies session tokens, login codes, and guest credentials with the API's secret.
 export class Context {
 	#secretKey: Uint8Array;
 
@@ -125,6 +127,7 @@ export class Context {
 	}
 }
 
+// Rejects a request without a valid session token, and sets `account_id` from one.
 export const required = createMiddleware<{
 	Bindings: Env;
 	Variables: {
@@ -142,6 +145,7 @@ export const required = createMiddleware<{
 	return await next();
 });
 
+// Sets `account_id` when the request carries a valid session token, and lets it through either way.
 export const optional = createMiddleware<{
 	Bindings: Env;
 	Variables: {

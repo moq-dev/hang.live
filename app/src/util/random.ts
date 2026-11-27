@@ -277,6 +277,7 @@ const NOUNS = [
 	"ass",
 ] as const;
 
+// A random room name, an adjective and a noun such as "cozy-chat".
 export function room(): string {
 	const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
 	const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];

@@ -6,6 +6,7 @@ import type { GLContext } from "./context";
 import { Meshes } from "./mesh";
 import { Deformation, Shader, type Uniform1f, type Uniform2f, type Uniform4f, type UniformMatrix4fv } from "./shader";
 
+// Draws a tile's border.
 export class BorderRenderer {
 	#program: Shader;
 	#meshes: Meshes;

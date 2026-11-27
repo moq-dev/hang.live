@@ -3,7 +3,9 @@ import type * as Api from "@hang/api";
 import { oauthChallenge, oauthVerifier } from "@hang/api/client";
 import { hc } from "hono/client";
 
+// The API's route and response types.
 export type * from "@hang/api";
+// The API's browser-safe schemas and helpers.
 export * from "@hang/api/client";
 
 import { Effect, Signal } from "@moq/signals";
@@ -115,4 +117,5 @@ class Client {
 	}
 }
 
+// The app's API client, holding the signed-in session.
 export const client = new Client();

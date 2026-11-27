@@ -11,6 +11,7 @@ import * as rpc from "./rpc";
 import type * as Storage from "./storage";
 import * as Tables from "./tables";
 
+// The account ID type under the name routes use, as `Account.Id`.
 export type Id = AccountId;
 
 // Account schemas
@@ -20,8 +21,10 @@ const infoSchema = z.object({
 	avatar: z.string(),
 });
 
+// An account's public profile: its ID, display name, and avatar URL.
 export type Info = z.infer<typeof infoSchema>;
 
+// What signup needs to create an account.
 export interface Create {
 	name: string;
 	email: string;
@@ -34,6 +37,7 @@ const table = Tables.accounts;
 type Row = typeof table.$inferSelect;
 type NewRow = typeof table.$inferInsert;
 
+// Routes under /account to read, edit, and delete the signed-in account.
 export const router = rpc
 	.router()
 	.get("/info", Auth.required, async (c) => {
@@ -72,6 +76,7 @@ export const router = rpc
 		return c.json({ success: true }, 200);
 	});
 
+// Account rows in D1, with uploaded avatars in R2.
 export class Context {
 	env: Env;
 	db: Database.Context;
