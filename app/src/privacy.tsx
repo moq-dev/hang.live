@@ -6,7 +6,7 @@ export default function Privacy() {
 		<Layout>
 			<div class="max-w-4xl mx-auto px-6 py-12">
 				<h1 class="text-3xl font-bold mb-8">Privacy Policy</h1>
-				<p class="text-sm text-gray-600 mb-8">Last Updated: October 2, 2025</p>
+				<p class="text-sm text-gray-600 mb-8">Last Updated: November 27, 2026</p>
 
 				<section class="mb-8">
 					<h2 class="text-2xl font-semibold mb-4 underline decoration-link-hue underline-offset-2">
@@ -27,15 +27,22 @@ export default function Privacy() {
 						<li>
 							<strong>Account Information</strong>: When you sign in with a linked provider (ex. Google,
 							Discord, or Apple), we store your email address, display name, and avatar. You can replace
-							your name and avatar at any time.
+							your name and avatar at any time. We also store which providers you linked and the rooms you
+							favorite.
 						</li>
 						<li>
-							<strong>Session State</strong>: An authentication token and any user preferences are stored
-							in your browser's local storage. It is cleared when you log out.
+							<strong>Guests</strong>: Without signing in, you join with a random guest identity, name,
+							and avatar. We keep no guest record on our servers; your browser holds the credential.
 						</li>
 						<li>
-							<strong>Media Cache</strong>: We cache seconds worth of media to improve the playback
-							experience. It is cleared immediately after disconnecting.
+							<strong>Browser Storage</strong>: Your sign-in token, guest identity, and preferences (such
+							as your chosen camera, microphone, and volume) are stored in your browser's local storage.
+							Logging out removes your sign-in token and identity; preferences stay until you clear site
+							data.
+						</li>
+						<li>
+							<strong>Media Cache</strong>: Relays and your browser hold a few seconds of media to smooth
+							playback. It is discarded shortly after, never saved.
 						</li>
 					</ul>
 				</section>
@@ -71,7 +78,7 @@ export default function Privacy() {
 					<ul class="list-disc pl-6 space-y-2">
 						<li>Account information is stored securely on our servers</li>
 						<li>Authentication tokens are stored locally in your browser</li>
-						<li>Video/audio is cached in RAM for a few seconds</li>
+						<li>Video/audio is held in relay and browser memory for a few seconds</li>
 					</ul>
 				</section>
 
@@ -87,10 +94,39 @@ export default function Privacy() {
 
 				<section class="mb-8">
 					<h2 class="text-2xl font-semibold mb-4 underline decoration-link-hue underline-offset-2">
+						Service Providers
+					</h2>
+					<p class="mb-4">These services handle data on our behalf so hang.live can work:</p>
+					<ul class="list-disc pl-6 space-y-2">
+						<li>
+							<strong>Cloudflare</strong> hosts the website and API. Account information is stored in
+							Cloudflare D1 and uploaded avatars in Cloudflare R2. Cloudflare processes your requests,
+							including your IP address, and our API keeps operational logs.
+						</li>
+						<li>
+							<strong>MoQ relays</strong> (<code>cdn.moq.dev</code>) carry everything you share in a hang:
+							video, audio, screen shares, chat messages, your name, and your avatar. The relays forward
+							it to other participants live and hold only a few seconds of it in memory.
+						</li>
+						<li>
+							<strong>Hugging Face</strong> serves the speech model when you pick high-quality text to
+							speech, so it sees your IP address when your browser downloads it. The speech itself is
+							generated on your device.
+						</li>
+						<li>
+							<strong>Your browser's speech engine</strong> reads participant names aloud when they join
+							or leave, unless you turn text to speech off or pick high quality. Some browsers use an
+							online voice that sends that text to the browser's vendor.
+						</li>
+					</ul>
+				</section>
+
+				<section class="mb-8">
+					<h2 class="text-2xl font-semibold mb-4 underline decoration-link-hue underline-offset-2">
 						Data Sharing
 					</h2>
 					<ul class="list-disc pl-6 space-y-2">
-						<li>We do not sell, rent, or share your information</li>
+						<li>We do not sell or rent your information, or share it beyond the service providers above</li>
 						<li>We do not display ads or work with advertisers</li>
 						<li>We only disclose information if required by law</li>
 					</ul>
@@ -119,7 +155,7 @@ export default function Privacy() {
 								account settings page
 							</a>
 						</li>
-						<li>Logout or clear browser storage to remove any local state</li>
+						<li>Clear this site's data in your browser to remove everything stored locally</li>
 						<li>
 							Request a copy of your stored information by contacting{" "}
 							<a href="mailto:admin@hang.live">admin@hang.live</a>
@@ -131,7 +167,7 @@ export default function Privacy() {
 					<h2 class="text-2xl font-semibold mb-4 underline decoration-link-hue underline-offset-2">
 						Changes to This Policy
 					</h2>
-					<p>We'll notify users via email of significant policy changes.</p>
+					<p>We'll post changes on this page and update the date at the top.</p>
 				</section>
 
 				<section class="mb-8">
