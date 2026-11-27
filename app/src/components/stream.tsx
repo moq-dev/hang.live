@@ -71,6 +71,21 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 		onCleanup(() => clearTimeout(timer));
 	});
 
+	// Move focus into the dialog so Escape and screen readers reach it at once, and hand it back on close.
+	let dialog: HTMLDivElement | undefined;
+	createEffect(() => {
+		if (!open()) return;
+		const previous = document.activeElement;
+		dialog?.focus();
+		onCleanup(() => previous instanceof HTMLElement && previous.focus());
+	});
+
+	// Keys stay in the dialog, so typing doesn't jump to the room's chat box.
+	const keydown = (e: KeyboardEvent) => {
+		e.stopPropagation();
+		if (e.key === "Escape") setOpen(false);
+	};
+
 	return (
 		<>
 			<Tooltip content="Stream from OBS or the CLI" position="top">
@@ -89,15 +104,17 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 				<div
 					class="fixed inset-0 bg-black/60 flex items-center justify-center z-[1002] pointer-events-auto"
 					onClick={() => setOpen(false)}
-					onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+					onKeyDown={keydown}
 					role="dialog"
+					aria-modal="true"
 					aria-label="Stream from OBS or the CLI"
 					tabIndex={-1}
+					ref={dialog}
 				>
 					<div
 						class="max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl p-5 text-base leading-normal"
 						onClick={(e) => e.stopPropagation()}
-						onKeyDown={(e) => e.stopPropagation()}
+						onKeyDown={keydown}
 						role="document"
 					>
 						<div class="flex items-center justify-between mb-4">
@@ -175,6 +192,11 @@ function Details(props: {
 	const paths = createMemo(() => choices().map((choice) => choice.path));
 	const labels = createMemo(() => new Map(choices().map((choice) => [choice.path, choice.label])));
 	const target = createMemo(() => props.picked ?? paths()[0]);
+	// Pin the first broadcast shown as the pick, so it too keeps its place once it stops sending.
+	createEffect(() => {
+		const first = paths()[0];
+		if (props.picked === undefined && first !== undefined) props.onPick(first);
+	});
 	// A picked broadcast that stopped sending keeps its place, so the commands never switch to someone else.
 	const offline = createMemo(() => {
 		const path = target();
