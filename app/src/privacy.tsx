@@ -41,8 +41,9 @@ export default function Privacy() {
 							data.
 						</li>
 						<li>
-							<strong>Media Cache</strong>: Relays and your browser hold a few seconds of media to smooth
-							playback. It is discarded shortly after, never saved.
+							<strong>Relay Cache</strong>: While you're in a hang, relays keep the last 30 seconds of
+							your video and audio and the last 10 seconds of chat, so late joiners can catch up. They
+							keep your name and avatar for up to a day. All of it is held in memory and never recorded.
 						</li>
 					</ul>
 				</section>
@@ -78,7 +79,7 @@ export default function Privacy() {
 					<ul class="list-disc pl-6 space-y-2">
 						<li>Account information is stored securely on our servers</li>
 						<li>Authentication tokens are stored locally in your browser</li>
-						<li>Video/audio is held in relay and browser memory for a few seconds</li>
+						<li>Video, audio, and chat are held in relay memory for at most 30 seconds</li>
 					</ul>
 				</section>
 
@@ -106,7 +107,7 @@ export default function Privacy() {
 						<li>
 							<strong>MoQ relays</strong> (<code>cdn.moq.dev</code>) carry everything you share in a hang:
 							video, audio, screen shares, chat messages, your name, and your avatar. The relays forward
-							it to other participants live and hold only a few seconds of it in memory.
+							it to other participants live and keep only the relay cache described above.
 						</li>
 						<li>
 							<strong>Hugging Face</strong> serves the speech model when you pick high-quality text to
@@ -126,9 +127,13 @@ export default function Privacy() {
 						Data Sharing
 					</h2>
 					<ul class="list-disc pl-6 space-y-2">
-						<li>We do not sell or rent your information, or share it beyond the service providers above</li>
+						<li>
+							Everything you share in a hang, including your name and avatar, goes to everyone else in it
+						</li>
+						<li>We do not sell or rent your information</li>
+						<li>The service providers above process it only to run hang.live</li>
 						<li>We do not display ads or work with advertisers</li>
-						<li>We only disclose information if required by law</li>
+						<li>Beyond that, we only disclose information if required by law</li>
 					</ul>
 				</section>
 
