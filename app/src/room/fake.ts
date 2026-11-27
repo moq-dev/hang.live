@@ -11,7 +11,7 @@ export type FakeBroadcastProps = {
 	user?: User;
 };
 
-// A tile with no media, for the landing page's demo room.
+// A demo tile for the landing page, showing images and clips it is handed instead of a broadcast from the relay.
 export class FakeBroadcast {
 	readonly role = "fake" as const;
 	sound: Sound;

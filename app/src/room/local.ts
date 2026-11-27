@@ -6,7 +6,7 @@ import { Effect, type Getter, Signal } from "@moq/signals";
 import Settings from "../settings";
 import { type ChatFields, chatFields, type LocationFields, locationFields, serveExtras } from "./metadata";
 
-/** Where and as whom we publish; an unset name or avatar comes from the stored account. */
+/** Where and as whom we publish; an omitted name or avatar comes from the stored account. */
 export interface LocalProps {
 	connection?: Moq.Connection;
 	identity?: Signal<Moq.Path.Valid> | Moq.Path.Valid;

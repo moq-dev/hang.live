@@ -1287,7 +1287,7 @@ export function audio(name: AudioName): Audio {
 	};
 }
 
-// A video element for a meme, or undefined when the browser plays none of its formats.
+// A video element for a meme, or undefined when it lists formats and the browser plays none of them.
 export function video(name: VideoName): Video | undefined {
 	const videoSource = VIDEO[name];
 	const video = document.createElement("video") as HTMLVideoElement;
