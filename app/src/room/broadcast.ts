@@ -7,6 +7,7 @@ import type { FakeBroadcast } from "./fake";
 import { Bounds, Vector } from "./geometry";
 import type { HangLocalSource } from "./local";
 import * as Meme from "./meme";
+import type * as Metadata from "./metadata";
 import { Name } from "./name";
 import { Deform } from "./physics";
 import type { Sound } from "./sound";
@@ -64,6 +65,9 @@ export class Broadcast<T extends BroadcastSource = BroadcastSource> {
 	// This is separate from the source's location window so we can temporarily use our own value.
 	// After we learn the real position over the network, we'll replace it.
 	position: Signal<Position>;
+
+	/** Where peers' drags hold this window right now, by sender, streamed over datagrams until the snapshot catches up. */
+	holds = new Signal<ReadonlyMap<object, Metadata.Position>>(new Map());
 
 	// The meme video/audio we're rendering, if any.
 	meme = new Signal<Meme.AV | undefined>(undefined);

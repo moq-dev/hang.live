@@ -78,7 +78,10 @@ export class WatchBroadcast {
 		this.signals.cleanup(() => this.#player.close());
 
 		const metadata = consume(this.#player.broadcast);
-		const extras = consumeExtras(this.#player.broadcast);
+		// Only WebTransport carries datagrams; over the WebSocket fallback, windows move on release instead.
+		const datagrams = new Signal(false);
+		this.signals.run((effect) => datagrams.set(effect.get(props.connection.transport) === "webtransport"));
+		const extras = consumeExtras(this.#player.broadcast, datagrams);
 		this.signals.cleanup(() => {
 			metadata.close();
 			extras.close();

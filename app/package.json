@@ -9,7 +9,7 @@
 		"check": "bun run --cwd ../api build && tsc --noEmit && biome check",
 		"deps": "bun run --cwd ../api build && bun run --cwd ../moq/js/libav build",
 		"fix": "biome check --fix",
-		"test": "bun test --isolate --conditions=browser --preload ./test/setup.ts src",
+		"test": "bun test --isolate --conditions=browser --preload ./test/setup.ts",
 		"test:media": "bun run deps && tsc --project test/tsconfig.json && bun test ./test/media.browser.ts"
 	},
 	"license": "MIT",
@@ -30,7 +30,6 @@
 		"comlink": "^4.4.2",
 		"dompurify": "^3.5.0",
 		"hono": "^4.13.22",
-		"jszip": "^3.10.1",
 		"kokoro-js": "^1.2.1",
 		"marked": "^18.3.0",
 		"solid-js": "^1.9.9",

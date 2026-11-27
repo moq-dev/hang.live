@@ -2,11 +2,14 @@ import * as Clock from "@moq/clock";
 import { Effect, Signal } from "@moq/signals";
 import { Broadcast, type BroadcastSource } from "./broadcast";
 import type { Canvas } from "./canvas";
+import { Cursor } from "./cursor";
 import * as Gesture from "./gesture";
 import { AudioRenderer } from "./gl/audio";
 import { BorderRenderer } from "./gl/border";
 import { BroadcastRenderer } from "./gl/broadcast";
 import type { GLContext } from "./gl/context";
+import type { HangLocalSource } from "./local";
+import { LIVE_EXPIRY, type Point, type Position } from "./metadata";
 import * as Physics from "./physics";
 import type { Sound } from "./sound";
 
@@ -31,6 +34,8 @@ export class Space {
 	#hovering: Broadcast | undefined = undefined;
 	#stack = new Gesture.Stack();
 	#gesture: Gesture.Gesture<Broadcast>;
+	// Where the mouse is over the canvas, in room coordinates, streamed to peers each frame.
+	#pointer?: Point;
 
 	#scale = new Signal<number>(1.0);
 
@@ -59,7 +64,7 @@ export class Space {
 		this.#signals.event(canvas.element, "mousemove", this.#onMouseMove.bind(this));
 		// Releasing the button and leaving the canvas both end a drag.
 		this.#signals.event(canvas.element, "mouseup", this.#onMouseRelease.bind(this));
-		this.#signals.event(canvas.element, "mouseleave", this.#onMouseRelease.bind(this));
+		this.#signals.event(canvas.element, "mouseleave", this.#onMouseLeave.bind(this));
 		this.#signals.event(canvas.element, "wheel", this.#onMouseWheel.bind(this), { passive: false });
 
 		this.#signals.event(canvas.element, "touchstart", this.#onTouchStart.bind(this), { passive: false });
@@ -71,6 +76,19 @@ export class Space {
 
 		// Physics steps with each rendered frame, so it pauses whenever the canvas is hidden.
 		this.#signals.set(this.canvas.scene, this.#frame.bind(this));
+
+		// Frames stop while hidden or without a GL context, so end the drag and drop the pointer instead of
+		// streaming stale ones that no frame would clear.
+		this.#signals.run((effect) => {
+			if (effect.get(this.canvas.visible) && effect.get(this.canvas.context)) return;
+			this.#pointer = undefined;
+			// Ends a mouse drag as well as a touch one, publishing where the tile landed.
+			if (this.#gesture.touchCancel()) {
+				this.#hover(undefined);
+				document.body.style.cursor = "default";
+			}
+			this.#stream();
+		});
 	}
 
 	#runRenderers(effect: Effect) {
@@ -96,8 +114,19 @@ export class Space {
 		document.body.style.cursor = "default";
 	}
 
+	#onMouseLeave() {
+		this.#pointer = undefined;
+		this.#onMouseRelease();
+	}
+
 	#onMouseMove(e: MouseEvent) {
 		const mouse = this.canvas.relative(e.clientX, e.clientY);
+		const viewport = this.canvas.viewport.peek();
+		// Before the first resize the viewport is empty, and dividing by it would publish NaN.
+		this.#pointer =
+			viewport.x > 0 && viewport.y > 0
+				? { x: mouse.x / viewport.x - 0.5, y: mouse.y / viewport.y - 0.5 }
+				: undefined;
 		if (this.#gesture.move(mouse)) return;
 
 		const broadcast = this.#gesture.at(mouse);
@@ -228,7 +257,37 @@ export class Space {
 			this.#stack.push(broadcast.position);
 		});
 
+		this.#runHeld(broadcast);
+
 		if (source.role === "watch") {
+			const cursor = new Cursor(broadcast as Broadcast<typeof source>, this.canvas);
+			broadcast.signals.cleanup(() => cursor.close());
+
+			// A peer dragging its own window streams where it is.
+			broadcast.signals.run((effect) => {
+				hold(effect, broadcast, broadcast, effect.get(source.location.live.window));
+			});
+
+			// A peer dragging someone's window streams it by the handle that window publishes. Resolved
+			// reactively, since a viewer joining mid-drag may learn the window or its handle after the first
+			// datagram, and a window that locks or rotates its handle mid-drag stops following. Only a new
+			// target reruns the hold, so reordering tiles doesn't replay a stale position.
+			const dragged = broadcast.signals.computed((effect) => effect.get(source.location.live.peer)?.handle);
+			const target = broadcast.signals.computed((effect) => {
+				const handle = effect.get(dragged);
+				return handle ? this.#addressed(handle, effect) : undefined;
+			});
+			broadcast.signals.run((effect) => {
+				const window = effect.get(target);
+				if (!window) return;
+				const handle = effect.get(dragged);
+				effect.run((effect) => {
+					// A datagram that switches windows can reach this run before the new target does.
+					const peer = effect.get(source.location.live.peer);
+					hold(effect, window, broadcast, peer && peer.handle === handle ? peer.position : undefined);
+				});
+			});
+
 			broadcast.signals.run((effect) => {
 				const handle = effect.get(source.location.window.handle);
 				if (!handle) return;
@@ -313,11 +372,79 @@ export class Space {
 	// Forget the peer moves a departing local publisher asked for, right away, since a publisher reused
 	// later (such as a new screen share) would replay them, and nothing settles them anymore.
 	#leave(broadcast: Broadcast) {
-		if (broadcast.source.role === "publish") broadcast.source.location.peers.positions.set(undefined);
+		if (broadcast.source.role !== "publish") return;
+		const location = broadcast.source.location;
+		location.peers.positions.set(undefined);
+		location.live.cursor.set(undefined);
+		location.live.window.set(undefined);
+		location.live.peer.set(undefined);
+	}
+
+	// Follow a peer's drag of this window while it streams, then fall back to the durable snapshot.
+	#runHeld(broadcast: Broadcast) {
+		// Where the window sat before a peer's drag held it.
+		let home: Position | undefined;
+		broadcast.signals.run((effect) => {
+			// The latest sender's hold wins while several drag at once.
+			const live = [...effect.get(broadcast.holds).values()].at(-1);
+			if (live) {
+				home ??= { ...broadcast.position.peek() };
+				if (this.#gesture.dragging !== broadcast) broadcast.position.update((prev) => ({ ...prev, ...live }));
+				return;
+			}
+			if (!home) return;
+			const from = home;
+
+			// The drag's end can beat the snapshot it settles into, and a refused move never lands in one,
+			// so wait a moment before putting the window back where the snapshot says, or where it sat
+			// before the drag when it never published a position.
+			effect.timer(() => {
+				home = undefined;
+				if (this.#gesture.dragging === broadcast) return;
+				const placed = broadcast.source.location.window.position.peek();
+				// The stacking order stays local.
+				broadcast.position.update((prev) => ({
+					...prev,
+					x: placed?.x ?? from.x ?? prev.x,
+					y: placed?.y ?? from.y ?? prev.y,
+					s: placed?.s ?? from.s ?? prev.s,
+				}));
+			}, LIVE_EXPIRY);
+		});
+	}
+
+	// The window publishing `handle`, which peers may move.
+	#addressed(handle: string, effect: Effect): Broadcast | undefined {
+		for (const broadcast of effect.get(this.ordered)) {
+			if (handleOf(broadcast, effect) === handle) return broadcast;
+		}
+		return undefined;
+	}
+
+	// Stream the pointer and the dragged window to peers over datagrams, once per frame at most.
+	#stream() {
+		const dragging = this.#gesture.dragging;
+		const position = dragging?.position.peek();
+
+		// The pointer and peer drags ride the camera, like the moves in #carrier.
+		let carrier: HangLocalSource | undefined;
+		for (const broadcast of this.lookup.values()) {
+			const source = broadcast.source;
+			if (source.role !== "publish") continue;
+			carrier ??= source;
+			source.location.live.window.set(dragging === broadcast ? position : undefined);
+		}
+		if (!carrier) return;
+
+		carrier.location.live.cursor.set(this.#pointer);
+		const handle = dragging?.source.role === "watch" ? dragging.source.location.window.handle.peek() : undefined;
+		carrier.location.live.peer.set(handle && position ? { handle, position } : undefined);
 	}
 
 	// Step the physics for the time since the last frame, then draw it.
 	#frame(now: DOMHighResTimeStamp) {
+		this.#stream();
+
 		const steps = this.#stepper.advance();
 		for (let i = 0; i < steps; i++) this.#step();
 
@@ -444,6 +571,33 @@ export class Space {
 		this.ordered.set([]);
 		this.lookup.clear();
 	}
+}
+
+// The handle a window publishes for peers to address its moves, if it takes any.
+function handleOf(broadcast: Broadcast, effect: Effect): string | undefined {
+	const source = broadcast.source;
+	if (source.role === "watch") return effect.get(source.location.window.handle);
+	if (source.role === "publish")
+		return effect.get(source.location.window.movable) ? effect.get(source.location.window.handle) : undefined;
+	return undefined;
+}
+
+// Hold `target` at `position` for this run on behalf of `sender`, leaving other senders' holds alone.
+function hold(effect: Effect, target: Broadcast, sender: Broadcast, position: Position | undefined) {
+	if (!position) return;
+	// Re-added last, so the sender that moved most recently shows.
+	target.holds.update((prev) => {
+		const next = new Map(prev);
+		next.delete(sender);
+		return next.set(sender, position);
+	});
+	effect.cleanup(() =>
+		target.holds.update((prev) => {
+			const next = new Map(prev);
+			next.delete(sender);
+			return next;
+		}),
+	);
 }
 
 // The WebGL renderers for one live context.
