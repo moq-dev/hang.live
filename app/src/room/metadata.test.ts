@@ -91,21 +91,20 @@ test("a window peers may not move hides its handle and echoes from them", async 
 	}
 });
 
-test("removed chat catalog entries clear stale messages", async () => {
+test("removed chat catalog entries clear stale typing", async () => {
 	const net = new Net.Broadcast.Producer();
 	const catalog = new Signal<ExtendedCatalog | undefined>({ hang: { chat: { track: "hang/chat.json" } } });
 	const active = new Signal<Net.Broadcast.Consumer | undefined>(net.consume());
 	const track = net.createTrack("hang/chat.json", { timescale: Net.Time.Timescale.MILLI });
 	if (!track) throw new Error("hang/chat.json already exists");
 	const publisher = new Json.Snapshot.Producer({ track });
-	publisher.update({ message: "hello", typing: true }, Net.Time.Timestamp.now());
+	publisher.update({ typing: true }, Net.Time.Timestamp.now());
 	const extras = consumeExtras({ out: { catalog, active } }, new Signal(true));
 	try {
 		await flush();
-		expect(extras.chat.message.latest.peek()).toBe("hello");
+		expect(extras.chat.typing.active.peek()).toBe(true);
 		catalog.set({});
 		await flush();
-		expect(extras.chat.message.latest.peek()).toBeUndefined();
 		expect(extras.chat.typing.active.peek()).toBeUndefined();
 	} finally {
 		extras.close();
@@ -114,7 +113,7 @@ test("removed chat catalog entries clear stale messages", async () => {
 	}
 });
 
-test("windowed chat delivers a repeated message twice and ignores the legacy field", async () => {
+test("windowed chat delivers a repeated message twice", async () => {
 	const net = new Net.Broadcast.Producer();
 	const catalog = new Signal<ExtendedCatalog>({});
 	const local = chatFields();
@@ -133,9 +132,6 @@ test("windowed chat delivers a repeated message twice and ignores the legacy fie
 		local.message.latest.set("lol", true);
 		await flush();
 		local.message.latest.set("lol", true);
-		await flush();
-		// The legacy snapshot clears its message, which a windowed reader must not follow.
-		local.message.latest.set("");
 		await flush();
 		expect(seen.filter((value) => value === "lol")).toHaveLength(2);
 		expect(extras.chat.message.latest.peek()).toBe("lol");

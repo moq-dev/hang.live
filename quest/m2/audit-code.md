@@ -7,7 +7,7 @@ Run the `code` audit: `quest audit code` prints what it checks, what each findin
 ## Plan
 
 Baseline from the m1 run (2026-11-25): about 18k lines of TypeScript in `api/` and `app/`; `moq/` is upstream and out of scope.
-`just check` runs `fallow dead-code` (fallow 3.44.0, moq's dead-code tool), so unused files, exports, and types already fail the gate; `.fallowrc.jsonc` turns off unused class members, so grep those by hand.
+`just check` runs `fallow dead-code` (moq's dead-code tool), so unused files, exports, and types already fail the gate; `.fallowrc.jsonc` turns off unused class members, so grep those by hand.
 
 Check first:
 
