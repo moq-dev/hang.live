@@ -7,6 +7,7 @@ The production smoke reads it on both pages to check each lists the other by nam
 
 ## Plan
 
+- The maintainer kept this follow-up when picking [#77](https://github.com/moq-dev/hang.live/pull/77) to merge on 2026-11-27: ✅ keep (rejected: drop).
 - The room draws peers only on its canvas, so nothing in the DOM lists them.
   Add a screen-reader-only list, labelled for the room, of each tile in `room.space.ordered` by its user's name (`app/src/sup.tsx`'s `App`).
 - Switch the last step of `app/test/smoke.ts` from the badge count to each page listing the other by name, in the same PR.
