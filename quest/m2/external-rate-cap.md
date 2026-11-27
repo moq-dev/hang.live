@@ -14,7 +14,10 @@ cap in `api/test/room.test.ts`. Validate against cdn.moq.dev, not only the dev
 relay: mint, then publish with the `moq.sh` CLI.
 
 The relay paces only QUIC sessions to a cap and refuses a capped grant over
-WebSocket, which OBS and the CLI don't use. Consider capping participants' join
+WebSocket, the transport OBS and the CLI fall back to when UDP is blocked
+(`moq/rs/moq-tokio/src/lib.rs`). Before enabling the cap, publish with OBS and
+the CLI with UDP blocked; if the relay still refuses the capped token there,
+the cap waits on a relay that accepts it over WebSocket too. Consider capping participants' join
 tokens the same way once this works, since the cap protects nothing while a
 fresh guest can still publish uncapped.
 

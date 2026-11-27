@@ -1,5 +1,5 @@
 import { Effect, Signal } from "@moq/signals";
-import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import * as Api from "../api";
 import type { Room } from "../room";
@@ -58,6 +58,14 @@ export function StreamButton(props: { name: string; room: Room }): JSX.Element {
 			setError(err instanceof Error ? err.message : String(err));
 		}
 	};
+
+	// Replace the tokens as they expire, so an open dialog never offers ones the relay would refuse.
+	createEffect(() => {
+		const current = minted();
+		if (!open() || !current) return;
+		const timer = setTimeout(show, current.expires.getTime() - Date.now());
+		onCleanup(() => clearTimeout(timer));
+	});
 
 	return (
 		<>
@@ -153,9 +161,15 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 	const paths = createMemo(() => choices().map((choice) => choice.path));
 	const labels = createMemo(() => new Map(choices().map((choice) => [choice.path, choice.label])));
 	const [picked, setPicked] = createSignal<string | undefined>(undefined);
-	const target = createMemo(() => {
-		const pick = picked();
-		return pick && paths().includes(pick) ? pick : paths()[0];
+	const target = createMemo(() => picked() ?? paths()[0]);
+	// A picked broadcast that stopped sending keeps its place, so the commands never switch to someone else.
+	const offline = createMemo(() => {
+		const path = target();
+		return path !== undefined && !paths().includes(path);
+	});
+	const options = createMemo(() => {
+		const path = target();
+		return offline() && path !== undefined ? [path, ...paths()] : paths();
 	});
 
 	return (
@@ -189,18 +203,27 @@ function Details(props: { minted: Minted; room: Room }): JSX.Element {
 										value={path()}
 										onChange={(e) => setPicked(e.currentTarget.value)}
 									>
-										<For each={paths()}>
+										<For each={options()}>
 											{(each) => (
 												<option value={each} selected={each === path()}>
-													{labels().get(each)}
+													{labels().get(each) ?? `${fallbackName(each)} (offline)`}
 												</option>
 											)}
 										</For>
 									</select>
 								</label>
-								<Copy label="Serve HLS on port 8089, open to your network" value={egress().hls} />
-								<Copy label="Restream over RTMP" value={egress().rtmp} />
-								<Copy label="Record to MP4" value={egress().record} />
+								<Show
+									when={!offline()}
+									fallback={
+										<p class="text-sm text-gray-400">
+											This broadcast stopped sending media; pick another or wait for it to return.
+										</p>
+									}
+								>
+									<Copy label="Serve HLS on port 8089, open to your network" value={egress().hls} />
+									<Copy label="Restream over RTMP" value={egress().rtmp} />
+									<Copy label="Record to MP4" value={egress().record} />
+								</Show>
 							</>
 						);
 					}}
