@@ -27,6 +27,9 @@ check:
 	bun run --cwd app test
 	bun run --cwd app test:media
 
+# Run what CI runs: the checks, then the build.
+ci: check build
+
 # Automatically fix some issues.
 fix:
 	bun install
