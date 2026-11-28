@@ -10,14 +10,19 @@ declare global {
 }
 
 const target = process.argv[2];
-if (!target) throw new Error("usage: bun test/smoke.ts <origin>, such as https://hang.live");
+if (!target) throw new Error("usage: bun test/smoke.ts <origin> [index.html], such as https://hang.live");
 const origin = new URL(target);
+// A just-deployed build's exact page, which the single-page fallback serves for the room: while Cloudflare
+// propagates a deploy, a page may still come from the previous build, which must not stand in for this one.
+const expected = process.argv[3] ? await Bun.file(process.argv[3]).text() : undefined;
 
 // A fresh room under a prefix kept for the smoke, so neither a visitor nor an overlapping run changes who is in it.
 // Rooms are not stored and guests mint only a `guest/<uuid>` path, so a run leaves nothing behind.
 const room = `hang-smoke-${crypto.randomUUID()}`;
 const url = new URL(`/@${room}`, origin);
 const TIMEOUT = 30_000;
+// How long `just verify` allows a deploy to reach every machine at a location.
+const PROPAGATION = 30_000;
 
 const errors: string[] = [];
 let current = "start";
@@ -61,7 +66,33 @@ async function open(browser: Playwright.Browser, name: string): Promise<Playwrig
 		Object.defineProperty(Navigator.prototype, "setAppBadge", { configurable: true, value: badge });
 		Object.defineProperty(Navigator.prototype, "clearAppBadge", { configurable: true, value: () => badge(0) });
 	}, name);
-	await page.goto(url.href);
+	let stale: Error | undefined;
+	if (expected !== undefined) {
+		// A location can serve either build until the deploy reaches all of its machines, so refetch the page
+		// until it is this build's before the browser loads it.
+		await page.route(url.href, async (route) => {
+			const deadline = performance.now() + PROPAGATION;
+			for (;;) {
+				const response = await route.fetch();
+				// Less the line where Cloudflare's Web Analytics inserts its beacon into pages served to browsers.
+				const served = (await response.text())
+					.split("\n")
+					.filter(
+						(line) => !line.startsWith('<script type="module" src="https://static.cloudflareinsights.com/'),
+					)
+					.join("\n");
+				if (served === expected) return route.fulfill({ response });
+				if (performance.now() > deadline) {
+					stale = new Error(`${name} was served a page other than ${process.argv[3]} for 30 s`);
+					return route.abort();
+				}
+				await Bun.sleep(500);
+			}
+		});
+	}
+	await page.goto(url.href, { timeout: PROPAGATION + TIMEOUT }).catch((error) => {
+		throw stale ?? error;
+	});
 	return page;
 }
 

@@ -44,9 +44,9 @@ build:
 	bun install --frozen-lockfile
 	bun run build
 
-# Join a deployed site, such as https://hang.live, from two headless browsers and check each sees the other.
-smoke origin:
-	bun run --cwd app smoke "{{origin}}"
+# Join a deployed site, such as https://hang.live, from two headless browsers and check each sees the other, and was served the given index.html, if any.
+smoke origin page="":
+	bun run --cwd app smoke "{{origin}}" "{{ if page == "" { "" } else { absolute_path(page) } }}"
 
 # Deploy the API and app to an environment, staging or live, then check the deployed site.
 deploy env: (package env) (ship env)
@@ -84,23 +84,35 @@ ship env:
 verify env:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	trap 'echo "error: {{env}} is broken; roll back both Workers with: (cd api && bun wrangler rollback --env {{env}}) && (cd app && bun wrangler rollback --env {{env}})" >&2' ERR
 	source "app/.env.{{env}}"
-	curl -fsS -o /dev/null "$VITE_API_URL/health"
-	# The single-page fallback answers any path with index.html, so only this build's exact page proves the deploy.
-	if ! curl -fsS "$VITE_APP_URL/" | cmp -s - app/dist/index.html; then
-		echo "error: $VITE_APP_URL/ does not serve this build's app/dist/index.html" >&2
-		false
+	app="(cd app && bun wrangler rollback --env {{env}})"
+	if ! curl -fsS -o /dev/null "$VITE_API_URL/health"; then
+		echo "error: $VITE_API_URL/health failed; roll back the API Worker with: (cd api && bun wrangler rollback --env {{env}})" >&2
+		exit 1
 	fi
 	bundle=$(sed -n 's/.*<script type="module"[^>]* src="\([^"]*\)".*/\1/p' app/dist/index.html)
 	if [ -z "$bundle" ]; then
-		echo "error: app/dist/index.html names no module script" >&2
-		false
+		echo "error: app/dist/index.html names no module script; roll back the app Worker with: $app" >&2
+		exit 1
 	fi
-	curl -fsS -o /dev/null "$VITE_APP_URL$bundle"
+	# Cloudflare spreads a deployment over seconds with no signal when it is done, and meanwhile even one
+	# location answers from the old and new versions side by side (https://developers.cloudflare.com/workers/versions-and-deployments/version-skew/),
+	# so wait until the edge has served each file, allowing ten times the "few seconds" Cloudflare documents.
+	# The single-page fallback answers any missing path with index.html, so only this build's exact bytes prove the deploy.
+	deadline=$((SECONDS + 30))
+	serves() {
+		until curl -fsS "$VITE_APP_URL$1" | cmp -s - "app/dist$2"; do
+			if [ "$SECONDS" -ge "$deadline" ]; then
+				echo "error: $VITE_APP_URL$1 did not serve this build's app/dist$2 within 30 s; roll back the app Worker with: $app" >&2
+				exit 1
+			fi
+			sleep 0.5
+		done
+	}
+	serves / /index.html
+	serves "$bundle" "$bundle"
 	# The site serves this build, so a failed join may be the relay's (or its trust of this env's key), not the deploy's.
-	trap - ERR
-	if ! just smoke "$VITE_APP_URL"; then
+	if ! just smoke "$VITE_APP_URL" app/dist/index.html; then
 		echo "error: {{env}} serves this build, but two browsers could not join a room; check the app, the API, and the relay before rolling back" >&2
 		exit 1
 	fi
